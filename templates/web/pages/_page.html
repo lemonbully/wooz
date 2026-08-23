@@ -1,0 +1,30 @@
+{% extends "web/_shell.html" %}
+
+{% comment %}
+Shell for the static / legal marketing pages: a ruled page header, then a
+constrained prose measure. Child pages fill page_eyebrow and page_body; their
+existing markup (lead, checks, card, btn…) is remapped to the Palantir look by
+the `.pal .<legacy>` rules in onewooz-pal.css, so they transform without a
+rewrite.
+{% endcomment %}
+
+{% block title %}{{ page_title }} · OneWooz{% endblock %}
+
+{% block main %}
+<header class="pal-pagehead pal-blueprint">
+  <div class="pal-container">
+    <p class="pal-breadcrumb">
+      <a href="{% url 'web:home' %}">OneWooz</a> / <span>{% block page_eyebrow %}Page{% endblock %}</span>
+    </p>
+    <h1 class="pal-pagehead__title">{{ page_title }}</h1>
+  </div>
+</header>
+
+<div class="pal-section pal-section--tight pal-ruled">
+  <div class="pal-container">
+    <div class="pal-prose">
+      {% block page_body %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}

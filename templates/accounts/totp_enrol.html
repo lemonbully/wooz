@@ -1,0 +1,30 @@
+{% extends "accounts/_auth_shell.html" %}
+
+{% block title %}Add an authenticator app · OneWooz{% endblock %}
+{% block auth_title %}Add an authenticator app{% endblock %}
+{% block auth_subtitle %}
+  <p class="auth__subtitle">
+    Add this key to Google Authenticator, 1Password, or any TOTP app.
+  </p>
+{% endblock %}
+
+{% block auth_body %}
+  <div class="mt-6">
+    <p class="eyebrow" style="color:var(--text-muted);">Setup key</p>
+    <code class="code-block">{{ secret }}</code>
+    <p class="hint">
+      Keep this private — anyone holding it can generate your codes.
+    </p>
+  </div>
+
+  <form method="post" class="auth__form">
+    {% csrf_token %}
+    <div class="field">
+      <label class="label" for="code">Code from your app</label>
+      <input class="input input--code" type="text" name="code" id="code"
+             inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+             autocomplete="one-time-code" required autofocus>
+    </div>
+    <button type="submit" class="btn btn--primary btn--block mt-6">Confirm and turn on</button>
+  </form>
+{% endblock %}

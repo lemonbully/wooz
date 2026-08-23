@@ -1,0 +1,47 @@
+# OneWooz — runtime dependencies
+#
+# Ranges rather than exact pins so a first install resolves cleanly.
+# Lock to exact versions (pip freeze > requirements.lock.txt) once the
+# environment is created.
+
+# --- Framework -------------------------------------------------------------
+Django>=5.2,<6.0
+
+# --- Security --------------------------------------------------------------
+argon2-cffi>=23.1                # Argon2id password hashing
+cryptography>=43.0               # HKDF + Fernet for field-level encryption
+webauthn>=2.2                    # passkeys / WebAuthn
+pyotp>=2.9                       # TOTP second factor
+qrcode[pil]>=8.0                 # TOTP enrolment QR codes
+
+# --- Data ------------------------------------------------------------------
+mysqlclient>=2.2                 # production database driver
+pydantic>=2.9                    # versioned site-content schema
+
+# --- Cache / queue ---------------------------------------------------------
+redis>=5.1
+django-redis>=5.4
+celery[sqs]>=5.4
+django-celery-beat>=2.7
+django-celery-results>=2.5
+
+# --- Storage / static ------------------------------------------------------
+whitenoise>=6.8
+django-storages>=1.14
+boto3>=1.35
+Pillow>=11.0
+
+# --- Integrations ----------------------------------------------------------
+razorpay>=1.4
+requests>=2.32
+dnspython>=2.7                   # custom-domain DNS verification
+tldextract>=5.1
+
+# --- Utilities -------------------------------------------------------------
+bleach>=6.2                      # sanitising owner-supplied rich text
+user-agents>=2.2
+python-dateutil>=2.9
+
+# --- Serving ---------------------------------------------------------------
+gunicorn>=23.0
+sentry-sdk>=2.17

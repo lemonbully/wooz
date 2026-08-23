@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% load static onewooz %}
+
+{% comment %}
+Marketing shell — "Palantir" direction. Defines the public-site chrome once:
+sticky ruled nav (with a JS-free mobile disclosure menu), content, footer.
+Everything is wrapped in `.pal`, and the design system is loaded here from
+onewooz-pal.css, so the marketing surface is fully transformed while the app,
+admin and auth chrome (onewooz.css) are untouched.
+{% endcomment %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/onewooz-pal.css' %}">
+<script nonce="{{ csp_nonce }}">
+  // Flag the document for entrance animations before first paint — unless the
+  // user prefers reduced motion. Gating the hidden initial states on this class
+  // means there is no flash of hidden content, and reduced-motion / no-JS users
+  // get a fully rendered, still page. Runs in <head>, so it lands before body.
+  try {
+    if (!window.matchMedia || !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.documentElement.classList.add("pal-anim");
+    }
+  } catch (e) {}
+</script>
+{% endblock %}
+
+{% block body %}
+<div class="pal">
+<a href="#main" class="sr-only">Skip to content</a>
+
+<header class="pal-nav" id="site-nav">
+  <div class="pal-container pal-nav__inner">
+    <a href="{% url 'web:home' %}" class="pal-brand">
+      <img class="pal-brand__img" src="{% static 'img/Icon_main.png' %}" alt="" width="26" height="26">
+    </a>
+
+    <nav class="pal-nav__links" aria-label="Main">
+      <a href="{% url 'web:platform' %}">Platform</a>
+      <a href="{% url 'web:solutions' %}">Solutions</a>
+      <a href="{% url 'web:customers' %}">Customers</a>
+      <a href="{% url 'web:pricing' %}">Pricing</a>
+      <a href="{% url 'web:security' %}">Security</a>
+    </nav>
+
+    <div class="pal-nav__actions">
+      <a href="{% surface_url 'app' '/sign-in/' %}" class="pal-btn pal-btn--ghost">Sign in</a>
+      <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store</a>
+
+      <details class="pal-menu">
+        <summary aria-label="Menu">Menu</summary>
+        <div class="pal-menu__panel">
+          <a href="{% url 'web:platform' %}">Platform</a>
+          <a href="{% url 'web:solutions' %}">Solutions</a>
+          <a href="{% url 'web:customers' %}">Customers</a>
+          <a href="{% url 'web:pricing' %}">Pricing</a>
+          <a href="{% url 'web:security' %}">Security</a>
+          <a href="{% surface_url 'app' '/sign-in/' %}">Sign in</a>
+          <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  {% block main %}{% endblock %}
+</main>
+
+<footer class="pal-footer">
+  <div class="pal-container">
+    <div class="pal-footer__top">
+      <div>
+        <a href="{% url 'web:home' %}" class="pal-brand">
+          <img class="pal-brand__img" src="{% static 'img/Icon_main.png' %}" alt="" width="26" height="26">
+        </a>
+        <p class="pal-footer__note">
+          Commerce infrastructure for people who would rather run their business
+          than manage a website.
+        </p>
+      </div>
+
+      <div class="pal-footer__cols">
+        <div class="pal-footer__col">
+          <h4>Product</h4>
+          <a href="{% url 'web:platform' %}">Platform</a>
+          <a href="{% url 'web:solutions' %}">Solutions</a>
+          <a href="{% url 'web:pricing' %}">Pricing</a>
+          <a href="{% url 'web:customers' %}">Customers</a>
+        </div>
+        <div class="pal-footer__col">
+          <h4>Company</h4>
+          <a href="{% url 'web:about' %}">About</a>
+          <a href="{% url 'web:contact' %}">Contact</a>
+          <a href="{% url 'web:support' %}">Support</a>
+        </div>
+        <div class="pal-footer__col">
+          <h4>Legal</h4>
+          <a href="{% url 'web:page' 'privacy' %}">Privacy</a>
+          <a href="{% url 'web:page' 'terms' %}">Terms</a>
+          <a href="{% url 'web:security' %}">Security</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="pal-footer__base">
+      <span>&copy; {% now "Y" %} OneWooz — All rights reserved</span>
+      <span>Made for merchants, not developers</span>
+    </div>
+  </div>
+</footer>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+
+    var root = document.documentElement;
+
+    // --- Nav chrome ------------------------------------------------------
+    var nav = document.getElementById("site-nav");
+    if (nav) {
+      var onScroll = function () { nav.dataset.scrolled = window.scrollY > 8 ? "true" : "false"; };
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }
+    var menu = document.querySelector(".pal-menu");
+    if (menu) {
+      menu.addEventListener("click", function (e) {
+        if (e.target.closest("a")) { menu.removeAttribute("open"); }
+      });
+    }
+
+    // --- Entrance system -------------------------------------------------
+    // Runs only when motion is allowed (flag set pre-paint in <head>).
+    if (!root.classList.contains("pal-anim")) return;
+
+    // Repeated-item containers: their children stagger in.
+    var GROUP = ".pal-matrix, .pal-grid, .pal-plans, .pal-stats, .pal-specs, .pal-logos, .pal-prose";
+    // Top-level content items that fade / wipe / scale in.
+    var ITEM = ".pal-marker, .pal-lead, .pal-btn-row, .pal-quote, .pal-infocard, .pal-field, " +
+               ".pal-plan__cta, .pal-display, .pal-h2, .pal-h3, .pal-pagehead__title, .pal-viewport";
+
+    var slice = function (nl) { return Array.prototype.slice.call(nl); };
+
+    // Split big headings into masked lines that reveal one after another —
+    // the Palantir line-by-line text entrance. Delays are set via the DOM
+    // (element.style), never inline style attributes, so the CSP is not
+    // engaged. Splitting on <br> keeps the authored line breaks.
+    slice(document.querySelectorAll(".pal-display, .pal-h2, .pal-pagehead__title")).forEach(function (h) {
+      if (h.getAttribute("data-split") === "1") return;
+      var parts = h.innerHTML.split(/<br\s*\/?>/i);
+      var html = "";
+      for (var p = 0; p < parts.length; p++) {
+        html += '<span class="pal-line"><span class="pal-line__inner">' + parts[p] + "</span></span>";
+      }
+      h.innerHTML = html;
+      h.classList.add("pal-split");
+      h.setAttribute("data-split", "1");
+      slice(h.querySelectorAll(".pal-line__inner")).forEach(function (inner, i) {
+        inner.style.transitionDelay = i * 90 + "ms";
+      });
+    });
+
+    // Stagger the children of every group.
+    slice(document.querySelectorAll(GROUP)).forEach(function (group) {
+      slice(group.children).forEach(function (child, i) {
+        child.style.transitionDelay = Math.min(i, 8) * 80 + "ms";
+      });
+    });
+
+    // Items are revealed on their own only when not inside a group (a nested
+    // item rides along with its group child instead).
+    var items = slice(document.querySelectorAll(ITEM)).filter(function (el) {
+      return !el.closest(GROUP);
+    });
+
+    // Per-section cascade: top-level items arrive in sequence.
+    slice(document.querySelectorAll(".pal-section, .pal-pagehead, .pal-hero")).forEach(function (scope) {
+      var local = items.filter(function (el) { return scope.contains(el); });
+      local.forEach(function (el, i) {
+        el.style.transitionDelay = Math.min(i, 6) * 100 + "ms";
+      });
+    });
+
+    // --- Illustrative extras: self-drawing SVGs and counting numbers -----
+    // Measure each stroke so the line art can draw itself. Dash values are set
+    // via the DOM (element.style), never inline style attributes, so the CSP
+    // is not engaged.
+    var draws = slice(document.querySelectorAll(".pal-draw"));
+    draws.forEach(function (box) {
+      slice(box.querySelectorAll("path, line, polyline")).forEach(function (s) {
+        var len = 0;
+        try { len = s.getTotalLength(); } catch (e) { len = 0; }
+        if (!len) return;
+        s.style.strokeDasharray = len + "";
+        s.style.strokeDashoffset = len + "";
+      });
+    });
+    var drawIn = function (box) {
+      slice(box.querySelectorAll("path, line, polyline")).forEach(function (s) {
+        s.style.strokeDashoffset = "0";
+      });
+    };
+
+    var countUp = function (el) {
+      if (el.__counted) return;
+      el.__counted = true;
+      var target = parseFloat(el.getAttribute("data-count")) || 0;
+      var pre = el.getAttribute("data-prefix") || "";
+      var suf = el.getAttribute("data-suffix") || "";
+      var start = null, dur = 1300;
+      var step = function (ts) {
+        if (start === null) start = ts;
+        var t = Math.min((ts - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = pre + Math.round(target * eased).toLocaleString("en-IN") + suf;
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+
+    var reveal = function (el) {
+      el.classList.add("is-visible");
+      if (el.classList.contains("pal-draw")) drawIn(el);
+      if (el.hasAttribute("data-count")) countUp(el);
+    };
+
+    // Motion is on, so start counters at zero (their markup holds the final
+    // value for the reduced-motion / no-JS case) — then they count up on view.
+    slice(document.querySelectorAll("[data-count]")).forEach(function (el) {
+      el.textContent = (el.getAttribute("data-prefix") || "") + "0" + (el.getAttribute("data-suffix") || "");
+    });
+
+    // Observe groups, top-level items, and the illustrative components; each
+    // settles once.
+    var targets = slice(document.querySelectorAll(GROUP))
+      .concat(items, draws, slice(document.querySelectorAll(".pal-dash")),
+              slice(document.querySelectorAll("[data-count]")));
+
+    if (!("IntersectionObserver" in window)) {
+      targets.forEach(reveal);
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        reveal(entry.target);
+        io.unobserve(entry.target);
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+    targets.forEach(function (el) { io.observe(el); });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "web/_shell.html" %}
+{% load onewooz %}
+
+{% block title %}About · OneWooz{% endblock %}
+
+{% block main %}
+
+<header class="pal-pagehead pal-blueprint">
+  <div class="pal-container">
+    <p class="pal-breadcrumb"><a href="{% url 'web:home' %}">OneWooz</a> / <span>About</span></p>
+    <h1 class="pal-pagehead__title">We build the shop,<br>so you can run the business.</h1>
+    <p class="pal-lead pal-pagehead__lead">
+      Most small brands and retailers don't want a website. They want to be
+      found, take orders, and get on with the rest of the job. OneWooz exists to
+      hand them a working store — and get out of the way.
+    </p>
+    <div class="pal-btn-row pal-mt-8">
+      <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Build my store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      <a href="{% url 'web:customers' %}" class="pal-btn pal-btn--ghost">See who uses it</a>
+    </div>
+  </div>
+</header>
+
+{# ------------------------------------------------------------ The problem #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="split" data-reveal>
+      <div>
+        <div class="pal-marker"><span class="pal-marker__num">01</span><span>Why we exist</span></div>
+        <h2 class="pal-h2 pal-mt-6" style="max-width:18ch;">The gap nobody should have to cross alone.</h2>
+      </div>
+      <div class="pal-prose">
+        <p>Between “I need to sell online” and “I have a working store” sits a
+        pile of decisions nobody asked for: which template, which plugin, which
+        payment gateway, which courier, who writes the refund policy. Every one
+        of them is a place to stall.</p>
+        <p>We watched capable people — makers, wholesalers, family businesses —
+        lose months to that gap, or pay agencies a number they didn't want to
+        say out loud. So we closed it. You tell us what you sell and who buys it;
+        we build a store that suits that trade, publish it, and hand you the
+        keys. Everything stays yours to change — but nothing <em>has</em> to be
+        changed for the store to work.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# --------------------------------------------------------------- Beliefs #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>What we believe</span></div>
+    <h2 class="pal-h2 pal-mt-6" style="max-width:20ch;" data-reveal>A few plain principles, kept.</h2>
+
+    <div class="pal-grid pal-grid--3 pal-mt-12" data-reveal>
+      <div class="pal-cell"><div class="pal-cell__idx">01</div><div class="pal-cell__title">It's your business</div><div class="pal-cell__desc">Your domain, your customers, your data and your money. We host and run it; we never hold it hostage.</div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">02</div><div class="pal-cell__title">No cut of your sales</div><div class="pal-cell__desc">You pay for the platform, not a slice of every order. What you sell settles to your own account.</div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">03</div><div class="pal-cell__title">Presentable on day one</div><div class="pal-cell__desc">A generated store is finished, not a shell of “insert text here”. It should be sellable before you edit a thing.</div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">04</div><div class="pal-cell__title">Two kinds of selling</div><div class="pal-cell__desc">A shop that takes money (D2C) and a catalogue that captures enquiries (B2B) — both are first-class here.</div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">05</div><div class="pal-cell__title">Boring parts, handled</div><div class="pal-cell__desc">Tax fields, courier labels, abandoned carts, refunds — the unglamorous machinery is already switched on.</div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">06</div><div class="pal-cell__title">Freedom to leave</div><div class="pal-cell__desc">Export your data and point your domain elsewhere whenever you want. Trust is easier when the door is open.</div></div>
+    </div>
+  </div>
+</section>
+
+{# ------------------------------------------------------------- The story #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="split" data-reveal>
+      <div>
+        <div class="pal-marker"><span class="pal-marker__num">03</span><span>How we got here</span></div>
+        <h2 class="pal-h2 pal-mt-6" style="max-width:16ch;">Built from what didn't work.</h2>
+      </div>
+      <div class="pal-time">
+        <div class="pal-time__item">
+          <div class="pal-time__k">The idea</div>
+          <div class="pal-time__t">One click, one store</div>
+          <div class="pal-time__d">A tool that turns a few answers into a live shop — payments, shipping and all — instead of a blank canvas and a wish of luck.</div>
+        </div>
+        <div class="pal-time__item">
+          <div class="pal-time__k">The rebuild</div>
+          <div class="pal-time__t">Do the unglamorous right</div>
+          <div class="pal-time__d">We rebuilt the engine around the parts merchants actually feel: real copy, working checkout, honest security, and content that reads like a person wrote it.</div>
+        </div>
+        <div class="pal-time__item">
+          <div class="pal-time__k">Today</div>
+          <div class="pal-time__t">D2C and B2B, on one platform</div>
+          <div class="pal-time__d">Brands take orders; wholesalers capture enquiries and quotes. Same engine, a store shaped for your trade.</div>
+        </div>
+        <div class="pal-time__item">
+          <div class="pal-time__k">Next</div>
+          <div class="pal-time__t">More trades, more reach</div>
+          <div class="pal-time__d">Deeper industry content, more regions and currencies — always with the same promise: presentable on day one, yours to keep.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# --------------------------------------------------------- What we won't #}
+<section class="pal-section pal-ruled pal-section--ink">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">04</span><span>What we won't do</span></div>
+    <h2 class="pal-h2 pal-mt-6" style="max-width:18ch;" data-reveal>The lines we don't cross.</h2>
+    <div class="pal-matrix pal-mt-12" data-reveal>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">01</div><div class="pal-matrix__body"><div class="pal-matrix__title">Take a percentage of your sales</div><div class="pal-matrix__desc">The platform earns its keep from a fair subscription — never from skimming your orders.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">02</div><div class="pal-matrix__body"><div class="pal-matrix__title">Hold your domain, customers or data</div><div class="pal-matrix__desc">Everything is exportable and portable. Leaving is a button, not a battle.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">03</div><div class="pal-matrix__body"><div class="pal-matrix__title">Ship a half-built template and call it a store</div><div class="pal-matrix__desc">If a generated store isn't presentable without editing, we haven't done our job.</div></div></div>
+    </div>
+  </div>
+</section>
+
+{# ------------------------------------------------------------------ CTA #}
+<section class="pal-section pal-ruled pal-blueprint pal-cta">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">05</span><span>Deploy</span></div>
+    <h2 class="pal-display pal-cta__title pal-mt-6" style="font-size:clamp(2.4rem,1.2rem+5vw,4.5rem);" data-reveal>See what we'd build for you.</h2>
+    <p class="pal-lead pal-mt-6" data-reveal>Free to start, live in minutes, and nothing lost if you change your mind.</p>
+    <div class="pal-btn-row pal-mt-8" data-reveal>
+      <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Build my store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      <a href="{% url 'web:contact' %}" class="pal-btn pal-btn--ghost">Talk to us</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

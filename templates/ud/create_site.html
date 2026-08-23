@@ -1,0 +1,151 @@
+{% extends "ud/_shell.html" %}
+
+{% block title %}Create a store · OneWooz{% endblock %}
+{% block crumb %}Create a store{% endblock %}
+
+{% block main %}
+<div class="app-page">
+
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">02 — Onboarding</p>
+      <h1 class="app-head__title pal-mt-4">Create a store</h1>
+      <p class="app-head__lead">
+        Tell us a little about your business. OneWooz turns it into a working,
+        published store — copy, sections, policies and all — that you can refine
+        afterwards.
+      </p>
+    </div>
+  </div>
+
+  <div class="app-block">
+
+  {% if submitted %}
+    {# ---- Confirmation state ---- #}
+    <div class="app-confirm">
+      <div class="pal-alert pal-alert--ok">
+        <p class="pal-alert__title">Brief captured</p>
+        We have your details for <strong>{{ brief.brand_name|default:"your store" }}</strong>.
+        Store generation from the industry content packs is landing next — you’ll
+        get a live store on a <code>.onewooz.site</code> address the moment it does.
+        <p class="pal-alert__ref">REF · {{ brief.business_type|upper|default:"—" }} / {{ brief.industry|default:"—" }}</p>
+      </div>
+      <div class="pal-btn-row">
+        <a href="{% url 'ud:dashboard' %}" class="pal-btn">Back to overview</a>
+        <a href="{% url 'ud:create_site' %}" class="pal-btn pal-btn--ghost">Edit the brief</a>
+      </div>
+    </div>
+
+  {% else %}
+    {# ---- Wizard form ---- #}
+    <form method="post" class="app-wizard">
+      {% csrf_token %}
+
+      <div class="app-wizard__rail">
+        <p class="app-wizard__kicker">Store setup</p>
+        <div class="app-wizard__steps">
+          <div class="app-wstep">
+            <span class="app-wstep__n">01</span>
+            <div><div class="app-wstep__t">Business type</div><div class="app-wstep__d">D2C or B2B</div></div>
+          </div>
+          <div class="app-wstep">
+            <span class="app-wstep__n">02</span>
+            <div><div class="app-wstep__t">Industry</div><div class="app-wstep__d">Sets the content pack</div></div>
+          </div>
+          <div class="app-wstep">
+            <span class="app-wstep__n">03</span>
+            <div><div class="app-wstep__t">Brand</div><div class="app-wstep__d">Name &amp; tagline</div></div>
+          </div>
+          <div class="app-wstep">
+            <span class="app-wstep__n">04</span>
+            <div><div class="app-wstep__t">Publish</div><div class="app-wstep__d">Live in seconds</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-wizard__form">
+
+        {# Step 1 — business type #}
+        <fieldset class="app-fieldset">
+          <legend class="app-fieldset__legend">What are you selling as?</legend>
+          <p class="app-fieldset__hint">This decides whether your store takes orders and payment, or enquiries.</p>
+          <div class="app-optset app-optset--2">
+            <div class="app-opt">
+              <input type="radio" name="business_type" id="bt-d2c" value="d2c" checked>
+              <label for="bt-d2c">
+                <span class="app-opt__k">D2C</span>
+                <span class="app-opt__t">Sell direct to shoppers</span>
+                <span class="app-opt__d">Cart, checkout and online payments. For brands selling to the public.</span>
+              </label>
+            </div>
+            <div class="app-opt">
+              <input type="radio" name="business_type" id="bt-b2b" value="b2b">
+              <label for="bt-b2b">
+                <span class="app-opt__k">B2B</span>
+                <span class="app-opt__t">Take trade enquiries</span>
+                <span class="app-opt__d">A catalogue and enquiry flow instead of checkout. For wholesale and retail supply.</span>
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        {# Step 2 — industry #}
+        <fieldset class="app-fieldset">
+          <legend class="app-fieldset__legend">Which industry fits best?</legend>
+          <p class="app-fieldset__hint">We pick real copy, section order and demo products from a pack built for it.</p>
+          <div class="app-optset app-optset--3">
+            <div class="app-opt">
+              <input type="radio" name="industry" id="ind-fashion" value="fashion" checked>
+              <label for="ind-fashion"><span class="app-opt__t">Fashion &amp; apparel</span><span class="app-opt__d">Clothing, footwear, accessories.</span></label>
+            </div>
+            <div class="app-opt">
+              <input type="radio" name="industry" id="ind-beauty" value="beauty">
+              <label for="ind-beauty"><span class="app-opt__t">Beauty &amp; wellness</span><span class="app-opt__d">Skincare, cosmetics, supplements.</span></label>
+            </div>
+            <div class="app-opt">
+              <input type="radio" name="industry" id="ind-food" value="food">
+              <label for="ind-food"><span class="app-opt__t">Food &amp; beverage</span><span class="app-opt__d">Packaged food, drinks, gourmet.</span></label>
+            </div>
+            <div class="app-opt">
+              <input type="radio" name="industry" id="ind-home" value="home">
+              <label for="ind-home"><span class="app-opt__t">Home &amp; living</span><span class="app-opt__d">Décor, furniture, kitchenware.</span></label>
+            </div>
+            <div class="app-opt">
+              <input type="radio" name="industry" id="ind-electronics" value="electronics">
+              <label for="ind-electronics"><span class="app-opt__t">Electronics</span><span class="app-opt__d">Gadgets, accessories, devices.</span></label>
+            </div>
+            <div class="app-opt">
+              <input type="radio" name="industry" id="ind-other" value="other">
+              <label for="ind-other"><span class="app-opt__t">Something else</span><span class="app-opt__d">A general-purpose starting point.</span></label>
+            </div>
+          </div>
+        </fieldset>
+
+        {# Step 3 — brand #}
+        <fieldset class="app-fieldset">
+          <legend class="app-fieldset__legend">Your brand</legend>
+          <p class="app-fieldset__hint">Used across the storefront, its title and its social preview.</p>
+          <div>
+            <label class="pal-field">
+              <span class="pal-field__label">Brand name</span>
+              <input class="pal-input" type="text" name="brand_name" maxlength="120" placeholder="e.g. Northline Supply" required>
+            </label>
+            <label class="pal-field">
+              <span class="pal-field__label">Tagline <span class="app-optional">(optional)</span></span>
+              <input class="pal-input" type="text" name="tagline" maxlength="160" placeholder="One line on what you sell and for whom">
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="app-wizard__foot">
+          <span class="app-wizard__note">You can change everything after it’s live</span>
+          <button type="submit" class="pal-btn">Build my store <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+        </div>
+
+      </div>
+    </form>
+  {% endif %}
+
+  </div>
+</div>
+{% endblock %}

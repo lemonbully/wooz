@@ -1,0 +1,135 @@
+{% extends "ud/_shell.html" %}
+{% load static %}
+
+{% block title %}Security · OneWooz{% endblock %}
+
+{% block main %}
+<div class="container section--tight">
+  <div class="container--narrow" style="padding-inline:0;">
+
+    <h1 class="h1">Security</h1>
+    <p class="lead mt-3">How you sign in, and where you've signed in from.</p>
+
+    <section class="card card--pad-lg mt-7">
+      <div class="page-head">
+        <div>
+          <h2 class="h3">Passkeys</h2>
+          <p class="feature__body measure">
+            The strongest option. A passkey can't be phished, because your
+            browser only releases it to the real OneWooz.
+          </p>
+        </div>
+        <button type="button" id="add-passkey" class="btn btn--primary">Add passkey</button>
+      </div>
+
+      <p id="passkey-error" class="alert alert--error mt-4 hidden" role="alert"></p>
+
+      <ul class="list mt-5">
+        {% for credential in passkeys %}
+          <li>
+            <div>
+              <p class="small" style="font-weight:500;">{{ credential.label }}</p>
+              <p class="xs muted mt-3" style="margin-top:.25rem;">
+                Added {{ credential.created_at|date:"j M Y" }}
+                {% if credential.last_used_at %}· last used {{ credential.last_used_at|timesince }} ago{% endif %}
+              </p>
+            </div>
+            <form method="post" action="{% url 'accounts:passkey_delete' credential.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn--link small" style="color:var(--critical);">Remove</button>
+            </form>
+          </li>
+        {% empty %}
+          <li><span class="small muted">No passkeys yet.</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="card card--pad-lg mt-5">
+      <div class="page-head">
+        <div>
+          <h2 class="h3">Authenticator app</h2>
+          <p class="feature__body measure">
+            A 6-digit code as a second step after your password.
+          </p>
+        </div>
+        {% if not totp_devices %}
+          <a href="{% url 'accounts:totp_enrol' %}" class="btn btn--secondary">Set up</a>
+        {% endif %}
+      </div>
+
+      {% if totp_devices %}
+        <ul class="list mt-5">
+          {% for device in totp_devices %}
+            <li>
+              <span class="small">{{ device.label }}</span>
+              <span class="xs muted">Added {{ device.created_at|date:"j M Y" }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+
+    <section class="card card--pad-lg mt-5">
+      <h2 class="h3">Recent sign-in activity</h2>
+      <p class="feature__body measure">
+        Anything here you don't recognise is worth changing your password over.
+      </p>
+
+      <ul class="list mt-5">
+        {% for entry in recent_activity %}
+          <li>
+            <div class="small">
+              <strong>{{ entry.get_method_display }}</strong>
+              <span class="muted">· {{ entry.get_outcome_display }}</span>
+              {% if entry.is_suspicious %}
+                <span class="xs" style="color:var(--caution);">· unusual</span>
+              {% endif %}
+            </div>
+            <div class="xs muted" style="text-align:right;">
+              {{ entry.created_at|date:"j M Y, H:i" }}
+              {% if entry.ip_address %}<br>{{ entry.ip_address }}{% endif %}
+            </div>
+          </li>
+        {% empty %}
+          <li><span class="small muted">Nothing recorded yet.</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{% static 'js/passkeys.js' %}"
+        data-auth-begin="{% url 'accounts:passkey_auth_begin' %}"
+        data-auth-finish="{% url 'accounts:passkey_auth_finish' %}"
+        data-register-begin="{% url 'accounts:passkey_register_begin' %}"
+        data-register-finish="{% url 'accounts:passkey_register_finish' %}"></script>
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    var button = document.getElementById('add-passkey');
+    var errorBox = document.getElementById('passkey-error');
+
+    if (!window.OneWoozPasskeys || !window.OneWoozPasskeys.isSupported()) {
+      button.disabled = true;
+      button.title = 'This browser does not support passkeys.';
+      return;
+    }
+
+    button.addEventListener('click', async function () {
+      errorBox.classList.add('hidden');
+      button.disabled = true;
+      try {
+        await window.OneWoozPasskeys.register('');
+        window.location.reload();
+      } catch (err) {
+        errorBox.textContent = err.message || 'That passkey could not be added.';
+        errorBox.classList.remove('hidden');
+        button.disabled = false;
+      }
+    });
+  })();
+</script>
+{% endblock %}

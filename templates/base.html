@@ -1,0 +1,42 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}OneWooz{% endblock %}</title>
+  <meta name="description" content="{% block description %}OneWooz builds and publishes a working online store for D2C brands and B2B retailers. Answer a few questions, get a real site on your own domain.{% endblock %}">
+  {% block meta %}{% endblock %}
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  {% comment %}
+  Hand-authored and self-hosted — no build step, so the page is styled the
+  moment the repository is checked out. A CDN-compiled utility framework would
+  also force 'unsafe-eval' into the Content-Security-Policy.
+  {% endcomment %}
+  <link rel="stylesheet" href="{% static 'css/onewooz.css' %}">
+
+  {% comment %}
+  Theme-aware favicon: the white-theme mark for light devices, the dark-theme
+  mark for dark mode. Browsers that ignore the media attribute fall back to the
+  light one listed last.
+  {% endcomment %}
+  <link rel="icon" type="image/png" media="(prefers-color-scheme: dark)" href="{% static 'img/OneWooz_favicon_dark_theme.png' %}">
+  <link rel="icon" type="image/png" media="(prefers-color-scheme: light)" href="{% static 'img/OneWooz_favicon_white_theme.png' %}">
+  <link rel="icon" type="image/png" href="{% static 'img/OneWooz_favicon_white_theme.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/OneWooz_favicon_white_theme.png' %}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% block body %}{% endblock %}
+
+  {% comment %}
+  Every inline script must carry nonce="{{ csp_nonce }}". One that forgets is
+  blocked by the browser rather than silently running — which is the whole
+  point of a nonce instead of 'unsafe-inline'.
+  {% endcomment %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

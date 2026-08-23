@@ -1,0 +1,798 @@
+/* ==========================================================================
+   OneWooz — marketing design system  ·  "Palantir" direction
+   --------------------------------------------------------------------------
+   A full, stark, engineered treatment for the entire public site, inspired by
+   palantir.com: near-white paper and near-black ink, hairline rules on
+   everything, monospace metadata, section numbering, corner-bracket framing,
+   oversized grotesque type, and squared geometry. No glass, no gradients, no
+   glow — depth is structural, from rules and type, not from effects.
+
+   Scope: every rule is under `.pal`, which wraps the marketing <body> in
+   web/_shell.html. The app dashboard, admin and auth chrome keep onewooz.css
+   untouched and are unaffected.
+
+   Type (Google Fonts — already in the CSP allowlist):
+     - Display / headings : Space Grotesk
+     - Metadata / labels  : JetBrains Mono
+     - Body               : Inter  (neutral workhorse)
+   ========================================================================== */
+
+.pal {
+  /* --- Ground. Cool near-white + near-black, pushed to the extremes so the
+         whole site reads as a technical document. ----------------------- */
+  --pal-paper:      #f4f4f2;
+  --pal-paper-2:    #ececea;
+  --pal-panel:      #ffffff;
+  --pal-ink:        #0a0a0b;
+  --pal-ink-2:      #26262a;
+  --pal-muted:      #66666b;
+  --pal-faint:      #9a9aa0;
+
+  --pal-line:       rgb(10 10 11 / 0.16);
+  --pal-line-soft:  rgb(10 10 11 / 0.07);
+  --pal-line-ink:   rgb(244 244 242 / 0.16);
+
+  /* The one surviving accent, used sparingly — a tick, an active word, a link. */
+  --pal-accent:     #4b2bf5;
+  --pal-accent-2:   #6a44fb;
+
+  --pal-font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --pal-font-mono:    "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+  --pal-font-body:    "Inter", system-ui, -apple-system, sans-serif;
+
+  --pal-gutter: clamp(1.25rem, 0.8rem + 2vw, 3rem);
+  --pal-container: 80rem;
+
+  background: var(--pal-paper);
+  color: var(--pal-ink);
+  font-family: var(--pal-font-body);
+  font-size: 1rem;
+  line-height: 1.55;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.pal ::selection { background: var(--pal-ink); color: var(--pal-paper); }
+.pal :focus-visible { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
+
+/* 1. Type ================================================================= */
+
+.pal h1, .pal h2, .pal h3, .pal h4, .pal .pal-display {
+  font-family: var(--pal-font-display);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.03;
+  text-wrap: balance;
+}
+
+.pal-display { font-size: clamp(2.9rem, 1.1rem + 7vw, 6.25rem); letter-spacing: -0.04em; line-height: 0.95; }
+.pal-h2 { font-size: clamp(2rem, 1.2rem + 3vw, 3.5rem); letter-spacing: -0.032em; }
+.pal-h3 { font-size: clamp(1.2rem, 1rem + 0.7vw, 1.55rem); letter-spacing: -0.02em; line-height: 1.15; }
+
+.pal-lead {
+  font-size: clamp(1.05rem, 1rem + 0.45vw, 1.35rem);
+  line-height: 1.5;
+  color: var(--pal-ink-2);
+  max-width: 48ch;
+  text-wrap: pretty;
+}
+.pal-muted { color: var(--pal-muted); }
+.pal-measure { max-width: 42ch; }
+
+.pal a.pal-link { color: var(--pal-accent); text-decoration: none; border-bottom: 1px solid currentColor; }
+.pal a.pal-link:hover { color: var(--pal-ink); }
+
+/* Monospace metadata — the signature. */
+.pal-mono {
+  font-family: var(--pal-font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pal-muted);
+  font-feature-settings: "tnum";
+}
+.pal-mono--accent { color: var(--pal-accent); }
+
+/* Section marker: "02 — CAPABILITIES", a ruled label. */
+.pal-marker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--pal-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pal-muted);
+}
+.pal-marker__num { color: var(--pal-accent); }
+.pal-marker::after { content: ""; flex: 1; height: 1px; background: var(--pal-line); }
+.pal-section--ink .pal-marker { color: rgb(244 244 242 / 0.6); }
+.pal-section--ink .pal-marker::after { background: var(--pal-line-ink); }
+
+/* The single accent word — a precise underline, not a highlight. */
+.pal-accent-word { position: relative; white-space: nowrap; }
+.pal-accent-word::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: -0.06em;
+  height: 2px; background: var(--pal-accent);
+}
+
+/* 2. Layout & rules ======================================================= */
+
+.pal-container { width: 100%; max-width: var(--pal-container); margin-inline: auto; padding-inline: var(--pal-gutter); }
+.pal-container--narrow { max-width: 52rem; }
+
+.pal-section { padding-block: clamp(4rem, 2rem + 7vw, 8rem); position: relative; }
+.pal-section--tight { padding-block: clamp(2.5rem, 1.5rem + 3vw, 4rem); }
+.pal-section--ink { background: var(--pal-ink); color: var(--pal-paper); }
+.pal-section--ink .pal-lead { color: rgb(244 244 242 / 0.72); }
+.pal-section--ink .pal-mono { color: rgb(244 244 242 / 0.6); }
+
+.pal-ruled { border-top: 1px solid var(--pal-line); }
+.pal-section--ink.pal-ruled { border-top-color: var(--pal-line-ink); }
+
+/* Faint vertical gutter grid behind a section — the blueprint feel. */
+.pal-blueprint { position: relative; }
+.pal-blueprint::before {
+  content: "";
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(to right, var(--pal-line-soft) 1px, transparent 1px);
+  background-size: calc(100% / 6) 100%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 8%, #000 92%, transparent);
+}
+.pal-blueprint > * { position: relative; }
+
+.pal-grid { display: grid; gap: 1px; background: var(--pal-line); border: 1px solid var(--pal-line); }
+.pal-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.pal-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.pal-grid > * { background: var(--pal-paper); }
+@media (max-width: 56rem) { .pal-grid--3 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 40rem) { .pal-grid--2, .pal-grid--3 { grid-template-columns: 1fr; } }
+
+/* 3. Buttons ============================================================== */
+
+.pal-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  padding: 0.8125rem 1.375rem;
+  font-family: var(--pal-font-mono);
+  font-size: 0.72rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+  border: 1px solid var(--pal-ink); background: var(--pal-ink); color: var(--pal-paper);
+  border-radius: 0; cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.pal-btn:hover { background: var(--pal-accent); border-color: var(--pal-accent); color: #fff; }
+.pal-btn--ghost { background: transparent; color: var(--pal-ink); border-color: var(--pal-line); }
+.pal-btn--ghost:hover { background: transparent; color: var(--pal-accent); border-color: var(--pal-accent); }
+.pal-section--ink .pal-btn { background: var(--pal-paper); color: var(--pal-ink); border-color: var(--pal-paper); }
+.pal-section--ink .pal-btn:hover { background: var(--pal-accent); border-color: var(--pal-accent); color: #fff; }
+.pal-section--ink .pal-btn--ghost { background: transparent; color: var(--pal-paper); border-color: var(--pal-line-ink); }
+.pal-btn__arrow { transition: transform 160ms ease; }
+.pal-btn:hover .pal-btn__arrow { transform: translateX(3px); }
+.pal-btn-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+/* 4. Corner-bracket frame ================================================= */
+
+.pal-frame { position: relative; }
+.pal-frame > .pal-corner { position: absolute; width: 14px; height: 14px; border: 1.5px solid var(--pal-accent); z-index: 3; }
+.pal-corner--tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+.pal-corner--tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
+.pal-corner--bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
+.pal-corner--br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+
+/* 5. Nav ================================================================== */
+
+.pal-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgb(244 244 242 / 0.86);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--pal-line);
+}
+.pal-nav__inner { display: flex; align-items: center; justify-content: space-between; gap: 2rem; height: 4rem; }
+.pal-brand { display: inline-flex; align-items: center; gap: 0.625rem; font-family: var(--pal-font-display); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.02em; }
+.pal-brand__mark { width: 1.5rem; height: 1.5rem; display: grid; place-items: center; background: var(--pal-ink); color: var(--pal-paper); font-family: var(--pal-font-mono); font-size: 0.8125rem; font-weight: 700; }
+.pal-brand__img { height: 1.2rem; width: auto; display: block; flex: none; }
+.pal-nav__links { display: flex; gap: 1.75rem; font-family: var(--pal-font-mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.pal-nav__links a { color: var(--pal-muted); transition: color 160ms ease; }
+.pal-nav__links a:hover, .pal-nav__links a[aria-current="page"] { color: var(--pal-ink); }
+.pal-nav__actions { display: flex; align-items: center; gap: 0.75rem; }
+
+/* Mobile disclosure menu — no JS, CSP-safe. */
+.pal-menu { display: none; }
+.pal-menu > summary { list-style: none; cursor: pointer; padding: 0.55rem 0.8rem; border: 1px solid var(--pal-line); font-family: var(--pal-font-mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.pal-menu > summary::-webkit-details-marker { display: none; }
+.pal-menu[open] > summary { background: var(--pal-ink); color: var(--pal-paper); border-color: var(--pal-ink); }
+.pal-menu__panel { position: absolute; left: 0; right: 0; top: 4rem; background: var(--pal-paper); border-bottom: 1px solid var(--pal-line); padding: 1rem var(--pal-gutter) 1.5rem; display: grid; gap: 0.25rem; }
+.pal-menu__panel a { display: block; padding: 0.65rem 0; font-family: var(--pal-font-mono); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-ink); border-bottom: 1px solid var(--pal-line-soft); }
+.pal-menu__panel .pal-btn { margin-top: 0.75rem; }
+
+@media (max-width: 62rem) {
+  .pal-nav__links { display: none; }
+  .pal-nav__actions .pal-btn--ghost { display: none; }
+  .pal-menu { display: block; }
+}
+
+/* 6. Hero ================================================================= */
+
+.pal-hero { padding-block: clamp(3.5rem, 2rem + 6vw, 7rem) clamp(3rem, 2rem + 4vw, 6rem); }
+.pal-hero__grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(2rem, 1rem + 4vw, 5rem); align-items: center; }
+@media (max-width: 64rem) { .pal-hero__grid { grid-template-columns: 1fr; gap: 3rem; } }
+.pal-hero__display { margin-top: 1.5rem; }
+.pal-hero__lead { margin-top: 1.75rem; }
+.pal-hero__actions { margin-top: 2.25rem; }
+
+/* Ruled datasheet of specs under hero copy. */
+.pal-specs { margin-top: 2.5rem; border-top: 1px solid var(--pal-line); display: grid; grid-template-columns: repeat(3, 1fr); }
+.pal-specs__item { padding: 1rem 1rem 0 0; border-right: 1px solid var(--pal-line); }
+.pal-specs__item:last-child { border-right: 0; }
+.pal-specs__value { font-family: var(--pal-font-display); font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
+.pal-specs__label { margin-top: 0.25rem; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
+
+/* 7. Rendered storefront ================================================== */
+
+.pal-viewport { position: relative; }
+.pal-viewport__caption { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 0.625rem; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
+.pal-viewport__caption .dot { color: var(--pal-accent); }
+.pal-store { border: 1px solid var(--pal-ink); background: var(--pal-panel); overflow: hidden; box-shadow: 18px 18px 0 -1px rgb(10 10 11 / 0.06); }
+.pal-store__bar { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; border-bottom: 1px solid var(--pal-line); }
+.pal-store__logo { font-family: var(--pal-font-display); font-weight: 600; letter-spacing: 0.02em; font-size: 0.9rem; }
+.pal-store__nav { display: flex; gap: 0.9rem; font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
+@media (max-width: 30rem) { .pal-store__nav { display: none; } }
+.pal-store__hero { position: relative; }
+.pal-store__hero img { width: 100%; height: clamp(9rem, 22vw, 13rem); object-fit: cover; filter: grayscale(1) contrast(1.04); }
+.pal-store__hero-copy { position: absolute; left: 1rem; bottom: 1rem; right: 1rem; color: #fff; }
+.pal-store__hero-kicker { font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.85; }
+.pal-store__hero-title { font-family: var(--pal-font-display); font-weight: 600; font-size: clamp(1.1rem, 0.8rem + 1.4vw, 1.6rem); letter-spacing: -0.02em; margin-top: 0.25rem; text-shadow: 0 1px 12px rgb(0 0 0 / 0.4); }
+.pal-store__grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--pal-line); }
+.pal-store__cell { border-right: 1px solid var(--pal-line); padding: 0.75rem; }
+.pal-store__cell:last-child { border-right: 0; }
+.pal-store__cell img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; filter: grayscale(1) contrast(1.04); transition: filter 220ms ease; }
+.pal-store__cell:hover img { filter: grayscale(0) contrast(1); }
+.pal-store__cell-name { margin-top: 0.5rem; font-size: 0.72rem; font-weight: 500; }
+.pal-store__cell-price { font-family: var(--pal-font-mono); font-size: 0.64rem; color: var(--pal-muted); letter-spacing: 0.04em; }
+.pal-tag { position: absolute; z-index: 4; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.6rem; background: var(--pal-paper); border: 1px solid var(--pal-ink); font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+.pal-tag .led { width: 6px; height: 6px; background: var(--pal-accent); flex: none; }
+.pal-tag--tr { top: 2.2rem; right: -0.75rem; }
+.pal-tag--bl { bottom: 3.2rem; left: -0.75rem; }
+@media (max-width: 40rem) { .pal-tag { display: none; } }
+
+/* 8. Logo row ============================================================= */
+
+.pal-logos { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(1.5rem, 1rem + 3vw, 3.5rem); }
+.pal-logos__item { font-family: var(--pal-font-display); font-weight: 600; font-size: 1rem; letter-spacing: 0.02em; color: var(--pal-faint); }
+
+/* 9. Capability matrix ==================================================== */
+
+.pal-matrix { border: 1px solid var(--pal-line); border-bottom: 0; }
+.pal-matrix__row { display: grid; grid-template-columns: 4.5rem 1fr; border-bottom: 1px solid var(--pal-line); transition: background 160ms ease; }
+.pal-matrix__row:hover { background: var(--pal-paper-2); }
+.pal-matrix__idx { padding: 1.5rem 1rem; font-family: var(--pal-font-mono); font-size: 0.72rem; color: var(--pal-accent); border-right: 1px solid var(--pal-line); letter-spacing: 0.06em; }
+.pal-matrix__body { display: grid; grid-template-columns: 15rem 1fr; gap: 1rem 2rem; padding: 1.5rem; align-items: baseline; }
+@media (max-width: 48rem) { .pal-matrix__row { grid-template-columns: 3rem 1fr; } .pal-matrix__idx { padding: 1.25rem 0.75rem; } .pal-matrix__body { grid-template-columns: 1fr; gap: 0.5rem; padding: 1.25rem; } }
+.pal-matrix__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.1rem; letter-spacing: -0.01em; }
+.pal-matrix__desc { color: var(--pal-muted); font-size: 0.95rem; }
+
+/* 10. Feature / spec cell (generic bordered grid item) ==================== */
+
+.pal-cell { padding: clamp(1.5rem, 1rem + 1.5vw, 2.25rem); }
+.pal-cell__idx { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.1em; color: var(--pal-accent); }
+.pal-cell__title { margin-top: 1rem; font-family: var(--pal-font-display); font-weight: 500; font-size: 1.2rem; letter-spacing: -0.01em; }
+.pal-cell__desc { margin-top: 0.625rem; color: var(--pal-muted); font-size: 0.95rem; }
+.pal-section--ink .pal-grid { background: var(--pal-line-ink); border-color: var(--pal-line-ink); }
+.pal-section--ink .pal-grid > * { background: var(--pal-ink); }
+.pal-section--ink .pal-cell__desc { color: rgb(244 244 242 / 0.6); }
+
+/* 11. Stats band ========================================================== */
+
+.pal-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-left: 1px solid var(--pal-line-ink); }
+@media (max-width: 56rem) { .pal-stats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 30rem) { .pal-stats { grid-template-columns: 1fr; } }
+.pal-stat { padding: 1.75rem; border-right: 1px solid var(--pal-line-ink); }
+.pal-stat__value { font-family: var(--pal-font-display); font-size: clamp(2.5rem, 1.5rem + 3vw, 3.75rem); font-weight: 500; letter-spacing: -0.03em; line-height: 1; }
+.pal-stat__label { margin-top: 0.75rem; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgb(244 244 242 / 0.6); }
+
+/* 12. Quote =============================================================== */
+
+.pal-quote { max-width: 60rem; }
+.pal-quote__text { font-family: var(--pal-font-display); font-weight: 400; font-size: clamp(1.5rem, 1rem + 2vw, 2.5rem); letter-spacing: -0.02em; line-height: 1.2; text-wrap: pretty; }
+.pal-quote__by { margin-top: 2rem; display: flex; align-items: center; gap: 0.75rem; font-family: var(--pal-font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); }
+.pal-quote__by strong { color: var(--pal-ink); font-weight: 600; }
+.pal-section--ink .pal-quote__by strong { color: var(--pal-paper); }
+
+/* 13. Page header (interior pages) ======================================== */
+
+.pal-pagehead { padding-block: clamp(3.5rem, 2rem + 5vw, 6rem) clamp(2rem, 1rem + 3vw, 3.5rem); }
+.pal-pagehead__title { margin-top: 1.25rem; font-size: clamp(2.5rem, 1.5rem + 4vw, 4.5rem); letter-spacing: -0.035em; line-height: 0.98; }
+.pal-pagehead__lead { margin-top: 1.5rem; }
+.pal-breadcrumb { font-family: var(--pal-font-mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
+.pal-breadcrumb a { color: var(--pal-muted); }
+.pal-breadcrumb a:hover { color: var(--pal-ink); }
+.pal-breadcrumb span { color: var(--pal-accent); }
+
+/* 14. Pricing ============================================================= */
+
+.pal-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--pal-line); border: 1px solid var(--pal-line); }
+@media (max-width: 60rem) { .pal-plans { grid-template-columns: 1fr; } }
+.pal-plan { background: var(--pal-paper); padding: clamp(1.75rem, 1rem + 2vw, 2.5rem); display: flex; flex-direction: column; }
+.pal-plan--featured { background: var(--pal-ink); color: var(--pal-paper); }
+.pal-plan__name { font-family: var(--pal-font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
+.pal-plan--featured .pal-plan__name { color: rgb(244 244 242 / 0.6); }
+.pal-plan__price { margin-top: 1.25rem; font-family: var(--pal-font-display); font-size: clamp(2.25rem, 1.5rem + 2vw, 3rem); font-weight: 500; letter-spacing: -0.03em; line-height: 1; }
+.pal-plan__price span { font-family: var(--pal-font-mono); font-size: 0.8rem; letter-spacing: 0.04em; color: var(--pal-muted); text-transform: none; }
+.pal-plan--featured .pal-plan__price span { color: rgb(244 244 242 / 0.6); }
+.pal-plan__desc { margin-top: 1rem; font-size: 0.9rem; color: var(--pal-muted); }
+.pal-plan--featured .pal-plan__desc { color: rgb(244 244 242 / 0.72); }
+.pal-plan__list { margin-top: 1.5rem; display: grid; gap: 0.75rem; font-size: 0.9rem; }
+.pal-plan__list li { display: flex; gap: 0.625rem; align-items: baseline; }
+.pal-plan__list li::before { content: "→"; color: var(--pal-accent); font-family: var(--pal-font-mono); }
+.pal-plan__cta { margin-top: auto; padding-top: 1.75rem; }
+
+/* 15. Prose (legal / long-form) + legacy-class overrides =================
+   The static pages (about, contact, security, privacy, terms) still use the
+   onewooz.css utility class names in their markup. Rather than rewrite each,
+   we restyle those class names when they appear inside `.pal`, and style raw
+   prose tags for the long legal pages. ---------------------------------- */
+
+.pal-prose { max-width: 46rem; font-size: 1.02rem; line-height: 1.7; color: var(--pal-ink-2); }
+.pal-prose > * + * { margin-top: 1.25rem; }
+.pal-prose h2, .pal-prose .h3 { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.3rem, 1rem + 1vw, 1.7rem); letter-spacing: -0.02em; color: var(--pal-ink); margin-top: 2.5rem; }
+.pal-prose h3 { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.2rem; color: var(--pal-ink); margin-top: 2rem; }
+.pal-prose a { color: var(--pal-accent); border-bottom: 1px solid currentColor; }
+.pal-prose a:hover { color: var(--pal-ink); }
+.pal-prose strong { color: var(--pal-ink); font-weight: 600; }
+.pal-prose ul { display: grid; gap: 0.75rem; padding-left: 0; }
+
+/* Legacy class remaps under .pal */
+.pal .eyebrow { font-family: var(--pal-font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pal-accent); }
+.pal .lead { font-family: var(--pal-font-body); font-size: clamp(1.05rem, 1rem + 0.45vw, 1.3rem); line-height: 1.5; color: var(--pal-ink-2); }
+.pal .h1 { font-family: var(--pal-font-display); font-weight: 500; letter-spacing: -0.035em; }
+.pal .h3 { font-family: var(--pal-font-display); font-weight: 500; letter-spacing: -0.02em; }
+.pal .card { background: var(--pal-panel); border: 1px solid var(--pal-line); border-radius: 0; }
+.pal .card--pad-lg { padding: clamp(1.5rem, 1rem + 1.5vw, 2.25rem); }
+.pal .feature__body { color: var(--pal-muted); }
+.pal .btn { border-radius: 0; font-family: var(--pal-font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; }
+.pal .btn--primary { background: var(--pal-ink); border-color: var(--pal-ink); color: var(--pal-paper); }
+.pal .btn--primary:hover { background: var(--pal-accent); border-color: var(--pal-accent); }
+.pal .btn--secondary { background: transparent; border-color: var(--pal-line); color: var(--pal-ink); }
+.pal .btn--secondary:hover { background: transparent; border-color: var(--pal-accent); color: var(--pal-accent); }
+.pal .checks svg { color: var(--pal-accent); }
+.pal .checks li { font-size: 0.98rem; color: var(--pal-ink-2); }
+.pal .alert { border-radius: 0; font-size: 0.9rem; }
+.pal .alert--info { background: var(--pal-panel); border: 1px solid var(--pal-line); border-left: 2px solid var(--pal-accent); color: var(--pal-ink-2); }
+.pal .alert--error { border-radius: 0; }
+
+/* 16. Contact / info cards + form ======================================== */
+
+.pal-infocard { border: 1px solid var(--pal-line); padding: clamp(1.5rem, 1rem + 1.5vw, 2rem); background: var(--pal-panel); }
+.pal-infocard h3 { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.2rem; }
+.pal-infocard p { margin-top: 0.5rem; color: var(--pal-muted); font-size: 0.95rem; }
+.pal-infocard a.pal-btn { margin-top: 1.25rem; }
+
+.pal-field { display: block; margin-top: 1.25rem; }
+.pal-field__label { display: block; font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 0.5rem; }
+.pal-input, .pal-textarea { width: 100%; padding: 0.75rem 0.875rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.95rem; }
+.pal-input:focus, .pal-textarea:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+.pal-textarea { min-height: 8rem; resize: vertical; }
+
+/* 17. CTA band =========================================================== */
+
+.pal-cta { text-align: left; }
+.pal-cta__title { max-width: 18ch; }
+
+/* 18. Footer ============================================================= */
+
+.pal-footer { border-top: 1px solid var(--pal-line); padding-block: 3.5rem 2.5rem; }
+.pal-footer__top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2rem; align-items: flex-start; }
+.pal-footer__note { max-width: 30ch; margin-top: 1rem; color: var(--pal-muted); font-size: 0.9rem; }
+.pal-footer__cols { display: flex; gap: clamp(2rem, 1rem + 4vw, 5rem); flex-wrap: wrap; }
+.pal-footer__col h4 { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-faint); margin-bottom: 0.75rem; }
+.pal-footer__col a { display: block; font-size: 0.9rem; color: var(--pal-muted); padding-block: 0.25rem; }
+.pal-footer__col a:hover { color: var(--pal-ink); }
+.pal-footer__base { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--pal-line); display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-faint); }
+
+/* 19. Motion — entrance system ==========================================
+   Scroll/enter reveals with a per-section cascade and staggered groups, in the
+   Palantir register: fade + rise on content, a mask-wipe on big headings, a
+   scale settle on framed media, and a drawn rule under section markers.
+   Everything settles once; nothing loops.
+
+   Initial hidden states are gated on `.pal-anim`, a class set on <html> before
+   first paint (in web/_shell.html) only when motion is allowed — so there is no
+   flash of hidden content, and no-JS / reduced-motion users get the page fully
+   rendered and still. Per-element stagger delays are set inline by the script.
+   ===================================================================== */
+
+.pal {
+  --rv-dur: 1050ms;                               /* slow, unhurried — Palantir tempo */
+  --rv-ease: cubic-bezier(0.16, 1, 0.3, 1);       /* expo-out: heavy settle */
+  --rv-shift: 26px;
+  --rv-blur: 12px;                                /* focus-in — the Palantir signature */
+}
+
+/* Neutralise onewooz.css's global [data-reveal] hide inside the marketing
+   surface — this system drives animation from classes, not that attribute, so
+   the legacy attribute must never leave content stuck hidden. Placed first so
+   the .pal-anim hidden states below (equal specificity, later) still win. */
+.pal [data-reveal] { opacity: 1; transform: none; }
+
+/* --- Fade + rise + focus-in items ---------------------------------------- */
+.pal-anim .pal-marker,
+.pal-anim .pal-lead,
+.pal-anim .pal-btn-row,
+.pal-anim .pal-quote,
+.pal-anim .pal-infocard,
+.pal-anim .pal-field,
+.pal-anim .pal-plan__cta,
+.pal-anim .pal-viewport,
+.pal-anim .pal-display,
+.pal-anim .pal-h2,
+.pal-anim .pal-h3,
+.pal-anim .pal-pagehead__title {
+  opacity: 0;
+  transform: translateY(var(--rv-shift));
+  filter: blur(var(--rv-blur));
+  transition: opacity var(--rv-dur) var(--rv-ease),
+              transform var(--rv-dur) var(--rv-ease),
+              filter var(--rv-dur) var(--rv-ease),
+              clip-path var(--rv-dur) var(--rv-ease);
+  will-change: opacity, transform, filter;
+}
+
+/* Reveal — generic settle (opacity, position and focus). */
+.pal-anim .is-visible { opacity: 1 !important; transform: none !important; filter: none !important; }
+
+/* Big headings, unsplit fallback: an upward mask-wipe (used only if the line
+   splitter did not run). */
+.pal-anim .pal-display,
+.pal-anim .pal-h2,
+.pal-anim .pal-pagehead__title { clip-path: inset(0 0 105% 0); }
+.pal-anim .pal-display.is-visible,
+.pal-anim .pal-h2.is-visible,
+.pal-anim .pal-pagehead__title.is-visible { clip-path: inset(-14% 0 -14% 0); }
+
+/* --- Line-by-line heading reveal (the Palantir text entrance) -----------
+   The script wraps each <br>-delimited line in a clipping mask; the inner
+   slides up from below, comes into focus and fades in, one line after the
+   next. This overrides the clip fallback above. */
+.pal-line { display: block; overflow: hidden; padding-bottom: 0.16em; margin-bottom: -0.16em; }
+.pal-line__inner { display: block; }
+.pal-anim .pal-split { opacity: 1 !important; transform: none !important; filter: none !important; clip-path: none !important; }
+.pal-anim .pal-split .pal-line__inner {
+  transform: translateY(118%);
+  opacity: 0;
+  filter: blur(var(--rv-blur));
+  transition: transform var(--rv-dur) var(--rv-ease),
+              opacity var(--rv-dur) var(--rv-ease),
+              filter var(--rv-dur) var(--rv-ease);
+  will-change: transform, opacity, filter;
+}
+.pal-anim .pal-split.is-visible .pal-line__inner { transform: none; opacity: 1; filter: none; }
+
+/* Framed media: settle up from a slight scale, in focus. */
+.pal-anim .pal-viewport { transform: translateY(var(--rv-shift)) scale(0.97); }
+
+/* Section marker: the flanking rule draws out after the label lands. */
+.pal-anim .pal-marker::after { transform: scaleX(0); transform-origin: left center; transition: transform 1050ms var(--rv-ease) 220ms; }
+.pal-anim .pal-marker.is-visible::after { transform: scaleX(1); }
+
+/* --- Staggered groups ---------------------------------------------------
+   Children rise and come into focus in sequence when the group enters view;
+   the group box itself never moves. Per-child delay is applied inline by JS. */
+.pal-anim .pal-matrix > *,
+.pal-anim .pal-grid > *,
+.pal-anim .pal-plans > *,
+.pal-anim .pal-stats > *,
+.pal-anim .pal-specs > *,
+.pal-anim .pal-logos > *,
+.pal-anim .pal-prose > * {
+  opacity: 0;
+  transform: translateY(20px);
+  filter: blur(var(--rv-blur));
+  transition: opacity var(--rv-dur) var(--rv-ease),
+              transform var(--rv-dur) var(--rv-ease),
+              filter var(--rv-dur) var(--rv-ease);
+  will-change: opacity, transform, filter;
+}
+.pal-anim .pal-matrix.is-visible > *,
+.pal-anim .pal-grid.is-visible > *,
+.pal-anim .pal-plans.is-visible > *,
+.pal-anim .pal-stats.is-visible > *,
+.pal-anim .pal-specs.is-visible > *,
+.pal-anim .pal-logos.is-visible > *,
+.pal-anim .pal-prose.is-visible > * { opacity: 1; transform: none; filter: none; }
+
+/* An animated item nested inside a group rides along with its group child
+   rather than hiding on its own (which would strand it, since only the group
+   is observed). */
+.pal-anim :is(.pal-matrix, .pal-grid, .pal-plans, .pal-stats, .pal-specs, .pal-logos, .pal-prose)
+  :is(.pal-marker, .pal-lead, .pal-btn-row, .pal-quote, .pal-infocard, .pal-field,
+      .pal-plan__cta, .pal-display, .pal-h2, .pal-h3, .pal-pagehead__title, .pal-viewport) {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  clip-path: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pal-store__cell img { transition: none; }
+}
+
+/* Spacing helpers (pal-scoped) */
+.pal-mt-4 { margin-top: 1rem; }
+.pal-mt-6 { margin-top: 1.5rem; }
+.pal-mt-8 { margin-top: 2rem; }
+.pal-mt-10 { margin-top: 2.5rem; }
+.pal-mt-12 { margin-top: 3rem; }
+.pal-center { text-align: center; }
+
+/* ==========================================================================
+   20. Creative / illustrative layer
+   --------------------------------------------------------------------------
+   Technical SVG illustration that dramatises what the platform actually does:
+   self-drawing line art, a live order feed, an animated commerce pipeline, an
+   operations-dashboard mock, a logistics map, and annotation "doodles" drawn in
+   the same engineered register (no cartoon scribble — these read as schematic
+   markup). All loops stop under prefers-reduced-motion.
+   ========================================================================== */
+
+/* 20.1 Stroke draw-in — SVG line art draws itself when revealed.
+   The script measures each stroke and sets its exact dash; a large fallback
+   here hides strokes before the script runs so nothing flashes. */
+.pal-anim .pal-draw :is(path, line, polyline) { stroke-dasharray: 1200; stroke-dashoffset: 1200; }
+.pal-draw :is(path, line, polyline) { transition: stroke-dashoffset 1300ms var(--rv-ease); }
+
+/* 20.2 Live order ticker — a terminal feed of shop events. */
+.pal-ticker { border-block: 1px solid var(--pal-line); overflow: hidden; background: var(--pal-panel); }
+.pal-ticker__track { display: flex; width: max-content; animation: pal-ticker 48s linear infinite; }
+.pal-ticker:hover .pal-ticker__track { animation-play-state: paused; }
+@keyframes pal-ticker { to { transform: translateX(-50%); } }
+.pal-ticker__item { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.7rem 1.25rem; border-right: 1px solid var(--pal-line); font-family: var(--pal-font-mono); font-size: 0.68rem; letter-spacing: 0.05em; color: var(--pal-muted); white-space: nowrap; }
+.pal-ticker__dot { width: 6px; height: 6px; flex: none; background: var(--pal-accent); }
+.pal-ticker__dot--ok { background: var(--positive, #0f7a53); }
+.pal-ticker__k { color: var(--pal-ink); }
+
+/* 20.3 Modules grid — the management system, part by part. */
+.pal-module { padding: clamp(1.5rem, 1rem + 1.5vw, 2rem); position: relative; min-width: 0; }
+/* Block wrapper with a fixed box — an inline <span> ignores width/height, which
+   let the SVG balloon to a default size and shove the labels out of the cell. */
+.pal-module__ico { display: block; width: 2.5rem; height: 2.5rem; color: var(--pal-ink); transition: color 160ms var(--rv-ease); }
+.pal-module__ico svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.pal-module:hover .pal-module__ico { color: var(--pal-accent); }
+.pal-module__name { margin-top: 1.25rem; font-family: var(--pal-font-display); font-weight: 500; font-size: 1.1rem; letter-spacing: -0.01em; color: var(--pal-ink); }
+.pal-module__desc { margin-top: 0.5rem; font-size: 0.9rem; line-height: 1.5; color: var(--pal-muted); }
+.pal-module__tag { position: absolute; top: 1.25rem; right: 1.25rem; font-family: var(--pal-font-mono); font-size: 0.56rem; letter-spacing: 0.1em; color: var(--pal-faint); }
+
+/* 20.4 Commerce pipeline — click to doorstep, with a packet in transit. */
+.pal-pipeline svg { width: 100%; height: auto; overflow: visible; }
+.pal-pipeline .track { stroke: var(--pal-line); stroke-width: 1.5; fill: none; }
+.pal-pipeline .flow { stroke: var(--pal-accent); stroke-width: 1.5; fill: none; stroke-dasharray: 5 11; animation: pal-flow 1.3s linear infinite; }
+@keyframes pal-flow { to { stroke-dashoffset: -32; } }
+.pal-pipeline .node { fill: var(--pal-paper); stroke: var(--pal-ink); stroke-width: 1.5; }
+.pal-pipeline .node-i { fill: var(--pal-ink); font-family: var(--pal-font-mono); font-size: 9px; }
+.pal-pipeline .label { fill: var(--pal-ink); font-family: var(--pal-font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.pal-pipeline .sub { fill: var(--pal-muted); font-family: var(--pal-font-mono); font-size: 9px; }
+.pal-pipeline .packet { fill: var(--pal-accent); }
+
+/* Mobile alternative — the horizontal SVG shrinks nodes and labels too far on a
+   phone, so below 40rem we hide it and show a vertical list at full type size.
+   The desktop diagram is unchanged. */
+.pal-pipe-m { display: none; position: relative; }
+@media (max-width: 40rem) {
+  .pal-pipeline svg { display: none; }
+  .pal-pipe-m { display: block; }
+}
+.pal-pipe-m ol { list-style: none; margin: 0 0 0 0.95rem; padding: 0; border-left: 1px solid var(--pal-line); }
+.pal-pipe-m li { position: relative; padding: 0.1rem 0 1.6rem 2rem; }
+.pal-pipe-m li:last-child { padding-bottom: 0; }
+.pal-pipe-m__num { position: absolute; left: -0.95rem; top: 0; width: 1.9rem; height: 1.9rem; border-radius: 50%; border: 1.5px solid var(--pal-ink); background: var(--pal-paper); display: grid; place-items: center; font-family: var(--pal-font-mono); font-size: 0.72rem; color: var(--pal-ink); }
+.pal-pipe-m__label { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.1rem; letter-spacing: -0.01em; }
+.pal-pipe-m__sub { font-family: var(--pal-font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); margin-top: 0.2rem; }
+.pal-pipe-m__flow { position: absolute; left: 0.95rem; top: 0; width: 7px; height: 7px; margin-left: -3px; background: var(--pal-accent); animation: pal-pipe-down 5s linear infinite; }
+@keyframes pal-pipe-down { from { top: 0; } to { top: 100%; } }
+
+/* 20.5 Operations dashboard mock — the control room. */
+.pal-dash { border: 1px solid var(--pal-ink); background: var(--pal-panel); box-shadow: 16px 16px 0 -1px rgb(10 10 11 / 0.06); }
+.pal-dash__top { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; border-bottom: 1px solid var(--pal-line); font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
+.pal-dash__top .live { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--pal-ink); }
+.pal-dash__top .live::before { content: ""; width: 6px; height: 6px; background: var(--positive, #0f7a53); border-radius: 50%; }
+.pal-dash__kpis { display: grid; grid-template-columns: repeat(3, 1fr); }
+.pal-dash__kpi { padding: 1.1rem; border-right: 1px solid var(--pal-line); border-bottom: 1px solid var(--pal-line); }
+.pal-dash__kpi:nth-child(3n) { border-right: 0; }
+.pal-dash__kpi-val { font-family: var(--pal-font-display); font-size: clamp(1.35rem, 1rem + 1vw, 1.75rem); font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.pal-dash__kpi-label { font-family: var(--pal-font-mono); font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); margin-top: 0.3rem; }
+.pal-dash__chart { padding: 1.1rem 1.1rem 1.35rem; }
+.pal-dash__chart-head { display: flex; justify-content: space-between; font-family: var(--pal-font-mono); font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 0.9rem; }
+.pal-dash__bars { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: end; gap: 5px; height: 96px; }
+.pal-dash__bars i { align-self: end; background: var(--pal-ink); transform: scaleY(0); transform-origin: bottom; transition: transform 900ms var(--rv-ease); }
+.pal-dash.is-visible .pal-dash__bars i { transform: scaleY(1); }
+.pal-dash__bars i { transition-delay: calc(var(--b, 0) * 60ms); }
+.pal-dash__bars i:last-child { background: var(--pal-accent); }
+/* Varied bar heights so it reads as data, not a fill. */
+.pal-dash__bars i:nth-child(1)  { height: 42%; --b: 0; }
+.pal-dash__bars i:nth-child(2)  { height: 58%; --b: 1; }
+.pal-dash__bars i:nth-child(3)  { height: 49%; --b: 2; }
+.pal-dash__bars i:nth-child(4)  { height: 66%; --b: 3; }
+.pal-dash__bars i:nth-child(5)  { height: 60%; --b: 4; }
+.pal-dash__bars i:nth-child(6)  { height: 74%; --b: 5; }
+.pal-dash__bars i:nth-child(7)  { height: 63%; --b: 6; }
+.pal-dash__bars i:nth-child(8)  { height: 82%; --b: 7; }
+.pal-dash__bars i:nth-child(9)  { height: 71%; --b: 8; }
+.pal-dash__bars i:nth-child(10) { height: 90%; --b: 9; }
+.pal-dash__bars i:nth-child(11) { height: 78%; --b: 10; }
+.pal-dash__bars i:nth-child(12) { height: 100%; --b: 11; }
+
+/* 20.6 Technical annotation "doodle". */
+.pal-doodle { position: absolute; z-index: 4; color: var(--pal-accent); pointer-events: none; display: inline-flex; align-items: center; gap: 0.4rem; }
+.pal-doodle svg { overflow: visible; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.pal-note { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--pal-accent); }
+.pal-doodle--plan { top: -0.7rem; right: -0.6rem; }
+@media (max-width: 60rem) { .pal-doodle--plan { top: 0.75rem; right: 0.75rem; } }
+
+/* 20.7 Logistics map. */
+.pal-map svg { width: 100%; height: auto; overflow: visible; }
+.pal-map .land { fill: none; stroke: var(--pal-line); stroke-width: 1; }
+.pal-map .route { fill: none; stroke: var(--pal-accent); stroke-width: 1.4; stroke-dasharray: 4 8; animation: pal-flow 1.6s linear infinite; }
+.pal-map .hub { fill: var(--pal-accent); }
+.pal-map .dot { fill: var(--pal-line); }
+.pal-map text { font-family: var(--pal-font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; fill: var(--pal-ink); }
+.pal-map .sub { font-size: 9px; fill: var(--pal-muted); }
+.pal-map .hub-ring { fill: none; stroke: var(--pal-accent); stroke-width: 1.2; transform-box: fill-box; transform-origin: center; animation: pal-ping 2.6s ease-out infinite; }
+@keyframes pal-ping { 0% { transform: scale(1); opacity: 0.7; } 70%, 100% { transform: scale(3.4); opacity: 0; } }
+
+/* Pricing featured plan needs a positioning context for its doodle. */
+.pal-plan { position: relative; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pal-ticker__track,
+  .pal-pipeline .flow,
+  .pal-pipeline .packet,
+  .pal-map .route,
+  .pal-map .hub-ring,
+  .pal-auth__dot,
+  .pal-pipe-m__flow { animation: none; }
+  .pal-dash__bars i { transform: scaleY(1); transition: none; }
+  .pal-draw :is(path, line, polyline) { transition: none; }
+}
+
+/* ==========================================================================
+   21. Authentication — the split "commerce OS" console
+   --------------------------------------------------------------------------
+   A drastic transform of every auth screen: a dark technical brand panel on
+   the left (blueprint grid, mono system status) and the form on paper on the
+   right. Only web/accounts/_auth_shell.html changes structurally; the legacy
+   onewooz.css form classes the child screens use (field, label, input, divider,
+   hint, checkbox-row, code-block…) are restyled here so sign-in, sign-up, the
+   MFA challenge, magic link and TOTP enrolment all transform without edits.
+   ========================================================================== */
+
+.pal-auth { min-height: 100dvh; display: grid; grid-template-columns: 1.05fr 0.95fr; background: var(--pal-paper); }
+
+/* --- Left: brand / system panel --- */
+.pal-auth__panel { position: relative; background: var(--pal-ink); color: var(--pal-paper); overflow: hidden; }
+.pal-auth__panel::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(244 244 242 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(244 244 242 / 0.06) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+  -webkit-mask-image: radial-gradient(ellipse 110% 80% at 25% 15%, #000, transparent 82%);
+  mask-image: radial-gradient(ellipse 110% 80% at 25% 15%, #000, transparent 82%);
+}
+.pal-auth__inner { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: space-between; gap: 3rem; padding: clamp(2.5rem, 2rem + 3vw, 4.5rem); }
+.pal-auth__kicker { color: var(--pal-accent-2); }
+.pal-auth__headline { margin-top: 2rem; font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.9rem, 1.2rem + 2.4vw, 3rem); letter-spacing: -0.03em; line-height: 1.05; max-width: 15ch; }
+.pal-auth__stack { margin-top: 2.75rem; display: grid; gap: 0; }
+.pal-auth__stack li { display: flex; gap: 0.85rem; align-items: baseline; font-size: 0.95rem; color: rgb(244 244 242 / 0.82); border-top: 1px solid rgb(244 244 242 / 0.14); padding-block: 0.9rem; }
+.pal-auth__stack li:last-child { border-bottom: 1px solid rgb(244 244 242 / 0.14); }
+.pal-auth__stack li span { font-family: var(--pal-font-mono); font-size: 0.7rem; color: var(--pal-accent-2); }
+.pal-auth__status { font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgb(244 244 242 / 0.6); display: flex; align-items: center; gap: 0.55rem; }
+.pal-auth__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--positive, #0f7a53); animation: pal-pulse 2.4s ease-out infinite; }
+@keyframes pal-pulse { 0% { box-shadow: 0 0 0 0 rgb(15 122 83 / 0.5); } 70%, 100% { box-shadow: 0 0 0 9px rgb(15 122 83 / 0); } }
+
+/* --- Right: form column --- */
+.pal-auth__main { display: flex; align-items: center; justify-content: center; padding: clamp(2rem, 1.5rem + 3vw, 4rem) var(--pal-gutter); }
+.pal-auth__wrap { width: 100%; max-width: 26rem; }
+.pal-auth__brand { display: inline-flex; margin-bottom: 2.25rem; }
+
+@media (max-width: 60rem) {
+  .pal-auth { grid-template-columns: 1fr; }
+  .pal-auth__panel { display: none; }
+}
+
+/* --- Form controls: restyle the legacy auth classes under .pal --- */
+.pal .auth__title { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.1rem); letter-spacing: -0.025em; color: var(--pal-ink); line-height: 1.05; }
+.pal .auth__subtitle { margin-top: 0.6rem; color: var(--pal-muted); font-size: 0.95rem; }
+.pal .auth__form { margin-top: 1.75rem; }
+.pal .auth__footer { margin-top: 1.75rem; font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-muted); }
+.pal .auth__footer a { color: var(--pal-accent); }
+.pal .field { display: block; }
+.pal .field + .field { margin-top: 1.1rem; }
+.pal .label { display: block; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 0.5rem; }
+.pal .label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem; }
+.pal .label-row .label { margin-bottom: 0; }
+.pal .input { width: 100%; padding: 0.8rem 0.9rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.95rem; transition: border-color 160ms var(--rv-ease), box-shadow 160ms var(--rv-ease); }
+.pal .input::placeholder { color: var(--pal-faint); }
+.pal .input:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+.pal .input--code { text-align: center; font-family: var(--pal-font-mono); font-size: 1.4rem; letter-spacing: 0.5em; text-indent: 0.5em; padding-block: 0.9rem; }
+.pal .hint { margin-top: 0.55rem; font-size: 0.8rem; color: var(--pal-muted); line-height: 1.5; }
+.pal .checkbox-row { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.85rem; color: var(--pal-ink-2); }
+.pal .checkbox-row input { accent-color: var(--pal-accent); margin-top: 0.2rem; flex: none; }
+.pal .divider { display: flex; align-items: center; gap: 0.75rem; margin-block: 1.35rem; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-faint); }
+.pal .divider::before, .pal .divider::after { content: ""; flex: 1; height: 1px; background: var(--pal-line); }
+.pal .code-block { margin-top: 0.6rem; padding: 0.8rem; border: 1px solid var(--pal-line); background: var(--pal-paper-2); font-family: var(--pal-font-mono); font-size: 0.85rem; word-break: break-all; user-select: all; }
+.pal .btn--link { padding: 0; background: none; border: none; color: var(--pal-accent); font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.pal .small { font-size: 0.82rem; }
+
+/* ==========================================================================
+   22. Contact / Support / About / Security building blocks
+   ========================================================================== */
+
+/* --- FAQ accordion (JS-free, <details>) --- */
+.pal-faq { border-top: 1px solid var(--pal-line); }
+.pal-faq details { border-bottom: 1px solid var(--pal-line); }
+.pal-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; cursor: pointer; padding: 1.35rem 0; list-style: none; font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1rem, 0.95rem + 0.4vw, 1.15rem); letter-spacing: -0.01em; }
+.pal-faq summary::-webkit-details-marker { display: none; }
+.pal-faq__sign { flex: none; width: 1rem; height: 1rem; position: relative; }
+.pal-faq__sign::before, .pal-faq__sign::after { content: ""; position: absolute; background: var(--pal-accent); transition: transform 220ms var(--rv-ease); }
+.pal-faq__sign::before { top: 50%; left: 0; right: 0; height: 1.5px; transform: translateY(-50%); }
+.pal-faq__sign::after { left: 50%; top: 0; bottom: 0; width: 1.5px; transform: translateX(-50%); }
+.pal-faq details[open] .pal-faq__sign::after { transform: translateX(-50%) scaleY(0); }
+.pal-faq__a { padding: 0 3rem 1.5rem 0; color: var(--pal-muted); max-width: 68ch; line-height: 1.6; }
+.pal-faq__a a { color: var(--pal-accent); border-bottom: 1px solid currentColor; }
+
+/* --- Forms (enquiry / ticket) --- */
+.pal-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+@media (max-width: 40rem) { .pal-form-grid { grid-template-columns: 1fr; } }
+.pal-form-grid .pal-field { margin-top: 0; }
+.pal-field--full { grid-column: 1 / -1; }
+.pal-select { width: 100%; padding: 0.8rem 0.9rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.95rem; appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--pal-muted) 50%), linear-gradient(135deg, var(--pal-muted) 50%, transparent 50%); background-position: calc(100% - 20px) center, calc(100% - 14px) center; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; }
+.pal-select:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+
+/* Selectable category chips (radios). */
+.pal-chipset { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.pal-chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+.pal-chip label { display: inline-block; padding: 0.55rem 0.9rem; border: 1px solid var(--pal-line); font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-ink-2); cursor: pointer; transition: background 140ms var(--rv-ease), color 140ms var(--rv-ease), border-color 140ms var(--rv-ease); }
+.pal-chip label:hover { border-color: var(--pal-accent); color: var(--pal-accent); }
+.pal-chip input:checked + label { background: var(--pal-ink); color: var(--pal-paper); border-color: var(--pal-ink); }
+.pal-chip input:focus-visible + label { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
+
+/* Inline alert / confirmation. */
+.pal-alert { border: 1px solid var(--pal-line); border-left: 2px solid var(--pal-accent); padding: 1.1rem 1.35rem; background: var(--pal-panel); font-size: 0.92rem; color: var(--pal-ink-2); }
+.pal-alert--ok { border-left-color: var(--positive, #0f7a53); }
+.pal-alert__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.05rem; color: var(--pal-ink); margin-bottom: 0.35rem; }
+.pal-alert__ref { font-family: var(--pal-font-mono); font-size: 0.75rem; letter-spacing: 0.06em; color: var(--pal-accent); margin-top: 0.6rem; }
+
+/* Identity / meta panel (support). */
+.pal-meta { border: 1px solid var(--pal-line); background: var(--pal-panel); }
+.pal-meta__row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--pal-line); font-size: 0.88rem; }
+.pal-meta__row:last-child { border-bottom: 0; }
+.pal-meta__k { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
+.pal-meta__v { color: var(--pal-ink); font-family: var(--pal-font-mono); font-size: 0.8rem; }
+
+/* --- Timeline (about) --- */
+.pal-time { border-left: 1px solid var(--pal-line); }
+.pal-time__item { padding: 0 0 2.25rem 1.75rem; position: relative; }
+.pal-time__item:last-child { padding-bottom: 0; }
+.pal-time__item::before { content: ""; position: absolute; left: -4.5px; top: 0.35rem; width: 8px; height: 8px; background: var(--pal-accent); }
+.pal-time__k { font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
+.pal-time__t { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.15rem; margin-top: 0.35rem; }
+.pal-time__d { margin-top: 0.45rem; color: var(--pal-muted); font-size: 0.95rem; line-height: 1.6; max-width: 58ch; }
+
+/* --- Protection cards (security) --- */
+.pal-shield { display: block; width: 2.5rem; height: 2.5rem; color: var(--pal-ink); transition: color 160ms var(--rv-ease); }
+.pal-shield svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.pal-cell:hover .pal-shield { color: var(--pal-accent); }
+
+/* --- Matrix on an ink band (about "what we won't do") --- */
+.pal-section--ink .pal-matrix,
+.pal-section--ink .pal-matrix__row,
+.pal-section--ink .pal-matrix__idx { border-color: var(--pal-line-ink); }
+.pal-section--ink .pal-matrix__row:hover { background: rgb(244 244 242 / 0.05); }
+.pal-section--ink .pal-matrix__desc { color: rgb(244 244 242 / 0.6); }
+
+/* --- Map origin marker (reach) --- */
+.pal-map .origin { fill: var(--pal-accent); }
+.pal-map .origin-ring { fill: none; stroke: var(--pal-accent); stroke-width: 1.2; opacity: 0.45; }
+.pal-map .origin-label { fill: var(--pal-ink); font-weight: 600; }

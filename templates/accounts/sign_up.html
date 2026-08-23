@@ -1,0 +1,44 @@
+{% extends "accounts/_auth_shell.html" %}
+
+{% block title %}Create your account · OneWooz{% endblock %}
+{% block auth_title %}Create your account{% endblock %}
+{% block auth_subtitle %}
+  <p class="auth__subtitle">Your store can be live in a few minutes.</p>
+{% endblock %}
+
+{% block auth_body %}
+  <form method="post" class="auth__form" novalidate>
+    {% csrf_token %}
+
+    <div class="field">
+      <label class="label" for="full_name">Your name</label>
+      <input class="input" type="text" name="full_name" id="full_name"
+             value="{{ full_name|default:'' }}" autocomplete="name" autofocus>
+    </div>
+
+    <div class="field">
+      <label class="label" for="email">Work email</label>
+      <input class="input" type="email" name="email" id="email"
+             value="{{ email|default:'' }}" autocomplete="username"
+             placeholder="you@yourbrand.com" required>
+    </div>
+
+    <div class="field">
+      <label class="label" for="password">Password</label>
+      <input class="input" type="password" name="password" id="password"
+             autocomplete="new-password" required minlength="12">
+      <p class="hint">
+        At least 12 characters. A short phrase you'll remember beats a short
+        scramble you won't.
+      </p>
+    </div>
+
+    <button type="submit" class="btn btn--primary btn--block mt-6">Create account</button>
+  </form>
+{% endblock %}
+
+{% block auth_footer %}
+  <p class="auth__footer">
+    Already have an account? <a href="{% url 'accounts:sign_in' %}">Sign in</a>
+  </p>
+{% endblock %}

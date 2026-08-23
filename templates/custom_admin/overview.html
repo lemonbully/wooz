@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load onewooz %}
+
+{% block title %}Admin{% endblock %}
+{% block meta %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+
+{% block body %}
+<header class="appbar">
+  <div class="container appbar__inner">
+    <span class="nav__brand">
+      <span class="nav__mark" aria-hidden="true">O</span>
+      OneWooz Admin
+    </span>
+    <nav class="appbar__nav" aria-label="Account">
+      <span class="appbar__email">{{ request.user.email }}</span>
+      <form method="post" action="{% url 'custom_admin:sign_out' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn--link" style="color:var(--ink-600);">Sign out</button>
+      </form>
+    </nav>
+  </div>
+</header>
+
+<main class="container section--tight">
+  <h1 class="h1">Admin</h1>
+  <p class="lead mt-3">
+    Signed in as {{ request.user.email }}. Everything you do here is recorded.
+  </p>
+</main>
+{% endblock %}

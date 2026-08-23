@@ -1,0 +1,16 @@
+New sign-in to your OneWooz account
+
+Someone signed in to {{ email }} from a device we haven't seen before.
+
+  When:    {{ when }}
+  IP:      {{ ip }}
+  Browser: {{ user_agent }}
+
+If that was you, nothing to do.
+
+If it wasn't, change your password now and remove any passkeys you don't
+recognise:
+
+  {{ app_origin }}/security/
+
+— {{ brand }}

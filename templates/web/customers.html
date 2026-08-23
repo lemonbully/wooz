@@ -1,0 +1,99 @@
+{% extends "web/_shell.html" %}
+{% load onewooz %}
+
+{% block title %}Customers · OneWooz{% endblock %}
+
+{% block main %}
+
+<header class="pal-pagehead pal-blueprint">
+  <div class="pal-container">
+    <p class="pal-breadcrumb"><a href="{% url 'web:home' %}">OneWooz</a> / <span>Customers</span></p>
+    <h1 class="pal-pagehead__title">Stores that opened<br>on a Tuesday.</h1>
+    <p class="pal-lead pal-pagehead__lead">
+      Small brands and retailers who stopped waiting for a website and started
+      taking orders. A selection of what OneWooz has built.
+    </p>
+  </div>
+</header>
+
+{# ------------------------------------------------------- Featured case #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>Field report — Aster &amp; Co</span></div>
+
+    <div class="pal-hero__grid pal-mt-12" data-reveal>
+      <div>
+        <blockquote class="pal-quote">
+          <p class="pal-quote__text">
+            “I'd been putting off a website for two years. I did this on a Tuesday
+            evening and took an order on Wednesday.”
+          </p>
+          <div class="pal-quote__by"><strong>Ritika K.</strong><span>— Founder, home fragrance brand</span></div>
+        </blockquote>
+        <div class="pal-specs pal-mt-10">
+          <div class="pal-specs__item"><div class="pal-specs__value">1 day</div><div class="pal-specs__label">Idea to first order</div></div>
+          <div class="pal-specs__item"><div class="pal-specs__value">0</div><div class="pal-specs__label">Developers hired</div></div>
+          <div class="pal-specs__item"><div class="pal-specs__value">₹0</div><div class="pal-specs__label">Taken from sales</div></div>
+        </div>
+      </div>
+
+      <div class="pal-viewport">
+        <div class="pal-viewport__caption"><span><span class="dot" aria-hidden="true">&#9679;</span> LIVE — asterandco.in</span><span>200 OK · TLS</span></div>
+        <div class="pal-frame">
+          <span class="pal-corner pal-corner--tl" aria-hidden="true"></span>
+          <span class="pal-corner pal-corner--tr" aria-hidden="true"></span>
+          <span class="pal-corner pal-corner--bl" aria-hidden="true"></span>
+          <span class="pal-corner pal-corner--br" aria-hidden="true"></span>
+          <div class="pal-store" role="img" aria-label="The Aster & Co storefront built by OneWooz.">
+            <div class="pal-store__bar"><span class="pal-store__logo">ASTER&nbsp;&amp;&nbsp;CO</span><nav class="pal-store__nav" aria-hidden="true"><span>Shop</span><span>Story</span><span>Cart</span></nav></div>
+            <div class="pal-store__hero"><img src="https://picsum.photos/seed/onewooz-aster/1000/560" alt="" loading="lazy" width="1000" height="560"><div class="pal-store__hero-copy"><div class="pal-store__hero-kicker">The winter table</div><div class="pal-store__hero-title">Made to be used every day.</div></div></div>
+            <div class="pal-store__grid" aria-hidden="true">
+              <div class="pal-store__cell"><img src="https://picsum.photos/seed/onewooz-a1/400/500" alt="" loading="lazy" width="400" height="500"><div class="pal-store__cell-name">Stoneware mug</div><div class="pal-store__cell-price">₹ 640</div></div>
+              <div class="pal-store__cell"><img src="https://picsum.photos/seed/onewooz-a2/400/500" alt="" loading="lazy" width="400" height="500"><div class="pal-store__cell-name">Linen set</div><div class="pal-store__cell-price">₹ 1,200</div></div>
+              <div class="pal-store__cell"><img src="https://picsum.photos/seed/onewooz-a3/400/500" alt="" loading="lazy" width="400" height="500"><div class="pal-store__cell-name">Cast pan</div><div class="pal-store__cell-price">₹ 3,450</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ------------------------------------------------------- More voices #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>More field reports</span></div>
+    <div class="pal-grid pal-grid--3 pal-mt-12" data-reveal>
+      <div class="pal-cell"><div class="pal-cell__idx">NORTHBOUND — APPAREL</div><div class="pal-cell__desc" style="margin-top:1rem;font-size:1.05rem;color:var(--pal-ink-2);">“The store looked finished the moment it appeared. I changed two photos and hit publish.”</div><div class="pal-quote__by pal-mt-8"><strong>Dev M.</strong></div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">FORGEWORKS — INDUSTRIAL</div><div class="pal-cell__desc" style="margin-top:1rem;font-size:1.05rem;color:var(--pal-ink-2);">“Our buyers send enquiries straight off the product page now. We quote the same day.”</div><div class="pal-quote__by pal-mt-8"><strong>S. Rao</strong></div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">KETTLE&amp;CO — FOOD</div><div class="pal-cell__desc" style="margin-top:1rem;font-size:1.05rem;color:var(--pal-ink-2);">“Live rates and labels saved me an hour a day I used to lose to the courier site.”</div><div class="pal-quote__by pal-mt-8"><strong>Anjali P.</strong></div></div>
+    </div>
+  </div>
+</section>
+
+{# ------------------------------------------------------- By the numbers #}
+<section class="pal-section pal-ruled pal-section--ink">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">03</span><span>By the numbers</span></div>
+    <h2 class="pal-h2 pal-mt-6" style="max-width:20ch;" data-reveal>A platform that carries real volume.</h2>
+    <div class="pal-stats pal-mt-12" data-reveal>
+      <div class="pal-stat"><div class="pal-stat__value"><span data-count="1240">1,240</span></div><div class="pal-stat__label">Stores live</div></div>
+      <div class="pal-stat"><div class="pal-stat__value"><span data-count="486000">4,86,000</span></div><div class="pal-stat__label">Orders shipped</div></div>
+      <div class="pal-stat"><div class="pal-stat__value">99.98%</div><div class="pal-stat__label">Uptime</div></div>
+      <div class="pal-stat"><div class="pal-stat__value"><span data-count="4">4</span> min</div><div class="pal-stat__label">Median build time</div></div>
+    </div>
+  </div>
+</section>
+
+{# -------------------------------------------------------------- Deploy #}
+<section class="pal-section pal-ruled pal-blueprint pal-cta">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">04</span><span>Deploy</span></div>
+    <h2 class="pal-display pal-cta__title pal-mt-6" style="font-size:clamp(2.4rem,1.2rem+5vw,4.5rem);" data-reveal>Your store is next.</h2>
+    <div class="pal-btn-row pal-mt-8" data-reveal>
+      <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

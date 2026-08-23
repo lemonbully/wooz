@@ -1,0 +1,98 @@
+# Local production-parity stack: the real prod image and settings, with MySQL,
+# Redis and a Redis-backed Celery broker standing in for RDS / ElastiCache /
+# SQS. This is a smoke test of the container topology on your machine — not the
+# dev workflow (that stays `manage.py runserver` with dev settings).
+#
+#   docker compose up --build          bring the whole stack up
+#   docker compose run --rm web migrate   (RUN_MIGRATIONS=1 also migrates web on boot)
+#   open https://app.onewooz.localhost    (accept the local Caddy CA warning)
+#
+# Values come from ./.env  (copy deploy/.env.example → .env first).
+
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: "${ONEWOOZ_DB_NAME}"
+      MYSQL_USER: "${ONEWOOZ_DB_USER}"
+      MYSQL_PASSWORD: "${ONEWOOZ_DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${ONEWOOZ_DB_ROOT_PASSWORD}"
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${ONEWOOZ_DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: onewooz-app:local
+    command: ["web"]
+    env_file: [.env]
+    environment:
+      DJANGO_SETTINGS_MODULE: onewooz.settings.prod
+      ONEWOOZ_DB_HOST: db
+      ONEWOOZ_REDIS_URL: redis://redis:6379/1
+      ONEWOOZ_CELERY_BROKER_URL: redis://redis:6379/0
+      RUN_MIGRATIONS: "1"
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  worker:
+    image: onewooz-app:local
+    command: ["worker"]
+    env_file: [.env]
+    environment:
+      DJANGO_SETTINGS_MODULE: onewooz.settings.prod
+      ONEWOOZ_DB_HOST: db
+      ONEWOOZ_REDIS_URL: redis://redis:6379/1
+      ONEWOOZ_CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      web: {condition: service_started}
+      redis: {condition: service_healthy}
+
+  beat:
+    image: onewooz-app:local
+    command: ["beat"]
+    env_file: [.env]
+    environment:
+      DJANGO_SETTINGS_MODULE: onewooz.settings.prod
+      ONEWOOZ_DB_HOST: db
+      ONEWOOZ_REDIS_URL: redis://redis:6379/1
+      ONEWOOZ_CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      web: {condition: service_started}
+      redis: {condition: service_healthy}
+
+  caddy:
+    build:
+      context: .
+      dockerfile: deploy/caddy/Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_UPSTREAM: web:8000
+    volumes:
+      - ./deploy/caddy/Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      web: {condition: service_started}
+
+volumes:
+  db_data:
+  caddy_data:

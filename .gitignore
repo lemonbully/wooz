@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Local secrets. Generated automatically on first dev run — never committed.
+.secrets/
+.env
+.env.*
+!.env.sample
+
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# No front-end build step: CSS is hand-authored at
+# onewooz/static/css/onewooz.css and is committed.
+node_modules/
+package-lock.json
+
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+.idea/
+.vscode/
+*.log

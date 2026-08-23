@@ -1,0 +1,105 @@
+{% extends "web/_shell.html" %}
+{% load onewooz %}
+
+{% block title %}Security · OneWooz{% endblock %}
+
+{% block main %}
+
+<header class="pal-pagehead pal-blueprint">
+  <div class="pal-container">
+    <p class="pal-breadcrumb"><a href="{% url 'web:home' %}">OneWooz</a> / <span>Security</span></p>
+    <h1 class="pal-pagehead__title">Your customers trust you.<br>We protect what that means.</h1>
+    <p class="pal-lead pal-pagehead__lead">
+      When someone buys from your store, they hand over their name, address and
+      payment. Here is what we do to keep that safe — in plain words, and what it
+      means for you.
+    </p>
+  </div>
+</header>
+
+{# ------------------------------------------------------- How we protect #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>How we protect you</span></div>
+    <h2 class="pal-h2 pal-mt-6" style="max-width:20ch;" data-reveal>Six protections, working quietly in the background.</h2>
+
+    <div class="pal-grid pal-grid--3 pal-mt-12" data-reveal>
+      <div class="pal-cell">
+        <span class="pal-shield pal-draw" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-4.5"/></svg></span>
+        <div class="pal-cell__title" style="margin-top:1.25rem;">Only you get into your account</div>
+        <div class="pal-cell__desc">Signing in is hard to fake and easy for you. You can add a second step, or sign in with your own device instead of a password — so there's nothing to steal or guess.</div>
+      </div>
+      <div class="pal-cell">
+        <span class="pal-shield pal-draw" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6H4z"/><path d="M14 14h6v6h-6z"/></svg></span>
+        <div class="pal-cell__title" style="margin-top:1.25rem;">Your store stands alone</div>
+        <div class="pal-cell__desc">One merchant can never see another's orders or customers. That separation is part of the foundation — not a rule someone has to remember to follow.</div>
+      </div>
+      <div class="pal-cell">
+        <span class="pal-shield pal-draw" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 10h12v10H6z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/><path d="M12 14v3"/></svg></span>
+        <div class="pal-cell__title" style="margin-top:1.25rem;">Sensitive details are locked away</div>
+        <div class="pal-cell__desc">The things that matter most — payment connections and private records — are stored scrambled. If they were ever copied, they'd be useless to whoever took them.</div>
+      </div>
+      <div class="pal-cell">
+        <span class="pal-shield pal-draw" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18"/><path d="M12 3c-3 3-3 15 0 18"/></svg></span>
+        <div class="pal-cell__title" style="margin-top:1.25rem;">Everything travels encrypted</div>
+        <div class="pal-cell__desc">Every page — on our address or your own domain — is served over a secure connection, so what your buyers type can't be read in transit. We keep it valid for you, always.</div>
+      </div>
+      <div class="pal-cell">
+        <span class="pal-shield pal-draw" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 15l6-6"/><path d="M10.5 6.5l1-1a4 4 0 0 1 6 6l-1.5 1.5"/><path d="M13.5 17.5l-1 1a4 4 0 0 1-6-6l1.5-1.5"/></svg></span>
+        <div class="pal-cell__title" style="margin-top:1.25rem;">Links give nothing away</div>
+        <div class="pal-cell__desc">Addresses and references can't be guessed or counted through. Nobody can tinker with a link to reach an order or an account that isn't theirs.</div>
+      </div>
+      <div class="pal-cell">
+        <span class="pal-shield pal-draw" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><path d="M12 9a3 3 0 1 0 .01 0"/></svg></span>
+        <div class="pal-cell__title" style="margin-top:1.25rem;">You can see what happens</div>
+        <div class="pal-cell__desc">Every sign-in and every sensitive change is recorded and visible to you — including the attempts that failed. If anything looks off, you'll know first.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ------------------------------------------------------------- Promises #}
+<section class="pal-section pal-ruled pal-section--ink">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>What we promise</span></div>
+    <h2 class="pal-h2 pal-mt-6" style="max-width:18ch;" data-reveal>Security is also about what we won't do.</h2>
+    <div class="pal-matrix pal-mt-12" data-reveal>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">01</div><div class="pal-matrix__body"><div class="pal-matrix__title">We never sell or rent your data</div><div class="pal-matrix__desc">Your customers are yours. We don't hand them, or their details, to anyone.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">02</div><div class="pal-matrix__body"><div class="pal-matrix__title">We keep only what's needed</div><div class="pal-matrix__desc">We hold the information required to run your store — not a hoard of extra data “just in case”.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">03</div><div class="pal-matrix__body"><div class="pal-matrix__title">You can take it all and leave</div><div class="pal-matrix__desc">Export your data and point your domain elsewhere whenever you like. Nothing is held hostage.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">04</div><div class="pal-matrix__body"><div class="pal-matrix__title">If something goes wrong, we tell you</div><div class="pal-matrix__desc">No quiet cover-ups. If an incident touches your store, you hear it from us, promptly and plainly.</div></div></div>
+    </div>
+  </div>
+</section>
+
+{# --------------------------------------------------------------- Report #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="split" data-reveal>
+      <div>
+        <div class="pal-marker"><span class="pal-marker__num">03</span><span>Found a problem?</span></div>
+        <h2 class="pal-h2 pal-mt-6" style="max-width:16ch;">Tell us, and we'll protect you for it.</h2>
+      </div>
+      <div class="pal-infocard">
+        <h3>Report a vulnerability</h3>
+        <p>Write to <a href="mailto:security@onewooz.com" class="pal-link">security@onewooz.com</a>. We acknowledge within one working day, keep you updated while we fix it, and will not take action against anyone who reports in good faith and doesn't access other people's data.</p>
+        <a href="mailto:security@onewooz.com" class="pal-btn pal-btn--ghost" style="margin-top:1.5rem;">Email the security team</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ------------------------------------------------------------------ CTA #}
+<section class="pal-section pal-ruled pal-blueprint pal-cta">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">04</span><span>Deploy</span></div>
+    <h2 class="pal-display pal-cta__title pal-mt-6" style="font-size:clamp(2.4rem,1.2rem+5vw,4.5rem);" data-reveal>Sell with a clear conscience.</h2>
+    <p class="pal-lead pal-mt-6" data-reveal>Protection that's on from the first minute — nothing for you to configure.</p>
+    <div class="pal-btn-row pal-mt-8" data-reveal>
+      <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Build my store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      <a href="{% url 'web:contact' %}" class="pal-btn pal-btn--ghost">Ask a question</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

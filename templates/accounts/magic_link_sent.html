@@ -1,0 +1,26 @@
+{% extends "accounts/_auth_shell.html" %}
+
+{% block title %}Check your inbox · OneWooz{% endblock %}
+{% block auth_title %}Check your inbox{% endblock %}
+
+{% block auth_body %}
+  {% comment %}
+  Worded so it reads the same whether or not the address has an account.
+  Saying "we couldn't find that email" would let anyone test which addresses
+  are registered here.
+  {% endcomment %}
+  <p class="auth__subtitle mt-4">
+    If <strong style="color:var(--text);">{{ email }}</strong> has a OneWooz
+    account, a sign-in link is on its way. It works once and expires shortly.
+  </p>
+
+  <form method="post" action="{% url 'accounts:login_code_request' %}" class="mt-6">
+    {% csrf_token %}
+    <input type="hidden" name="email" value="{{ email }}">
+    <button type="submit" class="btn btn--secondary btn--block">Send me a code instead</button>
+  </form>
+{% endblock %}
+
+{% block auth_footer %}
+  <p class="auth__footer"><a href="{% url 'accounts:sign_in' %}">Back to sign in</a></p>
+{% endblock %}

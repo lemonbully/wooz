@@ -1,0 +1,34 @@
+# OneWooz edge — local docker-compose only.
+#
+# Uses Caddy's internal CA (`tls internal`) instead of Let's Encrypt, because
+# ACME cannot validate *.localhost. Run `caddy trust` (or accept the warning)
+# to trust the local root. The named hosts below resolve to 127.0.0.1 in every
+# modern browser, so no hosts-file edit is needed.
+#
+# Reaches the app over the compose network (web:8000), and forwards the same
+# X-Forwarded-Proto header production sends, so Secure cookies work locally.
+
+{
+	admin off
+	auto_https disable_redirects
+}
+
+(local) {
+	tls internal
+	encode gzip
+	@internal path /internal/*
+	respond @internal 404
+	reverse_proxy {$APP_UPSTREAM:web:8000} {
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-For {remote_host}
+	}
+}
+
+onewooz.localhost, www.onewooz.localhost, app.onewooz.localhost, admin.onewooz.localhost {
+	import local
+}
+
+# Storefront apex used by dev settings (STOREFRONT_APEX=shop.localhost).
+*.shop.localhost, shop.localhost {
+	import local
+}

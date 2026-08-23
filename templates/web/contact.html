@@ -1,0 +1,155 @@
+{% extends "web/_shell.html" %}
+{% load onewooz %}
+
+{% block title %}Contact · OneWooz{% endblock %}
+
+{% block main %}
+
+<header class="pal-pagehead pal-blueprint">
+  <div class="pal-container">
+    <p class="pal-breadcrumb"><a href="{% url 'web:home' %}">OneWooz</a> / <span>Contact</span></p>
+    <h1 class="pal-pagehead__title">Talk to a real person.</h1>
+    <p class="pal-lead pal-pagehead__lead">
+      A human reads every message and we answer within one working day. Pick the
+      channel that fits, or send an enquiry below.
+    </p>
+  </div>
+</header>
+
+{# ------------------------------------------------------------- Channels #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>Channels</span></div>
+    <div class="pal-grid pal-grid--3 pal-mt-12" data-reveal>
+      <div class="pal-cell">
+        <div class="pal-cell__idx">SUPPORT</div>
+        <div class="pal-cell__title">Something's not right</div>
+        <div class="pal-cell__desc">A problem with your live store, an order, a payout or a domain.</div>
+        <div class="pal-btn-row pal-mt-8"><a href="{% url 'web:support' %}" class="pal-btn pal-btn--ghost">Raise a ticket <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a></div>
+      </div>
+      <div class="pal-cell">
+        <div class="pal-cell__idx">SALES</div>
+        <div class="pal-cell__title">Before you sign up</div>
+        <div class="pal-cell__desc">Not sure OneWooz fits what you sell? Ask first — no pressure.</div>
+        <div class="pal-btn-row pal-mt-8"><a href="mailto:hello@onewooz.com" class="pal-btn pal-btn--ghost">hello@onewooz.com</a></div>
+      </div>
+      <div class="pal-cell">
+        <div class="pal-cell__idx">SECURITY</div>
+        <div class="pal-cell__title">Report a vulnerability</div>
+        <div class="pal-cell__desc">Found a weakness? Tell us in good faith and we'll act — and protect you.</div>
+        <div class="pal-btn-row pal-mt-8"><a href="mailto:security@onewooz.com" class="pal-btn pal-btn--ghost">security@onewooz.com</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# -------------------------------------------------------------- Enquiry #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-hero__grid">
+      <div>
+        <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>Send an enquiry</span></div>
+        <h2 class="pal-h2 pal-mt-6" style="max-width:16ch;" data-reveal>Tell us what you need.</h2>
+        <p class="pal-lead pal-mt-6" data-reveal>
+          Choose a category so your message reaches the right desk. We reply by
+          email within one working day.
+        </p>
+        <p class="pal-mono pal-mt-8" data-reveal>help@onewooz.com · Mon–Sat · 10:00–19:00 IST</p>
+      </div>
+
+      <div class="pal-infocard">
+        {% if sent %}
+          <div class="pal-alert pal-alert--ok">
+            <div class="pal-alert__title">Enquiry received</div>
+            Thanks — a real person will reply within one working day to the email
+            you gave us.
+            <div class="pal-alert__ref">Reference: {{ ref }}</div>
+          </div>
+          <div class="pal-btn-row pal-mt-8"><a href="{% url 'web:contact' %}" class="pal-btn pal-btn--ghost">Send another</a></div>
+        {% else %}
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="pal-form-grid">
+              <div class="pal-field">
+                <label class="pal-field__label" for="name">Your name</label>
+                <input class="pal-input" type="text" name="name" id="name" autocomplete="name" required>
+              </div>
+              <div class="pal-field">
+                <label class="pal-field__label" for="email">Work email</label>
+                <input class="pal-input" type="email" name="email" id="email" autocomplete="email" placeholder="you@yourbrand.com" required>
+              </div>
+              <div class="pal-field pal-field--full">
+                <label class="pal-field__label" for="company">Business name <span style="text-transform:none;letter-spacing:0;">(optional)</span></label>
+                <input class="pal-input" type="text" name="company" id="company" autocomplete="organization">
+              </div>
+              <div class="pal-field pal-field--full">
+                <label class="pal-field__label" for="category">What's this about?</label>
+                <select class="pal-select" name="category" id="category" required>
+                  <option value="general">General question</option>
+                  <option value="sales">Sales — before I sign up</option>
+                  <option value="migration">Migrating an existing store</option>
+                  <option value="b2b">B2B / bulk &amp; enquiry catalogue</option>
+                  <option value="billing">Billing &amp; plans</option>
+                  <option value="partnership">Partnership</option>
+                  <option value="other">Something else</option>
+                </select>
+              </div>
+              <div class="pal-field pal-field--full">
+                <label class="pal-field__label" for="message">Message</label>
+                <textarea class="pal-textarea" name="message" id="message" required placeholder="A sentence or two about what you're after."></textarea>
+              </div>
+            </div>
+            <div class="pal-btn-row pal-mt-8">
+              <button type="submit" class="pal-btn">Send enquiry <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+            </div>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ----------------------------------------------------------------- FAQ #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">03</span><span>Common questions</span></div>
+    <h2 class="pal-h2 pal-mt-6" style="max-width:18ch;" data-reveal>Answers to what people usually ask.</h2>
+
+    <div class="pal-faq pal-mt-12" data-reveal>
+      <details>
+        <summary>How quickly will I hear back? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">Within one working day, every time — usually much sooner. Security reports are acknowledged within one working day too.</div>
+      </details>
+      <details>
+        <summary>Can I talk to someone before I sign up? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">Yes. Email <a href="mailto:hello@onewooz.com">hello@onewooz.com</a> or use the enquiry form above and pick “Sales”. We'll tell you honestly whether OneWooz fits what you sell.</div>
+      </details>
+      <details>
+        <summary>I already sell somewhere else — can I move my store over? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">Usually, yes. Send an enquiry with “Migrating an existing store” and tell us where you're selling now and roughly how many products you have. We'll walk you through moving your catalogue, domain and customers.</div>
+      </details>
+      <details>
+        <summary>Do you take a percentage of my sales? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">No. Your revenue is yours and settles to your own account through your payment provider. We charge for the platform, never a cut of what you sell.</div>
+      </details>
+      <details>
+        <summary>My live store has a problem right now — where do I go? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">Raise a ticket on the <a href="{% url 'web:support' %}">support desk</a>. Tell us what's broken and, if you can, an order or store reference — it reaches us faster than email.</div>
+      </details>
+      <details>
+        <summary>Do you sell to businesses (B2B), not just shoppers? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">Yes. OneWooz builds both a shop that takes money (D2C) and a catalogue that captures enquiries and quotes (B2B). See <a href="{% url 'web:solutions' %}">Solutions</a> for both paths.</div>
+      </details>
+      <details>
+        <summary>Which currencies and payment methods do you support? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">India first — rupee pricing with cards, UPI and cash on delivery, plus part-payment. More regions are on the way; ask if you need one that isn't listed.</div>
+      </details>
+      <details>
+        <summary>How do I report a security issue? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">Email <a href="mailto:security@onewooz.com">security@onewooz.com</a>. We won't pursue anyone who reports in good faith and doesn't access other people's data. More on our <a href="{% url 'web:security' %}">security page</a>.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static onewooz %}
+
+{% comment %}
+Shared frame for every authentication screen — "Palantir" direction. A split
+console: a dark technical brand panel on the left, the form on paper on the
+right. The block contract (auth_title, auth_subtitle, auth_body, auth_footer)
+is unchanged, so sign-in, sign-up, the MFA challenge, magic link and TOTP
+enrolment keep working untouched; only their look changes, via the .pal wrapper
+and onewooz-pal.css. No entrance-animation flag is set here — the form must be
+present and usable the instant the page loads.
+{% endcomment %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/onewooz-pal.css' %}">
+{% endblock %}
+
+{% block body %}
+<div class="pal pal-auth">
+
+  {# ----------------------------------------------- Brand / system panel #}
+  <aside class="pal-auth__panel" aria-hidden="true">
+    <div class="pal-auth__inner">
+      <div>
+        <span class="pal-mono pal-auth__kicker">OneWooz · Commerce OS</span>
+        <h2 class="pal-auth__headline">Your storefront and back office, one system.</h2>
+        <ul class="pal-auth__stack">
+          <li><span>01</span> Storefront — live on your own domain</li>
+          <li><span>02</span> Orders, payments &amp; shipping</li>
+          <li><span>03</span> Inventory, customers &amp; analytics</li>
+        </ul>
+      </div>
+      <div class="pal-auth__status">
+        <span class="pal-auth__dot"></span> All systems operational · 99.98% uptime
+      </div>
+    </div>
+  </aside>
+
+  {# ------------------------------------------------------- Form column #}
+  <main class="pal-auth__main">
+    <div class="pal-auth__wrap">
+
+      {% comment %}
+      The wordmark leaves the dashboard for the marketing site, so it needs a
+      built origin — "/" here would land on the dashboard and bounce an
+      unauthenticated visitor straight back to this page.
+      {% endcomment %}
+      <a href="{% surface_url 'marketing' '/' %}" class="pal-brand pal-auth__brand">
+        <img class="pal-brand__img" src="{% static 'img/Icon_main.png' %}" alt="" width="26" height="26">
+        OneWooz
+      </a>
+
+      <h1 class="auth__title">{% block auth_title %}{% endblock %}</h1>
+      {% block auth_subtitle %}{% endblock %}
+
+      {% if error %}
+        <div class="alert alert--error mt-5" role="alert">{{ error }}</div>
+      {% endif %}
+      {% if errors %}
+        <div class="alert alert--error mt-5" role="alert">
+          <ul>{% for item in errors %}<li>{{ item }}</li>{% endfor %}</ul>
+        </div>
+      {% endif %}
+
+      {% block auth_body %}{% endblock %}
+
+      {% block auth_footer %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+{% endblock %}

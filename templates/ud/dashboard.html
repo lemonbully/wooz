@@ -1,0 +1,157 @@
+{% extends "ud/_shell.html" %}
+
+{% block title %}Overview · OneWooz{% endblock %}
+{% block crumb %}Overview{% endblock %}
+
+{% block main %}
+<div class="app-page">
+
+  {# ---- Page header ---- #}
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">01 — Command centre</p>
+      <h1 class="app-head__title pal-mt-4">
+        {% if request.user.display_name %}Welcome back, {{ request.user.display_name }}{% else %}Welcome to OneWooz{% endif %}
+      </h1>
+      <p class="app-head__lead">
+        Every store you run with OneWooz, and how each is performing — in one place.
+      </p>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'ud:create_site' %}" class="pal-btn">
+        Create a store <span class="pal-btn__arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+  </div>
+
+  {# ---- KPI row ---- #}
+  <div class="app-block">
+    <div class="app-block__head">
+      <p class="pal-mono">Performance · all stores</p>
+      <span class="app-pill">30-day window</span>
+    </div>
+    <div class="app-kpis">
+      {% for kpi in kpis %}
+        <div class="app-kpi">
+          <p class="app-kpi__label">{{ kpi.label }}</p>
+          {% if kpi.value is None %}
+            <p class="app-kpi__value app-kpi__value--empty">—</p>
+            <p class="app-kpi__delta app-kpi__delta--flat">Live once a store is published</p>
+          {% else %}
+            <p class="app-kpi__value">{{ kpi.value }}</p>
+            <p class="app-kpi__delta">{{ kpi.caption }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ---- Stores ---- #}
+  <div class="app-block">
+    <div class="app-block__head">
+      <p class="pal-mono">Your stores</p>
+      {% if sites %}<a href="{% url 'ud:create_site' %}" class="pal-link">Add another</a>{% endif %}
+    </div>
+
+    {% if sites %}
+      <div class="app-stores">
+        {% for site in sites %}
+          <article class="app-store">
+            <div class="app-store__top">
+              <div>
+                <h2 class="app-store__name">{{ site.name }}</h2>
+                <p class="app-store__host">{{ site.host }}</p>
+              </div>
+              <span class="app-pill app-pill--live">Live</span>
+            </div>
+            <div class="app-store__mini">
+              <div><div class="app-store__mini-v">{{ site.orders_count|default:"0" }}</div><div class="app-store__mini-l">Orders</div></div>
+              <div><div class="app-store__mini-v">{{ site.products_count|default:"0" }}</div><div class="app-store__mini-l">Products</div></div>
+              <div><div class="app-store__mini-v">{{ site.sessions_count|default:"0" }}</div><div class="app-store__mini-l">Sessions</div></div>
+            </div>
+            <div class="app-store__foot">
+              <a href="{{ site.manage_url }}" class="pal-btn pal-btn--ghost">Manage</a>
+              <a href="{{ site.public_url }}" class="pal-btn pal-btn--ghost">Visit</a>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="app-empty">
+        <span class="app-empty__ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 9 4.5 4.5A2 2 0 0 1 6.4 3h11.2a2 2 0 0 1 1.9 1.5L21 9"/><path d="M3 9h18"/><path d="M5 9v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M9 13h6"/></svg>
+        </span>
+        <h2 class="app-empty__title">No stores yet</h2>
+        <p class="app-empty__text">
+          Answer a few questions about your business and OneWooz builds and
+          publishes a working store — products, checkout, payments, shipping.
+          You can change anything afterwards.
+        </p>
+        <div class="app-empty__actions">
+          <a href="{% url 'ud:create_site' %}" class="pal-btn">Create your first store <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ---- Getting started + activity ---- #}
+  <div class="app-block">
+    <div class="app-split">
+
+      <section>
+        <div class="app-card__head">
+          <h2 class="app-card__title">Getting started</h2>
+          <span class="app-mono">Step {% if sites %}3{% else %}2{% endif %} of {{ steps|length }}</span>
+        </div>
+        <div class="app-steps app-steps--flush">
+          {% for step in steps %}
+            <div class="app-step app-step--{{ step.state }}">
+              <div class="app-step__mark">
+                {% if step.state == 'done' %}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                {% else %}
+                  {{ forloop.counter }}
+                {% endif %}
+              </div>
+              <div class="app-step__body">
+                <p class="app-step__title">{{ step.title }}</p>
+                <p class="app-step__desc">{{ step.desc }}</p>
+              </div>
+              {% if step.state == 'now' %}
+                <div class="app-step__aside">
+                  <a href="{% url 'ud:create_site' %}" class="pal-btn pal-btn--ghost">Start</a>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <aside>
+        <div class="app-card__head">
+          <h2 class="app-card__title">Recent activity</h2>
+        </div>
+        <div class="app-card__body">
+          {% if activity %}
+            <div class="app-feed">
+              {% for event in activity %}
+                <div class="app-feed__item">
+                  <p class="app-feed__t">{{ event.when }}</p>
+                  <p class="app-feed__b">{{ event.text }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="app-note-inline">
+              Nothing to show yet. Once your store is live, orders, sign-ups and
+              settings changes appear here as a running log.
+            </p>
+          {% endif %}
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

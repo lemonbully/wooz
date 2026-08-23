@@ -1,0 +1,76 @@
+# OneWooz edge — production.
+#
+# TLS terminates here (not at the load balancer) because an AWS ALB can only
+# serve certificates for domains you own, and OneWooz must serve HTTPS for
+# arbitrary customer domains. The NLB does L4 TCP passthrough on :443/:80 to
+# this Caddy, which terminates TLS and reverse-proxies cleartext to Gunicorn on
+# the same task (localhost).
+#
+# Env expected:
+#   APP_UPSTREAM       app host:port (default 127.0.0.1:8000; compose sets web:8000)
+#   CADDY_ASK_SECRET   shared secret for the on-demand ask (== ONEWOOZ_CADDY_ASK_SECRET)
+#   ACME_EMAIL         Let's Encrypt account email
+#   REDIS_HOST         ElastiCache endpoint (certificate store)
+#   REDIS_PORT         default 6379
+#   REDIS_TLS          "true" for ElastiCache in-transit encryption, else "false"
+
+{
+	admin off
+	email {$ACME_EMAIL}
+
+	# Mint certificates on first request — for storefront subdomains and
+	# custom domains — but only when the app authorises the hostname. Without
+	# the ask, anyone pointing DNS at us could burn our ACME rate limit.
+	on_demand_tls {
+		ask http://{$APP_UPSTREAM:127.0.0.1:8000}/internal/caddy/ask?secret={$CADDY_ASK_SECRET}
+		interval 2m
+		burst 5
+	}
+
+	# Shared certificate store, so any instance can serve any issued domain.
+	storage redis {
+		host        {$REDIS_HOST:127.0.0.1}
+		port        {$REDIS_PORT:6379}
+		db          0
+		key_prefix  "caddytls"
+		tls_enabled {$REDIS_TLS:false}
+	}
+}
+
+# Shared behaviour for every site: compression, security headers, block the
+# internal ask path from the outside world, and proxy to Gunicorn with the
+# forwarded-proto header Django trusts (SECURE_PROXY_SSL_HEADER).
+(proxy) {
+	encode zstd gzip
+
+	@internal path /internal/*
+	respond @internal 404
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	reverse_proxy {$APP_UPSTREAM:127.0.0.1:8000} {
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+# Platform hosts — certificates via the normal HTTP-01 challenge (no wildcard,
+# so no DNS-01 plugin needed). Point their DNS at the NLB.
+onewooz.com, www.onewooz.com, app.onewooz.com, admin.onewooz.com {
+	import proxy
+}
+
+# Everything else — storefront subdomains (<slug>.onewooz.site) and verified
+# custom domains — gets a certificate on demand, gated by the ask endpoint.
+https:// {
+	tls {
+		on_demand
+	}
+	import proxy
+}

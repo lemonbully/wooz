@@ -1,0 +1,93 @@
+{% extends "accounts/_auth_shell.html" %}
+{% load static %}
+
+{% block title %}Sign in · OneWooz{% endblock %}
+{% block auth_title %}Sign in{% endblock %}
+{% block auth_subtitle %}
+  <p class="auth__subtitle">Manage your store, products and orders.</p>
+{% endblock %}
+
+{% block auth_body %}
+  <button type="button" id="passkey-signin" class="btn btn--secondary btn--block mt-6 hidden">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="4"/><path d="M10.3 15H7a4 4 0 0 0-4 4v2"/><circle cx="17" cy="15" r="2"/><path d="M17 17v4"/><path d="M19 19h-4"/></svg>
+    Sign in with a passkey
+  </button>
+  <p id="passkey-error" class="alert alert--error mt-3 hidden" role="alert"></p>
+
+  <div id="passkey-divider" class="divider hidden">or</div>
+
+  <form method="post" class="auth__form" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <div class="field">
+      <label class="label" for="email">Email</label>
+      <input class="input" type="email" name="email" id="email"
+             value="{{ email|default:'' }}" autocomplete="username webauthn"
+             placeholder="you@yourbrand.com" required autofocus>
+    </div>
+
+    <div class="field">
+      <div class="label-row">
+        <label class="label" for="password" style="margin:0;">Password</label>
+        <a href="{% url 'accounts:magic_link_request' %}" class="small" style="color:var(--accent-600);">
+          Sign in without a password
+        </a>
+      </div>
+      <input class="input" type="password" name="password" id="password"
+             autocomplete="current-password" required>
+    </div>
+
+    <button type="submit" class="btn btn--primary btn--block mt-6">Sign in</button>
+  </form>
+{% endblock %}
+
+{% block auth_footer %}
+  {% comment %}
+  Public sign-up is currently disabled; accounts are created by an operator via
+  `python manage.py createuser`. Re-enable this link when sign-up returns.
+  <p class="auth__footer">
+    New to OneWooz? <a href="{% url 'accounts:sign_up' %}">Create an account</a>
+  </p>
+  {% endcomment %}
+{% endblock %}
+
+{% block scripts %}
+{% comment %}
+Endpoints are passed in rather than baked into the script: these resolve
+through reverse(), so they carry the /user prefix under single-host local
+development and no prefix on app.onewooz.com.
+{% endcomment %}
+<script nonce="{{ csp_nonce }}" src="{% static 'js/passkeys.js' %}"
+        data-auth-begin="{% url 'accounts:passkey_auth_begin' %}"
+        data-auth-finish="{% url 'accounts:passkey_auth_finish' %}"
+        data-register-begin="{% url 'accounts:passkey_register_begin' %}"
+        data-register-finish="{% url 'accounts:passkey_register_finish' %}"></script>
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    var button = document.getElementById('passkey-signin');
+    var divider = document.getElementById('passkey-divider');
+    var errorBox = document.getElementById('passkey-error');
+
+    // Only offer the passkey path where the browser can actually do it —
+    // a dead button is worse than no button.
+    if (!window.OneWoozPasskeys || !window.OneWoozPasskeys.isSupported()) return;
+
+    button.classList.remove('hidden');
+    divider.classList.remove('hidden');
+
+    button.addEventListener('click', async function () {
+      errorBox.classList.add('hidden');
+      button.disabled = true;
+      try {
+        var result = await window.OneWoozPasskeys.signIn();
+        window.location.href = result.redirect || '/';
+      } catch (err) {
+        errorBox.textContent = err.message || 'That did not work. Try your password instead.';
+        errorBox.classList.remove('hidden');
+        button.disabled = false;
+      }
+    });
+  })();
+</script>
+{% endblock %}

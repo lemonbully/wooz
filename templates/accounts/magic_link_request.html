@@ -1,0 +1,23 @@
+{% extends "accounts/_auth_shell.html" %}
+
+{% block title %}Sign in without a password · OneWooz{% endblock %}
+{% block auth_title %}Sign in without a password{% endblock %}
+{% block auth_subtitle %}
+  <p class="auth__subtitle">We'll email you a link that signs you straight in.</p>
+{% endblock %}
+
+{% block auth_body %}
+  <form method="post" class="auth__form" novalidate>
+    {% csrf_token %}
+    <div class="field">
+      <label class="label" for="email">Email</label>
+      <input class="input" type="email" name="email" id="email"
+             autocomplete="username" placeholder="you@yourbrand.com" required autofocus>
+    </div>
+    <button type="submit" class="btn btn--primary btn--block mt-6">Email me a link</button>
+  </form>
+{% endblock %}
+
+{% block auth_footer %}
+  <p class="auth__footer"><a href="{% url 'accounts:sign_in' %}">Use a password instead</a></p>
+{% endblock %}

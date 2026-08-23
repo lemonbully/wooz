@@ -1,0 +1,96 @@
+{% extends "web/_shell.html" %}
+{% load onewooz %}
+
+{% block title %}Pricing · OneWooz{% endblock %}
+
+{% block main %}
+
+<header class="pal-pagehead pal-blueprint">
+  <div class="pal-container">
+    <p class="pal-breadcrumb"><a href="{% url 'web:home' %}">OneWooz</a> / <span>Pricing</span></p>
+    <h1 class="pal-pagehead__title">Start free.<br>Pay when you're selling.</h1>
+    <p class="pal-lead pal-pagehead__lead">
+      Build your store and see it live before you decide anything. No card to
+      begin, and we never take a cut of your sales.
+    </p>
+  </div>
+</header>
+
+{% comment %} Placeholder tiers — swap the figures for the real plan once set. {% endcomment %}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>Plans</span></div>
+
+    <div class="pal-plans pal-mt-12" data-reveal>
+      <div class="pal-plan">
+        <div class="pal-plan__name">Launch</div>
+        <div class="pal-plan__price">Free</div>
+        <div class="pal-plan__desc">Everything you need to build a store and see it live on a OneWooz address.</div>
+        <ul class="pal-plan__list">
+          <li>Full store, built for your industry</li>
+          <li>OneWooz subdomain, HTTPS included</li>
+          <li>Products, cart and checkout</li>
+          <li>No card required</li>
+        </ul>
+        <div class="pal-plan__cta"><a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn pal-btn--ghost">Start free</a></div>
+      </div>
+
+      <div class="pal-plan pal-plan--featured">
+        <span class="pal-doodle pal-doodle--plan" aria-hidden="true">
+          <span class="pal-note">Best value</span>
+          <svg width="30" height="26" viewBox="0 0 30 26"><path d="M2 3c8 2 13 8 15 17"/><path d="M11 17l6 4 3-6"/></svg>
+        </span>
+        <div class="pal-plan__name">Growth · most popular</div>
+        <div class="pal-plan__price">₹ 799 <span>/ month</span></div>
+        <div class="pal-plan__desc">Go live on your own domain and take real orders, with the full commerce core.</div>
+        <ul class="pal-plan__list">
+          <li>Your own custom domain</li>
+          <li>Cards, UPI and cash on delivery</li>
+          <li>Live shipping rates &amp; labels</li>
+          <li>Analytics and SEO switched on</li>
+          <li>We never take a cut of sales</li>
+        </ul>
+        <div class="pal-plan__cta"><a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store</a></div>
+      </div>
+
+      <div class="pal-plan">
+        <div class="pal-plan__name">Scale · B2B</div>
+        <div class="pal-plan__price">Custom</div>
+        <div class="pal-plan__desc">For catalogues, multi-location retailers and higher volume. Talk to us.</div>
+        <ul class="pal-plan__list">
+          <li>Deep catalogue &amp; enquiry flows</li>
+          <li>Bulk-quote and quote requests</li>
+          <li>Priority support</li>
+          <li>Onboarding assistance</li>
+        </ul>
+        <div class="pal-plan__cta"><a href="mailto:hello@onewooz.com" class="pal-btn pal-btn--ghost">Talk to us</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# -------------------------------------------------------------- FAQ #}
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>Questions</span></div>
+    <div class="pal-matrix pal-mt-12" data-reveal>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">01</div><div class="pal-matrix__body"><div class="pal-matrix__title">Do you take a cut of my sales?</div><div class="pal-matrix__desc">No. Your revenue is yours. Payment settlement goes to your own account through your payment provider.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">02</div><div class="pal-matrix__body"><div class="pal-matrix__title">What does it cost to try?</div><div class="pal-matrix__desc">Nothing. Build the store, see it live on a OneWooz address, and only pay when you connect a custom domain and go to market.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">03</div><div class="pal-matrix__body"><div class="pal-matrix__title">Can I leave?</div><div class="pal-matrix__desc">Any time. Export your data and point your domain elsewhere. There is no lock-in and nothing is held hostage.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">04</div><div class="pal-matrix__body"><div class="pal-matrix__title">Who owns the domain?</div><div class="pal-matrix__desc">You do. Connect a domain you already own, or one we help you register in your name.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="pal-section pal-ruled pal-section--ink pal-cta">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">03</span><span>Deploy</span></div>
+    <h2 class="pal-display pal-cta__title pal-mt-6" style="font-size:clamp(2.4rem,1.2rem+5vw,4.5rem);" data-reveal>Build it free. Decide later.</h2>
+    <div class="pal-btn-row pal-mt-8" data-reveal>
+      <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      <a href="mailto:help@onewooz.com" class="pal-btn pal-btn--ghost">Talk to us first</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
