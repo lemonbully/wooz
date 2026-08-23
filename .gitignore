@@ -4,8 +4,8 @@ __pycache__/
 .venv/
 venv/
 env/
-claude.md/
-onewooz_design.md/
+claude.md
+onewooz_design.md
 DEPLOY.md
 
 # Local secrets. Generated automatically on first dev run — never committed.
