@@ -1,0 +1,11 @@
+{
+  "Comment": "SES for onewooz.com: DKIM CNAMEs, MAIL FROM MX+SPF, DMARC",
+  "Changes": [
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"uzxp6ltkaojh6jv5hoxvw2vmzmvkoadu._domainkey.onewooz.com","Type":"CNAME","TTL":1800,"ResourceRecords":[{"Value":"uzxp6ltkaojh6jv5hoxvw2vmzmvkoadu.dkim.amazonses.com"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"xgpptpq3xetexeebjg3samwzfyxpaze2._domainkey.onewooz.com","Type":"CNAME","TTL":1800,"ResourceRecords":[{"Value":"xgpptpq3xetexeebjg3samwzfyxpaze2.dkim.amazonses.com"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"asnmrfoncwn6swqh23aqhhkiddjk2j2w._domainkey.onewooz.com","Type":"CNAME","TTL":1800,"ResourceRecords":[{"Value":"asnmrfoncwn6swqh23aqhhkiddjk2j2w.dkim.amazonses.com"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"mail.onewooz.com","Type":"MX","TTL":1800,"ResourceRecords":[{"Value":"10 feedback-smtp.ap-south-1.amazonses.com"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"mail.onewooz.com","Type":"TXT","TTL":1800,"ResourceRecords":[{"Value":"\"v=spf1 include:amazonses.com ~all\""}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"_dmarc.onewooz.com","Type":"TXT","TTL":1800,"ResourceRecords":[{"Value":"\"v=DMARC1; p=none; rua=mailto:dmarc@onewooz.com; fo=1\""}]}}
+  ]
+}

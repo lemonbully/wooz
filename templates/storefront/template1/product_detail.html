@@ -1,0 +1,2135 @@
+{% extends "storefront/template2/product_detail.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block title %}{{ product.title }} · {{ website.name|default:website.content.site_name }}{% endblock %}
+
+{# This template shares template2's product layout but wears template1's own
+   navigation and footer, so the storefront stays visually consistent from home
+   to product. Purchase actions follow the store's business model, not the theme. #}
+{% block header %}{% include "storefront/template1/components/navigation.html" %}{% endblock %}
+{% block footer %}{% include "storefront/template1/components/footer.html" %}{% endblock %}
+
+{# Override only the two purchase blocks; everything else is inherited from template2/product_detail.html #}
+
+{% block pdp_sticky_sidebar %}
+      <!-- Sticky purchase sidebar within section (desktop) - B2B Enquiry -->
+      <aside class="hidden lg:block lg:col-start-3 lg:row-start-1">
+        <div class="w-[280px] rounded-xl ring-1 ring-gray-200 bg-white shadow-sm overflow-hidden sticky top-24">
+          <div class="p-6">
+            {% with specs=product.specifications %}
+            <div class="flex items-baseline gap-2">
+              <div id="sidebar-price" class="text-[28px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
+              {% if specs and specs.mrp %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
+              {% elif specs and specs.original_price %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
+              {% elif product.mrp %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
+              {% else %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through hidden"></div>
+              {% endif %}
+            </div>
+            <div class="mt-3 text-[13px] text-gray-700">
+              <span class="font-medium">Contact us for bulk pricing</span>
+            </div>
+            <div class="mt-4 text-[18px] font-semibold {% if product.in_stock|default:True %}text-green-600{% else %}text-red-600{% endif %}">
+              {% if product.in_stock|default:True %}In stock{% else %}Out of stock{% endif %}
+            </div>
+            <div class="mt-3 space-y-2 text-[13px]">
+              {% if specs and specs.ships_from %}
+              <div class="flex"><span class="w-24 text-gray-600">Ships from</span><span class="text-gray-900">{{ specs.ships_from }}</span></div>
+              {% elif website and website.name %}
+              <div class="flex"><span class="w-24 text-gray-600">Ships from</span><span class="text-gray-900">{{ website.name }}</span></div>
+              {% endif %}
+              {% if specs and specs.sold_by %}
+              <div class="flex"><span class="w-24 text-gray-600">Sold by</span><span class="text-blue-700">{{ specs.sold_by }}</span></div>
+              {% elif product.seller_name %}
+              <div class="flex"><span class="w-24 text-gray-600">Sold by</span><span class="text-blue-700">{{ product.seller_name }}</span></div>
+              {% endif %}
+              {% if specs and specs.packaging %}
+              <div class="flex"><span class="w-24 text-gray-600">Packaging</span><span class="text-gray-900">{{ specs.packaging }}</span></div>
+              {% endif %}
+              {% if specs and specs.moq or product.moq %}
+              <div class="flex"><span class="w-24 text-gray-600">Min Order</span><span class="text-gray-900">{{ specs.moq|default:product.moq }}</span></div>
+              {% endif %}
+            </div>
+            <div class="mt-4">
+              <label class="block text-[13px] text-gray-800 mb-1">Quantity:</label>
+              <input type="number" id="purch-qty" min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
+            </div>
+            <div class="mt-4 space-y-3">
+              <button type="button" id="purch-enquiry" class="block w-full text-center rounded-full bg-black text-white font-medium py-2.5 text-sm hover:bg-gray-800 transition-colors cursor-pointer" onclick="openPdpEnquiryModal()">Send Enquiry</button>
+              <a href="{% url 'public_product_whatsapp' product_id=product.product_id|default:'0' %}" class="flex items-center justify-center gap-2 w-full rounded-full bg-green-500 text-white font-medium py-2.5 text-sm hover:bg-green-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="h-4 w-4 fill-current">
+                  <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+                </svg>
+                <span>WhatsApp</span>
+              </a>
+            </div>
+            {% endwith %}
+          </div>
+        </div>
+      </aside>
+{% endblock %}
+
+{% block pdp_mobile_purchase_actions %}
+        <!-- Mobile purchase actions (visible when sticky sidebar is hidden) -->
+        <div class="lg:hidden mt-8">
+          <div class="bg-white py-4 pr-4 space-y-4">
+            <div class="flex flex-row gap-4 items-center">
+              <div class="flex items-baseline gap-2">
+                <div id="mobile-price" class="text-[22px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
+                {% with specs=product.specifications %}
+                {% if specs and specs.mrp %}
+                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
+                {% elif specs and specs.original_price %}
+                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
+                {% elif product.mrp %}
+                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
+                {% else %}
+                <div id="mobile-mrp" class="text-gray-400 line-through hidden"></div>
+                {% endif %}
+                {% endwith %}
+              </div>
+              <div class="text-[16px] font-semibold {% if product.in_stock|default:True %}text-green-600{% else %}text-red-600{% endif %}">
+                {% if product.in_stock|default:True %}In stock{% else %}Out of stock{% endif %}
+              </div>
+            </div>
+            <div class="text-[13px] text-gray-700">
+              <span class="font-medium">Contact us for bulk pricing and custom orders</span>
+            </div>
+            <div>
+              <label class="block text-[12px] text-gray-800 mb-1">Quantity</label>
+              <input type="number" id="purch-qty-m" min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
+            </div>
+            <div class="space-y-3">
+              <button type="button" id="purch-enquiry-m" class="block w-full text-center rounded-full bg-black text-white font-medium py-3 text-sm hover:bg-gray-800 transition-colors cursor-pointer" onclick="openPdpEnquiryModal()">Send Enquiry</button>
+              <a href="{% url 'public_product_whatsapp' product_id=product.product_id|default:'0' %}" class="flex items-center justify-center gap-2 w-full rounded-full bg-green-500 text-white font-medium py-3 text-sm hover:bg-green-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="h-4 w-4 fill-current">
+                  <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+                </svg>
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script>
+  // B2B enquiry buttons rely on global helpers
+  function openPdpEnquiryModal() {
+    var modal = document.getElementById('pdp-enquiry-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    // Ensure fields match the configured mode (mobile_only / mobile_qty / email_qty / all)
+    try { if (window.applyPdpEnquiryMode) window.applyPdpEnquiryMode(modal.getAttribute('data-enquiry-mode')); } catch(e) {}
+
+    // Pre-fill quantity (desktop/mobile) into enquiry modal
+    var sidebarQty = document.getElementById('purch-qty');
+    var mobileQty = document.getElementById('purch-qty-m');
+    var form = document.getElementById('pdp-enquiry-form');
+    var qtyInput = form ? form.querySelector('input[name=\"quantity\"]') : null;
+    if (qtyInput) {
+      var qty = (sidebarQty && sidebarQty.value) ? sidebarQty.value : ((mobileQty && mobileQty.value) ? mobileQty.value : '1');
+      qtyInput.value = qty;
+    }
+  }
+
+  function closePdpEnquiryModal() {
+    var modal = document.getElementById('pdp-enquiry-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+</script>
+{% endblock %}
+
+{# Legacy template1 implementation kept for reference (no longer rendered) #}
+{% block _legacy_template1_product_detail %}
+{% website_base_path website request as website_base %}
+<section class="bg-white pb-6 md:px-0 md:py-10">
+  <div class="mx-auto">
+    <!-- Breadcrumbs -->
+    <nav class="mt-8 md:mt-0 md:mb-6 ml-8 md:ml-8 md:px-4 sm:px-8 md:px-12 text-[10px] sm:text-xs text-gray-500 uppercase tracking-[0.15em] sm:tracking-[0.2em] overflow-hidden whitespace-nowrap overflow-ellipsis">
+      <div class="flex flex-wrap items-center">
+        <a href="{{ website_base }}" class="hover:text-gray-900 transition-colors">Home</a>
+        <span class="mx-1 sm:mx-2">/</span>
+        {% if product.category %}
+        <a href="{{ website_base }}category/{{ product.category.slug }}/" class="hover:text-gray-900 transition-colors truncate max-w-[40%] sm:max-w-none">{{ product.category.name }}</a>
+        <span class="mx-1 sm:mx-2">/</span>
+        {% endif %}
+        <span class="text-gray-900 truncate max-w-[50%] sm:max-w-none">{{ product.title }}</span>
+      </div>
+    </nav>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:[grid-template-columns:1fr_1fr_320px] gap-6 md:gap-8 lg:gap-10 px-4 md:px-0 lg:ml-0 w-full mx-auto lg:items-start">
+      <!-- Sticky purchase sidebar within section (desktop) - B2B Enquiry -->
+      <aside class="hidden lg:block lg:col-start-3 lg:row-start-1">
+        <div class="w-[280px] rounded-xl ring-1 ring-gray-200 bg-white shadow-sm overflow-hidden sticky top-24">
+          <div class="p-6">
+            {% with specs=product.specifications %}
+            <div class="flex items-baseline gap-2">
+              <div id="sidebar-price" class="text-[28px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
+              {% if specs and specs.mrp %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
+              {% elif specs and specs.original_price %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
+              {% elif product.mrp %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
+              {% else %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through hidden"></div>
+              {% endif %}
+            </div>
+            <div class="mt-3 text-[13px] text-gray-700">
+              <span class="font-medium">Contact us for bulk pricing</span>
+            </div>
+            <div class="mt-4 text-[18px] font-semibold {% if product.in_stock|default:True %}text-green-600{% else %}text-red-600{% endif %}">
+              {% if product.in_stock|default:True %}In stock{% else %}Out of stock{% endif %}
+            </div>
+            <div class="mt-3 space-y-2 text-[13px]">
+              {% if specs and specs.ships_from %}
+              <div class="flex"><span class="w-24 text-gray-600">Ships from</span><span class="text-gray-900">{{ specs.ships_from }}</span></div>
+              {% elif website and website.name %}
+              <div class="flex"><span class="w-24 text-gray-600">Ships from</span><span class="text-gray-900">{{ website.name }}</span></div>
+              {% endif %}
+              {% if specs and specs.sold_by %}
+              <div class="flex"><span class="w-24 text-gray-600">Sold by</span><span class="text-blue-700">{{ specs.sold_by }}</span></div>
+              {% elif product.seller_name %}
+              <div class="flex"><span class="w-24 text-gray-600">Sold by</span><span class="text-blue-700">{{ product.seller_name }}</span></div>
+              {% endif %}
+              {% if specs and specs.packaging %}
+              <div class="flex"><span class="w-24 text-gray-600">Packaging</span><span class="text-gray-900">{{ specs.packaging }}</span></div>
+              {% endif %}
+              {% if specs and specs.moq or product.moq %}
+              <div class="flex"><span class="w-24 text-gray-600">Min Order</span><span class="text-gray-900">{{ specs.moq|default:product.moq }}</span></div>
+              {% endif %}
+            </div>
+            <div class="mt-4">
+              <label class="block text-[13px] text-gray-800 mb-1">Quantity:</label>
+              <input type="number" id="purch-qty" min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
+            </div>
+            <div class="mt-4 space-y-3">
+              <button type="button" id="purch-enquiry" class="block w-full text-center rounded-full bg-black text-white font-medium py-2.5 text-sm hover:bg-gray-800 transition-colors cursor-pointer" onclick="openPdpEnquiryModal()">Send Enquiry</button>
+              <a href="{% url 'public_product_whatsapp' product_id=product.product_id|default:'0' %}" class="flex items-center justify-center gap-2 w-full rounded-full bg-green-500 text-white font-medium py-2.5 text-sm hover:bg-green-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="h-4 w-4 fill-current">
+                  <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+                </svg>
+                <span>WhatsApp</span>
+              </a>
+            </div>
+            {% endwith %}
+          </div>
+        </div>
+      </aside>
+      <!-- Gallery -->
+      <div class="lg:ml-12 lg:sticky lg:top-24 lg:self-start">
+        <div class="lg:flex lg:gap-4">
+          <!-- Vertical thumbnails (desktop) -->
+          <div class="hidden lg:flex lg:flex-col lg:space-y-3 lg:w-24">
+            {% for i in "1234" %}
+              {% with image_attr="image"|add:i %}
+              {% with img=product|getattribute:image_attr %}
+              {% if img %}
+              <button class="thumb overflow-hidden bg-white" data-url="{{ img.url }}">
+                <img src="{{ img.url }}" {% media_attrs website img.url product.title %} class="!w-24 !h-24 object-contain" />
+              </button>
+              {% endif %}
+              {% endwith %}
+              {% endwith %}
+            {% endfor %}
+          </div>
+
+          <!-- Main image (with zoom controls) -->
+          <div id="pdp-image-stage" class="relative w-full bg-white overflow-hidden aspect-square sm:max-w-[420px] md:aspect-square lg:aspect-square lg:max-w-[520px] !lg:h-[520px] !lg:w-[520px] mx-auto sm:mx-0 touch-pan-y select-none" data-zoom-enabled="{% if enable_product_detail_zoom == False %}false{% else %}true{% endif %}">
+            {% with images=product.image1|default:None %}
+            {% endwith %}
+            <!-- Zoom controls (conditionally shown based on setting) -->
+            {% if enable_product_detail_zoom != False %}
+            <div id="pdp-zoom-controls" class="absolute left-3 top-3 z-10 flex items-center gap-2 rounded-full bg-white/90 backdrop-blur px-2 py-2 shadow ring-1 ring-gray-200">
+              <button id="pdp-zoom-out" type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-900 ring-1 ring-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900" aria-label="Zoom out" title="Zoom out">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+              </button>
+              <button id="pdp-zoom-in" type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-900 text-white ring-1 ring-gray-900 hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-900" aria-label="Zoom in" title="Zoom in">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              </button>
+              <button id="pdp-zoom-reset" type="button" class="hidden sm:inline-flex items-center justify-center rounded-full bg-white px-3 h-9 text-xs font-semibold uppercase tracking-[0.15em] text-gray-800 ring-1 ring-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900" aria-label="Reset zoom" title="Reset zoom">
+                Reset
+              </button>
+            </div>
+            {% endif %}
+
+            <img
+              id="active-image"
+              src="{% if product.image1 %}{{ product.image1.url }}{% else %}https://via.placeholder.com/600x600?text=Product{% endif %}"
+              {% media_attrs website product.image1.url product.title %}
+              class="absolute inset-0 w-full !h-[100%] object-contain p-4 sm:p-3 md:p-4 lg:p-0 origin-center transition-transform duration-200 ease-out will-change-transform"
+              style="transform: translate(var(--pdp-tx, 0px), var(--pdp-ty, 0px)) scale(var(--pdp-scale, 1));" />
+
+            {% if product_video and product_video.url %}
+            <!-- Main image play button (same behavior as template2) -->
+            <button
+              id="pdp-main-play"
+              type="button"
+              class="absolute right-2 bottom-2 sm:right-3 sm:bottom-3 z-20 inline-flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-black text-white hover:bg-black focus:outline-none focus:ring-2 focus:ring-white transition shadow-lg"
+              aria-label="Play product video"
+              data-video-type="{{ product_video.type }}"
+              data-video-url="{{ product_video.url }}"
+              data-video-orientation="{{ product_video.orientation|default:'landscape' }}"
+              {% if product_video.embed_url %}data-video-embed="{{ product_video.embed_url }}"{% endif %}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 sm:h-6 sm:w-6" fill="white" aria-hidden="true">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </button>
+            {% endif %}
+            
+            <!-- Image navigation dots (mobile) -->
+            <div id="pdp-image-dots" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 lg:hidden">
+              <!-- Dots will be added dynamically via JS -->
+            </div>
+
+            <!-- Badges -->
+            <div class="absolute top-3 right-3 space-y-1.5 flex flex-col items-end">
+              {% with specs=product.specifications %}
+                {% if specs %}
+                  {% if specs.discount %}
+                    <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount }}%</span>
+                  {% elif specs.discount_percentage %}
+                    <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount_percentage }}%</span>
+                  {% endif %}
+                {% endif %}
+              {% endwith %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Thumbnails (mobile) -->
+        <div class="px-4 grid grid-cols-4 gap-3 md:gap-4 lg:hidden">
+          {% for i in "1234" %}
+            {% with image_attr="image"|add:i %}
+            {% with img=product|getattribute:image_attr %}
+            {% if img %}
+            <button class="thumb overflow-hidden bg-white" data-url="{{ img.url }}">
+              <img src="{{ img.url }}" {% media_attrs website img.url product.title %} class="!h-20 !md:h-24 w-full object-cover" />
+            </button>
+            {% endif %}
+            {% endwith %}
+            {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Details -->
+      <div class="ml-[1rem] mt-[1rem] md:mt-0 md:ml-2 lg:ml-0">
+        <h1 class="text-2xl sm:text-3xl md:text-3xl font-normal text-gray-900">{{ product.title }}</h1>
+        <div class="mt-2 flex items-center">
+          {% with rating=avg_rating|default_if_none:0|default:0 %}
+          <div class="flex items-center">
+            {% for i in "12345" %}
+              {% if forloop.counter <= rating|floatformat:"0"|add:"0" %}
+                <svg class="w-4 h-4 text-black fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+              {% elif forloop.counter == rating|floatformat:"0"|add:"0"|add:"1" and rating|floatformat:"1"|slice:"-1:" != "0" %}
+                <svg class="w-4 h-4 text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <defs>
+                    <linearGradient id="half-star-gradient" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="50%" stop-color="currentColor"></stop>
+                      <stop offset="50%" stop-color="#e5e7eb"></stop>
+                    </linearGradient>
+                  </defs>
+                  <path fill="url(#half-star-gradient)" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+              {% else %}
+                <svg class="w-4 h-4 text-gray-200 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% if total_reviews %}
+            <span class="ml-2 text-sm text-gray-600">{{ rating|floatformat:1 }} out of 5</span>
+            <span class="ml-2 text-xs text-gray-500">{{ total_reviews }} review{{ total_reviews|pluralize }}</span>
+          {% else %}
+            <span class="ml-2 text-sm text-gray-500">No ratings yet</span>
+          {% endif %}
+          {% endwith %}
+        </div>
+        <div class="mt-4 flex items-center space-x-3">
+          {% with specs=product.specifications %}
+            {% if specs and specs.mrp %}
+              <span class="text-2xl text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</span>
+              <span class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</span>
+            {% elif specs and specs.original_price %}
+              <span class="text-2xl text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</span>
+              <span class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</span>
+            {% else %}
+              <span class="text-2xl text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</span>
+            {% endif %}
+          {% endwith %}
+        </div>
+        {% if product.trusted_icons %}
+        <div class="mt-6 md:mt-5 flex flex-wrap gap-[1.5rem] md:gap-5">
+          <style>
+            @media (max-width: 640px) {
+              .trusted-row-mobile { flex-wrap: nowrap; overflow-x: auto; gap: 2rem; }
+              .trusted-row-mobile > div { flex: 0 0 auto; }
+            }
+          </style>
+          <div class="py-2 sm:py-0 w-full flex trusted-row-mobile gap-[2rem] sm:gap-6 items-center">
+          {% for badge in product.trusted_icons %}
+          <div class="flex flex-col items-center">
+            <span class="inline-flex h-12 w-12 sm:h-11 sm:w-11 items-center justify-center gap-3 rounded-full bg-gray-100 text-gray-700 ring-1 ring-gray-400" title="{{ badge }}" aria-label="{{ badge }}">
+              {% if 'Delivery' in badge or 'Shipping' in badge %}
+                <!-- Truck icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <rect x="2" y="9" width="10" height="6" rx="1"></rect>
+                  <path d="M12 10h4l3 3v2h-3.5"></path>
+                  <circle cx="6" cy="17" r="1.5" fill="currentColor"></circle>
+                  <circle cx="16" cy="17" r="1.5" fill="currentColor"></circle>
+                </svg>
+              {% elif 'warranty' in badge|lower %}
+                <!-- Shield check icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M12 3l7 3v6c0 4.418-3.582 7-7 9-3.418-2-7-4.582-7-9V6l7-3z"></path>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+              {% elif badge == 'Non returnable' %}
+                <!-- Prohibited icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <circle cx="12" cy="12" r="7"></circle>
+                  <path d="M8.5 8.5l7 7"></path>
+                </svg>
+              {% elif badge == 'Cash On Delivery' %}
+                <!-- Rupee symbol -->
+                <span class="text-lg font-semibold leading-none">₹</span>
+              {% elif badge == 'Secure Payment' %}
+                <!-- Lock icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <rect x="6" y="10" width="12" height="9" rx="2"></rect>
+                  <path d="M8 10V8a4 4 0 118 0v2"></path>
+                </svg>
+              {% elif 'Return' in badge %}
+                <!-- Rotate/return arrow icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M16 8a6 6 0 10.2 8.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  <path d="M16 4v4h-4" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              {% elif badge == 'Fast Delivery' %}
+                <!-- Bolt icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M13 3L6 14h5l-1 7 7-11h-5l1-7z" stroke-linejoin="round"></path>
+                </svg>
+              {% elif badge == 'Secure Packaging' %}
+                <!-- Box/cube icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M3 7l9-4 9 4-9 4-9-4z"></path>
+                  <path d="M3 7v10l9 4 9-4V7"></path>
+                  <path d="M12 11v10"></path>
+                </svg>
+              {% else %}
+                <!-- Generic check circle -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <circle cx="12" cy="12" r="7"></circle>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+              {% endif %}
+            </span>
+            <span class="mt-1.5 text-[11px] text-gray-700 text-center">
+              {% with words=badge|split:" " %}
+                {% if words|length > 1 %}
+                  {{ words.0 }}<br>
+                  {% for word in words|slice:"1:" %}
+                    {{ word }}{% if not forloop.last %} {% endif %}
+                  {% endfor %}
+                {% else %}
+                  {{ badge }}
+                {% endif %}
+              {% endwith %}
+            </span>
+          </div>
+          {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        <!-- Product Variations -->
+        {% if product.variants %}
+        <div class="mt-5">
+            <div class="grid grid-cols-1 md:flex md:flex-col gap-1.5">
+                {% for variant_type in product.variants %}
+                <div class="bg-white shadow-xs">
+                    <h4 class="font-medium text-gray-900 mb-1.5 text-sm md:text-xs">{{ variant_type.name }}</h4>
+                    <div class="flex flex-wrap gap-1.5 md:gap-1.5 gap-2">
+                        {% for value in variant_type.values %}
+                        {% if variant_type.name|lower == 'color' or variant_type.name|lower == 'colour' %}
+                        <div class="flex items-center px-2.5 py-1.5 text-sm md:text-xs md:px-2.5 md:py-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 ring-1 ring-gray-200 rounded cursor-pointer transition-colors">
+                            <span class="md:w-3.5 md:h-3.5 w-4 h-4 rounded-full md:mr-1.5 mr-2" style="background-color: {{ value.value }}"></span>
+                            {{ value.value }}
+                        </div>
+                        {% else %}
+                        <div class="md:px-2.5 md:py-1.5 px-3 py-2 text-sm md:text-xs bg-gray-50 hover:bg-gray-100 ring-1 ring-gray-200 rounded cursor-pointer transition-colors">
+                            {{ value.value }}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Product Features Section (from saved d2c_details) -->
+        {% if d2c_details and d2c_details.features %}
+        <div class="w-full mt-6">
+          <div class="bg-white overflow-hidden">
+            <div class="py-6">
+              <h3 class="text-base font-semibold text-gray-900 mb-4">Features</h3>
+              <div class="flex">
+                <div class="flex-1">
+                  {% for feature in d2c_details.features|slice:":2" %}
+                  <div class="flex items-start mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500 mt-0.5 mr-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-sm text-gray-700">{{ feature }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div class="flex-1">
+                  {% for feature in d2c_details.features|slice:"2:4" %}
+                  <div class="flex items-start mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500 mt-0.5 mr-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-sm text-gray-700">{{ feature }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- About this item (Bullet Points) -->
+        {% if d2c_details and d2c_details.bullets %}
+        <div class="w-full">
+          <div class="bg-white overflow-hidden">
+            <div class="py-6">
+              <h3 class="text-base font-semibold text-gray-900 mb-3">About this item</h3>
+              <ul id="bullets-list" class="list-disc list-outside ml-5 space-y-2 text-sm text-gray-800 leading-6 marker:text-gray-700">
+                {% for point in d2c_details.bullets %}
+                <li class="{% if forloop.counter > 3 %}hidden sm:list-item{% endif %}">{{ point }}</li>
+                {% endfor %}
+              </ul>
+              {% if d2c_details.bullets|length > 3 %}
+              <div class="mt-3 sm:hidden">
+                <button type="button" id="bullets-read-more" class="inline-flex items-center rounded-full border border-gray-400 bg-white px-3 py-1.5 ml-5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600">Read more</button>
+                <button type="button" id="bullets-read-less" class="inline-flex items-center rounded-full border border-gray-400 bg-white px-3 py-1.5 ml-5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 hidden">Read less</button>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Mobile purchase actions (visible when sticky sidebar is hidden) -->
+        <div class="lg:hidden mt-8">
+          <div class="bg-white py-4 space-y-4">
+            <div class="flex flex-row gap-4 items-center">
+              <div class="flex items-baseline gap-2">
+                <div id="mobile-price" class="text-[22px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
+                {% with specs=product.specifications %}
+                {% if specs and specs.mrp %}
+                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
+                {% elif specs and specs.original_price %}
+                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
+                {% elif product.mrp %}
+                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
+                {% else %}
+                <div id="mobile-mrp" class="text-gray-400 line-through hidden"></div>
+                {% endif %}
+                {% endwith %}
+              </div>
+              <div class="text-[16px] font-semibold {% if product.in_stock|default:True %}text-green-600{% else %}text-red-600{% endif %}">
+                {% if product.in_stock|default:True %}In stock{% else %}Out of stock{% endif %}
+              </div>
+            </div>
+            <div class="text-[13px] text-gray-700">
+              <span class="font-medium">Contact us for bulk pricing and custom orders</span>
+            </div>
+            <div>
+              <label class="block text-[12px] text-gray-800 mb-1">Quantity</label>
+              <input type="number" id="purch-qty-m" min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
+            </div>
+            <div class="space-y-3">
+              <button type="button" id="purch-enquiry-m" class="block w-full text-center rounded-full bg-black text-white font-medium py-3 text-sm hover:bg-gray-800 transition-colors cursor-pointer" onclick="openPdpEnquiryModal()">Send Enquiry</button>
+              <a href="{% url 'public_product_whatsapp' product_id=product.product_id|default:'0' %}" class="flex items-center justify-center gap-2 w-full rounded-full bg-green-500 text-white font-medium py-3 text-sm hover:bg-green-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="h-4 w-4 fill-current">
+                  <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+                </svg>
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Tabs (aligned with template2) -->
+    <section class="mt-10 md:mt-14 px-4 md:px-0">
+      <div class="w-full mx-auto px-4 sm:px-6 lg:px-12">
+        <div class="border-b border-gray-200 overflow-hidden">
+          <nav id="tabs-nav" class="flex items-center overflow-x-auto gap-6 md:gap-10 pb-2 -mb-2">
+            <button type="button" id="tab-desc" class="py-3 -mb-px uppercase tracking-[0.2em] text-[12px] md:text-xs font-medium border-b-2 border-gray-900 text-gray-900 whitespace-nowrap">Description</button>
+            <button type="button" id="tab-addl" class="py-3 -mb-px uppercase tracking-[0.2em] text-[12px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Item Details</button>
+            <button type="button" id="tab-manufacturer" class="py-3 -mb-px uppercase tracking-[0.2em] text-[12px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Manufacturer &amp; Packer</button>
+            <button type="button" id="tab-others" class="py-3 -mb-px uppercase tracking-[0.2em] text-[12px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Others</button>
+          </nav>
+        </div>
+        <div class="pt-6">
+          <!-- Description Content -->
+          <div id="panel-desc">
+            {% if product.description %}
+            <div class="text-sm md:text-sm max-w-none text-gray-700">
+              {{ product.description|linebreaks }}
+            </div>
+            {% else %}
+            <div class="text-xs text-gray-500">No description available.</div>
+            {% endif %}
+          </div>
+
+          <!-- Item Details Content -->
+          <div id="panel-addl" class="hidden">
+            {% with d=d2c_details %}
+            {% if d or product.specifications or product.hsn_code or product.gst_percentage or product.product_length or product.product_breadth or product.product_height or product.package_length or product.package_breadth or product.package_height or product.weight_value or product.package_weight_value or product.country_of_origin or product.return_type or product.dangerous_goods or product.guarantee_warranty %}
+            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {% if product.hsn_code %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">HSN Code</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.hsn_code }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.gst_percentage %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">GST</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.gst_percentage }}%</div>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if d and d.material %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Material</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ d.material }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d and d.colour %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Colour</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ d.colour }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d and d.recommended_use %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Recommended Use</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ d.recommended_use }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d and d.handling_time %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Handling Time</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ d.handling_time }}</div>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if d and d.accessories %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Accessories</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">
+                    <ul class="list-disc list-inside space-y-1">
+                      {% for a in d.accessories %}
+                      <li>{{ a }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if d and d.includes %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Includes</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">
+                    <ul class="list-disc list-inside space-y-1">
+                      {% for inc in d.includes %}
+                      <li>{{ inc }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if product.product_length and product.product_breadth and product.product_height %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Product Dimensions</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.product_length }} x {{ product.product_breadth }} x {{ product.product_height }}{% if product.product_unit %} {{ product.product_unit }}{% endif %}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.package_length and product.package_breadth and product.package_height %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Package Dimensions</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.package_length }} x {{ product.package_breadth }} x {{ product.package_height }}{% if product.package_unit %} {{ product.package_unit }}{% endif %}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.weight_value %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Product Weight</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.weight_value }}{% if product.weight_unit %} {{ product.weight_unit }}{% endif %}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.package_weight_value %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Package Weight</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.package_weight_value }}{% if product.package_weight_unit %} {{ product.package_weight_unit }}{% endif %}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.country_of_origin %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Country of Origin</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.country_of_origin }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.return_type %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Return Type</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.get_return_type_display|default:product.return_type }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.dangerous_goods %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Dangerous Goods</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.get_dangerous_goods_display|default:product.dangerous_goods }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.guarantee_warranty %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Guarantee/Warranty</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.guarantee_warranty }}</div>
+                </div>
+              </div>
+              {% endif %}
+
+              {% if product.specifications %}
+                {% for key, value in product.specifications.items %}
+                <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                  <div class="flex flex-col p-4">
+                    <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">{{ key|capfirst }}</h4></div>
+                    <div class="text-gray-900 text-xs md:text-sm break-words">{{ value }}</div>
+                  </div>
+                </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center py-8"><div class="text-xs text-gray-500">No additional information available.</div></div>
+            {% endif %}
+            {% endwith %}
+          </div>
+
+          <!-- Manufacturer & Packer -->
+          <div id="panel-manufacturer" class="hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {% if product.manufacturer_contact %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Manufacturer Contact</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.manufacturer_contact }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.packer_contact %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Packer Contact</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ product.packer_contact }}</div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+            {% if not product.manufacturer_contact and not product.packer_contact %}
+            <div class="text-center py-8"><div class="text-xs text-gray-500">No manufacturer or packer details available.</div></div>
+            {% endif %}
+          </div>
+
+          <!-- Others (Extras) -->
+          <div id="panel-others" class="hidden">
+            {% if d2c_details and d2c_details.extras %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {% for extra in d2c_details.extras %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2"><h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">{{ extra.name|default:extra.type|capfirst }}</h4></div>
+                  <div class="text-gray-900 text-xs md:text-sm break-words">{{ extra.text }}</div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8"><div class="text-xs text-gray-500">No other details available.</div></div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="mt-[5rem] w-full">
+      {% include 'storefront/template1/components/product_faq.html' %}
+    </div>
+    <!-- Reviews Section (Below FAQs) -->
+    <section id="reviews-section" class="mt-10 md:mt-14 bg-white px-4 md:px-0">
+      <div class="w-full mx-auto px-4 sm:px-6 lg:px-12 py-8">
+        <div class="text-center max-w-3xl mx-auto mb-6">
+          <h2 class="text-lg uppercase tracking-[0.25em] text-gray-800 font-semibold">Product Reviews</h2>
+          <p class="mt-2 text-sm text-gray-700">Share your experience with {{ product.title }}.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Summary -->
+          <div class="lg:col-span-1 p-5 bg-gray-100 rounded-md">
+            <div class="text-sm uppercase tracking-[0.2em] text-blue-700">Overall Rating</div>
+            <div class="mt-2 flex items-end gap-3">
+              <div class="text-4xl font-semibold text-gray-900">{{ avg_rating|default:0|floatformat:1 }}</div>
+              <div class="text-sm text-gray-600">/ 5</div>
+            </div>
+            <div class="mt-2 text-xs text-gray-600">Based on {{ total_reviews|default:0 }} review{{ total_reviews|default:0|pluralize }}</div>
+            <div class="mt-4 flex items-center">
+              {% with rating=avg_rating|default:0 %}
+              {% for i in "12345" %}
+                {% if forloop.counter <= rating|floatformat:"0"|add:"0" %}
+                  <svg class="w-5 h-5 text-amber-500 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                {% elif forloop.counter == rating|floatformat:"0"|add:"0"|add:"1" and rating|floatformat:"1"|slice:"-1:" != "0" %}
+                  <svg class="w-5 h-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="half-star-gradient-3" x1="0" x2="1" y1="0" y2="0"><stop offset="50%" stop-color="currentColor"></stop><stop offset="50%" stop-color="#e5e7eb"></stop></linearGradient></defs><path fill="url(#half-star-gradient-3)" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                {% else %}
+                  <svg class="w-5 h-5 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                {% endif %}
+              {% endfor %}
+              {% endwith %}
+            </div>
+          </div>
+          <!-- Reviews list and form -->
+          <div class="lg:col-span-2">
+            {% if reviews %}
+              <ul class="space-y-4">
+                {% for r in reviews %}
+                <li class="bg-white rounded-2xl ring-1 ring-gray-200 shadow-sm p-5">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <div class="text-sm font-medium text-gray-900">{{ r.name|default:'Anonymous' }}</div>
+                      <div class="text-[11px] text-gray-600">{{ r.created_at|date:'M d, Y' }}</div>
+                    </div>
+                    <div class="flex items-center">
+                      {% for i in "12345" %}
+                        {% if forloop.counter <= r.rating %}
+                          <svg class="w-4 h-4 text-amber-500 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        {% else %}
+                          <svg class="w-4 h-4 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% if r.title %}<div class="mt-1 text-sm font-medium text-gray-900">{{ r.title }}</div>{% endif %}
+                  <p class="mt-2 text-sm text-gray-700 leading-relaxed">{{ r.comment|linebreaksbr }}</p>
+                </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <div class="text-sm text-gray-600 bg-yellow-50 p-4 rounded-lg">No reviews yet. Be the first to review.</div>
+            {% endif %}
+            <!-- Review form (Accordion) -->
+            <div class="mt-6 bg-white shadow-sm rounded-xl">
+              <button id="review-accordion-btn" type="button" class="w-full flex items-center justify-between px-5 py-4" aria-controls="review-accordion-panel" aria-expanded="false" data-default-open="{% if total_reviews %}1{% else %}0{% endif %}">
+                <span class="text-sm font-medium text-gray-900">Write a review</span>
+                <svg id="review-accordion-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 text-gray-500 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div id="review-accordion-panel" class="border-t border-gray-100 {% if not total_reviews %}hidden{% endif %}">
+                <div class="p-5">
+                  <form method="post" action="{% url 'submit_product_review' product_id=product.product_id|default:'0' %}" class="space-y-3">
+                    {% csrf_token %}
+                    {% if is_d2c and not customer_email %}
+                    <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Sign in from Account to submit your review.
+                    </div>
+                    {% elif is_d2c and not can_review %}
+                    <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Reviews are available after your delivered order.
+                    </div>
+                    {% else %}
+                    <div class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                      {% if is_b2b %}Use your email to create or update your review anytime.{% else %}You can update your existing review from this form.{% endif %}
+                    </div>
+                    {% endif %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Name</label>
+                        <input type="text" name="name" value="{% if my_review and my_review.name %}{{ my_review.name }}{% endif %}" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Your name" />
+                      </div>
+                      <div>
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Email</label>
+                        <input type="email" name="email" value="{% if my_review and my_review.email %}{{ my_review.email }}{% endif %}" {% if is_b2b %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="you@example.com" />
+                      </div>
+                      <div>
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Rating</label>
+                        <select name="rating" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                          <option value="5" {% if my_review and my_review.rating == 5 %}selected{% endif %}>5 - Excellent</option>
+                          <option value="4" {% if my_review and my_review.rating == 4 %}selected{% endif %}>4 - Good</option>
+                          <option value="3" {% if my_review and my_review.rating == 3 %}selected{% endif %}>3 - Average</option>
+                          <option value="2" {% if my_review and my_review.rating == 2 %}selected{% endif %}>2 - Poor</option>
+                          <option value="1" {% if my_review and my_review.rating == 1 %}selected{% endif %}>1 - Terrible</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Title</label>
+                        <input type="text" name="title" value="{% if my_review and my_review.title %}{{ my_review.title }}{% endif %}" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Optional title" />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Review</label>
+                      <textarea name="comment" rows="4" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Share your experience with this product" required>{% if my_review and my_review.comment %}{{ my_review.comment }}{% endif %}</textarea>
+                    </div>
+                    <div class="flex items-center justify-end">
+                      <button type="submit" {% if is_d2c and not customer_email or is_d2c and not can_review %}disabled{% endif %} class="inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 text-white text-xs uppercase tracking-[0.15em] hover:bg-blue-700 shadow-sm transition-colors disabled:cursor-not-allowed disabled:bg-gray-400">Submit Review</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Related products -->
+    <style>
+      .related-product-image-link {
+        width: 100%;
+        height: 100%;
+      }
+      .related-bs-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+        gap: 0.5rem;
+        width: 100%;
+        align-items: stretch;
+      }
+      .related-bs-content {
+        /* Ensures consistent max width and padding on desktop */
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 0;
+        padding-right: 0;
+        overflow: hidden;
+      }
+      .related-bs-title {
+        /* Allows multi-line clamp and overflow safety on all sizes */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      @media (max-width: 768px) {
+        .related-bs-actions {
+          grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+        }
+        .related-bs-content {
+          width: 100%;
+          max-width: 42vw;
+          margin-left: 4px;
+          margin-right: 4px;
+          overflow: hidden;
+        }
+        .related-bs-title {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      }
+    </style>
+    <div class="mt-14 px-4 md:px-0">
+      <div class="text-center max-w-4xl mx-auto mb-6">
+        <h2 class="text-lg uppercase tracking-[0.25em] text-gray-800 font-normal">You may also like</h2>
+      </div>
+      <div id="related-slider" class="relative">
+        <button type="button" class="hidden md:hidden absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Previous" onclick="relatedPrev()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <button type="button" class="hidden md:hidden absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Next" onclick="relatedNext()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <div id="related-viewport" class="overflow-hidden">
+          <div id="related-track" class="flex transition-transform duration-500 ease-out will-change-transform -mx-2 md:-mx-3">
+            {% for item in related_products %}
+              <div class="related-slide box-border flex-none basis-1/2 lg:basis-1/4 px-2 md:px-3">
+                <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)]" style="border-radius: 8px;">
+                  <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
+                    {% if item.image1 %}
+                    <a href="{% url 'public_product_detail' product_slug=item.slug|default:'_' %}" class="group relative flex items-center justify-center flex-shrink-0 related-product-image-link">
+                      <span class="relative w-full h-full flex items-center justify-center">
+                        {% if website.content.enable_product_hover_swap and item.image2 %}
+                        <img src="{{ item.image1.url }}" {% media_attrs website item.image1.url item.title %} class="block w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0" data-no-srcset="true"/>
+                        <img src="{{ item.image2.url }}" {% media_attrs website item.image2.url item.title %} class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100" data-no-srcset="true"/>
+                        {% else %}
+                        <img src="{{ item.image1.url }}" {% media_attrs website item.image1.url item.title %} class="block w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" data-no-srcset="true"/>
+                        {% endif %}
+                      </span>
+                    </a>
+                    {% else %}
+                    <div class="absolute inset-0 flex items-center justify-center bg-gray-100"></div>
+                    {% endif %}
+                    {% if item.specifications %}
+                    <div class="absolute top-2 right-2 flex flex-col items-end space-y-1.5 pointer-events-none">
+                      {% with specs=item.specifications %}
+                        {% if specs.discount %}
+                          <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount }}%</span>
+                        {% elif specs.discount_percentage %}
+                          <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount_percentage }}%</span>
+                        {% endif %}
+                      {% endwith %}
+                    </div>
+                    {% endif %}
+                  </div>
+                  <div class="px-2 sm:px-3 md:px-4 py-4 text-left related-bs-content">
+                    <a href="{% url 'public_product_detail' product_slug=item.slug|default:'_' %}"
+                       class="block text-[10px] sm:text-[15px] font-normal uppercase leading-tight text-gray-900 hover:text-black transition-colors break-words related-bs-title">
+                      {{ item.title }}
+                    </a>
+                    {% if show_price_in_lists %}
+                    <div class="mt-1 text-gray-700">
+                      <a href="{% url 'public_product_detail' product_slug=item.slug|default:'_' %}"
+                         class="inline-flex items-baseline justify-start gap-1.5 hover:text-black transition-colors max-w-full">
+                        {% with specs=item.specifications %}
+                          <span class="text-[13px] sm:text-base font-normal uppercase leading-none text-gray-900 break-words">{{ item.currency|currency_symbol }}{{ item.price }}</span>
+                          {% if specs and specs.mrp %}
+                            <span class="text-xs sm:text-sm text-gray-400 line-through break-words">{{ item.currency|currency_symbol }}{{ specs.mrp }}</span>
+                          {% elif specs and specs.original_price %}
+                            <span class="text-xs sm:text-sm text-gray-400 line-through break-words">{{ item.currency|currency_symbol }}{{ specs.original_price }}</span>
+                          {% endif %}
+                        {% endwith %}
+                      </a>
+                    </div>
+                    {% endif %}
+                    <div class="mt-1.5 related-bs-actions">
+                      <button type="button"
+                         class="inline-flex items-center justify-center gap-1 w-full h-6 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
+                         style="border: 1px solid #888888;"
+                         onclick="openRelatedEnquiryModal('{{ item.product_id }}')"
+                         aria-label="Send enquiry for {{ item.title }}">
+                        <span class="font-medium leading-none truncate">Send Enquiry</span>
+                      </button>
+                      <a href="{% url 'public_product_whatsapp' product_id=item.product_id|default:'0' %}"
+                         class="w-full h-6 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-[#25D366] bg-white hover:bg-gray-50 transition"
+                         style="border: 1px solid #888888;"
+                         aria-label="Share {{ item.title }} on WhatsApp">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-3 h-3" fill="currentColor" aria-hidden="true">
+                          <path d="M16.02 3.2c-7.07 0-12.8 5.73-12.8 12.8 0 2.26.6 4.48 1.74 6.43L3.2 28.8l6.53-1.72a12.75 12.75 0 0 0 6.29 1.64h.01c7.07 0 12.8-5.73 12.8-12.8 0-3.42-1.33-6.63-3.75-9.05a12.7 12.7 0 0 0-9.06-3.67Zm0 23.31h-.01a10.5 10.5 0 0 1-5.35-1.46l-.38-.23-3.88 1.02 1.04-3.78-.24-.39a10.54 10.54 0 1 1 18.81-5.67c0 5.8-4.72 10.51-10.49 10.51Zm5.76-7.85c-.31-.15-1.83-.9-2.12-1-.28-.1-.49-.15-.69.16-.2.3-.79 1-.97 1.2-.18.2-.36.22-.67.07-.31-.15-1.3-.48-2.48-1.54-.92-.82-1.54-1.84-1.72-2.15-.18-.31-.02-.48.13-.63.14-.14.31-.36.46-.54.15-.18.2-.31.31-.51.1-.2.05-.38-.03-.54-.08-.15-.69-1.67-.95-2.28-.25-.6-.5-.52-.69-.53-.18-.01-.38-.01-.59-.01-.2 0-.54.08-.82.38-.28.31-1.08 1.06-1.08 2.58 0 1.52 1.11 2.99 1.26 3.2.15.2 2.18 3.33 5.27 4.67.74.32 1.32.51 1.77.66.74.24 1.41.2 1.94.12.59-.09 1.83-.75 2.09-1.47.26-.72.26-1.33.18-1.47-.08-.13-.28-.2-.59-.36Z"></path>
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% empty %}
+              <div class="w-full text-center text-gray-500 py-6">No related products available.</div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="mt-6 flex items-center justify-center gap-3">
+          <button id="related-prev" type="button" class="bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Previous" onclick="relatedPrev()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button id="related-next" type="button" class="bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Next" onclick="relatedNext()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PDP Enquiry Modal -->
+<div id="pdp-enquiry-modal" class="fixed inset-0 z-50 hidden" data-enquiry-mode="{{ enquiry_form_mode|default:'mobile_qty' }}">
+  <div class="absolute inset-0 bg-black/50" onclick="closePdpEnquiryModal()"></div>
+  <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-gray-200">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <h3 class="text-base font-semibold text-gray-900">Product Enquiry</h3>
+        <button type="button" id="pdp-enquiry-close" class="text-gray-400 hover:text-gray-600" onclick="closePdpEnquiryModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5"><path fill="currentColor" d="M6.4 5l12.6 12.6-1.4 1.4L5 6.4z"/><path fill="currentColor" d="M5 17.6L17.6 5l1.4 1.4L6.4 19z"/></svg>
+        </button>
+      </div>
+      <form id="pdp-enquiry-form" method="post" action="{% url 'public_enquiry' %}" class="px-5 py-4">
+        {% csrf_token %}
+        <input type="hidden" name="products" value="{{ product.product_id }}" />
+        <div id="pdp-enquiry-alert" class="hidden mb-3 text-sm rounded-md px-3 py-2"></div>
+        <div class="space-y-4">
+          {# Keep all three fields in DOM; JS + server defaults will toggle visibility/required precisely. #}
+          <div id="pdp-mobile-field" class="{% if enquiry_form_mode == 'email_qty' %}hidden{% endif %}">
+            <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Mobile Number</label>
+            <input type="tel" name="mobile" inputmode="numeric" pattern="[0-9]{8,14}" maxlength="14" {% if enquiry_form_mode != 'email_qty' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter mobile number" />
+          </div>
+          <div id="pdp-email-field" class="{% if enquiry_form_mode != 'email_qty' and enquiry_form_mode != 'all' %}hidden{% endif %}">
+            <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Email Address</label>
+            <input type="email" name="email" {% if enquiry_form_mode == 'email_qty' or enquiry_form_mode == 'all' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter your email" />
+          </div>
+          <div id="pdp-quantity-field" class="{% if enquiry_form_mode == 'mobile_only' %}hidden{% endif %}">
+            <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Quantity</label>
+            <input type="number" name="quantity" id="pdp-modal-quantity" min="1" step="1" {% if enquiry_form_mode != 'mobile_only' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter quantity" />
+          </div>
+        </div>
+        <div class="mt-5 flex items-center justify-end gap-2">
+          <button type="button" id="pdp-enquiry-cancel" class="inline-flex items-center justify-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50" onclick="closePdpEnquiryModal()">Cancel</button>
+          <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-black text-white text-xs uppercase tracking-[0.15em] hover:bg-gray-800 shadow-sm transition-colors">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- PDP Video Modal (ported from template2) -->
+<div id="pdp-video-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" style="display:none;">
+  <div id="pdp-video-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div id="pdp-video-modal-shell" class="relative z-10 w-full max-w-4xl mx-4 sm:mx-auto">
+    <div class="rounded-2xl bg-white shadow-2xl overflow-hidden">
+      <div class="relative bg-black">
+        <button type="button" id="pdp-video-close" class="absolute top-3 right-3 z-10 inline-flex items-center justify-center rounded-full p-2 text-gray-200" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div id="pdp-video-aspect" class="w-full aspect-video flex items-center justify-center">
+          <iframe id="pdp-video-iframe" class="w-full h-full hidden" src="" title="Product video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <video id="pdp-video-el" class="w-full h-full hidden object-contain" playsinline preload="auto" loop autoplay controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture>
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Global modal open/close functions for PDP Enquiry Modal
+  function openPdpEnquiryModal() {
+    var modal = document.getElementById('pdp-enquiry-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      // Apply the configured enquiry mode (show/hide + required/disabled fields)
+      try { if (window.applyPdpEnquiryMode) window.applyPdpEnquiryMode(modal.getAttribute('data-enquiry-mode')); } catch(e) {}
+      // Pre-fill quantity from sidebar input if available
+      var sidebarQty = document.getElementById('purch-qty');
+      var mobileQty = document.getElementById('purch-qty-m');
+      var modalQty = document.getElementById('pdp-modal-quantity');
+      if (modalQty) {
+        var qty = (sidebarQty && sidebarQty.value) ? sidebarQty.value : ((mobileQty && mobileQty.value) ? mobileQty.value : '1');
+        modalQty.value = qty;
+      }
+    }
+  }
+  function closePdpEnquiryModal() {
+    var modal = document.getElementById('pdp-enquiry-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+  function openRelatedEnquiryModal(productId) {
+    var input = document.querySelector('#pdp-enquiry-form input[name="products"]');
+    if (input) input.value = productId;
+    openPdpEnquiryModal();
+  }
+</script>
+
+<script>
+  // B2B: Dynamically show/hide enquiry modal fields based on mode:
+  // - mobile_only: mobile required, quantity hidden
+  // - mobile_qty: mobile + quantity required
+  // - email_qty: email + quantity required
+  // - all: mobile + email + quantity required
+  (function(){
+    function q(sel, root){ return (root || document).querySelector(sel); }
+    function setShown(el, show){
+      if (!el) return;
+      el.classList.toggle('hidden', !show);
+    }
+    function setRequiredAndEnabled(input, required, enabled){
+      if (!input) return;
+      if (required) input.setAttribute('required', '');
+      else input.removeAttribute('required');
+      input.disabled = !enabled;
+      if (!enabled) {
+        // Avoid submitting stale values from hidden fields
+        try { input.value = ''; } catch(e) {}
+      }
+    }
+
+    window.applyPdpEnquiryMode = function(mode){
+      var modal = document.getElementById('pdp-enquiry-modal');
+      if (!modal) return;
+      var m = (mode || modal.getAttribute('data-enquiry-mode') || 'mobile_qty');
+      m = (m || '').toString().trim();
+      if (!m) m = 'mobile_qty';
+
+      var mobileWrap = document.getElementById('pdp-mobile-field');
+      var emailWrap = document.getElementById('pdp-email-field');
+      var qtyWrap = document.getElementById('pdp-quantity-field');
+
+      var mobileInput = q('input[name="mobile"]', mobileWrap);
+      var emailInput = q('input[name="email"]', emailWrap);
+      var qtyInput = q('input[name="quantity"]', qtyWrap);
+
+      var showMobile = (m === 'mobile_only' || m === 'mobile_qty' || m === 'all');
+      var showEmail = (m === 'email_qty' || m === 'all');
+      var showQty = (m === 'mobile_qty' || m === 'email_qty' || m === 'all');
+
+      setShown(mobileWrap, showMobile);
+      setShown(emailWrap, showEmail);
+      setShown(qtyWrap, showQty);
+
+      setRequiredAndEnabled(mobileInput, (m === 'mobile_only' || m === 'mobile_qty' || m === 'all'), showMobile);
+      setRequiredAndEnabled(emailInput, (m === 'email_qty' || m === 'all'), showEmail);
+      setRequiredAndEnabled(qtyInput, (m === 'mobile_qty' || m === 'email_qty' || m === 'all'), showQty);
+    };
+
+    document.addEventListener('DOMContentLoaded', function(){
+      try { window.applyPdpEnquiryMode(); } catch(e) {}
+    });
+  })();
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const active = document.getElementById('active-image');
+    const stage = document.getElementById('pdp-image-stage');
+    const zoomInBtn = document.getElementById('pdp-zoom-in');
+    const zoomOutBtn = document.getElementById('pdp-zoom-out');
+    const zoomResetBtn = document.getElementById('pdp-zoom-reset');
+
+    // Check if zoom is enabled via data attribute
+    const zoomEnabled = stage ? (stage.getAttribute('data-zoom-enabled') !== 'false') : true;
+
+    // --- Image gallery swipe functionality ---
+    const imageUrls = [];
+    let currentImageIndex = 0;
+    
+    // Collect all product image URLs
+    {% for i in "1234567" %}
+      {% with image_attr="image"|add:i %}
+      {% with img=product|getattribute:image_attr %}
+      {% if img %}
+        imageUrls.push("{{ img.url }}");
+      {% endif %}
+      {% endwith %}
+      {% endwith %}
+    {% endfor %}
+    
+    // Initialize dots indicator
+    function initImageDots() {
+      const dotsContainer = document.getElementById('pdp-image-dots');
+      if (!dotsContainer || imageUrls.length <= 1) return;
+      
+      dotsContainer.innerHTML = '';
+      imageUrls.forEach((url, index) => {
+        const dot = document.createElement('div');
+        dot.className = index === 0 ? 'w-2 h-2 rounded-full bg-gray-900 transition-all duration-200' : 'w-2 h-2 rounded-full bg-gray-300 transition-all duration-200';
+        dot.dataset.index = index;
+        dotsContainer.appendChild(dot);
+      });
+    }
+    
+    // Update active dot
+    function updateDots() {
+      const dotsContainer = document.getElementById('pdp-image-dots');
+      if (!dotsContainer) return;
+      
+      const dots = dotsContainer.querySelectorAll('div');
+      dots.forEach((dot, index) => {
+        if (index === currentImageIndex) {
+          dot.className = 'w-2 h-2 rounded-full bg-gray-900 transition-all duration-200';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-gray-300 transition-all duration-200';
+        }
+      });
+    }
+    
+    // Change to specific image
+    function changeImage(index) {
+      if (index < 0 || index >= imageUrls.length) return;
+      currentImageIndex = index;
+      if (active) {
+        active.src = imageUrls[currentImageIndex];
+        updateDots();
+      }
+    }
+    
+    // Swipe detection
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    let isSwiping = false;
+    const minSwipeDistance = 50;
+    
+    initImageDots();
+
+    // --- Image zoom + pan (no dependencies) ---
+    const MIN_SCALE = 1;
+    const MAX_SCALE = zoomEnabled ? 3 : 1;
+    const STEP = 0.25;
+    let scale = 1;
+    let tx = 0;
+    let ty = 0;
+
+    function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+    function clampPan() {
+      if (!stage) return;
+      const r = stage.getBoundingClientRect();
+      const maxX = Math.max(0, (scale - 1) * r.width / 2);
+      const maxY = Math.max(0, (scale - 1) * r.height / 2);
+      tx = clamp(tx, -maxX, maxX);
+      ty = clamp(ty, -maxY, maxY);
+    }
+
+    function applyTransform() {
+      if (!active) return;
+      clampPan();
+      active.style.setProperty('--pdp-scale', String(scale));
+      active.style.setProperty('--pdp-tx', tx + 'px');
+      active.style.setProperty('--pdp-ty', ty + 'px');
+      updateZoomButtons();
+    }
+
+    function updateZoomButtons() {
+      if (zoomOutBtn) zoomOutBtn.classList.toggle('opacity-50', scale <= MIN_SCALE);
+      if (zoomOutBtn) zoomOutBtn.classList.toggle('pointer-events-none', scale <= MIN_SCALE);
+      if (zoomInBtn) zoomInBtn.classList.toggle('opacity-50', scale >= MAX_SCALE);
+      if (zoomInBtn) zoomInBtn.classList.toggle('pointer-events-none', scale >= MAX_SCALE);
+      if (zoomResetBtn) zoomResetBtn.classList.toggle('hidden', scale === 1 && tx === 0 && ty === 0);
+    }
+
+    function resetZoom() {
+      scale = 1;
+      tx = 0;
+      ty = 0;
+      applyTransform();
+    }
+
+    function zoomTo(newScale, clientX, clientY) {
+      if (!stage) {
+        scale = clamp(newScale, MIN_SCALE, MAX_SCALE);
+        applyTransform();
+        return;
+      }
+      const prev = scale;
+      const next = clamp(newScale, MIN_SCALE, MAX_SCALE);
+      if (next === prev) return;
+
+      // Keep the point under the cursor stable (best-effort)
+      const r = stage.getBoundingClientRect();
+      const px = (typeof clientX === 'number' ? (clientX - r.left) : (r.width / 2)) - r.width / 2;
+      const py = (typeof clientY === 'number' ? (clientY - r.top) : (r.height / 2)) - r.height / 2;
+      const ratio = next / prev;
+      tx = (1 - ratio) * px + ratio * tx;
+      ty = (1 - ratio) * py + ratio * ty;
+      scale = next;
+      applyTransform();
+    }
+
+    // Only attach zoom event handlers if zoom is enabled
+    if (zoomEnabled) {
+      if (zoomInBtn) zoomInBtn.addEventListener('click', function(){ zoomTo(scale + STEP); });
+      if (zoomOutBtn) zoomOutBtn.addEventListener('click', function(){ zoomTo(scale - STEP); });
+      if (zoomResetBtn) zoomResetBtn.addEventListener('click', function(){ resetZoom(); });
+
+      // Wheel to zoom (trackpad/mouse). Prevent page scroll while zooming over the image.
+      if (stage) {
+        stage.addEventListener('wheel', function(e){
+          if (!active) return;
+          // Zoom in on wheel up (deltaY < 0), zoom out on wheel down (deltaY > 0)
+          const dir = e.deltaY > 0 ? -1 : 1;
+          if (dir === 0) return;
+          e.preventDefault();
+          zoomTo(scale + dir * STEP, e.clientX, e.clientY);
+        }, { passive: false });
+
+        // Double click / double tap to toggle zoom
+        stage.addEventListener('dblclick', function(e){
+          e.preventDefault();
+          if (scale === 1) zoomTo(2, e.clientX, e.clientY);
+          else resetZoom();
+        });
+      }
+    }
+
+    // Drag to pan when zoomed & swipe to change image when not zoomed
+    if (zoomEnabled) {
+      (function(){
+        if (!stage) return;
+        let dragging = false;
+        let startX = 0, startY = 0, startTx = 0, startTy = 0;
+
+        function onDown(e){
+          // Store initial touch position for swipe detection
+          touchStartX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+          touchStartY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+          
+          if (scale <= 1) {
+            // Not zoomed - prepare for swipe
+            isSwiping = true;
+            return;
+          }
+          // Zoomed - prepare for pan
+          dragging = true;
+          stage.setPointerCapture && stage.setPointerCapture(e.pointerId);
+          startX = e.clientX;
+          startY = e.clientY;
+          startTx = tx;
+          startTy = ty;
+        }
+        function onMove(e){
+          if (dragging && scale > 1) {
+            // Pan when zoomed
+            tx = startTx + (e.clientX - startX);
+            ty = startTy + (e.clientY - startY);
+            applyTransform();
+          }
+        }
+        function onUp(e){
+          if (isSwiping && scale <= 1) {
+            // Handle swipe
+            touchEndX = e.clientX || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : touchStartX);
+            touchEndY = e.clientY || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : touchStartY);
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Check if horizontal swipe is dominant and exceeds minimum distance
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+              if (deltaX > 0) {
+                // Swipe right - previous image
+                const prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : imageUrls.length - 1;
+                changeImage(prevIndex);
+                resetZoom();
+              } else {
+                // Swipe left - next image
+                const nextIndex = currentImageIndex < imageUrls.length - 1 ? currentImageIndex + 1 : 0;
+                changeImage(nextIndex);
+                resetZoom();
+              }
+            }
+            isSwiping = false;
+          }
+          dragging = false;
+        }
+
+        stage.addEventListener('pointerdown', onDown);
+        stage.addEventListener('pointermove', onMove);
+        stage.addEventListener('pointerup', onUp);
+        stage.addEventListener('pointercancel', onUp);
+        stage.addEventListener('pointerleave', onUp);
+        
+        // Also support touch events for better mobile compatibility
+        // Track whether this is a horizontal swipe to prevent scroll only when needed
+        let isHorizontalSwipe = false;
+        
+        stage.addEventListener('touchstart', function(e) {
+          const touch = e.touches[0];
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+          isHorizontalSwipe = false;
+          if (scale <= 1) isSwiping = true;
+          // Don't preventDefault here - allow scroll detection to happen first
+        }, { passive: true });
+        
+        stage.addEventListener('touchmove', function(e) {
+          if (!e.touches || !e.touches[0]) return;
+          const touch = e.touches[0];
+          const deltaX = Math.abs(touch.clientX - touchStartX);
+          const deltaY = Math.abs(touch.clientY - touchStartY);
+          
+          // If zoomed in, prevent scroll to allow panning
+          if (scale > 1) {
+            e.preventDefault();
+            return;
+          }
+          
+          // Determine if this is a horizontal swipe (for image change)
+          // Only prevent default scroll if horizontal movement is dominant
+          if (deltaX > deltaY && deltaX > 10) {
+            isHorizontalSwipe = true;
+            e.preventDefault(); // Prevent scroll only for horizontal swipes
+          }
+          // For vertical swipes, allow normal page scrolling (don't preventDefault)
+        }, { passive: false });
+        
+        stage.addEventListener('touchend', function(e) {
+          if (isSwiping && scale <= 1 && e.changedTouches && e.changedTouches[0]) {
+            const touch = e.changedTouches[0];
+            touchEndX = touch.clientX;
+            touchEndY = touch.clientY;
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Only change image if it was a horizontal swipe
+            if (isHorizontalSwipe && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+              if (deltaX > 0) {
+                const prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : imageUrls.length - 1;
+                changeImage(prevIndex);
+                resetZoom();
+              } else {
+                const nextIndex = currentImageIndex < imageUrls.length - 1 ? currentImageIndex + 1 : 0;
+                changeImage(nextIndex);
+                resetZoom();
+              }
+            }
+            isSwiping = false;
+          }
+          isHorizontalSwipe = false;
+        }, { passive: true });
+      })();
+    } else {
+      // When zoom is disabled, still enable swipe
+      (function(){
+        if (!stage) return;
+        
+        // Track whether this is a horizontal swipe to prevent scroll only when needed
+        let isHorizontalSwipe = false;
+        
+        stage.addEventListener('touchstart', function(e) {
+          const touch = e.touches[0];
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+          isHorizontalSwipe = false;
+          isSwiping = true;
+          // Don't preventDefault here - allow scroll detection to happen first
+        }, { passive: true });
+        
+        stage.addEventListener('touchmove', function(e) {
+          if (!e.touches || !e.touches[0]) return;
+          const touch = e.touches[0];
+          const deltaX = Math.abs(touch.clientX - touchStartX);
+          const deltaY = Math.abs(touch.clientY - touchStartY);
+          
+          // Determine if this is a horizontal swipe (for image change)
+          // Only prevent default scroll if horizontal movement is dominant
+          if (deltaX > deltaY && deltaX > 10) {
+            isHorizontalSwipe = true;
+            e.preventDefault(); // Prevent scroll only for horizontal swipes
+          }
+          // For vertical swipes, allow normal page scrolling (don't preventDefault)
+        }, { passive: false });
+        
+        stage.addEventListener('touchend', function(e) {
+          if (isSwiping && e.changedTouches && e.changedTouches[0]) {
+            const touch = e.changedTouches[0];
+            touchEndX = touch.clientX;
+            touchEndY = touch.clientY;
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Only change image if it was a horizontal swipe
+            if (isHorizontalSwipe && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+              if (deltaX > 0) {
+                const prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : imageUrls.length - 1;
+                changeImage(prevIndex);
+              } else {
+                const nextIndex = currentImageIndex < imageUrls.length - 1 ? currentImageIndex + 1 : 0;
+                changeImage(nextIndex);
+              }
+            }
+            isSwiping = false;
+          }
+          isHorizontalSwipe = false;
+        }, { passive: true });
+      })();
+    }
+
+    document.querySelectorAll('.thumb').forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-url');
+        if (url) {
+          // Find the index of this image in imageUrls array
+          const imgIndex = imageUrls.indexOf(url);
+          if (imgIndex !== -1) {
+            changeImage(imgIndex);
+          } else {
+            // Fallback if not found
+            active.src = url;
+          }
+          resetZoom();
+        }
+      });
+    });
+
+    // --- PDP video modal (ported from template2) ---
+    const videoModal = document.getElementById('pdp-video-modal');
+    const videoModalShell = document.getElementById('pdp-video-modal-shell');
+    const videoAspect = document.getElementById('pdp-video-aspect');
+    const videoBackdrop = document.getElementById('pdp-video-backdrop');
+    const videoClose = document.getElementById('pdp-video-close');
+    const videoIframe = document.getElementById('pdp-video-iframe');
+    const videoEl = document.getElementById('pdp-video-el');
+
+    function closeVideoModal() {
+      if (videoIframe) {
+        videoIframe.setAttribute('src', '');
+        videoIframe.classList.add('hidden');
+      }
+      if (videoEl) {
+        try { videoEl.pause(); } catch (e) {}
+        videoEl.removeAttribute('src');
+        while (videoEl.firstChild) { videoEl.removeChild(videoEl.firstChild); }
+        try { videoEl.load(); } catch (e) {}
+        videoEl.classList.add('hidden');
+      }
+      if (videoModal) {
+        videoModal.classList.add('hidden');
+        videoModal.classList.remove('flex');
+        videoModal.style.display = 'none';
+      }
+      // Reset modal layout back to landscape defaults
+      try {
+        if (videoModalShell) {
+          videoModalShell.classList.remove('max-w-md');
+          videoModalShell.classList.remove('max-w-[420px]');
+          videoModalShell.classList.add('max-w-4xl');
+          videoModalShell.style.maxWidth = '';
+          videoModalShell.style.width = '';
+        }
+        if (videoAspect) {
+          videoAspect.classList.remove('aspect-[9/16]');
+          videoAspect.classList.add('aspect-video');
+          videoAspect.style.maxHeight = '';
+          videoAspect.style.aspectRatio = '';
+        }
+      } catch (e) {}
+      try { document.body.style.overflow = ''; } catch (e) {}
+    }
+
+    function openVideoModal(btn) {
+      if (!videoModal) return;
+      const vType = (btn && btn.getAttribute('data-video-type')) || '';
+      const vUrl = (btn && btn.getAttribute('data-video-url')) || '';
+      const vEmbed = (btn && btn.getAttribute('data-video-embed')) || '';
+      const vOriRaw = (btn && btn.getAttribute('data-video-orientation')) || 'landscape';
+      const vOri = (vOriRaw || 'landscape').toLowerCase() === 'portrait' ? 'portrait' : 'landscape';
+      if (!vUrl && !vEmbed) return;
+
+      // reset both players
+      if (videoIframe) { videoIframe.setAttribute('src', ''); videoIframe.classList.add('hidden'); }
+      if (videoEl) {
+        try { videoEl.pause(); } catch (e) {}
+        videoEl.removeAttribute('src');
+        while (videoEl.firstChild) { videoEl.removeChild(videoEl.firstChild); }
+        try { videoEl.load(); } catch (e) {}
+        videoEl.classList.add('hidden');
+      }
+
+      if (vType === 'youtube' && vEmbed && videoIframe) {
+        // YouTube embed with loop+autoplay (best-effort)
+        var vid = '';
+        try {
+          var m = (vEmbed || '').match(/\/embed\/([a-zA-Z0-9_-]+)/);
+          vid = (m && m[1]) ? m[1] : '';
+        } catch (e) { vid = ''; }
+        var qp = 'autoplay=1&rel=0&controls=0&playsinline=1&modestbranding=1&loop=1';
+        if (vid) qp += '&playlist=' + encodeURIComponent(vid);
+        const src = vEmbed + (vEmbed.indexOf('?') === -1 ? '?' : '&') + qp;
+        videoIframe.setAttribute('src', src);
+        videoIframe.classList.remove('hidden');
+      } else if (videoEl && vUrl) {
+        // Direct video file
+        const sourceEl = document.createElement('source');
+        sourceEl.setAttribute('src', vUrl);
+        const ext = (vUrl.split('?')[0] || '').split('.').pop().toLowerCase();
+        const mimeMap = { 'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg', 'mov': 'video/quicktime', 'ogv': 'video/ogg' };
+        sourceEl.setAttribute('type', mimeMap[ext] || 'video/mp4');
+        videoEl.appendChild(sourceEl);
+        try { videoEl.controls = false; } catch (e) {}
+        try { videoEl.loop = true; } catch (e) {}
+        try { videoEl.autoplay = true; } catch (e) {}
+        videoEl.load();
+        videoEl.classList.remove('hidden');
+        videoEl.play().catch(function(e) {});
+      }
+
+      // Apply layout based on orientation (portrait vs landscape)
+      try {
+        if (videoModalShell) {
+          videoModalShell.classList.remove('max-w-4xl', 'max-w-md', 'max-w-[420px]');
+          if (vOri === 'portrait') {
+            videoModalShell.style.width = '100%';
+            videoModalShell.style.maxWidth = 'min(420px, calc(85vh * 9 / 16))';
+          } else {
+            videoModalShell.classList.add('max-w-4xl');
+            videoModalShell.style.maxWidth = '';
+            videoModalShell.style.width = '';
+          }
+        }
+        if (videoAspect) {
+          videoAspect.classList.remove('aspect-video', 'aspect-[9/16]', 'pdp-portrait-aspect');
+          if (vOri === 'portrait') {
+            videoAspect.classList.add('aspect-[9/16]');
+            videoAspect.style.maxHeight = '85vh';
+            videoAspect.style.aspectRatio = '9 / 16';
+          } else {
+            videoAspect.classList.add('aspect-video');
+            videoAspect.style.maxHeight = '';
+            videoAspect.style.aspectRatio = '';
+          }
+        }
+      } catch (e) {}
+
+      // Show modal with flex centering
+      videoModal.classList.remove('hidden');
+      videoModal.classList.add('flex');
+      videoModal.style.display = 'flex';
+      try { document.body.style.overflow = 'hidden'; } catch (e) {}
+    }
+
+    if (videoBackdrop) videoBackdrop.addEventListener('click', closeVideoModal);
+    if (videoClose) videoClose.addEventListener('click', closeVideoModal);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeVideoModal();
+    });
+    var mainPlayBtn = document.getElementById('pdp-main-play');
+    if (mainPlayBtn) {
+      mainPlayBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        try { openVideoModal(this); } catch (err) {}
+      });
+    }
+
+    // Tabs logic (aligned with template2)
+    const tabDesc = document.getElementById('tab-desc');
+    const tabAddl = document.getElementById('tab-addl');
+    const tabManufacturer = document.getElementById('tab-manufacturer');
+    const tabOthers = document.getElementById('tab-others');
+    const panelDesc = document.getElementById('panel-desc');
+    const panelAddl = document.getElementById('panel-addl');
+    const panelManufacturer = document.getElementById('panel-manufacturer');
+    const panelOthers = document.getElementById('panel-others');
+
+    function activate(tab) {
+      const map = {
+        desc: {btn: tabDesc, panel: panelDesc},
+        addl: {btn: tabAddl, panel: panelAddl},
+        manufacturer: {btn: tabManufacturer, panel: panelManufacturer},
+        others: {btn: tabOthers, panel: panelOthers},
+      };
+      Object.keys(map).forEach(k => {
+        const entry = map[k];
+        if (!entry || !entry.btn || !entry.panel) return;
+        if (k === tab) {
+          entry.btn.classList.add('text-gray-900','border-gray-900');
+          entry.btn.classList.remove('text-gray-500','border-transparent');
+          entry.panel.classList.remove('hidden');
+        } else {
+          entry.btn.classList.remove('text-gray-900','border-gray-900');
+          entry.btn.classList.add('text-gray-500','border-transparent');
+          entry.panel.classList.add('hidden');
+        }
+      });
+
+      // On mobile, scroll the active tab into view
+      try {
+        const nav = document.getElementById('tabs-nav');
+        const entry = map[tab];
+        if (nav && entry && entry.btn && window.innerWidth < 768) {
+          const offset = entry.btn.offsetLeft - nav.offsetLeft;
+          nav.scrollTo({ left: offset, behavior: 'smooth' });
+        }
+      } catch (e) {}
+    }
+
+    tabDesc && tabDesc.addEventListener('click', () => activate('desc'));
+    tabAddl && tabAddl.addEventListener('click', () => activate('addl'));
+    tabManufacturer && tabManufacturer.addEventListener('click', () => activate('manufacturer'));
+    tabOthers && tabOthers.addEventListener('click', () => activate('others'));
+
+    // Initialize default
+    activate('desc');
+    // Initial zoom state
+    applyTransform();
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    var form = document.getElementById('pdp-enquiry-form');
+    var alertBox = document.getElementById('pdp-enquiry-alert');
+
+    if(form){
+      form.addEventListener('submit', async function(e){
+        e.preventDefault();
+        if(!form.action) return;
+        var fd = new FormData(form);
+        try{
+          var res = await fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+          var data = await res.json();
+          if(res.ok && data.status === 'success'){
+            if(alertBox){ alertBox.className = 'mb-3 text-sm rounded-md px-3 py-2 bg-green-50 text-green-700 ring-1 ring-green-200'; alertBox.textContent = data.message; alertBox.classList.remove('hidden'); }
+            // Reset form
+            form.reset();
+            setTimeout(function(){ closePdpEnquiryModal(); if(alertBox){ alertBox.classList.add('hidden'); } }, 1500);
+          } else {
+            var errText = (data && data.errors) ? data.errors.join(' ') : 'Something went wrong.';
+            if(alertBox){ alertBox.className = 'mb-3 text-sm rounded-md px-3 py-2 bg-red-50 text-red-700 ring-1 ring-red-200'; alertBox.textContent = errText; alertBox.classList.remove('hidden'); }
+          }
+        }catch(err){
+          if(alertBox){ alertBox.className = 'mb-3 text-sm rounded-md px-3 py-2 bg-red-50 text-red-700 ring-1 ring-red-200'; alertBox.textContent = 'Network error. Please try again.'; alertBox.classList.remove('hidden'); }
+        }
+      });
+    }
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('review-accordion-btn');
+    const panel = document.getElementById('review-accordion-panel');
+    const icon = document.getElementById('review-accordion-icon');
+    if (!btn || !panel) return;
+
+    const defaultOpen = btn.getAttribute('data-default-open') === '1';
+    if (defaultOpen) {
+      btn.setAttribute('aria-expanded', 'true');
+      panel.classList.remove('hidden');
+      icon && icon.classList.add('rotate-180');
+    } else {
+      btn.setAttribute('aria-expanded', 'false');
+      panel.classList.add('hidden');
+      icon && icon.classList.remove('rotate-180');
+    }
+
+    btn.addEventListener('click', function() {
+      const isOpen = btn.getAttribute('aria-expanded') === 'true';
+      if (isOpen) {
+        btn.setAttribute('aria-expanded', 'false');
+        panel.classList.add('hidden');
+        icon && icon.classList.remove('rotate-180');
+      } else {
+        btn.setAttribute('aria-expanded', 'true');
+        panel.classList.remove('hidden');
+        icon && icon.classList.add('rotate-180');
+      }
+    });
+  });
+</script>
+
+<!-- Mobile bullets "Read more" toggle -->
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    var list = document.getElementById('bullets-list');
+    var moreBtn = document.getElementById('bullets-read-more');
+    var lessBtn = document.getElementById('bullets-read-less');
+    if (!list || !moreBtn || !lessBtn) return;
+    moreBtn.addEventListener('click', function(){
+      var hiddenItems = list.querySelectorAll('li.hidden');
+      hiddenItems.forEach(function(li){ li.classList.remove('hidden'); });
+      moreBtn.classList.add('hidden');
+      lessBtn.classList.remove('hidden');
+    });
+    lessBtn.addEventListener('click', function(){
+      var items = list.querySelectorAll('li');
+      items.forEach(function(li, idx){ if (idx >= 3) { li.classList.add('hidden'); } });
+      lessBtn.classList.add('hidden');
+      moreBtn.classList.remove('hidden');
+    });
+  });
+</script>
+
+<!-- Discuss Your Needs (Form Section) -->
+<section id="discuss-needs" class="py-16 md:py-20 bg-[rgb(241,241,241,1)]">
+  <div class="max-w-6xl mx-auto px-4">
+    <div class="text-center max-w-3xl mx-auto">
+      <h2 class="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-gray-900">Discuss Your Needs</h2>
+      <p class="mt-3 md:mt-4 text-sm md:text-base text-gray-600 px-4 md:px-0">Everyday we work hard to make life of our clients better and happier.</p>
+    </div>
+
+    <form action="{% url 'public_enquiry' %}" method="post" class="mt-8 md:mt-10 px-6 md:px-0">
+      {% csrf_token %}
+      <input type="hidden" name="source" value="product_detail" />
+      <div class="flex flex-col sm:flex-row items-stretch justify-center gap-3 md:gap-4">
+        <!-- Select Category (dropdown multi-select) -->
+        <div class="relative w-full sm:max-w-[260px]">
+          <button type="button" data-dropdown-toggle="dd-categories" data-placeholder="Select Category" class="w-full h-12 md:h-14 rounded-lg md:rounded-xl bg-white border border-gray-200 px-4 text-left text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 flex items-center justify-between">
+            <span class="dropdown-label">Select Category</span>
+            <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+          </button>
+          <div id="dd-categories" class="hidden absolute z-30 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-auto">
+            <div class="py-2">
+              {% for category in categories %}
+              <label class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                <input type="checkbox" name="categories" value="{{ category.id }}" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                <span class="text-sm text-gray-700">{{ category.name }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Select Products (dropdown multi-select) -->
+        <div class="relative w-full sm:max-w-[320px]">
+          <button type="button" data-dropdown-toggle="dd-products" data-placeholder="Select Products" class="w-full h-12 md:h-14 rounded-lg md:rounded-xl bg-white border border-gray-200 px-4 text-left text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 flex items-center justify-between">
+            <span class="dropdown-label">Select Products</span>
+            <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+          </button>
+          <div id="dd-products" class="hidden absolute z-30 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-auto">
+            <div class="py-2">
+              {% for p in products %}
+              <label class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer" data-category-id="{{ p.category.id|default:'' }}">
+                <input type="checkbox" name="products" value="{{ p.product_id }}" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                <span class="text-sm text-gray-700">{{ p.title }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Quantity -->
+        <div class="w-full sm:max-w-[160px]">
+          <input type="number" min="1" step="1" required name="quantity" placeholder="Quantity" class="w-full h-12 md:h-14 rounded-lg md:rounded-xl bg-white border border-gray-200 px-4 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500" />
+        </div>
+
+        <!-- Mobile Number -->
+        <div class="w-full sm:max-w-[220px]">
+          <input type="tel" required name="mobile" inputmode="numeric" pattern="[0-9]{8,14}" maxlength="14" placeholder="Mobile Number" class="w-full h-12 md:h-14 rounded-lg md:rounded-xl bg-white border border-gray-200 px-4 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500" />
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="h-12 md:h-14 px-6 md:px-8 rounded-lg md:rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-colors">Submit</button>
+      </div>
+    </form>
+
+    <!-- Flash messages -->
+    <div class="mt-6 md:mt-8 max-w-3xl mx-auto">
+      <div id="enquiry-msg" style="display:none;"></div>
+    </div>
+  </div>
+</section>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  function updateDropdownLabel(button, menu) {
+    if (!button || !menu) return;
+    var label = button.querySelector('.dropdown-label');
+    var placeholder = button.getAttribute('data-placeholder') || 'Select';
+    var checks = menu.querySelectorAll('input[type="checkbox"]:checked');
+    if (checks.length === 0) {
+      label.textContent = placeholder;
+    } else if (checks.length === 1) {
+      label.textContent = checks[0].closest('label').querySelector('span').textContent;
+    } else {
+      label.textContent = checks.length + ' selected';
+    }
+  }
+
+  function initDropdown(button, menu, onChange) {
+    if (!button || !menu) return;
+
+    button.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var isHidden = menu.classList.contains('hidden');
+      document.querySelectorAll('[id^="dd-"]').forEach(function(el){ el.classList.add('hidden'); });
+      if (isHidden) menu.classList.remove('hidden'); else menu.classList.add('hidden');
+    });
+
+    // Keyboard accessibility
+    button.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        menu.classList.remove('hidden');
+      }
+    });
+
+    menu.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (e.target && e.target.matches('input[type="checkbox"]')) {
+        updateDropdownLabel(button, menu);
+        if (typeof onChange === 'function') onChange();
+      }
+    });
+
+    document.addEventListener('click', function() { menu.classList.add('hidden'); });
+    updateDropdownLabel(button, menu);
+  }
+
+  var catButton = document.querySelector('[data-dropdown-toggle="dd-categories"]');
+  var catMenu = document.getElementById('dd-categories');
+  var prodButton = document.querySelector('[data-dropdown-toggle="dd-products"]');
+  var prodMenu = document.getElementById('dd-products');
+
+  function filterProductsByCategories() {
+    if (!catMenu || !prodMenu) return;
+    var selected = Array.from(catMenu.querySelectorAll('input[type="checkbox"]:checked')).map(function(cb){ return cb.value; });
+    var selectedSet = new Set(selected);
+    var labels = prodMenu.querySelectorAll('label');
+    labels.forEach(function(l){
+      var cat = l.getAttribute('data-category-id') || '';
+      var checkbox = l.querySelector('input[type="checkbox"]');
+      var show = selectedSet.size === 0 || selectedSet.has(cat);
+      if (!show && checkbox && checkbox.checked) { checkbox.checked = false; }
+      l.classList.toggle('hidden', !show);
+    });
+    updateDropdownLabel(prodButton, prodMenu);
+  }
+
+  initDropdown(catButton, catMenu, filterProductsByCategories);
+  initDropdown(prodButton, prodMenu);
+
+  // AJAX submit (no page reload)
+  var form = document.querySelector('#discuss-needs form');
+  if (form) {
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var fd = new FormData(form);
+      try {
+        var res = await fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+        var data = await res.json();
+        var box = document.getElementById('enquiry-msg');
+        if (res.ok && data.status === 'success') {
+          if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-black text-white ring-1 ring-green-200'; box.textContent = data.message; box.style.display='block'; }
+          form.querySelector('input[name="quantity"]').value = '';
+          form.querySelector('input[name="mobile"]').value = '';
+          form.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; });
+          updateDropdownLabel(catButton, catMenu);
+          filterProductsByCategories();
+        } else {
+          var errText = (data && data.errors) ? data.errors.join(' ') : 'Something went wrong.';
+          if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = errText; box.style.display='block'; }
+        }
+      } catch (err) {
+        var box2 = document.getElementById('enquiry-msg');
+        if (box2) { box2.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box2.textContent = 'Network error. Please try again.'; box2.style.display='block'; }
+      }
+    });
+  }
+});
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var slider = document.getElementById('related-slider');
+    var track = document.getElementById('related-track');
+    if (!slider || !track) return;
+    var slides = track.querySelectorAll('.related-slide');
+    if (!slides || slides.length === 0) return;
+
+    var viewport = document.getElementById('related-viewport');
+    var index = 0;
+
+    function getSlideWidth() {
+      var first = track.querySelector('.related-slide');
+      return first ? first.getBoundingClientRect().width : 0;
+    }
+
+    function getVisibleCount() {
+      var slideW = getSlideWidth();
+      var vpW = viewport ? viewport.getBoundingClientRect().width : 0;
+      if (!slideW || !vpW) return 1;
+      var count = Math.round(vpW / slideW);
+      return Math.max(1, count);
+    }
+
+    function getMaxIndex() {
+      var vis = getVisibleCount();
+      return Math.max(0, slides.length - vis);
+    }
+
+    function update() {
+      var w = getSlideWidth();
+      track.style.transform = 'translateX(' + (-index * w) + 'px)';
+      updateButtons();
+    }
+
+    function updateButtons() {
+      var prevBtn = document.getElementById('related-prev');
+      var nextBtn = document.getElementById('related-next');
+      var disabledPrev = (index <= 0);
+      var disabledNext = (index >= getMaxIndex());
+      [prevBtn, nextBtn].forEach(function(btn){ if (!btn) return; btn.classList.remove('opacity-50','pointer-events-none'); });
+      if (prevBtn && disabledPrev) { prevBtn.classList.add('opacity-50','pointer-events-none'); }
+      if (nextBtn && disabledNext) { nextBtn.classList.add('opacity-50','pointer-events-none'); }
+    }
+
+    window.relatedNext = function() {
+      index = Math.min(index + 1, getMaxIndex());
+      update();
+    };
+    window.relatedPrev = function() {
+      index = Math.max(index - 1, 0);
+      update();
+    };
+
+    window.addEventListener('resize', function(){
+      // Clamp index in case visible count changed
+      index = Math.min(index, getMaxIndex());
+      update();
+    });
+
+    update();
+  });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var relatedWishlistButtons = document.querySelectorAll('.js-related-wishlist');
+  relatedWishlistButtons.forEach(function(btn){
+    btn.addEventListener('click', async function(){
+      var url = btn.getAttribute('data-wishlist-url');
+      if(!url || btn.disabled){ return; }
+      btn.disabled = true;
+      try{
+        var res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' } });
+        var data = await res.json();
+        if(res.ok && data && data.success){
+          btn.classList.add('text-red-500', 'border-red-200', 'bg-red-50');
+        } else if(data && data.login_required){
+          window.location.href = '{% url "public_user_account" %}';
+          return;
+        }
+      } catch(err) {}
+      finally { btn.disabled = false; }
+    });
+  });
+});
+</script>
+{% endblock %} 

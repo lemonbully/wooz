@@ -33,7 +33,13 @@ A page sets `nav_active` to highlight its sidebar item and may override
     <a href="{% url 'ud:dashboard' %}" class="app-side__brand" aria-label="OneWooz — dashboard home">
       <img class="app-side__brand-img" src="{% static 'img/Icon_main.png' %}" alt="" width="24" height="24">
     </a>
-    {% include "ud/_nav.html" %}
+    <div class="ow-scroller is-vertical app-side__scroller" data-scroller>
+      <div class="ow-scroller__area" data-scroller-area>
+        {% include "ud/_nav.html" %}
+      </div>
+      <button type="button" class="ow-hint ow-hint--start" aria-label="Scroll up for more"><span class="ow-hint__arw">↑</span> More</button>
+      <button type="button" class="ow-hint ow-hint--end" aria-label="Scroll down for more"><span class="ow-hint__arw">↓</span> More</button>
+    </div>
     <div class="app-side__foot">
       <span class="dot" aria-hidden="true"></span>
       All systems operational
@@ -61,35 +67,7 @@ A page sets `nav_active` to highlight its sidebar item and may override
         {% endblock %}
       </div>
 
-      <div class="app-top__actions">
-        <details class="app-acct">
-          <summary aria-label="Account menu">
-            <span class="app-avatar" aria-hidden="true">{{ request.user.display_name|default:request.user.email|slice:":1" }}</span>
-            <span class="app-acct__who">{{ request.user.email }}</span>
-            <svg class="app-acct__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-          </summary>
-          <div class="app-acct__panel">
-            <div class="app-acct__head">
-              <div class="app-acct__name">{{ request.user.display_name|default:"Your account" }}</div>
-              <div class="app-acct__mail">{{ request.user.email }}</div>
-            </div>
-            <div class="app-acct__links">
-              <a href="{% url 'accounts:security' %}">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="M9 12l2 2 4-4"/></svg>
-                Security &amp; devices
-              </a>
-              <div class="app-acct__sep" aria-hidden="true"></div>
-              <form method="post" action="{% url 'accounts:sign_out' %}">
-                {% csrf_token %}
-                <button type="submit">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
-                  Sign out
-                </button>
-              </form>
-            </div>
-          </div>
-        </details>
-      </div>
+      {% include "ud/_topbar_actions.html" %}
     </header>
 
     <main id="main">
@@ -102,6 +80,7 @@ A page sets `nav_active` to highlight its sidebar item and may override
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'js/app/scroll-hint.js' %}" defer></script>
 <script nonce="{{ csp_nonce }}">
   // Close the account / mobile menus on outside click or Escape. The menus are
   // native <details>, so they work with JS disabled; this only refines them.

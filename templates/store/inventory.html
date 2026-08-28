@@ -1,0 +1,49 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Inventory{% endblock %}
+{% block crumb %}Inventory{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Catalogue</p>
+    <h1 class="app-head__title pal-mt-4">Inventory</h1>
+    <p class="app-head__lead">Stock on hand across every product and its variants.</p>
+  </div></div>
+
+  <div class="app-block">
+    <form method="get" class="app-toolbar">
+      <div class="app-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" name="q" value="{{ q }}" placeholder="Search title or SKU…">
+      </div>
+      <button class="pal-btn pal-btn--ghost" type="submit">Search</button>
+    </form>
+
+    {% if products %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Product</th><th>Category</th><th>Type</th><th class="app-table__num">Threshold</th><th class="app-table__num">On hand</th></tr></thead>
+          <tbody>
+            {% for p in products %}
+              <tr>
+                <td><a href="{% url 'store:product_edit' site.id p.id %}" class="app-table__strong">{{ p.title }}</a>{% if p.sku %}<div class="app-sub">{{ p.sku }}</div>{% endif %}</td>
+                <td>{{ p.category.name|default:"—" }}</td>
+                <td>{% if p.has_variants %}Variant{% else %}Simple{% endif %}</td>
+                <td class="app-table__num">{{ p.low_stock_threshold }}</td>
+                <td class="app-table__num">
+                  {% if p.is_out_of_stock %}<span class="app-badge app-badge--danger">0</span>
+                  {% elif p.is_low_stock %}<span class="app-badge app-badge--warn">{{ p.stock_on_hand }}</span>
+                  {% else %}<span class="app-badge app-badge--ok">{{ p.stock_on_hand }}</span>{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "store/_pagination.html" with page=products %}
+    {% else %}
+      <div class="app-empty"><h2 class="app-empty__title">Nothing to show</h2><p class="app-empty__text">Add products to start tracking stock.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

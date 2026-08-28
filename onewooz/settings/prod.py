@@ -20,6 +20,16 @@ from . import env
 
 DEBUG = False
 
+# Host validation is delegated to core.middleware.HostRoutingMiddleware, which
+# resolves every Host header to a surface and returns 404 for anything it does
+# not recognise — the marketing/app/admin hosts match exactly, storefronts must
+# be ``<slug>.onewooz.site``, and a custom domain is admitted only when a Site
+# has verified it. That per-request gate is what lets owners connect arbitrary
+# custom domains without editing an allowlist or redeploying, so ALLOWED_HOSTS
+# is opened here and the middleware is the real allowlist. Override with
+# ONEWOOZ_ALLOWED_HOSTS only if you want to additionally hard-limit hosts.
+ALLOWED_HOSTS = env.get_list("ONEWOOZ_ALLOWED_HOSTS") or ["*"]
+
 SECRET_KEY = env.get("ONEWOOZ_SECRET_KEY", required=True)
 FIELD_ENCRYPTION_KEY = env.get("ONEWOOZ_FIELD_ENCRYPTION_KEY", required=True)
 CADDY_ASK_SECRET = env.get("ONEWOOZ_CADDY_ASK_SECRET", required=True)
@@ -145,16 +155,62 @@ INSTALLED_APPS = INSTALLED_APPS + [  # noqa: F405
 ]
 
 # --------------------------------------------------------------------------
-# Email
+# Email  (transactional: OTP / sign-in / sign-up / verification)
 # --------------------------------------------------------------------------
+# The sender is chosen from environment variables, in priority order, so it can
+# be switched without a code change:
+#
+#   1. Generic SMTP — ONEWOOZ_SMTP_* (Hostinger is the default host). ACTIVE
+#      sender in production. Set these on the web task definition:
+#         ONEWOOZ_SMTP_USER        full mailbox, e.g. otp@yourdomain.com
+#         ONEWOOZ_SMTP_PASSWORD    that mailbox's password  (store as a secret)
+#         ONEWOOZ_SMTP_HOST        default "smtp.hostinger.com"
+#         ONEWOOZ_SMTP_PORT        default 587
+#         ONEWOOZ_SMTP_SSL         "true" for port 465 (implicit SSL); else TLS
+#         ONEWOOZ_SMTP_TLS         default true (STARTTLS on 587)
+#         ONEWOOZ_FROM_EMAIL       optional; defaults to the mailbox above
+#   2. Gmail — ONEWOOZ_GMAIL_USER + ONEWOOZ_GMAIL_APP_PASSWORD.
+#   3. Amazon SES / legacy SMTP — ONEWOOZ_EMAIL_* (last-resort fallback).
+#
+# Providers like Hostinger and Gmail reject a mismatched From, so the From
+# address defaults to the authenticated mailbox; ONEWOOZ_FROM_EMAIL may override
+# it (keep the same address — you can add a display name).
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = env.get("ONEWOOZ_EMAIL_HOST", required=True)
-EMAIL_PORT = env.get_int("ONEWOOZ_EMAIL_PORT", 587)
-EMAIL_HOST_USER = env.get("ONEWOOZ_EMAIL_USER", required=True)
-EMAIL_HOST_PASSWORD = env.get("ONEWOOZ_EMAIL_PASSWORD", required=True)
-EMAIL_USE_TLS = True
-EMAIL_TIMEOUT = 15
+EMAIL_TIMEOUT = env.get_int("ONEWOOZ_SMTP_TIMEOUT", 20)
+
+_SMTP_USER = env.get("ONEWOOZ_SMTP_USER", "")
+_SMTP_PASSWORD = env.get("ONEWOOZ_SMTP_PASSWORD", "")
+_GMAIL_USER = env.get("ONEWOOZ_GMAIL_USER", "")
+_GMAIL_APP_PASSWORD = env.get("ONEWOOZ_GMAIL_APP_PASSWORD", "")
+
+if _SMTP_USER and _SMTP_PASSWORD:
+    # --- Hostinger / generic SMTP (active) ---
+    EMAIL_HOST = env.get("ONEWOOZ_SMTP_HOST", "smtp.hostinger.com")
+    EMAIL_PORT = env.get_int("ONEWOOZ_SMTP_PORT", 587)
+    EMAIL_HOST_USER = _SMTP_USER
+    EMAIL_HOST_PASSWORD = _SMTP_PASSWORD
+    EMAIL_USE_SSL = env.get_bool("ONEWOOZ_SMTP_SSL", False)
+    EMAIL_USE_TLS = False if EMAIL_USE_SSL else env.get_bool("ONEWOOZ_SMTP_TLS", True)
+    DEFAULT_FROM_EMAIL = env.get("ONEWOOZ_FROM_EMAIL", _SMTP_USER)
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+elif _GMAIL_USER and _GMAIL_APP_PASSWORD:
+    # --- Gmail ---
+    EMAIL_HOST = "smtp.gmail.com"
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = _GMAIL_USER
+    EMAIL_HOST_PASSWORD = _GMAIL_APP_PASSWORD
+    _FROM_NAME = env.get("ONEWOOZ_FROM_NAME", "OneWooz")
+    DEFAULT_FROM_EMAIL = "%s <%s>" % (_FROM_NAME, _GMAIL_USER)
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+else:
+    # --- Amazon SES / legacy SMTP (fallback only) ---
+    EMAIL_HOST = env.get("ONEWOOZ_EMAIL_HOST", required=True)
+    EMAIL_PORT = env.get_int("ONEWOOZ_EMAIL_PORT", 587)
+    EMAIL_HOST_USER = env.get("ONEWOOZ_EMAIL_USER", required=True)
+    EMAIL_HOST_PASSWORD = env.get("ONEWOOZ_EMAIL_PASSWORD", required=True)
+    EMAIL_USE_TLS = True
 
 # --------------------------------------------------------------------------
 # Error tracking

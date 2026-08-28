@@ -49,6 +49,20 @@ ADMIN_HOST = env.get("ONEWOOZ_ADMIN_HOST", "admin.onewooz.com")
 # registrable domain from MARKETING_HOST on purpose — see module docstring.
 STOREFRONT_APEX = env.get("ONEWOOZ_STOREFRONT_APEX", "onewooz.site")
 
+# Where owners point their custom domain (a CNAME/ALIAS target). Set this to the
+# public hostname of the Caddy edge that terminates TLS on demand (e.g.
+# "edge.onewooz.com") so custom domains get an automatic free certificate. When
+# unset, the store's own <slug>.onewooz.site is shown (served by the ALB, no
+# per-domain cert). The verify step checks the domain resolves to this target.
+CUSTOM_DOMAIN_TARGET = env.get("ONEWOOZ_CUSTOM_DOMAIN_TARGET", "")
+
+# Redis set of verified custom domains that Caddy's on-demand-TLS ask endpoint
+# consults (SISMEMBER) before issuing a certificate. Populated when an owner
+# verifies a domain; see commerce.views.domains and core.middleware.CaddyAskMiddleware.
+CADDY_VERIFIED_DOMAINS_KEY = env.get(
+    "ONEWOOZ_CADDY_VERIFIED_DOMAINS_KEY", "onewooz:verified_domains"
+)
+
 # Hosts that are ours and are never treated as a tenant storefront.
 PLATFORM_HOSTS = {MARKETING_HOST, f"www.{MARKETING_HOST}", APP_HOST, ADMIN_HOST}
 
@@ -72,11 +86,18 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    # Must precede staticfiles: disables runserver's own static handler so
+    # WhiteNoise serves static in dev too, giving one code path (and correct
+    # cache headers) across dev and prod. No-op outside the runserver command.
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     # Deliberately no django.contrib.admin: the internal admin is a purpose
     # built app on its own host with passkey-only authentication.
     "core",
     "accounts",
+    "tenancy",
+    "commerce",
+    "storefront",
     "web",
     "ud",
     "custom_admin",
@@ -95,6 +116,10 @@ MIDDLEWARE = [
     "core.middleware.CaddyAskMiddleware",
     # Resolves the host to a surface and swaps request.urlconf.
     "core.middleware.HostRoutingMiddleware",
+    # Attaches request.site on storefront requests (no-op elsewhere). Runs
+    # after host routing so request.surface / site_slug are set, and before the
+    # CSP is built so a storefront's custom-script opt-in is visible.
+    "storefront.middleware.CurrentSiteMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -124,6 +149,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.security",
+                "ud.context_processors.dashboard_nav",
             ],
         },
     },
@@ -241,6 +267,33 @@ CSP_BASE_URI = ("'self'",)
 CSP_FORM_ACTION = ("'self'",)
 CSP_OBJECT_SRC = ("'none'",)
 
+# The generated storefronts are ported from a Tailwind + Font Awesome design
+# that relies on inline <style> blocks, dynamic style="" attributes and a
+# handful of inline scripts. They live on a *separate registrable domain*
+# (onewooz.site) — a public-suffix boundary that already isolates them from the
+# dashboard and from each other — so the storefront surface, and only that
+# surface, gets a CSP loose enough for that markup. The dashboard, admin and
+# marketing surfaces keep the strict nonce-only policy above.
+CSP_STOREFRONT_STYLE_EXTRA = (
+    "'unsafe-inline'",
+    "https://cdnjs.cloudflare.com",
+    "https://fonts.googleapis.com",
+)
+CSP_STOREFRONT_SCRIPT_EXTRA = ("'unsafe-inline'",)
+CSP_STOREFRONT_FONT_EXTRA = ("https://cdnjs.cloudflare.com",)
+# When an owner opts a storefront into custom tracking scripts, these hosts are
+# also admitted to that storefront's script-src.
+CSP_TENANT_SCRIPT_HOSTS = (
+    "https://www.googletagmanager.com",
+    "https://www.google-analytics.com",
+    "https://connect.facebook.net",
+)
+
+# The owner dashboard's content editor loads the free (self-hostable) TinyMCE
+# build from jsDelivr — script, skin CSS and icon fonts. Admitted on the app
+# surface only. To self-host later, drop the files under static/ and clear this.
+CSP_EDITOR_HOSTS = ("https://cdn.jsdelivr.net",)
+
 # --------------------------------------------------------------------------
 # Rate limiting
 # --------------------------------------------------------------------------
@@ -264,6 +317,19 @@ RATE_LIMITS = {
     "enquiry.submit": (10, 3600),
     "review.submit": (5, 3600),
 }
+
+# --------------------------------------------------------------------------
+# Sign-up allowlist (private beta)
+# --------------------------------------------------------------------------
+
+# Self-service sign-up is open only to these addresses while OneWooz is in
+# private beta; every other address is turned away at the sign-up form. Compared
+# case-insensitively. Override with ONEWOOZ_SIGNUP_ALLOWLIST (comma-separated);
+# an empty value keeps the built-in test list rather than opening sign-up to all.
+SIGNUP_ALLOWLIST = env.get_list(
+    "ONEWOOZ_SIGNUP_ALLOWLIST",
+    ["brandisebox@gmail.com", "ayushmantiwari2312@gmail.com"],
+) or ["brandisebox@gmail.com", "ayushmantiwari2312@gmail.com"]
 
 # --------------------------------------------------------------------------
 # Caching

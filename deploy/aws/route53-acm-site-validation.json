@@ -1,0 +1,6 @@
+{
+  "Comment": "ACM DNS validation for onewooz.site + *.onewooz.site",
+  "Changes": [
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"_46481a9bf8fe3c08ba645ac5d02791ba.onewooz.site","Type":"CNAME","TTL":300,"ResourceRecords":[{"Value":"_809751812207b9efb379b95c43320556.jkddzztszm.acm-validations.aws."}]}}
+  ]
+}

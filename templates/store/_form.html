@@ -1,0 +1,28 @@
+{% comment %}
+Renders a Django form in the OneWooz app style. Controls are styled by CSS
+scoped to `.app-form`. Fields flow in a wrapping row and size to their likely
+content; textareas and any names listed in `wide_fields` take the full width.
+Checkboxes render as inline toggles. Wrap in your own <form> + submit row.
+{% endcomment %}
+{% load store_extras %}
+{% if form.non_field_errors %}
+  <div class="pal-alert" role="alert">{{ form.non_field_errors }}</div>
+{% endif %}
+<div class="app-formgrid">
+  {% for field in form %}
+    {% if field.field.widget.input_type == "checkbox" %}
+      <label class="app-check app-f--full">
+        {{ field }}
+        <span class="app-check__label">{{ field.label }}</span>
+        {% if field.help_text %}<span class="app-field-hint">{{ field.help_text }}</span>{% endif %}
+      </label>
+    {% else %}
+      <label class="pal-field {% if field|widget_type == 'Textarea' or field.name in wide_fields %}app-f--full{% endif %}">
+        <span class="pal-field__label">{{ field.label }}{% if field.field.required %} <span class="app-req">*</span>{% endif %}</span>
+        {{ field }}
+        {% if field.help_text %}<span class="app-field-hint">{{ field.help_text }}</span>{% endif %}
+        {% for error in field.errors %}<span class="app-field-err">{{ error }}</span>{% endfor %}
+      </label>
+    {% endif %}
+  {% endfor %}
+</div>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!--
+    Tileable hairline grid used by the Tailwind arbitrary-value utility
+    .bg-[url('/static/images/grid-pattern.svg')]. Kept as a static asset (not an
+    inline data URI) because the manifest static storage resolves every url() in
+    tailwind.css at collectstatic time, and a missing target fails the deploy.
+    One faint 1px cell in warm neutral, low opacity so it reads on light grounds.
+  -->
+  <path d="M32 0H0V32" fill="none" stroke="#1f2937" stroke-opacity="0.06" stroke-width="1"/>
+</svg>

@@ -1,0 +1,199 @@
+{% extends "storefront/template2/base.html" %}
+{% load static %}
+
+{% block title %}{{ blog.title }} | {{ website.content.site_name }}{% endblock %}
+
+{% block page_content %}
+<!-- Blog content typography – mirrors TinyMCE editor output exactly -->
+<style>
+  .blog-content { color: #374151; line-height: 1.8; font-size: 1rem; word-wrap: break-word; overflow-wrap: break-word; }
+  .blog-content p { margin: 0 0 1.25em 0; }
+  .blog-content h1 { font-size: 2em; font-weight: 700; margin: 1.2em 0 0.6em; line-height: 1.25; color: #111827; }
+  .blog-content h2 { font-size: 1.5em; font-weight: 700; margin: 1.2em 0 0.5em; line-height: 1.3; color: #111827; }
+  .blog-content h3 { font-size: 1.25em; font-weight: 600; margin: 1em 0 0.4em; line-height: 1.35; color: #111827; }
+  .blog-content h4 { font-size: 1.125em; font-weight: 600; margin: 1em 0 0.4em; line-height: 1.4; color: #111827; }
+  .blog-content h5 { font-size: 1em; font-weight: 600; margin: 0.8em 0 0.3em; color: #111827; }
+  .blog-content h6 { font-size: 0.875em; font-weight: 600; margin: 0.8em 0 0.3em; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; }
+  .blog-content ul { list-style-type: disc; padding-left: 1.75em; margin: 0 0 1.25em 0; }
+  .blog-content ol { list-style-type: decimal; padding-left: 1.75em; margin: 0 0 1.25em 0; }
+  .blog-content li { margin: 0.35em 0; }
+  .blog-content li > ul, .blog-content li > ol { margin-top: 0.35em; margin-bottom: 0.35em; }
+  .blog-content ul ul { list-style-type: circle; }
+  .blog-content ul ul ul { list-style-type: square; }
+  .blog-content a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; }
+  .blog-content a:hover { color: #1d4ed8; }
+  .blog-content strong, .blog-content b { font-weight: 700; color: #111827; }
+  .blog-content em, .blog-content i { font-style: italic; }
+  .blog-content u { text-decoration: underline; }
+  .blog-content s, .blog-content del, .blog-content strike { text-decoration: line-through; }
+  .blog-content blockquote { border-left: 4px solid #d1d5db; padding: 0.75em 1.25em; margin: 1.25em 0; background: #f9fafb; color: #4b5563; font-style: italic; border-radius: 0 0.5rem 0.5rem 0; }
+  .blog-content blockquote p:last-child { margin-bottom: 0; }
+  .blog-content hr { border: none; border-top: 1px solid #e5e7eb; margin: 2em 0; }
+  .blog-content img { max-width: 100%; height: auto; border-radius: 0.5rem; margin: 1.25em 0; }
+  .blog-content figure { margin: 1.5em 0; text-align: center; }
+  .blog-content figcaption { font-size: 0.875em; color: #6b7280; margin-top: 0.5em; }
+  .blog-content table { width: 100%; border-collapse: collapse; margin: 1.25em 0; font-size: 0.95em; }
+  .blog-content table th { background: #f3f4f6; font-weight: 600; text-align: left; padding: 0.65em 0.85em; border: 1px solid #d1d5db; color: #111827; }
+  .blog-content table td { padding: 0.65em 0.85em; border: 1px solid #e5e7eb; }
+  .blog-content table tr:nth-child(even) { background: #f9fafb; }
+  .blog-content code { background: #f3f4f6; color: #dc2626; padding: 0.15em 0.4em; border-radius: 0.25rem; font-size: 0.9em; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  .blog-content pre { background: #1f2937; color: #e5e7eb; padding: 1em 1.25em; border-radius: 0.5rem; overflow-x: auto; margin: 1.25em 0; font-size: 0.9em; line-height: 1.6; }
+  .blog-content pre code { background: transparent; color: inherit; padding: 0; border-radius: 0; font-size: inherit; }
+  .blog-content sub { vertical-align: sub; font-size: 0.75em; }
+  .blog-content sup { vertical-align: super; font-size: 0.75em; }
+  .blog-content iframe { max-width: 100%; margin: 1.25em 0; border-radius: 0.5rem; }
+  .blog-content video { max-width: 100%; margin: 1.25em 0; border-radius: 0.5rem; }
+  @media (min-width: 768px) {
+    .blog-content { font-size: 1.0625rem; line-height: 1.85; }
+    .blog-content h1 { font-size: 2.25em; }
+    .blog-content h2 { font-size: 1.65em; }
+    .blog-content h3 { font-size: 1.35em; }
+  }
+</style>
+
+<section class="bg-white">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <nav class="text-sm text-gray-500 mb-6">
+      <a href="{% url 'public_website' %}" class="hover:text-gray-800">Home</a>
+      <span class="mx-2">/</span>
+      <a href="{% url 'public_blogs' %}" class="hover:text-gray-800">Blogs</a>
+      <span class="mx-2">/</span>
+      <span class="text-gray-800">{{ blog.title }}</span>
+    </nav>
+
+    <article>
+      <header class="mb-6">
+        <h1 class="mt-2 text-3xl md:text-4xl font-semibold text-gray-900">{{ blog.title }}</h1>
+        <div class="mt-3 text-sm text-gray-500">{{ blog.author|default:"Nina Marling" }} • {{ blog.created_at|date:"M d, Y" }}</div>
+      </header>
+
+      {% if blog.image %}
+      <div class="relative max-w-3xl mx-auto overflow-hidden rounded-xl border border-gray-200 mb-8">
+        <img src="{{ blog.image.url }}" alt="{{ blog.title }}" class="w-full h-auto object-cover sm:max-h-[400px] md:max-h-[500px]">
+      </div>
+      {% endif %}
+
+      <div class="blog-content">
+        {{ blog.description|safe }}
+      </div>
+    </article>
+
+    <div class="mt-10">
+      <a href="{% url 'public_blogs' %}" class="inline-flex items-center text-xs tracking-[0.25em] uppercase text-gray-900 border border-gray-300 rounded-md px-4 py-2 hover:bg-gray-50">
+        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to Blogs
+      </a>
+    </div>
+  </div>
+  </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  function updateDropdownLabel(button, menu) {
+      if (!button || !menu) return;
+      const label = button.querySelector('.dropdown-label');
+      const placeholder = button.getAttribute('data-placeholder') || 'Select';
+      const checks = menu.querySelectorAll('input[type="checkbox"]:checked');
+      if (checks.length === 0) {
+          label.textContent = placeholder;
+      } else if (checks.length === 1) {
+          label.textContent = checks[0].closest('label').querySelector('span').textContent;
+      } else {
+          label.textContent = checks.length + ' selected';
+      }
+  }
+
+  function initDropdown(button, menu, onChange) {
+      if (!button || !menu) return;
+
+      button.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const isHidden = menu.classList.contains('hidden');
+          document.querySelectorAll('[id^="dd-"]').forEach(el => el.classList.add('hidden'));
+          if (isHidden) menu.classList.remove('hidden');
+          else menu.classList.add('hidden');
+      });
+
+      // Keyboard accessibility: open via keys without causing click toggle race
+      button.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+              e.preventDefault();
+              menu.classList.remove('hidden');
+          }
+      });
+
+      menu.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (e.target && e.target.matches('input[type="checkbox"]')) {
+              updateDropdownLabel(button, menu);
+              if (typeof onChange === 'function') onChange();
+          }
+      });
+
+      document.addEventListener('click', function() {
+          menu.classList.add('hidden');
+      });
+
+      updateDropdownLabel(button, menu);
+  }
+
+  const catButton = document.querySelector('[data-dropdown-toggle="dd-categories"]');
+  const catMenu = document.getElementById('dd-categories');
+  const prodButton = document.querySelector('[data-dropdown-toggle="dd-products"]');
+  const prodMenu = document.getElementById('dd-products');
+
+  function filterProductsByCategories() {
+      const selected = Array.from(catMenu.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+      const selectedSet = new Set(selected);
+      const labels = prodMenu.querySelectorAll('label');
+      labels.forEach(l => {
+          const cat = l.getAttribute('data-category-id') || '';
+          const checkbox = l.querySelector('input[type="checkbox"]');
+          const show = selectedSet.size === 0 || selectedSet.has(cat);
+          if (!show && checkbox && checkbox.checked) {
+              checkbox.checked = false;
+          }
+          l.classList.toggle('hidden', !show);
+      });
+      updateDropdownLabel(prodButton, prodMenu);
+  }
+
+  initDropdown(catButton, catMenu, filterProductsByCategories);
+  initDropdown(prodButton, prodMenu);
+
+  // AJAX submit (no page reload)
+  const form = document.querySelector('#discuss-needs form');
+  if (form) {
+      form.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const fd = new FormData(form);
+          try {
+              const res = await fetch(form.action, {
+                  method: 'POST',
+                  headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                  body: fd
+              });
+              const data = await res.json();
+              const box = document.getElementById('enquiry-msg');
+              if (res.ok && data.status === 'success') {
+                  if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-black text-white ring-1 ring-green-200'; box.textContent = data.message; box.style.display='block'; }
+                  // Reset minimal fields
+                  form.querySelector('input[name="quantity"]').value = '';
+                  form.querySelector('input[name="mobile"]').value = '';
+                  // Uncheck all checkboxes
+                  form.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                  updateDropdownLabel(catButton, catMenu);
+                  filterProductsByCategories();
+              } else {
+                  const errText = (data && data.errors) ? data.errors.join(' ') : 'Something went wrong.';
+                  if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = errText; box.style.display='block'; }
+              }
+          } catch (err) {
+              const box = document.getElementById('enquiry-msg');
+              if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = 'Network error. Please try again.'; box.style.display='block'; }
+          }
+      });
+  }
+});
+</script>
+{% endblock %}

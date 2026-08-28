@@ -1,0 +1,44 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Discounts{% endblock %}
+{% block crumb %}Discounts{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Grow</p>
+      <h1 class="app-head__title pal-mt-4">Discounts</h1>
+      <p class="app-head__lead">Coupon codes for campaigns, launches and win-backs — fixed or percentage.</p>
+    </div>
+    <div class="app-head__actions"><a href="{% url 'store:coupon_new' site.id %}" class="pal-btn">New discount <span class="pal-btn__arrow" aria-hidden="true">→</span></a></div>
+  </div>
+
+  <div class="app-block">
+    {% if coupons %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Code</th><th>Type</th><th class="app-table__num">Value</th><th class="app-table__num">Used</th><th>Window</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for c in coupons %}
+              <tr>
+                <td><a href="{% url 'store:coupon_edit' site.id c.id %}" class="app-table__strong">{{ c.code }}</a></td>
+                <td>{{ c.get_discount_type_display }}</td>
+                <td class="app-table__num">{% if c.discount_type == 'percent' %}{{ c.value }}%{% else %}{{ site.currency }} {{ c.value }}{% endif %}</td>
+                <td class="app-table__num">{{ c.times_used }}{% if c.usage_limit %}/{{ c.usage_limit }}{% endif %}</td>
+                <td class="app-sub">{{ c.starts_at|date:"d M"|default:"—" }} → {{ c.ends_at|date:"d M"|default:"—" }}</td>
+                <td>{% if c.active %}<span class="app-badge app-badge--ok">Active</span>{% else %}<span class="app-badge app-badge--muted">Off</span>{% endif %}</td>
+                <td class="app-table__actions">
+                  <a href="{% url 'store:coupon_edit' site.id c.id %}" class="app-iconbtn">Edit</a>
+                  <form method="post" action="{% url 'store:coupon_delete' site.id c.id %}" onsubmit="return confirm('Remove this discount?');">{% csrf_token %}<button class="app-iconbtn app-iconbtn--danger" type="submit">Delete</button></form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="app-empty"><h2 class="app-empty__title">No discounts yet</h2><p class="app-empty__text">Create a coupon code to run your first promotion.</p><div class="app-empty__actions"><a href="{% url 'store:coupon_new' site.id %}" class="pal-btn">New discount</a></div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

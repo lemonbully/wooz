@@ -1,0 +1,28 @@
+{
+    "UserData":  "IyEvYmluL2Jhc2gKZWNobyBFQ1NfQ0xVU1RFUj1vbmV3b296LXByb2QgPj4gL2V0Yy9lY3MvZWNzLmNvbmZpZwplY2hvIEVDU19FTkFCTEVfU1BPVF9JTlNUQU5DRV9EUkFJTklORz10cnVlID4+IC9ldGMvZWNzL2Vjcy5jb25maWcK",
+    "ImageId":  "resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2023/arm64/recommended/image_id",
+    "NetworkInterfaces":  [
+                              {
+                                  "Groups":  [
+                                                 "sg-0c35be77e7cbfaf18"
+                                             ],
+                                  "DeviceIndex":  0,
+                                  "AssociatePublicIpAddress":  true
+                              }
+                          ],
+    "IamInstanceProfile":  {
+                               "Name":  "ecsInstanceRole"
+                           },
+    "TagSpecifications":  [
+                              {
+                                  "Tags":  [
+                                               {
+                                                   "Key":  "Name",
+                                                   "Value":  "onewooz-ecs"
+                                               }
+                                           ],
+                                  "ResourceType":  "instance"
+                              }
+                          ],
+    "InstanceType":  "t4g.medium"
+}

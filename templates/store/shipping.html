@@ -1,0 +1,49 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Shipping{% endblock %}
+{% block crumb %}Shipping{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Delivery</p>
+    <h1 class="app-head__title pal-mt-4">Shipping</h1>
+    <p class="app-head__lead">Connect a courier and set your pickup warehouses. Tokens are encrypted at rest.</p>
+  </div></div>
+
+  <div class="app-block">
+    <div class="app-split">
+      <section>
+        <div class="app-card__head"><h2 class="app-card__title">Courier</h2></div>
+        <div class="app-card__body">
+          <form method="post" class="app-form">
+            {% csrf_token %}
+            <input type="hidden" name="intent" value="provider">
+            {% include "store/_form.html" with form=pform %}
+            <div class="app-form__foot"><button class="pal-btn" type="submit">Save courier</button></div>
+          </form>
+        </div>
+      </section>
+
+      <aside>
+        <div class="app-card__head"><h2 class="app-card__title">Warehouses</h2></div>
+        <div class="app-card__body">
+          {% if warehouses %}
+            {% for w in warehouses %}
+              <div class="app-feed__item"><p class="app-feed__t">{{ w.name }}{% if w.is_default %} · <span class="app-badge app-badge--accent">Default</span>{% endif %}</p><p class="app-feed__b">{{ w.city }} {{ w.pincode }}</p></div>
+            {% endfor %}
+          {% else %}
+            <p class="app-note-inline">No warehouses yet. Add a pickup address below.</p>
+          {% endif %}
+
+          <form method="post" class="app-form" style="margin-top:1rem;">
+            {% csrf_token %}
+            <input type="hidden" name="intent" value="warehouse">
+            {% include "store/_form.html" with form=wform %}
+            <div class="app-form__foot"><button class="pal-btn pal-btn--ghost" type="submit">Add warehouse</button></div>
+          </form>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+{% endblock %}

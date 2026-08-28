@@ -18,6 +18,7 @@ urlpatterns = [
     path("health/ready/", health.ready, name="health_ready"),
     path("", include("accounts.urls")),
     path("", include("ud.urls")),
+    path("store/<uuid:site_id>/", include("commerce.urls")),
 ]
 
 if settings.DEBUG:

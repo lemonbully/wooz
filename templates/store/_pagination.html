@@ -1,0 +1,19 @@
+{% comment %}
+Reusable pager. Pass `page` (a Django Page). Preserves existing query params
+(filters, search) by re-emitting them alongside the page number.
+{% endcomment %}
+{% if page.paginator.num_pages > 1 %}
+<nav class="app-pager" aria-label="Pagination">
+  {% if page.has_previous %}
+    <a class="app-pager__link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page.previous_page_number }}">← Prev</a>
+  {% else %}
+    <span class="app-pager__link app-pager__link--off">← Prev</span>
+  {% endif %}
+  <span class="app-pager__at">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}
+    <a class="app-pager__link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page.next_page_number }}">Next →</a>
+  {% else %}
+    <span class="app-pager__link app-pager__link--off">Next →</span>
+  {% endif %}
+</nav>
+{% endif %}

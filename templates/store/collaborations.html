@@ -1,0 +1,41 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Collaborations{% endblock %}
+{% block crumb %}Collaborations{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Grow</p>
+      <h1 class="app-head__title pal-mt-4">Collaborations</h1>
+      <p class="app-head__lead">Creators and affiliates who promote your store and earn commission on the orders they bring.</p>
+    </div>
+    <div class="app-head__actions"><a href="{% url 'store:collaboration_new' site.id %}" class="pal-btn">Invite collaborator <span class="pal-btn__arrow" aria-hidden="true">→</span></a></div>
+  </div>
+
+  <div class="app-block">
+    {% if collaborations %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Collaborator</th><th>Handle</th><th>Commission</th><th class="app-table__num">Orders</th><th class="app-table__num">Earned</th><th class="app-table__num">Owed</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for c in collaborations %}
+              <tr>
+                <td class="app-table__strong">{{ c.name }}<div class="app-sub">{{ c.email }}</div></td>
+                <td class="app-table__id">@{{ c.handle }}</td>
+                <td>{% if c.commission_type == 'percent' %}{{ c.commission_value }}%{% else %}{{ site.currency }} {{ c.commission_value }}/order{% endif %}</td>
+                <td class="app-table__num">{{ c.total_orders }}</td>
+                <td class="app-table__num">{{ site.currency }} {{ c.total_earned }}</td>
+                <td class="app-table__num">{{ site.currency }} {{ c.outstanding }}</td>
+                <td><span class="app-badge app-badge--{{ c.status }}">{{ c.get_status_display }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="app-empty"><h2 class="app-empty__title">No collaborators yet</h2><p class="app-empty__text">Invite a creator and share a referral handle to start driving attributed sales.</p><div class="app-empty__actions"><a href="{% url 'store:collaboration_new' site.id %}" class="pal-btn">Invite collaborator</a></div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Requests{% endblock %}
+{% block crumb %}Requests{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">After-sales</p>
+    <h1 class="app-head__title pal-mt-4">Requests</h1>
+    <p class="app-head__lead">Cancellations, returns, replacements and warranty claims customers raise on their orders.</p>
+  </div></div>
+
+  <div class="app-block">
+    <form method="get" class="app-toolbar">
+      <select name="type" class="pal-select">
+        <option value="">All types</option>
+        {% for t in type_choices %}<option value="{{ t.value }}" {% if active_type == t.value %}selected{% endif %}>{{ t.label }}</option>{% endfor %}
+      </select>
+      <select name="status" class="pal-select">
+        <option value="">Any status</option>
+        {% for s in status_choices %}<option value="{{ s.value }}" {% if active_status == s.value %}selected{% endif %}>{{ s.label }}</option>{% endfor %}
+      </select>
+      <button class="pal-btn pal-btn--ghost" type="submit">Apply</button>
+    </form>
+
+    {% if requests %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Order</th><th>Type</th><th>Reason</th><th>Raised</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for r in requests %}
+              <tr>
+                <td class="app-table__id"><a href="{% url 'store:order_detail' site.id r.order.id %}">#{{ r.order.number }}</a></td>
+                <td>{{ r.get_request_type_display }}</td>
+                <td>{{ r.reason|default:r.description|default:"—"|truncatechars:48 }}</td>
+                <td>{{ r.created_at|date:"d M Y" }}</td>
+                <td><span class="app-badge app-badge--{{ r.status }}">{{ r.get_status_display }}</span></td>
+                <td class="app-table__actions">
+                  {% if r.status == 'pending' %}
+                    <form method="post" action="{% url 'store:request_resolve' site.id r.id %}">{% csrf_token %}
+                      <button name="decision" value="approved" class="app-iconbtn">Approve</button>
+                      <button name="decision" value="rejected" class="app-iconbtn app-iconbtn--danger">Reject</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="{% url 'store:request_resolve' site.id r.id %}">{% csrf_token %}<button name="decision" value="processed" class="app-iconbtn">Mark done</button></form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "store/_pagination.html" with page=requests %}
+    {% else %}
+      <div class="app-empty"><h2 class="app-empty__title">No requests</h2><p class="app-empty__text">Return, replacement and warranty requests from customers show up here.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

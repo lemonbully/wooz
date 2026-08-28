@@ -1,0 +1,22 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · {% if is_edit %}Edit category{% else %}New category{% endif %}{% endblock %}
+{% block crumb %}{% if is_edit %}{{ category.name }}{% else %}New category{% endif %}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Catalogue</p>
+    <h1 class="app-head__title pal-mt-4">{% if is_edit %}Edit category{% else %}New category{% endif %}</h1>
+  </div></div>
+  <div class="app-block">
+    <form method="post" enctype="multipart/form-data" class="app-form app-card" style="padding:1.5rem;">
+      {% csrf_token %}
+      {% include "store/_form.html" with wide_fields="description" %}
+      <div class="app-form__foot">
+        <a href="{% url 'store:categories' site.id %}" class="pal-btn pal-btn--ghost">Cancel</a>
+        <button class="pal-btn" type="submit">{% if is_edit %}Save changes{% else %}Create category{% endif %}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

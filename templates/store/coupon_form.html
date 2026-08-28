@@ -1,0 +1,22 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · {% if is_edit %}Edit discount{% else %}New discount{% endif %}{% endblock %}
+{% block crumb %}{% if is_edit %}{{ coupon.code }}{% else %}New discount{% endif %}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Grow</p>
+    <h1 class="app-head__title pal-mt-4">{% if is_edit %}Edit discount{% else %}New discount{% endif %}</h1>
+  </div></div>
+  <div class="app-block">
+    <form method="post" class="app-form app-card" style="padding:1.5rem;">
+      {% csrf_token %}
+      {% include "store/_form.html" %}
+      <div class="app-form__foot">
+        <a href="{% url 'store:coupons' site.id %}" class="pal-btn pal-btn--ghost">Cancel</a>
+        <button class="pal-btn" type="submit">{% if is_edit %}Save changes{% else %}Create discount{% endif %}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{
+  "Comment": "OneWooz platform hosts -> app EIP 13.204.135.123",
+  "Changes": [
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"onewooz.com","Type":"A","TTL":300,"ResourceRecords":[{"Value":"13.204.135.123"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"www.onewooz.com","Type":"A","TTL":300,"ResourceRecords":[{"Value":"13.204.135.123"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"app.onewooz.com","Type":"A","TTL":300,"ResourceRecords":[{"Value":"13.204.135.123"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"admin.onewooz.com","Type":"A","TTL":300,"ResourceRecords":[{"Value":"13.204.135.123"}]}}
+  ]
+}

@@ -1,0 +1,28 @@
+{% extends "accounts/_auth_shell.html" %}
+
+{% block title %}Enter your code · OneWooz{% endblock %}
+{% block auth_title %}Check your email{% endblock %}
+{% block auth_subtitle %}
+  <p class="auth__subtitle">We sent a 6-digit code to {{ email }}. Enter it to continue.</p>
+{% endblock %}
+
+{% block auth_body %}
+  <form method="post" action="{% url 'accounts:email_otp' %}" class="auth__form">
+    {% csrf_token %}
+
+    <div class="field">
+      <label class="sr-only" for="code">Six-digit code</label>
+      <input class="input input--code" type="text" name="code" id="code"
+             inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+             autocomplete="one-time-code" required autofocus>
+    </div>
+
+    <button type="submit" class="btn btn--primary btn--block mt-6">Continue</button>
+  </form>
+{% endblock %}
+
+{% block auth_footer %}
+  <p class="auth__footer">
+    Didn't get it? Check spam, or <a href="{% url 'accounts:sign_in' %}">start again</a>.
+  </p>
+{% endblock %}

@@ -9,10 +9,15 @@ every credential-stuffing campaign.
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -60,6 +65,155 @@ GENERIC_SENT_MESSAGE = (
     "If that address has a OneWooz account, a sign-in link is on its way. "
     "Check your inbox."
 )
+
+
+# --------------------------------------------------------------------------
+# Emailed one-time code, required in every sign-in and sign-up
+# --------------------------------------------------------------------------
+
+
+class _CodeResult(NamedTuple):
+    """Outcome of :func:`_email_code_and_park`.
+
+    ``ok`` means the code was mailed and the flow is parked; otherwise ``error``
+    and ``status`` are the message and HTTP status the caller should render.
+    """
+
+    ok: bool
+    error: str = ""
+    status: int = 200
+
+
+def _email_code_and_park(request, *, flow: str, email: str, purpose: str, data: dict) -> _CodeResult:
+    """Issue an emailed code, send it, and park the pending flow in the session.
+
+    Returns a non-``ok`` result — having parked nothing — when the address or
+    this connection has hit its send limit, or when the mail could not be
+    delivered (e.g. the provider refused it). ``purpose`` namespaces the code in
+    :mod:`accounts.otp` so a sign-up code and a sign-in code for the same address
+    never satisfy one another.
+    """
+    ip = ratelimit.client_identity(request)
+    address_ok = ratelimit.consume("otp.send.email", email).allowed
+    ip_ok = ratelimit.consume("otp.send.ip", ip).allowed
+    if not (address_ok and ip_ok):
+        return _CodeResult(
+            False, "Too many codes requested. Wait a few minutes and try again.", 429
+        )
+
+    services.begin_email_verification(request, flow=flow, email=email, data=data)
+    code = otp.issue(purpose, email)
+    if not emails.send_login_code(email, code, minutes=otp.TTL_SECONDS // 60):
+        # Delivery failed: unpark the pending flow so the visitor is not stranded
+        # on the code-entry screen waiting for a code that will never arrive.
+        services.clear_email_verification(request)
+        return _CodeResult(
+            False,
+            "We couldn't send your verification code right now. "
+            "Please try again in a moment.",
+            503,
+        )
+    return _CodeResult(True)
+
+
+@ensure_csrf_cookie
+@require_http_methods(["GET", "POST"])
+def email_otp(request):
+    """Collect and verify the one-time code emailed during sign-in or sign-up.
+
+    Both flows converge here: a sign-in resumes into the second-factor gate (so
+    staff still face their authenticator), a sign-up creates the account. There
+    is no way to reach a session from this view without first having proved
+    control of the address that the code was mailed to.
+    """
+    state = services.resolve_email_verification(request)
+    if state is None:
+        return redirect("accounts:sign_in")
+
+    email = state["email"]
+    purpose = "signup" if state.get("flow") == "signup" else "login"
+
+    if request.method == "GET":
+        return render(request, "accounts/email_otp.html", {"email": email})
+
+    if not ratelimit.consume("otp.verify", email).allowed:
+        services.clear_email_verification(request)
+        return render(
+            request,
+            "accounts/email_otp.html",
+            {"email": email, "error": "Too many attempts. Please start again."},
+            status=429,
+        )
+
+    result = otp.verify(purpose, email, request.POST.get("code", ""))
+    if not result.ok:
+        services.record_attempt(
+            request,
+            method=LoginActivity.Method.EMAIL_OTP,
+            outcome=LoginActivity.Outcome.MFA_FAILED,
+            email=email,
+        )
+        return render(
+            request,
+            "accounts/email_otp.html",
+            {"email": email, "error": "That code is not right or has expired."},
+            status=401,
+        )
+
+    ratelimit.reset("otp.verify", email)
+
+    if state.get("flow") == "signup":
+        return _finish_signup(request, state)
+
+    # Sign-in flow: the emailed code passed. Resume into any enrolled second
+    # factor exactly as the password path used to, then complete.
+    user = User.objects.filter(pk=state.get("user"), is_active=True).first()
+    services.clear_email_verification(request)
+    if user is None:
+        return redirect("accounts:sign_in")
+
+    next_url = state.get("next") or ""
+    if services.needs_second_factor(request, user):
+        services.begin_pending_login(request, user, method=LoginActivity.Method.EMAIL_OTP)
+        if not user.has_second_factor:
+            return redirect("accounts:totp_enrol")
+        return redirect(f"{reverse('accounts:mfa_challenge')}?next={next_url}")
+
+    services.complete_login(request, user, method=LoginActivity.Method.EMAIL_OTP)
+    return redirect(next_url or dashboard_url())
+
+
+def _finish_signup(request, state: dict):
+    """Create the account for a sign-up whose emailed code has been verified."""
+    email = state["email"]
+    next_url = state.get("next") or ""
+    services.clear_email_verification(request)
+
+    user = User.objects.filter(email=email).first()
+    if user is None:
+        with transaction.atomic():
+            user = User.objects.create_user(
+                email=email,
+                password=None,
+                full_name=state.get("full_name", ""),
+                signup_source=str(getattr(request, "surface", "")),
+            )
+            # The password was validated and hashed at sign-up time and carried
+            # through the session as a hash, never as plaintext. Assign it
+            # directly rather than re-hashing.
+            hashed = state.get("password") or ""
+            if hashed:
+                user.password = hashed
+                user.password_changed_at = timezone.now()
+            # Entering the emailed code proves control of the mailbox, so the
+            # address is verified in the same step.
+            user.email_verified_at = timezone.now()
+            user.save(update_fields=["password", "password_changed_at",
+                                     "email_verified_at", "updated_at"])
+        audit.record("account.created", request=request, actor=user)
+
+    services.complete_login(request, user, method=LoginActivity.Method.EMAIL_OTP)
+    return redirect(next_url or dashboard_url())
 
 
 # --------------------------------------------------------------------------
@@ -128,20 +282,32 @@ def sign_in(request):
 
     ratelimit.reset("login.identifier", email)
 
-    if services.needs_second_factor(request, user):
-        services.begin_pending_login(request, user, method=LoginActivity.Method.PASSWORD)
-        services.record_attempt(
+    # Every sign-in is confirmed with a one-time code emailed to the address on
+    # the account — an emailed factor layered on the password, applied uniformly
+    # whether or not a TOTP/passkey factor is also enrolled. Any enrolled second
+    # factor is still challenged afterwards, in the email-code view. The password
+    # having matched, this send only ever goes to the account's own address.
+    services.record_attempt(
+        request,
+        method=LoginActivity.Method.PASSWORD,
+        outcome=LoginActivity.Outcome.MFA_REQUIRED,
+        user=user,
+    )
+    sent = _email_code_and_park(
+        request,
+        flow="login",
+        email=user.email,
+        purpose="login",
+        data={"user": str(user.pk), "next": services.safe_next_url(request, "")},
+    )
+    if not sent.ok:
+        return render(
             request,
-            method=LoginActivity.Method.PASSWORD,
-            outcome=LoginActivity.Outcome.MFA_REQUIRED,
-            user=user,
+            "accounts/sign_in.html",
+            {"error": sent.error, "email": email},
+            status=sent.status,
         )
-        if not user.has_second_factor:
-            return redirect("accounts:totp_enrol")
-        return redirect(f"{reverse('accounts:mfa_challenge')}?next={services.safe_next_url(request, '')}")
-
-    services.complete_login(request, user, method=LoginActivity.Method.PASSWORD)
-    return redirect(services.safe_next_url(request, dashboard_url()))
+    return redirect("accounts:email_otp")
 
 
 @require_POST
@@ -542,83 +708,104 @@ def security(request):
 # --------------------------------------------------------------------------
 
 
+@ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
 def sign_up(request):
-    # Public self-service sign-up is currently DISABLED. Accounts are created
-    # by an operator with ``python manage.py createuser`` instead. The route and
-    # view are kept so ``reverse('accounts:sign_up')`` and any ``{% url %}`` tag
-    # still resolve; authenticated users go to the dashboard, everyone else is
-    # sent to sign-in. To re-enable, remove this block and uncomment the
-    # original implementation below.
+    """Self-service sign-up, limited to allowlisted test users during the beta.
+
+    An approved address does not get an account on submit: it gets an emailed
+    one-time code, and the account is created only once that code is entered on
+    :func:`email_otp`. So even here, control of the mailbox is proven before any
+    account exists.
+    """
     if request.user.is_authenticated:
         return redirect(dashboard_url())
-    return redirect("accounts:sign_in")
 
-    # --- Original public sign-up (disabled) -------------------------------
-    # if request.user.is_authenticated:
-    #     return redirect(dashboard_url())
-    #
-    # if request.method == "GET":
-    #     return render(request, "accounts/sign_up.html")
-    #
-    # email = (request.POST.get("email") or "").strip().lower()
-    # password = request.POST.get("password") or ""
-    # full_name = (request.POST.get("full_name") or "").strip()[:150]
-    #
-    # if not ratelimit.consume("signup.ip", ratelimit.client_identity(request)).allowed:
-    #     return render(
-    #         request,
-    #         "accounts/sign_up.html",
-    #         {"error": "Too many sign-ups from this connection. Try again later."},
-    #         status=429,
-    #     )
-    #
-    # from django.contrib.auth.password_validation import validate_password
-    # from django.core.exceptions import ValidationError
-    #
-    # errors = []
-    # if not email or "@" not in email:
-    #     errors.append("Enter a valid email address.")
-    # if password:
-    #     try:
-    #         validate_password(password)
-    #     except ValidationError as exc:
-    #         errors.extend(exc.messages)
-    #
-    # if errors:
-    #     return render(
-    #         request,
-    #         "accounts/sign_up.html",
-    #         {"errors": errors, "email": email, "full_name": full_name},
-    #         status=400,
-    #     )
-    #
-    # existing = User.objects.filter(email=email).first()
-    # if existing is not None:
-    #     # Do not say the address is taken. Instead send a sign-in link, which
-    #     # is useful to the real owner and tells an enumerator nothing.
-    #     token = tokens.sign("auth.magic_link", {"u": str(existing.pk)})
-    #     url = request.build_absolute_uri(
-    #         reverse("accounts:magic_link_consume") + f"?t={token}"
-    #     )
-    #     emails.send_magic_link(email, url, minutes=tokens.ttl_for("auth.magic_link") // 60)
-    #     return render(request, "accounts/magic_link_sent.html", {"email": email})
-    #
-    # with transaction.atomic():
-    #     user = User.objects.create_user(
-    #         email=email,
-    #         password=password or None,
-    #         full_name=full_name,
-    #         signup_source=str(getattr(request, "surface", "")),
-    #     )
-    #
-    # audit.record("account.created", request=request, actor=user)
-    #
-    # token = tokens.sign("auth.email_verify", {"u": str(user.pk)})
-    # verify_url = request.build_absolute_uri(
-    #     reverse("accounts:magic_link_consume") + f"?t={token}"
-    # )
-    # emails.send_magic_link(email, verify_url, minutes=tokens.ttl_for("auth.email_verify") // 60)
-    #
-    # services.complete_login(request, user, method=LoginActivity.Method.PASSWORD)
-    # return redirect(dashboard_url())
+    if request.method == "GET":
+        return render(request, "accounts/sign_up.html")
+
+    email = (request.POST.get("email") or "").strip().lower()
+    password = request.POST.get("password") or ""
+    full_name = (request.POST.get("full_name") or "").strip()[:150]
+    form = {"email": email, "full_name": full_name}
+
+    if not ratelimit.consume("signup.ip", ratelimit.client_identity(request)).allowed:
+        return render(
+            request,
+            "accounts/sign_up.html",
+            {**form, "error": "Too many sign-ups from this connection. Try again later."},
+            status=429,
+        )
+
+    # Private beta: only approved test addresses may register. Everyone else is
+    # turned away with a plain message. (This intentionally does reveal that the
+    # address is not on the list — that is the requested behaviour, and it says
+    # nothing about whether any account exists.)
+    if not services.is_signup_allowed(email):
+        services.record_attempt(
+            request,
+            method=LoginActivity.Method.PASSWORD,
+            outcome=LoginActivity.Outcome.NO_ACCOUNT,
+            email=email,
+        )
+        return render(
+            request,
+            "accounts/sign_up.html",
+            {
+                **form,
+                "error": "You're not a test user. Sign-up is limited to approved "
+                         "test accounts during the OneWooz private beta.",
+            },
+            status=403,
+        )
+
+    errors = []
+    if not email or "@" not in email:
+        errors.append("Enter a valid email address.")
+    try:
+        validate_password(password)
+    except ValidationError as exc:
+        errors.extend(exc.messages)
+    if errors:
+        return render(
+            request,
+            "accounts/sign_up.html",
+            {**form, "errors": errors},
+            status=400,
+        )
+
+    existing = User.objects.filter(email=email).first()
+    if existing is not None:
+        # Already registered: don't make a second account. Send a sign-in code
+        # to the same address instead, so an allowlisted returning user still
+        # lands in the dashboard.
+        sent = _email_code_and_park(
+            request, flow="login", email=email, purpose="login",
+            data={"user": str(existing.pk), "next": ""},
+        )
+        if not sent.ok:
+            return render(
+                request,
+                "accounts/sign_up.html",
+                {**form, "error": sent.error},
+                status=sent.status,
+            )
+        return redirect("accounts:email_otp")
+
+    # New account: hold the validated details (password as a hash, never
+    # plaintext) until the emailed code confirms the address.
+    sent = _email_code_and_park(
+        request,
+        flow="signup",
+        email=email,
+        purpose="signup",
+        data={"full_name": full_name, "password": make_password(password), "next": ""},
+    )
+    if not sent.ok:
+        return render(
+            request,
+            "accounts/sign_up.html",
+            {**form, "error": sent.error},
+            status=sent.status,
+        )
+    return redirect("accounts:email_otp")

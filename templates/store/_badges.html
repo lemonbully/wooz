@@ -1,0 +1,15 @@
+{% comment %}
+Trusted badge checkboxes (choose up to 4). `trusted_badges` is the option list,
+`prefill.trusted_icons` the already-selected ones. The view keeps the first 4.
+{% endcomment %}
+<div class="app-f--full">
+  <span class="pal-field__label">Trusted badges <span class="app-field-hint" style="display:inline">— up to 4</span></span>
+  <div class="app-badgeset">
+    {% for badge in trusted_badges %}
+      <label class="app-badgeopt">
+        <input type="checkbox" name="trusted_icons" value="{{ badge }}"{% if badge in prefill.trusted_icons %} checked{% endif %}>
+        <span>{{ badge }}</span>
+      </label>
+    {% endfor %}
+  </div>
+</div>

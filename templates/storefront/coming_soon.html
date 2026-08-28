@@ -1,0 +1,29 @@
+{% extends "storefront/theme_base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="min-h-[60vh] flex items-center justify-center px-4 py-20">
+  <div class="max-w-lg text-center">
+    <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+      <i class="fas fa-store text-2xl text-gray-500"></i>
+    </div>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-3">
+      {{ feature_name|default:"This feature" }} is coming soon
+    </h1>
+    <p class="text-gray-600 mb-8">
+      {{ website.content.site_name|default:website.name }} is getting ready to
+      take orders online. In the meantime, browse the catalogue or get in touch.
+    </p>
+    <div class="flex items-center justify-center gap-3">
+      <a href="{% url 'public_website' %}"
+         class="inline-flex items-center rounded-md bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
+        Back to home
+      </a>
+      <a href="{% url 'public_enquiry' %}"
+         class="inline-flex items-center rounded-md border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        Contact us
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

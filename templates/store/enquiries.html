@@ -1,0 +1,46 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Enquiries{% endblock %}
+{% block crumb %}Enquiries{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Leads</p>
+    <h1 class="app-head__title pal-mt-4">{% if is_b2b %}Trade enquiries{% else %}Contact enquiries{% endif %}</h1>
+    <p class="app-head__lead">{% if is_b2b %}Quote requests from businesses — the product, the quantity and who to reach.{% else %}Messages from your storefront’s contact form.{% endif %}</p>
+  </div></div>
+
+  <div class="app-block">
+    <div class="app-tabs" role="tablist">
+      <a class="app-tab" href="?" {% if not unread_only %}aria-current="true"{% endif %}>All</a>
+      <a class="app-tab" href="?unread=1" {% if unread_only %}aria-current="true"{% endif %}>Unread</a>
+    </div>
+
+    {% if enquiries %}
+      <div class="app-enquiries" style="margin-top:1rem;">
+        {% for e in enquiries %}
+          <article class="app-enquiry {% if not e.is_read %}app-enquiry--new{% endif %}">
+            <div class="app-enquiry__head">
+              <span class="app-table__strong">{{ e.name|default:"Anonymous" }}</span>
+              <span class="app-sub">{{ e.created_at|date:"d M Y, H:i" }}</span>
+            </div>
+            <p class="app-sub">{{ e.email|default:"" }}{% if e.mobile_number %} · {{ e.mobile_number }}{% endif %}</p>
+            {% if is_b2b %}
+              <div class="app-enquiry__meta">
+                {% for p in e.products.all %}<span class="app-chip">{{ p.title }}</span>{% endfor %}
+                {% for c in e.categories.all %}<span class="app-chip app-chip--soft">{{ c.name }}</span>{% endfor %}
+                {% if e.quantity %}<span class="app-chip">Qty · {{ e.quantity }}</span>{% endif %}
+              </div>
+            {% endif %}
+            {% if e.subject %}<p class="app-enquiry__subject">{{ e.subject }}</p>{% endif %}
+            {% if e.message %}<p class="app-enquiry__body">{{ e.message }}</p>{% endif %}
+          </article>
+        {% endfor %}
+      </div>
+      {% include "store/_pagination.html" with page=enquiries %}
+    {% else %}
+      <div class="app-empty"><h2 class="app-empty__title">No enquiries</h2><p class="app-empty__text">Messages and quote requests from your storefront arrive here.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

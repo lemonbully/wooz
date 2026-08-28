@@ -1,0 +1,878 @@
+{% extends "storefront/template2/base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block extra_head %}
+{{ block.super }}
+{% if schema_json %}
+<script type="application/ld+json">{{ schema_json|safe }}</script>
+{% endif %}
+<style>
+    /* ========================================
+       Core Page - Sophisticated Editorial
+       Premium, refined, immersive reading
+       ======================================== */
+    
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+    
+    :root {
+        --cp-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        --cp-serif: 'Source Serif 4', Georgia, serif;
+        --cp-ink: #0a0a0a;
+        --cp-ink-soft: #525252;
+        --cp-ink-faint: #a1a1aa;
+        --cp-line: #e4e4e7;
+        --cp-line-soft: #f4f4f5;
+        --cp-paper: #fafafa;
+        --cp-white: #ffffff;
+        --cp-accent: #18181b;
+        --cp-sidebar: 272px;
+        --cp-header: var(--header-height, 68px);
+        --cp-measure: 680px;
+        --cp-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .cp-shell {
+        display: flex;
+        min-height: calc(100vh - var(--cp-header));
+        background: var(--cp-paper);
+    }
+    
+    /* Sidebar */
+    .cp-aside {
+        display: none;
+        width: var(--cp-sidebar);
+        flex-shrink: 0;
+        background: var(--cp-white);
+        border-right: 1px solid var(--cp-line-soft);
+    }
+    
+    @media (min-width: 1024px) {
+        .cp-aside {
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: var(--cp-header);
+            height: calc(100vh - var(--cp-header));
+            overflow: hidden;
+        }
+    }
+    
+    .cp-aside-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem 1.25rem;
+    }
+    
+    .cp-aside-scroll::-webkit-scrollbar { width: 0; }
+    
+    .cp-brand {
+        padding-bottom: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid var(--cp-line-soft);
+    }
+    
+    .cp-brand-title {
+        font-family: var(--cp-serif);
+        font-size: 1.0625rem;
+        font-weight: 500;
+        color: var(--cp-ink);
+        line-height: 1.35;
+    }
+    
+    .cp-brand-desc {
+        margin-top: 0.5rem;
+        font-family: var(--cp-sans);
+        font-size: 0.8125rem;
+        color: var(--cp-ink-soft);
+        line-height: 1.5;
+    }
+    
+    /* Nav */
+    .cp-menu-label {
+        font-family: var(--cp-sans);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--cp-ink-faint);
+        margin-bottom: 0.625rem;
+    }
+    
+    .cp-menu-item {
+        display: block;
+        padding: 0.5625rem 0.75rem;
+        margin: 2px 0;
+        border-radius: 5px;
+        font-family: var(--cp-sans);
+        font-size: 0.875rem;
+        font-weight: 400;
+        color: var(--cp-ink-soft);
+        text-decoration: none;
+        transition: all 150ms var(--cp-ease);
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+    }
+    
+    .cp-menu-item:hover {
+        color: var(--cp-ink);
+        background: var(--cp-line-soft);
+    }
+    
+    .cp-menu-item.active {
+        color: var(--cp-ink);
+        background: var(--cp-line-soft);
+        font-weight: 500;
+    }
+    
+    .cp-menu-sub {
+        display: none;
+        margin-left: 0.75rem;
+        padding-left: 0.875rem;
+        border-left: 1px solid var(--cp-line);
+    }
+    
+    .cp-menu-sub.show { display: block; }
+    
+    .cp-menu-sub .cp-menu-item {
+        font-size: 0.8125rem;
+        padding: 0.4375rem 0.625rem;
+        color: var(--cp-ink-faint);
+    }
+    
+    .cp-menu-sub .cp-menu-item:hover,
+    .cp-menu-sub .cp-menu-item.active {
+        color: var(--cp-ink);
+    }
+    
+    .cp-aside-footer {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid var(--cp-line-soft);
+    }
+    
+    .cp-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: var(--cp-sans);
+        font-size: 0.8125rem;
+        color: var(--cp-ink-faint);
+        text-decoration: none;
+        transition: color 150ms var(--cp-ease);
+    }
+    
+    .cp-back:hover { color: var(--cp-ink); }
+    
+    /* Main */
+    .cp-body {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    @media (min-width: 1024px) {
+        .cp-body {
+            height: calc(100vh - var(--cp-header));
+            overflow-y: auto;
+        }
+    }
+    
+    .cp-body-inner {
+        max-width: calc(var(--cp-measure) + 5rem);
+        margin: 0 auto;
+        padding: 2.5rem 1.25rem 4rem;
+    }
+    
+    @media (min-width: 768px) {
+        .cp-body-inner { padding: 3.5rem 2.5rem 6rem; }
+    }
+    
+    /* Mobile */
+    .cp-m-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.5rem;
+        background: var(--cp-white);
+        border: 1px solid var(--cp-line);
+        border-radius: 6px;
+        font-family: var(--cp-sans);
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--cp-ink);
+        cursor: pointer;
+    }
+    
+    @media (min-width: 1024px) { .cp-m-toggle { display: none; } }
+    
+    .cp-m-menu {
+        display: none;
+        margin-bottom: 1.5rem;
+        padding: 0.75rem;
+        background: var(--cp-white);
+        border: 1px solid var(--cp-line);
+        border-radius: 6px;
+    }
+    
+    .cp-m-menu.show { display: block; }
+    
+    @media (min-width: 1024px) { .cp-m-menu { display: none !important; } }
+    
+    /* Breadcrumb */
+    .cp-crumb {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+        margin-bottom: 1.75rem;
+        font-family: var(--cp-sans);
+        font-size: 0.8125rem;
+        color: var(--cp-ink-faint);
+    }
+    
+    .cp-crumb a {
+        color: inherit;
+        text-decoration: none;
+        transition: color 150ms;
+    }
+    
+    .cp-crumb a:hover { color: var(--cp-ink); }
+    
+    .cp-crumb-sep { opacity: 0.35; }
+    
+    .cp-crumb-now { color: var(--cp-ink-soft); font-weight: 500; }
+    
+    /* Article */
+    .cp-article-head {
+        margin-bottom: 2.5rem;
+    }
+    
+    .cp-article-title {
+        font-family: var(--cp-serif);
+        font-size: clamp(1.875rem, 5vw, 2.625rem);
+        font-weight: 500;
+        color: var(--cp-ink);
+        line-height: 1.2;
+        letter-spacing: -0.015em;
+    }
+    
+    .cp-article-intro {
+        margin-top: 0.875rem;
+        font-family: var(--cp-sans);
+        font-size: 1.0625rem;
+        color: var(--cp-ink-soft);
+        line-height: 1.6;
+    }
+    
+    .cp-article-cover {
+        margin-top: 2rem;
+        aspect-ratio: 2.2/1;
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--cp-line-soft);
+    }
+    
+    .cp-article-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .cp-article-cover-empty {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--cp-ink-faint);
+    }
+    
+    /* Prose */
+    .cp-prose {
+        font-family: var(--cp-serif);
+        font-size: 1.0625rem;
+        line-height: 1.85;
+        color: var(--cp-ink);
+    }
+    
+    .cp-prose p { margin-bottom: 1.375rem; }
+    
+    .cp-prose h1, .cp-prose h2, .cp-prose h3, .cp-prose h4 {
+        font-family: var(--cp-serif);
+        font-weight: 600;
+        color: var(--cp-ink);
+        letter-spacing: -0.01em;
+    }
+    
+    .cp-prose h1 { font-size: 1.75rem; margin: 2.75rem 0 1.125rem; }
+    .cp-prose h2 { font-size: 1.375rem; margin: 2.25rem 0 0.875rem; }
+    .cp-prose h3 { font-size: 1.1875rem; margin: 1.875rem 0 0.75rem; }
+    .cp-prose h4 { font-size: 1.0625rem; margin: 1.5rem 0 0.625rem; }
+    
+    .cp-prose ul, .cp-prose ol { margin: 1.25rem 0; padding-left: 1.375rem; }
+    .cp-prose li { margin-bottom: 0.5rem; }
+    
+    .cp-prose a {
+        color: var(--cp-ink);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-thickness: 1px;
+        transition: opacity 150ms;
+    }
+    
+    .cp-prose a:hover { opacity: 0.6; }
+    
+    .cp-prose img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin: 1.75rem 0;
+    }
+    
+    .cp-prose blockquote {
+        margin: 1.75rem 0;
+        padding: 1rem 1.25rem;
+        background: var(--cp-line-soft);
+        border-radius: 4px;
+        font-style: italic;
+        color: var(--cp-ink-soft);
+    }
+    
+    .cp-prose table {
+        width: 100%;
+        margin: 1.75rem 0;
+        border-collapse: collapse;
+        font-family: var(--cp-sans);
+        font-size: 0.9375rem;
+    }
+    
+    .cp-prose th, .cp-prose td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid var(--cp-line);
+    }
+    
+    .cp-prose th { font-weight: 600; }
+    
+    /* Nested */
+    .cp-related {
+        margin-top: 3rem;
+        padding-top: 2.5rem;
+        border-top: 1px solid var(--cp-line-soft);
+    }
+
+    /* When viewing a nested related tab, hide the parent hero and pull content up */
+    .cp-nested-mode .cp-related {
+        margin-top: 1rem;
+        padding-top: 0;
+        border-top: 0;
+    }
+    
+    .cp-related-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .cp-related-label {
+        font-family: var(--cp-sans);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--cp-ink-faint);
+    }
+    
+    .cp-related-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+    }
+    
+    .cp-related-tab {
+        padding: 0.4375rem 0.875rem;
+        font-family: var(--cp-sans);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--cp-ink-soft);
+        background: transparent;
+        border: 1px solid var(--cp-line);
+        border-radius: 100px;
+        cursor: pointer;
+        transition: all 150ms var(--cp-ease);
+    }
+    
+    .cp-related-tab:hover {
+        border-color: var(--cp-ink-soft);
+        color: var(--cp-ink);
+    }
+    
+    .cp-related-tab.active {
+        background: var(--cp-ink);
+        border-color: var(--cp-ink);
+        color: var(--cp-white);
+    }
+    
+    .cp-related-card {
+        padding: 1.75rem;
+        background: var(--cp-white);
+        border: 1px solid var(--cp-line);
+        border-radius: 8px;
+    }
+    
+    .cp-related-title {
+        font-family: var(--cp-serif);
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--cp-ink);
+        line-height: 1.3;
+    }
+    
+    .cp-related-subtitle {
+        margin-top: 0.25rem;
+        font-family: var(--cp-sans);
+        font-size: 0.9375rem;
+        color: var(--cp-ink-soft);
+    }
+    
+    .cp-related-img {
+        width: 100%;
+        max-height: 240px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-top: 1.25rem;
+    }
+    
+    .cp-related-content {
+        margin-top: 1.25rem;
+    }
+    
+    /* Empty */
+    .cp-empty {
+        text-align: center;
+        padding: 3rem 1.5rem;
+    }
+    
+    .cp-empty-text {
+        font-family: var(--cp-sans);
+        font-size: 0.9375rem;
+        color: var(--cp-ink-soft);
+    }
+    
+    
+    /* Animation */
+    .cp-animate {
+        animation: cpSlide 280ms var(--cp-ease);
+    }
+    
+    @keyframes cpSlide {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .sr-only {
+        position: absolute;
+        width: 1px; height: 1px;
+        padding: 0; margin: -1px;
+        overflow: hidden;
+        clip: rect(0,0,0,0);
+        white-space: nowrap;
+        border: 0;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+{% website_base_path website request as website_base %}
+
+<div class="cp-shell">
+    <!-- Aside -->
+    <aside class="cp-aside">
+        <div class="cp-aside-scroll">
+            <div class="cp-brand">
+                <h1 class="cp-brand-title">{{ core_page.title }}</h1>
+                {% if core_page.subtitle %}
+                <p class="cp-brand-desc">{{ core_page.subtitle }}</p>
+                {% endif %}
+            </div>
+            
+            <nav>
+                <div class="cp-menu-label">Contents</div>
+                
+                <a href="{{ website_base }}{{ core_page.slug }}/"
+                   class="cp-menu-item active"
+                   data-nav="overview"
+                   data-overview="1">
+                    Overview
+                </a>
+                
+                {% for sp in subpages %}
+                <div class="cp-menu-group">
+                    <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/"
+                       class="cp-menu-item"
+                       data-nav="subpage"
+                       data-subpage="{{ sp.slug }}">
+                        {{ sp.title }}
+                    </a>
+                    
+                    {% if sp.nested_subpages.all %}
+                    <div class="cp-menu-sub" data-nested-for="{{ sp.slug }}">
+                        {% for n in sp.nested_subpages.all %}
+                        {% if n.is_active %}
+                        <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/"
+                           class="cp-menu-item"
+                           data-nav="nested"
+                           data-subpage="{{ sp.slug }}"
+                           data-nested="{{ n.slug }}">
+                            {{ n.title }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </nav>
+        </div>
+        
+        <div class="cp-aside-footer">
+            <a href="{{ website_base }}core-pages/" class="cp-back">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                All Pages
+            </a>
+        </div>
+        
+        <nav class="sr-only">
+            <ul>
+                <li><a href="{{ website_base }}{{ core_page.slug }}/">{{ core_page.title }}</a>
+                    <ul>
+                        {% for sp in subpages %}
+                        <li><a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/">{{ sp.title }}</a>
+                            {% if sp.nested_subpages.all %}<ul>{% for n in sp.nested_subpages.all %}{% if n.is_active %}<li><a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/">{{ n.title }}</a></li>{% endif %}{% endfor %}</ul>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <!-- Body -->
+    <main class="cp-body">
+        <div class="cp-body-inner">
+            <!-- Mobile -->
+            <button type="button" class="cp-m-toggle" id="cp-m-toggle">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                Contents
+                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-left:auto"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            
+            <div class="cp-m-menu" id="cp-m-menu">
+                <a href="{{ website_base }}{{ core_page.slug }}/" class="cp-menu-item active" data-nav="overview" data-overview="1">Overview</a>
+                {% for sp in subpages %}
+                <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/" class="cp-menu-item" data-nav="subpage" data-subpage="{{ sp.slug }}">{{ sp.title }}</a>
+                {% endfor %}
+            </div>
+            
+            <!-- Breadcrumb -->
+            <nav class="cp-crumb" id="cp-crumb">
+                <a href="{{ website_base }}core-pages/">Pages</a>
+                <span class="cp-crumb-sep">/</span>
+                <span class="cp-crumb-now" id="cp-crumb-now">{{ core_page.title }}</span>
+            </nav>
+            
+            <!-- Article -->
+            <article class="cp-animate">
+                <header class="cp-article-head" id="cp-hero">
+                    <h2 class="cp-article-title" id="cp-title">{{ core_page.title }}</h2>
+                    <p class="cp-article-intro {% if not core_page.subtitle %}hidden{% endif %}" id="cp-intro">{{ core_page.subtitle|default:'' }}</p>
+                    
+                    <div class="cp-article-cover" id="cp-cover">
+                        {% if core_page.image %}
+                        <img src="{{ core_page.image }}" alt="{{ core_page.title }}" id="cp-img">
+                        {% else %}
+                        <div class="cp-article-cover-empty" id="cp-img-empty">
+                            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        </div>
+                        <img src="" alt="" id="cp-img" class="hidden">
+                        {% endif %}
+                    </div>
+                </header>
+                
+                <!-- Overview -->
+                <div id="cp-overview">
+                    {% if core_page.content %}
+                    <div class="cp-prose">{{ core_page.content|safe }}</div>
+                    {% else %}
+                    <div class="cp-empty"><p class="cp-empty-text">Choose a topic from the menu.</p></div>
+                    {% endif %}
+                </div>
+                
+                <!-- Subpage Section -->
+                <div id="cp-subpage" class="hidden">
+                    <!-- Related Tabs (shown when subpage has nested items) -->
+                    <div id="cp-related" class="cp-related hidden">
+                        <div class="cp-related-head">
+                            <span class="cp-related-label">Related</span>
+                            <div class="cp-related-tabs" id="cp-tabs"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Subpage Content (shown when no nested is selected) -->
+                    <div id="cp-sub-content">
+                        <div class="cp-prose" id="cp-sub-html"></div>
+                    </div>
+                    
+                    <!-- Nested Content (shown when nested is selected, replaces subpage content) -->
+                    <div class="cp-related-card hidden" id="cp-rel-card">
+                        <h3 class="cp-related-title" id="cp-rel-title"></h3>
+                        <p class="cp-related-subtitle hidden" id="cp-rel-sub"></p>
+                        <img src="" alt="" class="cp-related-img hidden" id="cp-rel-img">
+                        <div class="cp-related-content cp-prose" id="cp-rel-html"></div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </main>
+</div>
+
+<!-- Data -->
+{% if subpages %}
+<div class="hidden" id="cp-data">
+    {% for subpage in subpages %}
+    <div id="cp-data-{{ subpage.slug }}" data-title="{{ subpage.title }}" data-subtitle="{{ subpage.subtitle|default:'' }}" data-image="{{ subpage.image|default:'' }}">
+        <div class="cp-data-html">{{ subpage.content|safe }}</div>
+        {% if subpage.nested_subpages.all %}
+        <div class="cp-data-nested">
+            {% for n in subpage.nested_subpages.all %}{% if n.is_active %}
+            <div class="cp-nested-item" data-slug="{{ n.slug }}" data-title="{{ n.title }}" data-subtitle="{{ n.subtitle|default:'' }}" data-image="{{ n.image|default:'' }}">{{ n.content|safe }}</div>
+            {% endif %}{% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+(function() {
+    'use strict';
+    
+    const SLUG = "{{ core_page.slug|escapejs }}";
+    const BASE = "{{ website_base|escapejs }}".replace(/\/$/, '') + '/';
+    const TITLE = "{{ core_page.title|escapejs }}";
+    const SUBTITLE = "{{ core_page.subtitle|default:''|escapejs }}";
+    const IMAGE = "{{ core_page.image|default:''|escapejs }}";
+    
+    const $ = id => document.getElementById(id);
+    const $$ = sel => document.querySelectorAll(sel);
+    
+    const shell = document.querySelector('.cp-shell');
+    const heroHead = $('cp-hero');
+    const bodyScroller = document.querySelector('.cp-body');
+
+    const data = $('cp-data');
+    const titleEl = $('cp-title');
+    const introEl = $('cp-intro');
+    const imgEl = $('cp-img');
+    const imgEmpty = $('cp-img-empty');
+    const overview = $('cp-overview');
+    const subpageWrap = $('cp-subpage');
+    const subHtml = $('cp-sub-html');
+    const related = $('cp-related');
+    const tabs = $('cp-tabs');
+    const subContent = $('cp-sub-content');
+    const relCard = $('cp-rel-card');
+    const relTitle = $('cp-rel-title');
+    const relSub = $('cp-rel-sub');
+    const relImg = $('cp-rel-img');
+    const relHtml = $('cp-rel-html');
+    const crumb = $('cp-crumb-now');
+    const mToggle = $('cp-m-toggle');
+    const mMenu = $('cp-m-menu');
+    
+    let curSub = null, curNested = null, curNestedItems = [];
+    
+    const url = (s, n) => { let u = BASE + SLUG + '/'; if (s) u += s + '/'; if (n) u += n + '/'; return u; };
+    const parse = () => { let p = location.pathname; if (p.startsWith(BASE)) p = p.slice(BASE.length); const parts = p.split('/').filter(Boolean); if (!parts.length || parts[0] !== SLUG) return { sub: null, nested: null }; return { sub: parts[1] || null, nested: parts[2] || null }; };
+    const esc = t => { const d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; };
+    
+    const navUpdate = (s, n) => {
+        $$('.cp-menu-item').forEach(e => e.classList.remove('active'));
+        $$('.cp-menu-sub').forEach(e => e.classList.remove('show'));
+        if (!s) $$('[data-overview="1"]').forEach(e => e.classList.add('active'));
+        else {
+            $$(`[data-subpage="${s}"][data-nav="subpage"]`).forEach(e => e.classList.add('active'));
+            $$(`[data-nested-for="${s}"]`).forEach(e => e.classList.add('show'));
+            if (n) $$(`[data-nested="${n}"]`).forEach(e => e.classList.add('active'));
+        }
+    };
+    
+    const heroUpdate = (t, s, i) => {
+        if (titleEl) titleEl.textContent = t || TITLE;
+        if (introEl) { introEl.textContent = s || ''; introEl.classList.toggle('hidden', !s); }
+        if (imgEl && imgEmpty) {
+            if (i) { imgEl.src = i; imgEl.alt = t || ''; imgEl.classList.remove('hidden'); imgEmpty?.classList.add('hidden'); }
+            else { imgEl.classList.add('hidden'); imgEmpty?.classList.remove('hidden'); }
+        }
+    };
+
+    const setNestedMode = (on) => {
+        heroHead?.classList.toggle('hidden', !!on);
+        shell?.classList.toggle('cp-nested-mode', !!on);
+    };
+
+    const getScroller = () => {
+        // Desktop uses the internal `.cp-body` scroller; mobile typically scrolls the window.
+        const el = bodyScroller;
+        if (el && el.scrollHeight > el.clientHeight + 2) return { type: 'el', el };
+        return { type: 'window' };
+    };
+
+    const scrollToTop = ({ behavior = 'auto' } = {}) => {
+        const s = getScroller();
+        if (s.type === 'el') s.el.scrollTo({ top: 0, behavior });
+        else window.scrollTo({ top: 0, behavior });
+    };
+
+    const ensureVisible = (target, { offset = 12, behavior = 'smooth' } = {}) => {
+        if (!target) return;
+        const s = getScroller();
+        if (s.type === 'el') {
+            const sc = s.el;
+            const tRect = target.getBoundingClientRect();
+            const sRect = sc.getBoundingClientRect();
+            const topInScroller = (tRect.top - sRect.top) + sc.scrollTop;
+            const bottomInScroller = topInScroller + tRect.height;
+            const viewTop = sc.scrollTop;
+            const viewBottom = viewTop + sc.clientHeight;
+
+            // If fully visible, don't scroll (prevents "jump" / cut-off feeling)
+            if (topInScroller >= viewTop + offset && bottomInScroller <= viewBottom - 8) return;
+            sc.scrollTo({ top: Math.max(0, topInScroller - offset), behavior });
+            return;
+        }
+
+        // Window scroller
+        const rect = target.getBoundingClientRect();
+        const top = window.scrollY + rect.top;
+        const bottom = top + rect.height;
+        const viewTop = window.scrollY;
+        const viewBottom = viewTop + window.innerHeight;
+        if (top >= viewTop + offset && bottom <= viewBottom - 8) return;
+        window.scrollTo({ top: Math.max(0, top - offset), behavior });
+    };
+    
+    const crumbUpdate = (s, n) => {
+        if (!crumb) return;
+        let h = `<a href="${url()}">${esc(TITLE)}</a>`;
+        if (s) { h += `<span class="cp-crumb-sep">/</span>`; h += n ? `<a href="${url(curSub)}">${esc(s)}</a><span class="cp-crumb-sep">/</span><span class="cp-crumb-now">${esc(n)}</span>` : `<span class="cp-crumb-now">${esc(s)}</span>`; }
+        else h = `<span class="cp-crumb-now">${esc(TITLE)}</span>`;
+        crumb.innerHTML = h;
+    };
+    
+    const renderNested = (slug, items, { push = true } = {}) => {
+        const item = items.find(i => i.dataset.slug === slug);
+        if (!item) return;
+        curNested = item.dataset.slug;
+
+        // Hide parent (subpage) hero (title + image) to maximize nested content visibility
+        setNestedMode(true);
+        
+        // Hide subpage content, show nested card
+        subContent?.classList.add('hidden');
+        relCard?.classList.remove('hidden');
+        
+        if (relTitle) relTitle.textContent = item.dataset.title || '';
+        if (relSub) { relSub.textContent = item.dataset.subtitle || ''; relSub.classList.toggle('hidden', !item.dataset.subtitle); }
+        if (relImg) { if (item.dataset.image) { relImg.src = item.dataset.image; relImg.alt = item.dataset.title || ''; relImg.classList.remove('hidden'); } else relImg.classList.add('hidden'); }
+        if (relHtml) relHtml.innerHTML = item.innerHTML || '';
+        tabs?.querySelectorAll('.cp-related-tab').forEach(t => t.classList.toggle('active', t.dataset.nested === curNested));
+        if (push) history.pushState({ sub: curSub, nested: curNested }, '', url(curSub, curNested));
+        const sd = $('cp-data-' + curSub); crumbUpdate(sd?.dataset.title, item.dataset.title); navUpdate(curSub, curNested);
+
+        // Keep content perfectly framed (no cut-off): only scroll if needed, with a small offset
+        requestAnimationFrame(() => ensureVisible(relCard, { offset: 14, behavior: 'smooth' }));
+    };
+    
+    const showSubpageContent = () => {
+        curNested = null;
+        setNestedMode(false);
+        subContent?.classList.remove('hidden');
+        relCard?.classList.add('hidden');
+        tabs?.querySelectorAll('.cp-related-tab').forEach(t => t.classList.remove('active'));
+    };
+    
+    const renderSub = (s, n, { push = true } = {}) => {
+        if (!data) return;
+        const el = $('cp-data-' + s);
+        if (!el) return;
+        curSub = s; curNested = null;
+        heroUpdate(el.dataset.title, el.dataset.subtitle, el.dataset.image);
+        overview?.classList.add('hidden'); subpageWrap?.classList.remove('hidden');
+        const html = el.querySelector('.cp-data-html'); if (subHtml) subHtml.innerHTML = html ? html.innerHTML : '';
+        const nd = el.querySelector('.cp-data-nested'); const items = nd ? Array.from(nd.querySelectorAll('.cp-nested-item')) : [];
+        curNestedItems = items;
+
+        // Switching subpages should always start at a clean, predictable top position
+        scrollToTop({ behavior: 'auto' });
+        
+        if (items.length) {
+            related?.classList.remove('hidden');
+            if (tabs) {
+                tabs.innerHTML = items.map(i => `<button type="button" class="cp-related-tab" data-nested="${i.dataset.slug}">${esc(i.dataset.title || 'Topic')}</button>`).join('');
+                tabs.querySelectorAll('.cp-related-tab').forEach(t => t.addEventListener('click', () => renderNested(t.dataset.nested, items)));
+            }
+            
+            // Only render nested content if explicitly requested via URL
+            if (n && items.find(i => i.dataset.slug === n)) {
+                renderNested(n, items, { push: false });
+            } else {
+                // Show subpage content, not nested
+                showSubpageContent();
+                // Ensure the hero is fully visible after navigation
+                requestAnimationFrame(() => ensureVisible(heroHead, { offset: 10, behavior: 'auto' }));
+            }
+        } else {
+            related?.classList.add('hidden');
+            setNestedMode(false);
+            requestAnimationFrame(() => ensureVisible(heroHead, { offset: 10, behavior: 'auto' }));
+        }
+        
+        crumbUpdate(el.dataset.title, curNested ? items.find(i => i.dataset.slug === curNested)?.dataset.title : null); navUpdate(s, curNested);
+        
+        // URL only includes nested slug if nested is selected
+        if (push) history.pushState({ sub: s, nested: curNested }, '', url(s, curNested));
+    };
+    
+    const renderOverview = ({ push = true } = {}) => {
+        curSub = null; curNested = null;
+        setNestedMode(false);
+        heroUpdate(TITLE, SUBTITLE, IMAGE);
+        overview?.classList.remove('hidden'); subpageWrap?.classList.add('hidden'); related?.classList.add('hidden');
+        crumbUpdate(null, null); navUpdate(null, null);
+        if (push) history.pushState({ sub: null, nested: null }, '', url());
+    };
+    
+    const init = () => {
+        $$('.cp-menu-item[data-overview]').forEach(e => e.addEventListener('click', ev => { ev.preventDefault(); renderOverview(); }));
+        $$('.cp-menu-item[data-subpage][data-nav="subpage"]').forEach(e => e.addEventListener('click', ev => { ev.preventDefault(); renderSub(e.dataset.subpage, null); }));
+        $$('.cp-menu-item[data-nested]').forEach(e => e.addEventListener('click', ev => { ev.preventDefault(); renderSub(e.dataset.subpage, e.dataset.nested); }));
+        mToggle?.addEventListener('click', () => mMenu?.classList.toggle('show'));
+        window.addEventListener('popstate', e => { const s = e.state || parse(); if (s.sub) renderSub(s.sub, s.nested, { push: false }); else renderOverview({ push: false }); });
+        const p = parse(); if (p.sub) renderSub(p.sub, p.nested, { push: false }); else renderOverview({ push: false });
+    };
+    
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+{% endblock %}

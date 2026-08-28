@@ -1,0 +1,1472 @@
+{% extends "storefront/template2/base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block title %}Order Summary | {{ website.content.site_name|default:"Site Name" }}{% endblock %}
+
+{% block page_content %}
+  {% website_base_path website request as website_base %}
+  <section class="bg-white py-2 md:py-6">
+    <form id="checkout-form" action="" method="post" class="mx-auto max-w-screen-xl px-4 2xl:px-0">
+      {% csrf_token %}
+      {% if pending_order_id %}<input type="hidden" name="pending_order_id" value="{{ pending_order_id }}">{% endif %}
+      <div class="mx-auto lg:grid lg:grid-cols-5 lg:gap-8 xl:gap-10">
+        <!-- Mobile accordion: Order summary preview and toggle (visible on < lg) -->
+        <div class="block lg:hidden mt-2">
+          <button type="button" id="mobile-order-toggle" class="w-full flex items-center gap-3 rounded-lg border border-gray-400 bg-white px-3 py-2">
+            {% with ci=cart_items.0 %}
+            <span id="mobile-order-label" class="min-w-0 flex-1 text-left text-md font-medium text-gray-900">View products</span>
+            <div class="flex items-center gap-2">
+              {% if ci %}<div class="text-sm font-semibold text-gray-900">₹{{ totals.total }}</div>{% endif %}
+              <svg id="mobile-order-toggle-icon" class="w-4 h-4 text-gray-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            {% endwith %}
+          </button>
+          <div id="mobile-order-panel" class="hidden mt-3"></div>
+          <div id="mobile-order-panel-spacer" class="h-5"></div>
+        </div>
+        <!-- Left: Billing & Delivery (scrollable on large screens) -->
+        <div class="mt-6 space-y-4 border-b border-t border-gray-200 py-8 sm:mt-8 lg:col-span-3 lg:border-0 lg:py-0 lg:order-1">
+          <h4 class="text-lg font-semibold text-gray-900">Billing & Delivery information</h4>
+  
+          <dl>
+            <dt class="text-base font-medium text-gray-900">Customer</dt>
+            <dd class="mt-1 text-base font-normal text-gray-600">
+              <input name="name" class="w-full rounded-lg border border-gray-300 p-2 text-sm" placeholder="Your name" />
+              <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input name="phone" class="w-full rounded-lg border border-gray-300 p-2 text-sm" placeholder="Phone (10 digits)" required minlength="10" />
+                <input name="email" class="w-full rounded-lg border border-gray-300 p-2 text-sm" placeholder="Email" required />
+              </div>
+              <input type="hidden" name="address" id="hidden_address" />
+              <input type="hidden" name="first_name" id="hidden_first_name" />
+              <input type="hidden" name="last_name" id="hidden_last_name" />
+              <input type="hidden" name="company" id="hidden_company" />
+              <input type="hidden" name="country" id="hidden_country" value="India" />
+              <input type="hidden" name="house" id="hidden_house" />
+              <input type="hidden" name="street" id="hidden_street" />
+              <input type="hidden" name="city" id="hidden_city" />
+              <input type="hidden" name="state" id="hidden_state" />
+              <input type="hidden" name="pincode" id="hidden_pincode" />
+              <input type="hidden" name="gstin" id="hidden_gstin" />
+              <input type="hidden" name="has_gst" id="hidden_has_gst" value="" />
+              <input type="hidden" name="company_name" id="hidden_company_name" />
+              <input type="hidden" name="billing_house" id="hidden_billing_house" />
+              <input type="hidden" name="billing_street" id="hidden_billing_street" />
+              <input type="hidden" name="billing_city" id="hidden_billing_city" />
+              <input type="hidden" name="billing_state" id="hidden_billing_state" />
+              <input type="hidden" name="billing_pincode" id="hidden_billing_pincode" />
+              <input type="hidden" name="ship_to_different" id="hidden_ship_to_different" value="" />
+            </dd>
+          </dl>
+  
+          <button type="button" id="open-billing" class="hidden text-base font-medium text-primary-700 hover:underline">Edit</button>
+
+          <!-- Inline Billing & Shipping form (replacing modal UX) -->
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+              <div class="mb-2 flex items-center justify-start">
+                <div class="flex items-center gap-2">
+                  <input id="has_gst_onpage" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-2 focus:ring-primary-500" />
+                </div>
+                <label for="has_gst_onpage" class="block text-sm font-medium text-gray-900 ml-2 cursor-pointer">Do you have GST?</label>
+              </div>
+              <div id="company_gst_row" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="company_name_onpage" class="mb-2 block text-sm font-medium text-gray-900"> Company name </label>
+                  <input type="text" name="company" id="company_name_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" placeholder="Company (optional)" />
+                </div>
+                <div id="gstin_wrapper">
+                  <label for="gstin_onpage" class="mb-2 block text-sm font-medium text-gray-900"> GSTIN* </label>
+                  <input type="text" id="gstin_onpage" maxlength="15" pattern="[0-9A-Z]{15}" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" placeholder="15-character GSTIN" />
+                </div>
+              </div>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label for="country_onpage" class="mb-2 block text-sm font-medium text-gray-900"> Country/Region* </label>
+              <select name="country" id="country_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500">
+                <option value="India" selected>India</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="house_onpage" class="mb-2 block text-sm font-medium text-gray-900"> House No.* </label>
+              <input type="text" id="house_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" placeholder="House/Flat/Block" required />
+            </div>
+            <div>
+              <label for="street_onpage" class="mb-2 block text-sm font-medium text-gray-900"> Street/Area* </label>
+              <input type="text" id="street_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" placeholder="Street/Area" required />
+            </div>
+
+            <div>
+              <label for="city_onpage" class="mb-2 block text-sm font-medium text-gray-900"> City* </label>
+              <input type="text" id="city_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" placeholder="City" required />
+            </div>
+            <div>
+              <label for="state_onpage" class="mb-2 block text-sm font-medium text-gray-900"> State* </label>
+              <select id="state_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" required>
+                <option selected disabled>Select state</option>
+                <option value="Andhra Pradesh">Andhra Pradesh</option>
+                <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                <option value="Assam">Assam</option>
+                <option value="Bihar">Bihar</option>
+                <option value="Chhattisgarh">Chhattisgarh</option>
+                <option value="Goa">Goa</option>
+                <option value="Gujarat">Gujarat</option>
+                <option value="Haryana">Haryana</option>
+                <option value="Himachal Pradesh">Himachal Pradesh</option>
+                <option value="Jharkhand">Jharkhand</option>
+                <option value="Karnataka">Karnataka</option>
+                <option value="Kerala">Kerala</option>
+                <option value="Madhya Pradesh">Madhya Pradesh</option>
+                <option value="Maharashtra">Maharashtra</option>
+                <option value="Manipur">Manipur</option>
+                <option value="Meghalaya">Meghalaya</option>
+                <option value="Mizoram">Mizoram</option>
+                <option value="Nagaland">Nagaland</option>
+                <option value="Odisha">Odisha</option>
+                <option value="Punjab">Punjab</option>
+                <option value="Rajasthan">Rajasthan</option>
+                <option value="Sikkim">Sikkim</option>
+                <option value="Tamil Nadu">Tamil Nadu</option>
+                <option value="Telangana">Telangana</option>
+                <option value="Tripura">Tripura</option>
+                <option value="Uttar Pradesh">Uttar Pradesh</option>
+                <option value="Uttarakhand">Uttarakhand</option>
+                <option value="West Bengal">West Bengal</option>
+                <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+                <option value="Chandigarh">Chandigarh</option>
+                <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                <option value="Ladakh">Ladakh</option>
+                <option value="Lakshadweep">Lakshadweep</option>
+                <option value="Puducherry">Puducherry</option>
+              </select>
+            </div>
+            <div>
+              <label for="pincode_onpage" class="mb-2 block text-sm font-medium text-gray-900"> PIN* </label>
+              <input type="text" id="pincode_onpage" maxlength="6" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" placeholder="PIN Code" required />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label for="address_onpage" class="mb-2 block text-sm font-medium text-gray-900"> Shipping Address* </label>
+              <textarea id="address_onpage" rows="4" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" placeholder="Apartment, landmark, instructions (optional)"></textarea>
+            </div>
+
+            <div class="sm:col-span-2">
+              <div class="flex items-center">
+                <input id="ship_diff_toggle_onpage" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-2 focus:ring-primary-500" />
+                <label for="ship_diff_toggle_onpage" class="ml-2 text-sm font-medium text-gray-900 cursor-pointer"> Ship to a different address? </label>
+              </div>
+            </div>
+
+            <div id="ship_diff_container_onpage" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="first_name_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900"> First Name* </label>
+                <input id="first_name_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" />
+              </div>
+              <div>
+                <label for="last_name_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900"> Last Name* </label>
+                <input id="last_name_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" />
+              </div>
+              <div>
+                <label for="house_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900"> House No.* </label>
+                <input id="house_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" />
+              </div>
+              <div>
+                <label for="street_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900"> Street/Area* </label>
+                <input id="street_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" />
+              </div>
+              <div>
+                <label for="city_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900"> City* </label>
+                <input id="city_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" />
+              </div>
+              <div>
+                <label for="state_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900"> State* </label>
+                <select id="state_ship_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500">
+                  <option selected disabled>Select state</option>
+                  <option value="Delhi">Delhi</option>
+                  <option value="Maharashtra">Maharashtra</option>
+                  <option value="Karnataka">Karnataka</option>
+                  <option value="Uttar Pradesh">Uttar Pradesh</option>
+                  <option value="Gujarat">Gujarat</option>
+                </select>
+              </div>
+              <div>
+                <label for="pincode_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900"> PIN* </label>
+                <input id="pincode_ship_onpage" type="text" maxlength="6" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Shipping Rates -->
+          <div class="mt-6 rounded-lg bg-gray-50 p-4 border border-gray-200">
+            <div class="flex items-center justify-between">
+              <h5 class="text-base font-semibold text-gray-900">Shipping</h5>
+            </div>
+            <div class="mt-3 flex items-center">
+              <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900">Free Standard Shipping</p>
+                <p class="text-xs text-gray-500">Delivery in 5-7 business days</p>
+              </div>
+              <div class="text-base font-bold text-green-600">FREE</div>
+            </div>
+            <input type="hidden" name="selected_shipping" id="selected_shipping" value="standard|Free Standard Shipping|0" />
+          </div>
+
+          <!-- Notes like in the reference UI -->
+          <div class="mt-4">
+            <label class="mb-2 block text-sm font-medium text-gray-900">Order notes</label>
+            <textarea name="notes" id="order_notes" rows="3" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" placeholder="Notes about your order, e.g. special notes for delivery."></textarea>
+          </div>
+        </div>
+
+        <!-- Right: Items + Order summary (sticky on large screens) -->
+        <div id="order-summary-section" class="mt-6 sm:mt-8 lg:col-span-2 lg:order-2 lg:sticky lg:top-[120px] lg:self-start lg:rounded-xl lg:border lg:border-gray-200 lg:p-4 lg:bg-white">
+          <div class="relative overflow-hidden border-b border-gray-200">
+            <table class="w-full text-left font-medium text-gray-900 table-auto">
+              <tbody id="checkout-items-body" class="divide-y divide-gray-200">
+                {% for ci in cart_items %}
+                <tr data-pid="{{ ci.product.product_id }}" data-qty="{{ ci.quantity }}" class="align-top">
+                  <td class="py-4 w-full">
+                    <div class="flex items-start gap-4">
+                      <a href="{% url 'public_product_detail' product_slug=ci.product.slug|default:'_' %}" class="flex items-center aspect-square w-10 h-10 shrink-0">
+                        {% if ci.variant_image %}
+                          <img class="h-auto w-full max-h-full" src="{{ ci.variant_image }}" alt="{{ ci.product.title }}" />
+                        {% elif ci.product.image1 %}
+                          <img class="h-auto w-full max-h-full" src="{{ ci.product.image1.url }}" {% media_attrs website ci.product.image1.url ci.product.title %} />
+                        {% endif %}
+                      </a>
+                      <div class="w-full grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                        <div class="flex-1 min-w-0">
+                          <a href="{% url 'public_product_detail' product_slug=ci.product.slug|default:'_' %}" class="hover:underline block text-sm font-medium text-gray-900 break-words [overflow-wrap:anywhere]">{{ ci.product.title }}</a>
+                          {% if ci.variant_label %}
+                          <div class="mt-0.5 text-[11px] text-gray-600">({{ ci.variant_label }})</div>
+                          {% endif %}
+                          <button type="button" class="mt-1 text-xs text-red-600 hover:text-red-700 underline" data-action="remove">Remove</button>
+                        </div>
+                        <div class="flex items-center justify-end gap-3 shrink-0">
+                          <div class="inline-flex items-center gap-2">
+                            <button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="dec" aria-label="Decrease">−</button>
+                            <span class="min-w-[2ch] text-sm text-gray-900 text-center" data-role="qty">{{ ci.quantity }}</span>
+                            <button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="inc" aria-label="Increase">+</button>
+                          </div>
+                          <span class="text-right text-base font-bold text-gray-900 whitespace-nowrap">₹{{ ci.unit_price|floatformat:2 }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="hidden"></td>
+                  <td class="hidden"></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="py-6 text-center text-gray-500">No items in cart.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+  
+          <div class="my-4">
+            <h4 class="text-xl font-semibold text-gray-900">Order summary</h4>
+  
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <dl class="flex items-center justify-between gap-4">
+                  <dt class="text-gray-500">Subtotal</dt>
+                  <dd id="checkout-subtotal" class="text-base font-medium text-gray-900">₹{{ totals.subtotal }}</dd>
+                </dl>
+  
+                <dl class="flex items-center justify-between gap-4">
+                  <dt class="text-gray-500">Discount</dt>
+                  <dd id="checkout-discount" class="text-base font-medium text-green-600">-₹{{ totals.discount }}</dd>
+                </dl>
+
+                <dl id="checkout-credit-row" class="flex items-center justify-between gap-4 {% if not totals.credit_discount %}hidden{% endif %}">
+                  <dt class="text-gray-500">Store Credit</dt>
+                  <dd id="checkout-credit" class="text-base font-medium text-emerald-600">-₹{{ totals.credit_discount }}</dd>
+                </dl>
+  
+                <dl class="flex items-center justify-between gap-4">
+                  <dt class="text-gray-500">Shipping</dt>
+                  <dd id="checkout-shipping" class="text-base font-medium text-gray-900">₹{{ totals.shipping }}</dd>
+                </dl>
+  
+                <dl class="flex items-center justify-between gap-4">
+                  <dt class="text-gray-500">Tax</dt>
+                  <dd id="checkout-tax" class="text-base font-medium text-gray-900">₹{{ totals.tax }}</dd>
+                </dl>
+              </div>
+  
+              <dl class="flex items-center justify-between gap-4 border-t border-gray-200 pt-2">
+                <dt class="text-lg font-bold text-gray-900">Total</dt>
+                <dd id="checkout-total" class="text-lg font-bold text-gray-900">₹{{ totals.total }}</dd>
+              </dl>
+            </div>
+
+            <!-- Coupon accordion -->
+            <div class="mt-4 rounded-lg border border-gray-200">
+              <button type="button" id="coupon-accordion-btn" aria-expanded="false" class="w-full flex items-center justify-between px-4 py-3 text-left">
+                <span class="text-sm font-medium text-gray-900">Have a discount code?</span>
+                <svg class="h-5 w-5 text-gray-500 transition-transform duration-300" id="coupon-accordion-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <div id="coupon-accordion-panel" class="overflow-hidden transition-all duration-300 ease-in-out max-h-0">
+                <div class="px-4 pb-4 space-y-3">
+                  <div id="coupon-applied-row" class="hidden rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800 flex items-center justify-between">
+                    <div>
+                      <span class="font-semibold">Applied:</span>
+                      <span id="applied-coupon-code" class="ml-1"></span>
+                    </div>
+                    <button type="button" id="remove-coupon" class="text-emerald-700 hover:text-emerald-900 underline">Remove</button>
+                  </div>
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <input id="coupon-input" type="text" class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500" placeholder="Enter code" />
+                    <button type="button" id="apply-coupon" class="w-full sm:w-auto shrink-0 inline-flex items-center justify-center rounded-lg bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-300">Apply</button>
+                  </div>
+                  <p id="coupon-message" class="text-xs text-gray-500"></p>
+                </div>
+              </div>
+            </div>
+  
+            {% if cod_enabled or gateway_enabled %}
+            <div id="payment-method-section" class="my-6 rounded-lg border border-gray-200 p-4">
+              <h5 class="mb-3 text-base font-medium text-gray-900">Payment method</h5>
+              <div class="space-y-3">
+                {% if cod_enabled %}
+                <label class="flex items-center gap-3">
+                  <input type="radio" name="payment_method" value="COD" class="h-4 w-4" {% if not gateway_enabled %}checked{% endif %}>
+                  <span class="text-sm text-gray-800">Cash on Delivery (COD)</span>
+                </label>
+                {% endif %}
+                {% if gateway_enabled %}
+                <label class="flex items-center gap-3">
+                  <input type="radio" name="payment_method" value="gateway" class="h-4 w-4" {% if gateway_enabled %}checked{% endif %}>
+                  <span class="text-sm text-gray-800">Pay via {{ gateway_name|default:'Online Payment' }}</span>
+                </label>
+                {% endif %}
+                {% if partial_payment_available %}
+                <label class="flex items-start gap-3">
+                  <input type="radio" name="payment_method" value="partial" class="h-4 w-4 mt-1">
+                  <div class="flex-1">
+                    <div class="text-sm text-gray-800 font-medium">Partial payment</div>
+                    <div class="text-xs text-gray-600 mt-0.5">Pay a part online now and the remaining amount will be collected via COD.</div>
+                    <div id="partial-breakdown" class="mt-2 hidden rounded-lg border border-[#EDE9FE] bg-[#FBFAFF] p-3 text-xs text-gray-700">
+                      <div class="flex items-center justify-between"><span>Online now</span><span class="font-semibold" id="partial-online-amt">₹0.00</span></div>
+                      <div class="flex items-center justify-between mt-1"><span>COD remaining</span><span class="font-semibold" id="partial-cod-amt">₹0.00</span></div>
+                      <div class="mt-2 text-[11px] text-gray-500">The remaining amount will be collected at delivery (COD).</div>
+                    </div>
+                  </div>
+                </label>
+                {% endif %}
+              </div>
+              {% if gateway_error %}
+              <p class="mt-2 text-sm text-red-600">{{ gateway_error }}</p>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            {% if not has_payment_config %}
+            <div class="my-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <p class="text-sm font-medium text-amber-800">Online payments are currently unavailable.</p>
+              <p class="mt-1 text-xs text-amber-700">This store has not completed its payment configuration. You can review your order details, but placing an order is disabled until payment methods are set up by the store owner.</p>
+            </div>
+            {% endif %}
+
+            <div id="order-cta-row" class="gap-4 sm:flex sm:items-center my-2">
+              <button type="button" class="w-full rounded-lg  border border-gray-200 bg-white px-5  py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:outline-none focus:ring-4 focus:ring-gray-100">Return to Shopping</button>
+
+              <button
+                type="submit"
+                id="place-order"
+                {% if not has_payment_config %}
+                disabled
+                class="mt-4 flex w-full items-center justify-center rounded-lg bg-gray-300 text-gray-500 px-5 py-2.5 text-sm font-medium cursor-not-allowed sm:mt-0"
+                {% else %}
+                class="mt-4 flex w-full items-center justify-center rounded-lg bg-black text-white px-5 py-2.5 text-sm font-medium hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-300 sm:mt-0"
+                {% endif %}
+              >
+                Place order
+              </button>
+            </div>
+            <!-- Extra actions -->
+            <div class="mt-3 flex items-center justify-between gap-3">
+              <span class="text-sm font-medium text-gray-700">Bulk Buy Discount?</span>
+              <div class="flex items-center gap-2 shrink-0">
+                <a
+                  id="order-whatsapp"
+                  href="#"
+                  target="_blank"
+                  rel="noopener"
+                  class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 bg-white text-green-600 hover:bg-green-50 hover:border-green-200"
+                  aria-label="WhatsApp support"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="h-5 w-5 bi bi-whatsapp" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </section>
+  
+  <script>
+  document.addEventListener('DOMContentLoaded', function(){
+    const SITE_KEY = 't2_checkout_profile_' + '{{ website.public_slug }}';
+    const PROFILES_KEY = 't2_checkout_profiles_' + '{{ website.public_slug }}';
+    function fmtINR(x){
+      try {
+        const num = parseFloat(x||0);
+        return new Intl.NumberFormat('en-IN', {
+          style:'currency',
+          currency:'INR',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(isNaN(num) ? 0 : num);
+      } catch(e){
+        const n = Number(x||0);
+        return '₹' + (isFinite(n) ? n.toFixed(2) : '0.00');
+      }
+    }
+    async function refreshSummary(){
+      try{
+        const res = await fetch('{{ website_base }}cart/data/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const data = await res.json();
+        // update rows
+        const tbody = document.getElementById('checkout-items-body');
+        if (tbody){
+          let html = '';
+          (data.items||[]).forEach(function(it){
+            html += '\n<tr data-pid="' + it.product_id + '" data-qty="' + it.quantity + '" class="align-top">\n' +
+              '  <td class="py-4 w-full">' +
+              '    <div class="flex items-start gap-4">' +
+              '      <a href="' + it.url + '" class="flex items-center aspect-square w-10 h-10 shrink-0">' +
+                     (it.image ? ('<img class="h-auto w-full max-h-full" src="' + it.image + '" alt=""/>') : '') +
+              '      </a>' +
+              '      <div class="w-full grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">' +
+              '        <div class="flex-1 min-w-0">' +
+              '          <a href="' + it.url + '" class="hover:underline block text-sm font-medium text-gray-900 break-words [overflow-wrap:anywhere]">' + it.title + '</a>' +
+              '          ' + (it.variant_label ? ('<div class="mt-0.5 text-[11px] text-gray-500">(' + it.variant_label + ')</div>') : '') +
+              '          ' + (it.sku ? ('<div class="mt-0.5 text-[11px] text-gray-500">SKU: ' + it.sku + '</div>') : '') +
+              '          ' + (it.mrp && parseFloat(it.mrp) ? ('<div class="text-[11px] text-gray-500">MRP: ' + fmtINR(it.mrp) + '</div>') : '') +
+              '          <button type="button" class="mt-1 text-xs text-red-600 hover:text-red-700 underline" data-action="remove">Remove</button>' +
+              '        </div>' +
+              '        <div class="flex items-center justify-end gap-3 shrink-0">' +
+              '          <div class="inline-flex items-center gap-2">' +
+              '            <button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="dec">−</button>' +
+              '            <span class="min-w-[2ch] text-sm text-gray-900 text-center" data-role="qty">' + it.quantity + '</span>' +
+              '            <button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="inc">+</button>' +
+              '          </div>' +
+              '          <span class="text-right text-base font-bold text-gray-900 whitespace-nowrap">' + fmtINR(it.unit_price) + '</span>' +
+              '        </div>' +
+              '      </div>' +
+              '    </div>' +
+              '  </td>\n' +
+              '  <td class="hidden"></td>\n' +
+              '  <td class="hidden"></td>\n' +
+              '</tr>';
+          });
+          if (!html){ html = '<tr><td colspan="3" class="py-6 text-center text-gray-500">No items in cart.</td></tr>'; }
+          tbody.innerHTML = html;
+        }
+        // update totals in all instances (main + any clones in mobile accordion)
+        function setAllById(id, val){ try{ document.querySelectorAll('#'+id).forEach(function(el){ el.textContent = val; }); }catch(_){}
+          try{ document.querySelectorAll('[id="'+id+'"]').forEach(function(el){ el.textContent = val; }); }catch(_){}
+        }
+        function toggleAllById(id, show){
+          try { document.querySelectorAll('[id="'+id+'"]').forEach(function(el){ el.classList.toggle('hidden', !show); }); } catch(_){}
+          try { document.querySelectorAll('#'+id).forEach(function(el){ el.classList.toggle('hidden', !show); }); } catch(_){}
+        }
+        setAllById('checkout-subtotal', fmtINR((data.totals||{}).subtotal));
+        setAllById('checkout-discount', '-' + fmtINR((data.totals||{}).discount));
+        const creditVal = parseFloat(((data.totals||{}).credit_discount||'0')) || 0;
+        setAllById('checkout-credit', '-' + fmtINR(creditVal));
+        toggleAllById('checkout-credit-row', creditVal > 0);
+        setAllById('checkout-shipping', fmtINR((data.totals||{}).shipping));
+        setAllById('checkout-tax', fmtINR((data.totals||{}).tax));
+        setAllById('checkout-total', fmtINR((data.totals||{}).total));
+      }catch(e){ /* ignore */ }
+    }
+    // ------- Mobile accordion: clone order summary into panel on demand -------
+    try {
+      const toggleBtn = document.getElementById('mobile-order-toggle');
+      const panel = document.getElementById('mobile-order-panel');
+      const icon = document.getElementById('mobile-order-toggle-icon');
+      const label = document.getElementById('mobile-order-label');
+      const summarySection = document.getElementById('order-summary-section');
+      function setOpen(open){
+        if (!panel || !summarySection) return;
+        if (open){
+          // Inject a cloned copy of the order summary section so the original remains visible below
+          const clone = summarySection.cloneNode(true);
+          // Avoid duplicate IDs in cloned subtree
+          clone.removeAttribute('id');
+          // Make sure sticky styles don't apply within accordion
+          clone.classList.remove('lg:sticky');
+          clone.classList.remove('lg:top-[120px]');
+          // Hide payment method block and CTA buttons inside the clone
+          try {
+            const pay = clone.querySelector('#payment-method-section');
+            if (pay) pay.classList.add('hidden');
+            const cta = clone.querySelector('#order-cta-row');
+            if (cta) cta.classList.add('hidden');
+            // Allow WhatsApp button to be re-wired (event listeners are not cloned)
+            const wa = clone.querySelector('#order-whatsapp');
+            if (wa) wa.removeAttribute('data-wa-wired');
+          } catch(_){}
+          // Re-wire coupon accordion and apply/remove handlers within the clone
+          try {
+            const btnM = clone.querySelector('#coupon-accordion-btn');
+            const panelM = clone.querySelector('#coupon-accordion-panel');
+            const iconM = clone.querySelector('#coupon-accordion-icon');
+            const inputM = clone.querySelector('#coupon-input');
+            const applyBtnM = clone.querySelector('#apply-coupon');
+            const removeBtnM = clone.querySelector('#remove-coupon');
+            const msgM = clone.querySelector('#coupon-message');
+            const appliedRowM = clone.querySelector('#coupon-applied-row');
+            const appliedCodeElM = clone.querySelector('#applied-coupon-code');
+            function setPanelOpen(open){
+              if (!panelM) return;
+              // NOTE: panelM.scrollHeight is only reliable after clone is mounted in the DOM.
+              // Keep overflow hidden to prevent visual overlap with following sections.
+              panelM.style.overflow = 'hidden';
+              if (open){
+                panelM.style.maxHeight = panelM.scrollHeight + 'px';
+                iconM && (iconM.style.transform='rotate(180deg)');
+                btnM && btnM.setAttribute('aria-expanded','true');
+              }
+              else {
+                panelM.style.maxHeight = '0px';
+                iconM && (iconM.style.transform='rotate(0deg)');
+                btnM && btnM.setAttribute('aria-expanded','false');
+              }
+            }
+            btnM && btnM.addEventListener('click', function(){ const isOpen = btnM.getAttribute('aria-expanded')==='true'; setPanelOpen(!isOpen); });
+            function setAppliedUIM(code){ if (!appliedRowM || !appliedCodeElM) return; if (code){ appliedCodeElM.textContent = (code||'').toUpperCase(); appliedRowM.classList.remove('hidden'); } else { appliedRowM.classList.add('hidden'); } }
+            function firstCartRow(){ return document.querySelector('#checkout-items-body tr[data-pid]'); }
+            function currentQty(row){ if (!row) return 1; const el=row.querySelector('[data-role="qty"]'); const n=parseInt(el?el.textContent:(row.getAttribute('data-qty')||'1'),10)||1; return Math.max(1,n); }
+            async function applyCouponMobile(code){
+              if (msgM) msgM.textContent = '';
+              const row = firstCartRow();
+              if (!row){ if (msgM) msgM.textContent = 'Add items to cart before applying a code.'; return; }
+              const fd = new FormData();
+              fd.append('action','set');
+              fd.append('product_id', row.getAttribute('data-pid'));
+              fd.append('quantity', String(currentQty(row)));
+              fd.append('coupon', (code||'').trim());
+              try{
+                if (applyBtnM) applyBtnM.disabled = true;
+                const res = await fetch('{{ website_base }}cart/update/', { method:'POST', headers:{ 'X-Requested-With':'XMLHttpRequest' }, body: fd });
+                const data = await res.json();
+                if (data && data.totals){
+                  try {
+                    var _t=data.totals;
+                    function _fmtM(v){ try{var n=parseFloat(v||0);return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:2,maximumFractionDigits:2}).format(isNaN(n)?0:n);}catch(e){return '₹'+(parseFloat(v||0)||0).toFixed(2);} }
+                    function _setM(id,val){ try{document.querySelectorAll('#'+id+',[id="'+id+'"]').forEach(function(el){el.textContent=val;});}catch(e){} }
+                    function _togM(id,show){ try{document.querySelectorAll('#'+id+',[id="'+id+'"]').forEach(function(el){el.classList.toggle('hidden',!show);});}catch(e){} }
+                    _setM('checkout-subtotal',_fmtM(_t.subtotal));
+                    _setM('checkout-discount','-'+_fmtM(_t.discount));
+                    var _cred=parseFloat(_t.credit_discount||'0')||0;
+                    _setM('checkout-credit','-'+_fmtM(_cred));
+                    _togM('checkout-credit-row',_cred>0);
+                    _setM('checkout-shipping',_fmtM(_t.shipping));
+                    _setM('checkout-tax',_fmtM(_t.tax));
+                    _setM('checkout-total',_fmtM(_t.total));
+                  } catch(e){}
+                  const discount = parseFloat((data.totals.discount||'0'))||0;
+                  if ((code||'').trim()){
+                    if (discount>0){ if (msgM) msgM.textContent='Coupon applied successfully.'; setAppliedUIM(code); }
+                    else { if (msgM) msgM.textContent='Code not applicable or invalid.'; setAppliedUIM(''); }
+                  } else {
+                    if (msgM) msgM.textContent='Coupon removed.'; setAppliedUIM('');
+                  }
+                }
+              } catch(e){ if (msgM) msgM.textContent='Could not apply the code. Please try again.'; }
+              finally { if (applyBtnM) applyBtnM.disabled=false; }
+            }
+            applyBtnM && applyBtnM.addEventListener('click', function(){ applyCouponMobile(inputM && inputM.value); });
+            inputM && inputM.addEventListener('keypress', function(e){ if (e.key==='Enter'){ e.preventDefault(); applyCouponMobile(inputM.value); }});
+            removeBtnM && removeBtnM.addEventListener('click', function(){ applyCouponMobile(''); });
+          } catch(_){}
+          panel.innerHTML = '';
+          panel.appendChild(clone);
+          // Wire WhatsApp button inside the cloned accordion content (same behavior as desktop)
+          try { if (window.initOrderWhatsApp) { window.initOrderWhatsApp(panel); } } catch(_){}
+          panel.classList.remove('hidden');
+          // After mount, make sure coupon accordion starts CLOSED and has correct maxHeight behavior
+          try {
+            const btnM2 = panel.querySelector('#coupon-accordion-btn');
+            const panelM2 = panel.querySelector('#coupon-accordion-panel');
+            const iconM2 = panel.querySelector('#coupon-accordion-icon');
+            if (panelM2){
+              panelM2.style.overflow = 'hidden';
+              panelM2.style.maxHeight = '0px';
+            }
+            if (iconM2) iconM2.style.transform = 'rotate(0deg)';
+            if (btnM2) btnM2.setAttribute('aria-expanded','false');
+          } catch(_){}
+          // add bottom spacing to prevent overlap with next section title
+          try{
+            var spacer = document.getElementById('mobile-order-panel-spacer');
+            if (spacer) {
+              var extra = Math.max(8, Math.min(24, Math.round(panel.scrollHeight * 0.05)));
+              spacer.style.height = (extra) + 'px';
+            }
+          }catch(_){ }
+          if (icon) icon.style.transform = 'rotate(180deg)';
+          if (label) label.textContent = 'Hide details';
+        } else {
+          panel.classList.add('hidden');
+          panel.innerHTML = '';
+          if (icon) icon.style.transform = 'rotate(0deg)';
+          if (label) label.textContent = 'View products';
+        }
+      }
+      if (toggleBtn){
+        let open = false;
+        toggleBtn.addEventListener('click', function(){ open = !open; setOpen(open); });
+      }
+    } catch(e) {}
+    async function updateQty(productId, qty){
+      try{
+        const fd = new FormData(); fd.append('action','set'); fd.append('product_id', productId); fd.append('quantity', String(qty));
+        await fetch('{{ website_base }}cart/update/', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+        await refreshSummary();
+      }catch(e){}
+    }
+    async function removeItem(productId){
+      try{
+        const fd = new FormData(); fd.append('action','remove'); fd.append('product_id', productId);
+        await fetch('{{ website_base }}cart/update/', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+        await refreshSummary();
+      }catch(e){}
+    }
+    document.addEventListener('click', function(e){
+      var t = e.target; if (!t) return;
+      if (t.matches('.qty-btn,[data-action]')){
+        var action = t.getAttribute('data-action'); if (!action) return;
+        var row = t.closest('tr[data-pid]'); if (!row) return;
+        var pid = row.getAttribute('data-pid');
+        var qtyEl = row.querySelector('[data-role="qty"]');
+        var current = parseInt(qtyEl ? qtyEl.textContent : (row.getAttribute('data-qty')||'1'), 10) || 1;
+        if (action === 'inc') updateQty(pid, current + 1);
+        else if (action === 'dec'){ var next = Math.max(0, current - 1); if (next === 0) removeItem(pid); else updateQty(pid, next); }
+        else if (action === 'remove') removeItem(pid);
+      }
+    });
+    // SHIPPING RATES: fetch based on address changes
+    async function fetchShippingRates(){
+      try{
+        const fd = new FormData();
+        const get = (id)=>{ const el=document.getElementById(id); return el ? el.value.trim() : ''; };
+        fd.append('name', (document.querySelector('input[name="name"]')?.value||''));
+        fd.append('phone', (document.querySelector('input[name="phone"]')?.value||''));
+        fd.append('address', get('address_onpage') || get('address_billing_modal') || '');
+        fd.append('city', get('city_onpage') || get('city_input_billing_modal') || '');
+        fd.append('state', get('state_onpage') || get('select_state_input_billing_modal') || '');
+        fd.append('pincode', get('pincode_onpage') || get('pincode_billing_modal') || '');
+
+        const res = await fetch('{{ website_base }}checkout/rates/', { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body: fd });
+        const data = await res.json();
+        const cont = document.getElementById('shipping-rates');
+        const empty = document.getElementById('shipping-rates-empty');
+        if (!cont) return;
+        cont.innerHTML = '';
+        if (data.status === 'success' && (data.quotes||[]).length){
+          (data.quotes||[]).forEach(function(q, idx){
+            const id = 'shipopt_' + idx;
+            const row = document.createElement('label');
+            row.className = 'flex items-center justify-between gap-3 rounded-md bg-white p-3 border border-gray-200 hover:border-gray-300 cursor-pointer';
+            row.innerHTML = '<div class="flex items-center gap-3">\
+              <input type="radio" name="shipping_option" class="h-4 w-4" ' + (idx===0?'checked':'') + ' value="' + q.provider + '|' + q.service_level + '|' + q.amount + '"/>\
+              <span class="text-sm text-gray-900 font-medium">' + (q.provider.toUpperCase()) + ' · ' + q.service_level + '</span>\
+            </div>\
+            <div class="text-sm font-semibold text-gray-900">₹' + (q.amount.toFixed ? q.amount.toFixed(2) : q.amount) + (q.eta_days? (' · ' + q.eta_days + 'd') : '') + '</div>';
+            cont.appendChild(row);
+          });
+          // update hidden selection and shipping/total display
+          syncSelectedShipping();
+        } else {
+          const div = document.createElement('div');
+          div.className = 'text-sm text-gray-500';
+          div.textContent = 'No live rates. Using standard shipping.';
+          cont.appendChild(div);
+        }
+      }catch(e){ /* ignore */ }
+    }
+    function syncSelectedShipping(){
+      const sel = document.querySelector('input[name="shipping_option"]:checked');
+      const hidden = document.getElementById('selected_shipping');
+      if (sel && hidden){ hidden.value = sel.value; }
+      // Update totals UI incrementally
+      const parts = (sel && sel.value) ? sel.value.split('|') : [];
+      const amt = parts.length >= 3 ? parseFloat(parts[2]||'0') : 0;
+      const ship = document.getElementById('checkout-shipping'); if (ship){ ship.textContent = '₹' + (amt.toFixed ? amt.toFixed(2) : amt); }
+      const sub = document.getElementById('checkout-subtotal');
+      const dis = document.getElementById('checkout-discount');
+      const tax = document.getElementById('checkout-tax');
+      const tot = document.getElementById('checkout-total');
+      const credit = document.getElementById('checkout-credit');
+      try {
+        const subVal = parseFloat((sub?.textContent||'0').replace(/[^0-9.]/g,'')||'0');
+        const disVal = parseFloat((dis?.textContent||'0').replace(/[^0-9.]/g,'')||'0');
+        const credVal = parseFloat((credit?.textContent||'0').replace(/[^0-9.]/g,'')||'0');
+        const taxVal = parseFloat((tax?.textContent||'0').replace(/[^0-9.]/g,'')||'0');
+        const total = Math.max(0, subVal - disVal - credVal) + taxVal + (amt||0);
+        if (tot) tot.textContent = '₹' + total.toFixed(2);
+      } catch(e){}
+    }
+    document.getElementById('refresh-rates')?.addEventListener('click', fetchShippingRates);
+    document.addEventListener('change', function(e){ if (e.target && e.target.name === 'shipping_option'){ syncSelectedShipping(); }});
+    // Fetch on initial load
+    setTimeout(fetchShippingRates, 50);
+
+    // EMAIL-BASED AUTOFILL using localStorage only (per-email)
+    const emailInput = document.querySelector('input[name="email"]');
+    function fetchLocalProfileByEmail(email){
+      if(!email) return;
+      try{
+        const key = email.trim().toLowerCase();
+        const rawMap = localStorage.getItem(PROFILES_KEY);
+        const map = rawMap ? JSON.parse(rawMap) : {};
+        const p = map[key];
+        if (!p) return;
+        const set = (sel, val)=>{ const el=document.querySelector(sel); if(el && val!==undefined) el.value = val; };
+        set('input[name="name"]', p.name || ((p.first_name||'') + ' ' + (p.last_name||'')));
+        set('input[name="phone"]', p.phone);
+        // GST inputs
+        const gstOnPage = document.getElementById('gstin_onpage'); if (gstOnPage && p.gstin) gstOnPage.value = p.gstin;
+        const f1 = document.getElementById('first_name_onpage'); if(f1) f1.value = p.first_name || '';
+        const l1 = document.getElementById('last_name_onpage'); if(l1) l1.value = p.last_name || '';
+        const h1 = document.getElementById('house_onpage'); if(h1) h1.value = p.house || '';
+        const st1 = document.getElementById('street_onpage'); if(st1) st1.value = p.street || '';
+        const c1 = document.getElementById('city_onpage'); if(c1) c1.value = p.city || '';
+        const s1 = document.getElementById('state_onpage'); if(s1 && p.state) s1.value = p.state;
+        const pin1 = document.getElementById('pincode_onpage'); if(pin1) pin1.value = p.pincode || '';
+        const a1 = document.getElementById('address_onpage'); if(a1) a1.value = p.address || '';
+        // Merge into per-site profile for consistency with existing logic
+        try {
+          const stored = localStorage.getItem(SITE_KEY);
+          const current = stored ? JSON.parse(stored) : {};
+          const merged = Object.assign({}, current, {
+            name: (p.name || ((p.first_name||'') + ' ' + (p.last_name||''))).trim(),
+            phone: p.phone || current.phone || '',
+            email: email,
+            first_name: p.first_name || current.first_name || '',
+            last_name: p.last_name || current.last_name || '',
+            house: p.house || current.house || '',
+            street: p.street || current.street || '',
+            city: p.city || current.city || '',
+            state: p.state || current.state || '',
+            pincode: p.pincode || current.pincode || '',
+            address: p.address || current.address || '',
+            gstin: p.gstin || current.gstin || ''
+          });
+          localStorage.setItem(SITE_KEY, JSON.stringify(merged));
+        } catch(e){}
+      } catch(e){}
+    }
+    if (emailInput){
+      emailInput.addEventListener('blur', function(){ fetchLocalProfileByEmail(this.value.trim()); });
+      emailInput.addEventListener('change', function(){ fetchLocalProfileByEmail(this.value.trim()); });
+      // If email pre-filled, try load once on init
+      if (emailInput.value && emailInput.value.indexOf('@')>0){ fetchLocalProfileByEmail(emailInput.value.trim()); }
+    }
+  });
+  </script>
+  {% if partial_payment_available %}
+  <script>
+  (function(){
+    function money(n){
+      try { return '₹' + (Number(n||0).toFixed(2)); } catch(e) { return '₹0.00'; }
+    }
+    function parseINRText(text){
+      try { return parseFloat(String(text||'').replace(/[^0-9.]/g,'')) || 0; } catch(e){ return 0; }
+    }
+    // Config from server (used to calculate accurate breakdown from *current* total)
+    var ppType = '{{ partial_payment_type|default:"percent" }}';
+    var ppValue = Number('{{ partial_payment_value|default:"0" }}') || 0;
+
+    function syncBreakdown(){
+      try{
+        // If totals are dynamically refreshed, recalc remaining from DOM when possible
+        var totEl = document.getElementById('checkout-total');
+        var total = totEl ? parseINRText(totEl.textContent) : 0;
+        if (!isFinite(total) || total <= 0) total = 0;
+
+        var online = 0;
+        if (ppType === 'fixed') {
+          online = ppValue;
+        } else {
+          // percent
+          online = (total * ppValue) / 100.0;
+        }
+
+        // Round to 2 decimals
+        online = Math.round(online * 100) / 100;
+        // Clamp to sensible range: 0 < online < total (keep COD remainder when total > 0)
+        if (total > 0) {
+          if (online <= 0) online = 0;
+          if (online >= total) online = Math.max(0, total - 0.01);
+        }
+        online = Math.max(0, online);
+        var cod = Math.max(0, Math.round((total - online) * 100) / 100);
+
+        var onEl = document.getElementById('partial-online-amt');
+        var codEl = document.getElementById('partial-cod-amt');
+        if (onEl) onEl.textContent = money(online);
+        if (codEl) codEl.textContent = money(cod);
+      } catch(e){}
+    }
+
+    function onPaymentMethodChange(){
+      var selected = document.querySelector('input[name="payment_method"]:checked');
+      var box = document.getElementById('partial-breakdown');
+      if (!box) return;
+      if (selected && selected.value === 'partial') {
+        syncBreakdown();
+        box.classList.remove('hidden');
+      } else {
+        box.classList.add('hidden');
+      }
+    }
+
+    document.addEventListener('change', function(e){
+      if (e && e.target && e.target.name === 'payment_method') onPaymentMethodChange();
+    });
+    // initial state
+    onPaymentMethodChange();
+
+    // Keep breakdown fresh when cart summary refresh updates totals
+    try { setInterval(function(){ 
+      var selected = document.querySelector('input[name="payment_method"]:checked');
+      if (selected && selected.value === 'partial') syncBreakdown();
+    }, 1500); } catch(e){}
+  })();
+  </script>
+  {% endif %}
+{% if razorpay_order %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% endif %}
+{% if cashfree_session %}
+<script src="https://sdk.cashfree.com/js/ui/2.0.0/cashfree.js"></script>
+{% endif %}
+<script>
+  (function(){
+    const modal = document.getElementById('billingInformationModal');
+    const openBtn = document.getElementById('open-billing');
+    const closeBtn = document.getElementById('close-billing');
+    const cancelBtn = document.getElementById('cancel-billing');
+    const modalForm = document.getElementById('billing-modal-form');
+    const STORAGE_KEY = 't2_checkout_profile_' + '{{ website.public_slug }}';
+    function show(){ if(modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); } }
+    function hide(){ if(modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); } }
+    openBtn && openBtn.addEventListener('click', show);
+    closeBtn && closeBtn.addEventListener('click', hide);
+    cancelBtn && cancelBtn.addEventListener('click', hide);
+    modal && modal.addEventListener('click', function(e){ if(e.target === modal) hide(); });
+
+    // LocalStorage helpers
+    function saveProfile(){
+      const profile = {
+        name: document.querySelector('input[name="name"]').value || '',
+        phone: document.querySelector('input[name="phone"]').value || document.getElementById('phone-input')?.value || '',
+        email: document.querySelector('input[name="email"]').value || '',
+        has_gst: document.getElementById('has_gst_onpage')?.checked || false,
+        // Prefer on-page fields; fallback to modal if present
+        first_name: document.getElementById('first_name_onpage')?.value || document.getElementById('first_name_billing_modal')?.value || '',
+        last_name: document.getElementById('last_name_onpage')?.value || document.getElementById('last_name_billing_modal')?.value || '',
+        company: document.getElementById('company_name_onpage')?.value || document.getElementById('company_name')?.value || '',
+        country: document.getElementById('country_onpage')?.value || document.getElementById('country_billing_modal')?.value || 'India',
+        house: document.getElementById('house_onpage')?.value || document.getElementById('house_billing_modal')?.value || '',
+        street: document.getElementById('street_onpage')?.value || document.getElementById('street_billing_modal')?.value || '',
+        state: document.getElementById('state_onpage')?.value || document.getElementById('select_state_input_billing_modal')?.value || '',
+        city: document.getElementById('city_onpage')?.value || document.getElementById('city_input_billing_modal')?.value || '',
+        pincode: document.getElementById('pincode_onpage')?.value || document.getElementById('pincode_billing_modal')?.value || '',
+        address: document.getElementById('address_onpage')?.value || document.getElementById('address_billing_modal')?.value || '',
+        gstin: document.getElementById('gstin_onpage')?.value || '',
+        notes: document.getElementById('order_notes')?.value || '',
+        ship_diff: document.getElementById('ship_diff_toggle_onpage')?.checked || document.getElementById('ship_diff_toggle')?.checked || false,
+        ship_alt: {
+          first_name: document.getElementById('first_name_ship_onpage')?.value || document.getElementById('first_name_ship')?.value || '',
+          last_name: document.getElementById('last_name_ship_onpage')?.value || document.getElementById('last_name_ship')?.value || '',
+          house: document.getElementById('house_ship_onpage')?.value || document.getElementById('house_ship')?.value || '',
+          street: document.getElementById('street_ship_onpage')?.value || document.getElementById('street_ship')?.value || '',
+          city: document.getElementById('city_ship_onpage')?.value || document.getElementById('city_ship')?.value || '',
+          state: document.getElementById('state_ship_onpage')?.value || document.getElementById('state_ship')?.value || '',
+          pincode: document.getElementById('pincode_ship_onpage')?.value || document.getElementById('pincode_ship')?.value || ''
+        }
+      };
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); }catch(err){}
+      // Store per-email profile map for future autofill by email
+      try{
+        const email = (profile.email || '').trim().toLowerCase();
+        if (email){
+          const rawMap = localStorage.getItem(PROFILES_KEY);
+          const map = rawMap ? JSON.parse(rawMap) : {};
+          map[email] = {
+            name: profile.name,
+            phone: profile.phone,
+            email: profile.email,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            company: profile.company,
+            country: profile.country,
+            house: profile.house,
+            street: profile.street,
+            state: profile.state,
+            city: profile.city,
+            pincode: profile.pincode,
+            address: profile.address,
+            gstin: profile.gstin,
+            notes: profile.notes,
+            ship_diff: profile.ship_diff,
+            ship_alt: profile.ship_alt
+          };
+          localStorage.setItem(PROFILES_KEY, JSON.stringify(map));
+        }
+      } catch(err){}
+      syncHiddenFields(profile);
+    }
+    function loadProfile(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return;
+        const p = JSON.parse(raw);
+        const set = (sel, val)=>{ const el=document.querySelector(sel); if(el && val!==undefined) el.value = val; };
+        set('input[name="name"]', p.name);
+        set('input[name="phone"]', p.phone);
+        set('input[name="email"]', p.email);
+        // Fill on-page first
+        const s1 = document.getElementById('state_onpage'); if(s1 && p.state) s1.value = p.state;
+        const f1 = document.getElementById('first_name_onpage'); if(f1 && p.first_name) f1.value = p.first_name;
+        const l1 = document.getElementById('last_name_onpage'); if(l1 && p.last_name) l1.value = p.last_name;
+        const c1 = document.getElementById('city_onpage'); if(c1 && p.city) c1.value = p.city;
+        const a1 = document.getElementById('address_onpage'); if(a1 && p.address) a1.value = p.address;
+        const co1 = document.getElementById('company_name_onpage'); if(co1 && p.company) co1.value = p.company;
+        const cn1 = document.getElementById('country_onpage'); if(cn1 && p.country) cn1.value = p.country;
+        const h1 = document.getElementById('house_onpage'); if(h1 && p.house) h1.value = p.house;
+        const st1 = document.getElementById('street_onpage'); if(st1 && p.street) st1.value = p.street;
+        const pin1 = document.getElementById('pincode_onpage'); if(pin1 && p.pincode) pin1.value = p.pincode;
+        const hasGST = document.getElementById('has_gst_onpage'); if(hasGST){ hasGST.checked = !!p.has_gst; }
+        const gstRow = document.getElementById('company_gst_row'); if(gstRow){ if(p.has_gst){ gstRow.classList.remove('hidden'); } else { gstRow.classList.add('hidden'); } }
+        const gstInput = document.getElementById('gstin_onpage'); if(gstInput && p.gstin){ gstInput.value = p.gstin; }
+        // Required toggles when GST is enabled
+        const compInput = document.getElementById('company_name_onpage');
+        if (hasGST && compInput && gstInput){
+          compInput.required = !!p.has_gst;
+          gstInput.required = !!p.has_gst;
+        }
+
+        // Mirror to modal for compatibility
+        const s = document.getElementById('select_state_input_billing_modal'); if(s && p.state) s.value = p.state;
+        const f = document.getElementById('first_name_billing_modal'); if(f && p.first_name) f.value = p.first_name;
+        const l = document.getElementById('last_name_billing_modal'); if(l && p.last_name) l.value = p.last_name;
+        const c = document.getElementById('city_input_billing_modal'); if(c && p.city) c.value = p.city;
+        const a = document.getElementById('address_billing_modal'); if(a && p.address) a.value = p.address;
+        const co = document.getElementById('company_name'); if(co && p.company) co.value = p.company;
+        const cn = document.getElementById('country_billing_modal'); if(cn && p.country) cn.value = p.country;
+        const h = document.getElementById('house_billing_modal'); if(h && p.house) h.value = p.house;
+        const st = document.getElementById('street_billing_modal'); if(st && p.street) st.value = p.street;
+        const pin = document.getElementById('pincode_billing_modal'); if(pin && p.pincode) pin.value = p.pincode;
+        const n = document.getElementById('order_notes'); if(n && p.notes) n.value = p.notes;
+        if (p.ship_diff) {
+          const t1 = document.getElementById('ship_diff_toggle_onpage'); if(t1) t1.checked = true;
+          document.getElementById('ship_diff_container_onpage')?.classList.remove('hidden');
+          const setv = (id,val)=>{ const el=document.getElementById(id); if(el){ el.value = val || ''; el.setAttribute('value', val||''); } };
+          setv('first_name_ship_onpage', p.ship_alt.first_name);
+          setv('last_name_ship_onpage', p.ship_alt.last_name);
+          setv('house_ship_onpage', p.ship_alt.house);
+          setv('street_ship_onpage', p.ship_alt.street);
+          setv('city_ship_onpage', p.ship_alt.city);
+          const ss1 = document.getElementById('state_ship_onpage'); if (ss1 && p.ship_alt.state) ss1.value = p.ship_alt.state;
+          setv('pincode_ship_onpage', p.ship_alt.pincode);
+        }
+        syncHiddenFields(p);
+      }catch(err){}
+    }
+    function syncHiddenFields(p){
+      const hp = (id,v)=>{ const el=document.getElementById(id); if(el!=null){ el.value = v || ''; } };
+      const useShip = !!p.ship_diff;
+      const shipAlt = p.ship_alt || {};
+      const first = useShip ? (shipAlt.first_name||p.first_name) : p.first_name;
+      const last = useShip ? (shipAlt.last_name||p.last_name) : p.last_name;
+      const house = useShip ? (shipAlt.house||p.house) : p.house;
+      const street = useShip ? (shipAlt.street||p.street) : p.street;
+      const city = useShip ? (shipAlt.city||p.city) : p.city;
+      const state = useShip ? (shipAlt.state||p.state) : p.state;
+      const pincode = useShip ? (shipAlt.pincode||p.pincode) : p.pincode;
+      hp('hidden_first_name', first);
+      hp('hidden_last_name', last);
+      hp('hidden_company', p.company);
+      hp('hidden_country', p.country || 'India');
+      hp('hidden_house', house);
+      hp('hidden_street', street);
+      hp('hidden_city', city);
+      hp('hidden_state', state);
+      hp('hidden_pincode', pincode);
+      // GST / company details
+      hp('hidden_gstin', p.gstin);
+      hp('hidden_company_name', p.company);
+      hp('hidden_has_gst', p.has_gst ? '1' : '');
+      // Billing address (original address when shipping elsewhere)
+      hp('hidden_ship_to_different', useShip ? '1' : '');
+      if (useShip) {
+        hp('hidden_billing_house', p.house);
+        hp('hidden_billing_street', p.street);
+        hp('hidden_billing_city', p.city);
+        hp('hidden_billing_state', p.state);
+        hp('hidden_billing_pincode', p.pincode);
+      } else {
+        hp('hidden_billing_house', '');
+        hp('hidden_billing_street', '');
+        hp('hidden_billing_city', '');
+        hp('hidden_billing_state', '');
+        hp('hidden_billing_pincode', '');
+      }
+      const addrBase = useShip
+        ? [house, street].filter(Boolean).join(', ')
+        : (p.address || [house, street].filter(Boolean).join(', '));
+      const parts = [addrBase, city, state, pincode, (p.country||'India')].filter(Boolean);
+      const addr = parts.join(', ');
+      const ha = document.getElementById('hidden_address'); if (ha) ha.value = addr;
+    }
+    loadProfile();
+
+    // Persist profile when inputs change
+    ['name','phone','email'].forEach(n=>{
+      const el = document.querySelector(`input[name="${n}"]`);
+      el && el.addEventListener('change', saveProfile);
+      el && el.addEventListener('blur', saveProfile);
+    });
+    // Watch on-page and legacy modal inputs
+    ['first_name_onpage','last_name_onpage','company_name_onpage','gstin_onpage','has_gst_onpage','country_onpage','house_onpage','street_onpage','state_onpage','city_onpage','pincode_onpage','address_onpage','first_name_ship_onpage','last_name_ship_onpage','house_ship_onpage','street_ship_onpage','city_ship_onpage','state_ship_onpage','pincode_ship_onpage','order_notes','phone-input','first_name_billing_modal','last_name_billing_modal','company_name','country_billing_modal','house_billing_modal','street_billing_modal','select_state_input_billing_modal','city_input_billing_modal','pincode_billing_modal','address_billing_modal','first_name_ship','last_name_ship','house_ship','street_ship','city_ship','state_ship','pincode_ship'].forEach(id=>{
+      const el = document.getElementById(id);
+      el && el.addEventListener('change', saveProfile);
+      el && el.addEventListener('blur', saveProfile);
+      el && el.addEventListener('keyup', function(){ if(this.id==='address_billing_modal' || this.id==='address_onpage'){ saveProfile(); } });
+    });
+
+    // Toggle different shipping container
+    const shipToggle = document.getElementById('ship_diff_toggle_onpage');
+    shipToggle && shipToggle.addEventListener('change', function(){
+      const cont = document.getElementById('ship_diff_container_onpage');
+      if(this.checked){ cont && cont.classList.remove('hidden'); } else { cont && cont.classList.add('hidden'); }
+      saveProfile();
+    });
+
+    // Ensure hidden address is set before submitting (combine address + city + state)
+    const form = document.getElementById('checkout-form');
+    function composeAddress(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const p = raw ? JSON.parse(raw) : {};
+        syncHiddenFields(p);
+        // Phone validation: extract last 10 digits
+        const phoneInput = document.querySelector('input[name="phone"]');
+        if (phoneInput) {
+          const raw = (phoneInput.value || '').replace(/\D/g, '');
+          if (raw.length < 10) {
+            alert('Please enter a valid 10-digit phone number.');
+            throw new Error('invalid_phone');
+          }
+          phoneInput.value = raw.slice(-10);
+        }
+        // GST validations and push to hidden field
+        const hasGST = document.getElementById('has_gst_onpage');
+        const gstInput = document.getElementById('gstin_onpage');
+        const stateSel = document.getElementById('state_onpage');
+        const hiddenGST = document.getElementById('hidden_gstin');
+        const hiddenHasGST = document.getElementById('hidden_has_gst');
+        const hiddenCompanyName = document.getElementById('hidden_company_name');
+        if (hasGST && hasGST.checked) {
+          const compInput = document.getElementById('company_name_onpage');
+          if (compInput && !compInput.value.trim()){
+            alert('Please enter your Company name.');
+            throw new Error('missing_company');
+          }
+          if (gstInput && (!gstInput.value || gstInput.value.length !== 15)) {
+            alert('Please enter a valid 15-character GSTIN.');
+            throw new Error('invalid_gstin');
+          }
+          if (stateSel && gstInput) {
+            const stateToCode = {
+              'Jammu and Kashmir':'01','Himachal Pradesh':'02','Punjab':'03','Chandigarh':'04','Uttarakhand':'05','Haryana':'06','Delhi':'07','Rajasthan':'08','Uttar Pradesh':'09','Bihar':'10','Sikkim':'11','Arunachal Pradesh':'12','Nagaland':'13','Manipur':'14','Mizoram':'15','Tripura':'16','Meghalaya':'17','Assam':'18','West Bengal':'19','Jharkhand':'20','Odisha':'21','Chhattisgarh':'22','Madhya Pradesh':'23','Gujarat':'24','Daman and Diu':'25','Dadra and Nagar Haveli and Daman and Diu':'26','Maharashtra':'27','Andhra Pradesh':'28','Karnataka':'29','Goa':'30','Lakshadweep':'31','Kerala':'32','Tamil Nadu':'33','Puducherry':'34','Andaman and Nicobar Islands':'35','Telangana':'36','Andhra Pradesh (New)':'37'
+            };
+            const code = stateToCode[(stateSel.value||'').trim()];
+            if (code && gstInput.value.substring(0,2) !== code) {
+              alert('GSTIN state code does not match selected state.');
+              throw new Error('gst_state_mismatch');
+            }
+          }
+          if (hiddenGST) hiddenGST.value = (gstInput ? gstInput.value.trim().toUpperCase() : '');
+          if (hiddenHasGST) hiddenHasGST.value = '1';
+          if (hiddenCompanyName && compInput) hiddenCompanyName.value = compInput.value.trim();
+        } else {
+          if (hiddenGST) hiddenGST.value = '';
+          if (hiddenHasGST) hiddenHasGST.value = '';
+        }
+      } catch(e) { throw e; }
+    }
+    form && form.addEventListener('submit', function(ev){ try { saveProfile(); composeAddress(); } catch(err) { ev.preventDefault(); } });
+
+    // Intercept modal save to sync and close
+    modalForm && modalForm.addEventListener('submit', function(e){ e.preventDefault(); saveProfile(); hide(); });
+
+    // GST toggle visibility behavior
+    const hasGstToggle = document.getElementById('has_gst_onpage');
+    if (hasGstToggle){
+      hasGstToggle.addEventListener('change', function(){
+        const row = document.getElementById('company_gst_row');
+        const gstInput = document.getElementById('gstin_onpage');
+        const compInput = document.getElementById('company_name_onpage');
+        if (this.checked){
+          row && row.classList.remove('hidden');
+          if (gstInput) gstInput.required = true;
+          if (compInput) compInput.required = true;
+        } else {
+          row && row.classList.add('hidden');
+          if (gstInput) gstInput.required = false;
+          if (compInput) compInput.required = false;
+        }
+        saveProfile();
+      });
+    }
+
+    // Razorpay inline handler (if variables present)
+    try {
+      const rpOrder = {{ razorpay_order|default:'null'|safe }};
+      const rpKey = '{{ razorpay_key|default:"" }}';
+      if (rpOrder && rpKey) {
+        const btn = document.getElementById('place-order');
+        if (btn) {
+          btn.addEventListener('click', function(ev){
+            ev.preventDefault();
+            if (typeof Razorpay === 'undefined') {
+              alert('Payment gateway is still loading. Please wait a moment and try again.');
+              return;
+            }
+            const pendingOrderId = '{{ pending_order_id|default:"" }}';
+            const cancelUrl = pendingOrderId ? '{% url "payment_cancel_order" order_id=0|default:'0' %}'.replace('/0/', '/' + pendingOrderId + '/') : '';
+            const confirmUrl = pendingOrderId ? '{% url "public_order_confirmation" order_id=0|default:'0' %}'.replace('/0/', '/' + pendingOrderId + '/') : '{% url "public_checkout" %}';
+            try {
+              const options = {
+                key: rpKey,
+                amount: rpOrder.amount,
+                currency: rpOrder.currency,
+                name: '{{ website.content.site_name|default:website.name|escapejs }}',
+                order_id: rpOrder.id,
+                handler: function (response) {
+                  const form = document.createElement('form');
+                  form.method = 'POST';
+                  form.action = '{% url "payment_verify_razorpay" %}';
+                  const add = (n,v)=>{ const i=document.createElement('input'); i.type='hidden'; i.name=n; i.value=v; form.appendChild(i); };
+                  add('razorpay_payment_id', response.razorpay_payment_id || '');
+                  add('razorpay_order_id', response.razorpay_order_id || '');
+                  add('razorpay_signature', response.razorpay_signature || '');
+                  const csrftoken = '{{ csrf_token }}';
+                  if (csrftoken) { add('csrfmiddlewaretoken', csrftoken); }
+                  document.body.appendChild(form);
+                  form.submit();
+                },
+                modal: {
+                  ondismiss: function () {
+                    if (cancelUrl) {
+                      fetch(cancelUrl, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+                        .finally(function () { window.location.href = confirmUrl; });
+                    } else {
+                      window.location.href = confirmUrl;
+                    }
+                  }
+                },
+                prefill: {
+                  name: (document.querySelector('input[name="name"]') || {value:''}).value,
+                  email: (document.querySelector('input[name="email"]') || {value:''}).value,
+                  contact: (document.querySelector('input[name="phone"]') || {value:''}).value
+                },
+                notes: {
+                  address: (document.getElementById('hidden_address') || document.getElementById('address_onpage') || {value:''}).value
+                }
+              };
+              const rzp = new Razorpay(options);
+              rzp.on('payment.failed', function(response){
+                if (cancelUrl) {
+                  fetch(cancelUrl, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+                    .finally(function(){ window.location.href = confirmUrl; });
+                } else {
+                  window.location.href = confirmUrl;
+                }
+              });
+              rzp.open();
+            } catch(initErr) {
+              alert('Could not launch the payment window. Please refresh the page and try again.');
+            }
+          });
+        }
+      }
+    } catch (e) {}
+
+    // Cashfree (redirect to hosted checkout if session data available)
+    try {
+      const cf = {{ cashfree_session|default:'null'|safe }};
+      const mode = '{{ cashfree_mode|default:"production" }}';
+      if (cf && cf.payment_session_id) {
+        const btn = document.getElementById('place-order');
+        async function launchCashfree(ev){
+          if (ev) ev.preventDefault();
+          try {
+            const { load } = await import('https://esm.sh/@cashfreepayments/cashfree-js');
+            const cashfree = await load({ mode: mode });
+            const result = await cashfree.checkout({ paymentSessionId: cf.payment_session_id, redirectTarget: "_self" });
+            if (result && result.error) {
+              const url = cf.payment_link || cf.payment_url;
+              if (url) window.location.href = url;
+            }
+          } catch (err) {
+            try {
+              if (window.Cashfree && window.Cashfree.checkout) {
+                try { window.Cashfree.init({ mode: mode }); } catch(e) {}
+                window.Cashfree.checkout({ paymentSessionId: cf.payment_session_id });
+                return;
+              }
+            } catch(e){}
+            const url = cf.payment_link || cf.payment_url;
+            if (url) window.location.href = url;
+          }
+        }
+        if (btn) {
+          btn.addEventListener('click', launchCashfree);
+          // Auto-trigger hosted checkout on load as soon as the session exists
+          setTimeout(function(){
+            try { btn.click(); } catch(e){}
+          }, 50);
+        }
+      }
+    } catch (e) {}
+    // Auto-open Razorpay on load — wait for SDK script to finish loading before triggering.
+    // If the SDK never loads after ~10 s, redirect to the order status page so the
+    // customer can see their pending order rather than being stuck on the checkout page.
+    try{
+      const rpOrder = {{ razorpay_order|default:'null'|safe }};
+      const autoBtn = document.getElementById('place-order');
+      if (rpOrder && autoBtn) {
+        var _rpAutoRetries = 0;
+        var _rpConfirmUrl = '{% if pending_order_id %}{% url "public_order_confirmation" order_id=0|default:'0' %}'.replace('/0/', '/{{ pending_order_id }}/') + '{% else %}{% url "public_checkout" %}{% endif %}';
+        function _autoOpenRazorpay(){
+          if (typeof Razorpay !== 'undefined') {
+            try { autoBtn.click(); } catch(e){}
+          } else if (++_rpAutoRetries < 40) {
+            setTimeout(_autoOpenRazorpay, 250);
+          } else {
+            // SDK failed to load — send user to order status page (order is in "created/pending" state)
+            window.location.href = _rpConfirmUrl;
+          }
+        }
+        setTimeout(_autoOpenRazorpay, 100);
+      }
+    }catch(e){}
+
+    // ---------------- Coupon Accordion & Apply (AJAX) ----------------
+    try {
+      const btn = document.getElementById('coupon-accordion-btn');
+      const panel = document.getElementById('coupon-accordion-panel');
+      const icon = document.getElementById('coupon-accordion-icon');
+      const input = document.getElementById('coupon-input');
+      const applyBtn = document.getElementById('apply-coupon');
+      const removeBtn = document.getElementById('remove-coupon');
+      const msg = document.getElementById('coupon-message');
+      const appliedRow = document.getElementById('coupon-applied-row');
+      const appliedCodeEl = document.getElementById('applied-coupon-code');
+
+      function setPanel(open){
+        if (!panel) return;
+        if (open){
+          panel.style.maxHeight = panel.scrollHeight + 'px';
+          btn && btn.setAttribute('aria-expanded','true');
+          icon && (icon.style.transform = 'rotate(180deg)');
+        } else {
+          panel.style.maxHeight = '0px';
+          btn && btn.setAttribute('aria-expanded','false');
+          icon && (icon.style.transform = 'rotate(0deg)');
+        }
+      }
+      btn && btn.addEventListener('click', function(){
+        const isOpen = btn.getAttribute('aria-expanded') === 'true';
+        setPanel(!isOpen);
+      });
+
+      function firstCartRow(){ return document.querySelector('#checkout-items-body tr[data-pid]'); }
+      function currentQty(row){
+        if (!row) return 1;
+        const el = row.querySelector('[data-role="qty"]');
+        const n = parseInt(el ? el.textContent : (row.getAttribute('data-qty')||'1'), 10) || 1;
+        return Math.max(1, n);
+      }
+      function setAppliedUI(code){
+        if (!appliedRow || !appliedCodeEl) return;
+        if (code){
+          appliedCodeEl.textContent = code.toUpperCase();
+          appliedRow.classList.remove('hidden');
+        } else {
+          appliedRow.classList.add('hidden');
+        }
+      }
+      async function applyCouponAjax(code){
+        msg && (msg.textContent = '');
+        const row = firstCartRow();
+        if (!row){
+          msg && (msg.textContent = 'Add items to cart before applying a code.');
+          return;
+        }
+        const fd = new FormData();
+        fd.append('action','set');
+        fd.append('product_id', row.getAttribute('data-pid'));
+        fd.append('quantity', String(currentQty(row)));
+        fd.append('coupon', (code||'').trim());
+        try{
+          applyBtn && (applyBtn.disabled = true);
+          const res = await fetch('{{ website_base }}cart/update/', { method:'POST', headers:{ 'X-Requested-With':'XMLHttpRequest' }, body: fd });
+          const data = await res.json();
+          if (data && data.totals){
+            // Directly update totals in DOM (refreshSummary is defined in a different scope)
+            try {
+              var _t = data.totals;
+              function _fmt(v){ try{var n=parseFloat(v||0);return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:2,maximumFractionDigits:2}).format(isNaN(n)?0:n);}catch(e){return '₹'+(parseFloat(v||0)||0).toFixed(2);} }
+              function _setEl(id,val){ try{document.querySelectorAll('#'+id+',[id="'+id+'"]').forEach(function(el){el.textContent=val;});}catch(e){} }
+              function _togEl(id,show){ try{document.querySelectorAll('#'+id+',[id="'+id+'"]').forEach(function(el){el.classList.toggle('hidden',!show);});}catch(e){} }
+              _setEl('checkout-subtotal', _fmt(_t.subtotal));
+              _setEl('checkout-discount', '-' + _fmt(_t.discount));
+              var _cred = parseFloat(_t.credit_discount||'0') || 0;
+              _setEl('checkout-credit', '-' + _fmt(_cred));
+              _togEl('checkout-credit-row', _cred > 0);
+              _setEl('checkout-shipping', _fmt(_t.shipping));
+              _setEl('checkout-tax', _fmt(_t.tax));
+              _setEl('checkout-total', _fmt(_t.total));
+            } catch(e){}
+            const discount = parseFloat((data.totals.discount||'0')) || 0;
+            if ((code||'').trim()){
+              if (discount > 0){
+                msg && (msg.textContent = 'Coupon applied successfully.');
+                setAppliedUI(code);
+              } else {
+                msg && (msg.textContent = 'Code not applicable or invalid.');
+                setAppliedUI('');
+              }
+            } else {
+              msg && (msg.textContent = 'Coupon removed.');
+              setAppliedUI('');
+            }
+          }
+        } catch(e){
+          msg && (msg.textContent = 'Could not apply the code. Please try again.');
+        } finally {
+          applyBtn && (applyBtn.disabled = false);
+        }
+      }
+
+      applyBtn && applyBtn.addEventListener('click', function(){ applyCouponAjax(input && input.value); });
+      input && input.addEventListener('keypress', function(e){ if (e.key === 'Enter'){ e.preventDefault(); applyCouponAjax(input.value); }});
+      removeBtn && removeBtn.addEventListener('click', function(){ applyCouponAjax(''); });
+
+      // Initialize UI state from server-rendered totals
+      try {
+        const hasDiscount = (document.getElementById('checkout-discount')?.textContent||'').replace(/[^0-9.]/g,'');
+        const d = parseFloat(hasDiscount||'0');
+        if (d > 0){
+          // If discount exists, try to read stored coupon from cart stored in session via hidden storage
+          // Not available directly: keep applied row visible but without code if unknown
+          setAppliedUI('{{ totals.applied_coupon.code|default:"" }}');
+          setPanel(true);
+        }
+      } catch(e){}
+    } catch(e){}
+  })();
+</script>
+<script>
+  // Wire WhatsApp button with sanitized number; disable if not present
+  (function(){
+    try{
+      var raw = '{{ website.content.contact_info.whatsapp_number|default:"" }}';
+      var num = (raw||'').trim().replace(/[^0-9]/g,'');
+      // Expose initializer so mobile accordion clone can re-use the same behavior
+      window.initOrderWhatsApp = function(root){
+        try{
+          var scope = root || document;
+          var btns = [];
+          try { btns = Array.prototype.slice.call(scope.querySelectorAll('#order-whatsapp')); } catch(e) { btns = []; }
+          if (!btns || btns.length === 0) return;
+
+          // Add +91 prefix if not already present and number exists
+          var wa = num;
+          if (wa && wa.length > 0 && !wa.startsWith('91')) wa = '91' + wa;
+
+          btns.forEach(function(btn){
+            if (!btn || btn.dataset.waWired === '1') return;
+            btn.dataset.waWired = '1';
+
+            if (!wa){
+              btn.classList.add('opacity-60','cursor-not-allowed');
+              btn.addEventListener('click', function(e){ e.preventDefault(); });
+              return;
+            }
+
+            // Default href as fallback
+            btn.href = 'https://wa.me/' + wa;
+
+            // Build dynamic message on click (same message for desktop + mobile)
+            btn.addEventListener('click', async function(e){
+              try{
+                e.preventDefault();
+                var endpoint = '{{ website_base }}cart/data/';
+                var res = await fetch(endpoint, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                var data = await res.json();
+                var items = data && data.items ? data.items : [];
+                var totals = data && data.totals ? data.totals : {};
+                var lines = [];
+                lines.push('Hello, I would like assistance with this order:');
+                lines.push('');
+                lines.push('Items:');
+                for (var i=0;i<items.length;i++){
+                  var it = items[i] || {};
+                  var title = (it.title || 'Product');
+                  var variant = it.variant_label ? (' (' + it.variant_label + ')') : '';
+                  var qty = parseInt(it.quantity||1,10) || 1;
+                  var unit = parseFloat(it.unit_price||0) || 0;
+                  var line = unit * qty;
+                  lines.push('- ' + title + variant + ' x ' + qty + ' – ₹' + unit.toFixed(2) + ' each, Total ₹' + line.toFixed(2));
+                }
+                lines.push('');
+                function fmt(n){ try{ return '₹' + (parseFloat(n||0)||0).toFixed(2); }catch(_){ return '₹0.00'; } }
+                lines.push('Subtotal: ' + fmt((totals||{}).subtotal));
+                lines.push('Discount: ' + fmt((totals||{}).discount));
+                try{
+                  var cred = parseFloat((totals||{}).credit_discount||0) || 0;
+                  if (cred > 0) lines.push('Store Credit: -' + fmt(cred));
+                }catch(e){}
+                lines.push('Shipping: ' + fmt((totals||{}).shipping));
+                lines.push('Tax: ' + fmt((totals||{}).tax));
+                lines.push('Total: ' + fmt((totals||{}).total));
+                lines.push('');
+                lines.push('Site: ' + ('{{ website.content.site_name|default:website.name }}'));
+                var msg = lines.join('\n');
+                var url = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(msg);
+                window.open(url, '_blank');
+              }catch(err){
+                // Fallback to default behavior
+                window.open('https://wa.me/' + wa, '_blank');
+              }
+            });
+          });
+        }catch(e){}
+      };
+
+      // Wire initial (desktop) button on load
+      try { window.initOrderWhatsApp(document); } catch(_){}
+    }catch(e){}
+  })();
+  </script>
+{% endblock %}

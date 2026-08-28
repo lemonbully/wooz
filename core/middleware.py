@@ -357,22 +357,53 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             return ""
 
         script_src = list(settings.CSP_SCRIPT_SRC) + [f"'nonce-{nonce}'"]
+        style_src = list(settings.CSP_STYLE_SRC)
+        font_src = list(settings.CSP_FONT_SRC)
+        connect_src = list(settings.CSP_CONNECT_SRC)
+
+        surface = getattr(request, "surface", None)
+        is_storefront = surface is host_utils.Surface.STOREFRONT
+        if is_storefront:
+            # The ported storefront designs use inline styles and a few inline
+            # scripts. Admit them for this surface only. A nonce and
+            # 'unsafe-inline' are mutually exclusive for scripts (a browser that
+            # sees a nonce ignores 'unsafe-inline'), so drop the nonce here and
+            # rely on 'unsafe-inline' plus the public-suffix isolation instead.
+            script_src = list(settings.CSP_SCRIPT_SRC) + list(
+                getattr(settings, "CSP_STOREFRONT_SCRIPT_EXTRA", ())
+            )
+            style_src += list(getattr(settings, "CSP_STOREFRONT_STYLE_EXTRA", ()))
+            font_src += list(getattr(settings, "CSP_STOREFRONT_FONT_EXTRA", ()))
+        else:
+            # Dashboard, admin and marketing allow inline styles: our own scoped
+            # <style nonce> blocks plus the content editor's rich-text editor,
+            # which injects its own styles. These surfaces are cross-origin
+            # isolated from tenant storefronts, so this never touches a store.
+            style_src.append("'unsafe-inline'")
+            if surface is host_utils.Surface.APP:
+                # The content editor loads the free TinyMCE build (script, skin
+                # CSS and icon fonts) from jsDelivr; its image uploads post back
+                # to our own origin ('self', already in connect-src).
+                editor_hosts = list(getattr(settings, "CSP_EDITOR_HOSTS", ()))
+                for source_list in (script_src, style_src, font_src, connect_src):
+                    source_list.extend(editor_hosts)
 
         # A storefront whose owner has opted into custom tracking scripts needs
-        # a looser script-src. That relaxation applies to that storefront host
-        # only and never to the dashboard or admin surfaces.
+        # the tracking hosts admitted too. That relaxation applies to that
+        # storefront host only and never to the dashboard or admin surfaces.
         site = getattr(request, "site", None)
         if site is not None and getattr(site, "allows_custom_scripts", False):
-            script_src.append("'unsafe-inline'")
+            if "'unsafe-inline'" not in script_src:
+                script_src.append("'unsafe-inline'")
             script_src.extend(getattr(settings, "CSP_TENANT_SCRIPT_HOSTS", ()))
 
         directives = {
             "default-src": settings.CSP_DEFAULT_SRC,
             "script-src": tuple(script_src),
-            "style-src": settings.CSP_STYLE_SRC,
-            "font-src": settings.CSP_FONT_SRC,
+            "style-src": tuple(style_src),
+            "font-src": tuple(font_src),
             "img-src": settings.CSP_IMG_SRC,
-            "connect-src": settings.CSP_CONNECT_SRC,
+            "connect-src": tuple(connect_src),
             "frame-ancestors": settings.CSP_FRAME_ANCESTORS,
             "base-uri": settings.CSP_BASE_URI,
             "form-action": settings.CSP_FORM_ACTION,

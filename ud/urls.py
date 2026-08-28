@@ -21,7 +21,6 @@ urlpatterns = [
     # view on two URLs, so there is one canonical address to link and bookmark.
     path("", RedirectView.as_view(pattern_name="ud:dashboard", permanent=False), name="home"),
     path("dashboard/", views.dashboard, name="dashboard"),
-    # Placeholder until the onboarding wizard lands. The route exists now so
-    # the dashboard has nothing linking into a 404.
     path("new/", views.create_site, name="create_site"),
+    path("stores/<uuid:site_id>/template/", views.select_template, name="select_template"),
 ]

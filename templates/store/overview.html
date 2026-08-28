@@ -1,0 +1,88 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Overview{% endblock %}
+{% block crumb %}Overview{% endblock %}
+
+{% block main %}
+<div class="app-page">
+
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">{{ site.get_business_model_display }} store</p>
+      <h1 class="app-head__title pal-mt-4">{{ site.name }}</h1>
+      <p class="app-head__lead">{{ site.tagline|default:"Your store command centre — orders, catalogue and growth in one place." }}</p>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:product_new' site.id %}" class="pal-btn">Add product <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+      <a href="{% url 'store:settings' site.id %}" class="pal-btn pal-btn--ghost">Settings</a>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-block__head">
+      <p class="pal-mono">Performance</p>
+      <span class="app-pill">30-day window</span>
+    </div>
+    <div class="app-kpis">
+      {% for kpi in kpis %}
+        <div class="app-kpi">
+          <p class="app-kpi__label">{{ kpi.label }}</p>
+          <p class="app-kpi__value">{{ kpi.value }}</p>
+          <p class="app-kpi__delta app-kpi__delta--flat">{{ kpi.caption }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-split">
+      <section>
+        <div class="app-card__head">
+          <h2 class="app-card__title">Recent orders</h2>
+          <a href="{% url 'store:orders' site.id %}" class="pal-link">All orders</a>
+        </div>
+        {% if recent_orders %}
+          <div class="app-tablewrap" style="border-top:0;">
+            <table class="app-table">
+              <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th class="app-table__num">Total</th></tr></thead>
+              <tbody>
+                {% for order in recent_orders %}
+                  <tr>
+                    <td class="app-table__id"><a href="{% url 'store:order_detail' site.id order.id %}">#{{ order.number }}</a></td>
+                    <td>{{ order.customer_name|default:"—" }}</td>
+                    <td><span class="app-badge app-badge--{{ order.status }}">{{ order.get_status_display }}</span></td>
+                    <td class="app-table__num">{{ site.currency }} {{ order.total }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="app-card__body"><p class="app-note-inline">No orders yet. They’ll appear here the moment a customer checks out.</p></div>
+        {% endif %}
+      </section>
+
+      <aside>
+        <div class="app-card__head">
+          <h2 class="app-card__title">Needs attention</h2>
+          <a href="{% url 'store:out_of_stock' site.id %}" class="pal-link">Stock</a>
+        </div>
+        <div class="app-card__body">
+          {% if low_stock %}
+            <div class="app-feed">
+              {% for product in low_stock %}
+                <div class="app-feed__item">
+                  <p class="app-feed__t">{% if product.is_out_of_stock %}Out of stock{% else %}Low · {{ product.stock_on_hand }} left{% endif %}</p>
+                  <p class="app-feed__b">{{ product.title }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="app-note-inline">Stock levels look healthy across the catalogue.</p>
+          {% endif %}
+        </div>
+      </aside>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

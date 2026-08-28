@@ -1,0 +1,286 @@
+{% extends "store/_shell.html" %}
+{% load store_extras %}
+{% block title %}{{ site.name }} · {% if is_edit %}Edit product{% else %}New product{% endif %}{% endblock %}
+{% block crumb %}{% if is_edit %}{{ product.title }}{% else %}New product{% endif %}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Catalogue · {{ site.get_business_model_display }}</p>
+    <h1 class="app-head__title pal-mt-4">{% if is_edit %}Edit product{% else %}New product{% endif %}</h1>
+    <p class="app-head__lead">Complete each step. You can move back at any time; required fields are checked before you move on.</p>
+  </div></div>
+
+  <div class="app-block">
+    <form method="post" enctype="multipart/form-data" class="app-form app-card app-wiz" id="product-form" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}<div class="pal-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+
+      <div class="app-wiztabs" role="tablist">
+        {% if is_b2b %}
+          {% for label in "Basics,Images,Pricing & tax,Logistics,Specifications,Variants,FAQs & badges"|split:"," %}
+            <button type="button" class="app-wiztab" data-goto="{{ forloop.counter0 }}">{{ label }}</button>
+          {% endfor %}
+        {% else %}
+          {% for label in "Details,Images & video,Pricing,Dimensions,Variations,Specifications,Compliance,Extras"|split:"," %}
+            <button type="button" class="app-wiztab" data-goto="{{ forloop.counter0 }}">{{ label }}</button>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="app-wiz__alert pal-alert" id="wiz-alert" hidden></div>
+
+      {% if is_b2b %}
+        {# ================= B2B ================= #}
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_field.html" with field=form.title cls="app-f--full" %}
+            {% include "store/_field.html" with field=form.description cls="app-f--full" %}
+            {% include "store/_field.html" with field=form.category cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.sku cls="app-f--third" %}
+            <label class="pal-field app-f--full"><span class="pal-field__label">Tags</span><input type="text" name="keywords" value="{{ prefill.keywords }}" placeholder="Comma-separated, e.g. wholesale, bulk"></label>
+            {% include "store/_field.html" with field=form.video_link cls="app-f--full" %}
+            {% include "store/_field.html" with field=form.is_active cls="app-f--full" %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">{% include "store/_images.html" %}</div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_field.html" with field=form.price cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.mrp cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.gst_percentage cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.hsn_code cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.inventory cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.low_stock_threshold cls="app-f--quarter" %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_field.html" with field=form.country_of_origin cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.dangerous_goods cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.guarantee_warranty cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.return_type cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.package_length cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.package_breadth cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.package_height cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.package_unit cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.weight_value cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.weight_unit cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.manufacturer_contact cls="app-f--full" %}
+            {% include "store/_field.html" with field=form.packer_contact cls="app-f--full" %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_rep_pairs.html" with label="Specifications" name_a="spec_k" ph_a="Name (e.g. Material)" name_b="spec_v" ph_b="Value (e.g. Cotton)" rows=prefill.specs %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_rep_pairs.html" with label="Variant types" name_a="variant_type_name" ph_a="Type (e.g. Size)" name_b="variant_type_values" ph_b="Values, comma-separated (S, M, L)" rows=prefill.variants %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_rep_pairs.html" with label="FAQs" name_a="faq_q" ph_a="Question" name_b="faq_r" ph_b="Answer" rows=prefill.faqs %}
+            {% include "store/_badges.html" %}
+          </div>
+        </section>
+
+      {% else %}
+        {# ================= D2C / Both ================= #}
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_field.html" with field=form.category cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.currency cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.title cls="app-f--full" %}
+            {% include "store/_rep_simple.html" with name="bullets" label="Bullet points" placeholder="A short selling point" rows=prefill.bullets %}
+            {% include "store/_field.html" with field=form.description cls="app-f--full" %}
+            <label class="pal-field app-f--full"><span class="pal-field__label">Keywords</span><input type="text" name="keywords" value="{{ prefill.keywords }}" placeholder="Comma-separated"></label>
+            <label class="pal-field app-f--half"><span class="pal-field__label">Recommended use</span><input type="text" name="recommended_use" value="{{ prefill.recommended_use }}"></label>
+            <label class="pal-field app-f--third"><span class="pal-field__label">Material</span><input type="text" name="material" value="{{ prefill.material }}"></label>
+            <label class="pal-field app-f--third"><span class="pal-field__label">Colour / texture</span><input type="text" name="colour" value="{{ prefill.colour }}"></label>
+            <label class="pal-field app-f--full"><span class="pal-field__label">Special features</span><input type="text" name="features" value="{{ prefill.features }}" placeholder="Comma-separated"></label>
+            {% include "store/_field.html" with field=form.is_active cls="app-f--full" %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_images.html" %}
+            {% include "store/_field.html" with field=form.video_link cls="app-f--full" %}
+            {% include "store/_field.html" with field=form.video_orientation cls="app-f--half" %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_field.html" with field=form.sku cls="app-f--third" %}
+            <label class="pal-field app-f--third"><span class="pal-field__label">Handling time</span><input type="text" name="handling_time" value="{{ prefill.handling_time }}" placeholder="e.g. Ships in 2 days"></label>
+            {% include "store/_field.html" with field=form.mrp cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.price cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.gst_percentage cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.inventory cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.low_stock_threshold cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.hsn_code cls="app-f--third" %}
+            {% include "store/_badges.html" %}
+            {% include "store/_rep_simple.html" with name="accessories" label="Accessories" placeholder="Accessory name" rows=prefill.accessories %}
+            {% include "store/_rep_simple.html" with name="includes" label="What's in the box" placeholder="Included item" rows=prefill.includes %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_field.html" with field=form.product_length cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.product_breadth cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.product_height cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.product_unit cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.weight_value cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.weight_unit cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.package_length cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.package_breadth cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.package_height cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.package_unit cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.package_weight_value cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.package_weight_unit cls="app-f--third" %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_rep_pairs.html" with label="Variant types" name_a="variant_type_name" ph_a="Type (e.g. Size)" name_b="variant_type_values" ph_b="Values, comma-separated (S, M, L)" rows=prefill.variants %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_rep_pairs.html" with label="Specifications" name_a="spec_k" ph_a="Name (e.g. Material)" name_b="spec_v" ph_b="Value (e.g. Cotton)" rows=prefill.specs %}
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_field.html" with field=form.country_of_origin cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.dangerous_goods cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.return_type cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.guarantee_warranty cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.manufacturer_contact cls="app-f--full" %}
+            {% include "store/_field.html" with field=form.packer_contact cls="app-f--full" %}
+            <label class="pal-field app-f--full"><span class="pal-field__label">Warning</span><input type="text" name="warning" value="{{ prefill.warning }}"></label>
+            <label class="pal-field app-f--half"><span class="pal-field__label">Support phone</span><input type="text" name="support_phone" value="{{ prefill.support_phone }}"></label>
+            <label class="pal-field app-f--half"><span class="pal-field__label">Support email</span><input type="email" name="support_email" value="{{ prefill.support_email }}"></label>
+          </div>
+        </section>
+
+        <section class="app-wizpanel" data-step hidden>
+          <div class="app-formgrid">
+            {% include "store/_rep_pairs.html" with label="Extra sections (how to use, ingredients, custom…)" name_a="extra_name" ph_a="Section name" name_b="extra_value" ph_b="Content" rows=prefill.extras %}
+          </div>
+        </section>
+      {% endif %}
+
+      <div class="app-wiz__foot">
+        <button type="button" class="pal-btn pal-btn--ghost" id="wiz-prev">← Previous</button>
+        <div class="app-wiz__right">
+          <a href="{% url 'store:products' site.id %}" class="pal-btn pal-btn--ghost">Cancel</a>
+          <button type="button" class="pal-btn" id="wiz-next">Next →</button>
+          <button type="submit" class="pal-btn" id="wiz-submit" hidden>{% if is_edit %}Save changes{% else %}Create product{% endif %}</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  var form = document.getElementById("product-form");
+  if (!form) return;
+  var panels = Array.prototype.slice.call(form.querySelectorAll(".app-wizpanel"));
+  var tabs = Array.prototype.slice.call(form.querySelectorAll(".app-wiztab"));
+  var prevBtn = document.getElementById("wiz-prev");
+  var nextBtn = document.getElementById("wiz-next");
+  var submitBtn = document.getElementById("wiz-submit");
+  var alertBox = document.getElementById("wiz-alert");
+  var current = 0;
+
+  function show(i) {
+    current = i;
+    panels.forEach(function (p, idx) { p.hidden = idx !== i; });
+    tabs.forEach(function (t, idx) { t.classList.toggle("is-active", idx === i); });
+    if (prevBtn) prevBtn.disabled = i === 0;
+    var last = i === panels.length - 1;
+    if (nextBtn) nextBtn.hidden = last;
+    if (submitBtn) submitBtn.hidden = !last;
+    if (alertBox) alertBox.hidden = true;
+    if (form.scrollIntoView) form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function validate(panel) {
+    var required = Array.prototype.slice.call(panel.querySelectorAll("[required]"));
+    for (var i = 0; i < required.length; i++) {
+      var f = required[i];
+      var ok = f.type === "checkbox" ? f.checked : String(f.value || "").trim() !== "";
+      if (!ok) {
+        if (alertBox) { alertBox.hidden = false; alertBox.textContent = "Please complete the required fields on this step."; }
+        f.classList.add("app-invalid");
+        if (f.focus) f.focus();
+        return false;
+      }
+      f.classList.remove("app-invalid");
+    }
+    return true;
+  }
+
+  if (nextBtn) nextBtn.addEventListener("click", function () {
+    if (validate(panels[current])) show(Math.min(current + 1, panels.length - 1));
+  });
+  if (prevBtn) prevBtn.addEventListener("click", function () { show(Math.max(current - 1, 0)); });
+  tabs.forEach(function (t, idx) {
+    t.addEventListener("click", function () {
+      if (idx > current && !validate(panels[current])) return;
+      show(idx);
+    });
+  });
+
+  form.addEventListener("submit", function (e) {
+    for (var i = 0; i < panels.length; i++) {
+      if (!validate(panels[i])) { e.preventDefault(); show(i); return; }
+    }
+  });
+
+  // Repeatable rows: add / remove.
+  form.addEventListener("click", function (e) {
+    var add = e.target.closest ? e.target.closest(".app-rep__add") : null;
+    if (add) {
+      var rep = add.closest("[data-rep]");
+      var tmpl = rep && rep.querySelector(".app-rep__tmpl");
+      var rows = rep && rep.querySelector(".app-rep__rows");
+      if (tmpl && rows && tmpl.content.firstElementChild) {
+        rows.appendChild(tmpl.content.firstElementChild.cloneNode(true));
+      }
+      return;
+    }
+    var del = e.target.closest ? e.target.closest(".app-rep__del") : null;
+    if (del) {
+      var row = del.closest(".app-rep__row");
+      if (row && row.parentNode) row.parentNode.removeChild(row);
+    }
+  });
+
+  show(0);
+})();
+</script>
+{% endblock %}

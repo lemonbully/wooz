@@ -1,0 +1,1208 @@
+{% extends "storefront/template2/base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block title %}Account | {{ website.content.site_name|default:"Account" }}{% endblock %}
+
+{% block page_content %}
+<section class="bg-white">
+  <div class="container mx-auto px-4 py-10">
+    {% if customer_email %}
+      <div class="max-w-5xl mx-auto">
+        <div class="bg-gray-50 ring-1 ring-gray-200 rounded-xl p-5 mb-6 flex items-center justify-between md:hidden">
+          <div>
+            <p class="text-sm text-gray-500">Signed in as</p>
+            <p class="text-[16px] text-gray-900">{{ customer_email }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- Notification bell for mobile -->
+            <button type="button" id="mobile-notif-btn" class="relative inline-flex items-center justify-center w-10 h-10 rounded-md bg-white border border-gray-200 hover:bg-gray-50">
+              <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              <span id="mobile-notif-badge" class="hidden absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold min-w-[16px] text-center">0</span>
+            </button>
+            <a href="{% url 'public_account_logout' %}" class="inline-flex items-center px-4 py-2 rounded-md bg-gray-900 text-white hover:bg-black text-sm">Logout</a>
+          </div>
+        </div>
+        
+        <!-- Mobile Notifications Drawer -->
+        <div id="mobile-notif-drawer" class="fixed inset-0 z-[10001] hidden md:hidden">
+          <div class="absolute inset-0 bg-black/50" id="mobile-notif-overlay"></div>
+          <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] flex flex-col">
+            <div class="flex items-center justify-between px-4 py-3 border-b">
+              <h3 class="text-base font-semibold text-gray-900">Notifications</h3>
+              <button type="button" id="mobile-notif-close" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4" id="mobile-notif-content">
+              <div id="mobile-notif-list" class="space-y-2"></div>
+              <div id="mobile-notif-empty" class="hidden py-8 text-center text-gray-500 text-sm">No notifications.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="md:col-span-2">
+            <h2 class="text-xl font-medium tracking-tight text-gray-900 mb-3">Your Orders</h2>
+        <form method="get" class="mb-3 flex flex-col gap-3 md:hidden">
+          <div class="w-full">
+            <label class="text-sm text-gray-600">Status</label>
+            <select name="status" class="w-full h-10 rounded-md border border-gray-300 px-3 text-sm mt-1">
+              <option value="">All</option>
+              <option value="created" {% if status_filter == 'created' %}selected{% endif %}>Created</option>
+              <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+              <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+              <option value="shipped" {% if status_filter == 'shipped' %}selected{% endif %}>Shipped</option>
+              <option value="delivered" {% if status_filter == 'delivered' %}selected{% endif %}>Delivered</option>
+              <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3 w-full">
+            <div class="min-w-0">
+              <label class="text-sm text-gray-600">From</label>
+              <input type="date" name="start" value="{{ start_date|default:'' }}" class="w-full max-w-full min-w-0 h-10 rounded-md border border-gray-300 px-3 text-sm mt-1"/>
+            </div>
+            <div class="min-w-0">
+              <label class="text-sm text-gray-600">To</label>
+              <input type="date" name="end" value="{{ end_date|default:'' }}" class="w-full max-w-full min-w-0 h-10 rounded-md border border-gray-300 px-3 text-sm mt-1"/>
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="h-10 px-4 rounded-md bg-gray-900 text-white text-sm">Apply</button>
+          </div>
+        </form>
+
+        <div class="bg-white ring-1 ring-gray-200 rounded-xl">
+          <div class="divide-y divide-gray-100">
+            {% if orders %}
+              {% for order in orders %}
+              <div class="p-4 md:p-5">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span class="text-sm text-gray-500">Order #{{ order.website_order_number|default:order.id }}</span>
+                    <span class="text-base md:text-lg text-gray-900 font-medium">₹{{ order.total }}</span>
+                    <span class="text-xs text-gray-500">{{ order.placed_at|date:"M d, Y h:i A" }}</span>
+                  </div>
+                  <div class="text-right relative">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs ring-1 ring-gray-300 text-gray-700">{# Show "Placed" when status is created #}{% if order.status == 'created' %}Placed{% else %}{{ order.status|title }}{% endif %}</span>
+                    <button type="button" class="ml-2 inline-flex items-center justify-center w-8 h-8 rounded-full border text-xs hover:bg-gray-50" aria-haspopup="menu" aria-expanded="false" data-order-menu-btn data-order-id="{{ order.id }}">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                    </button>
+                    {% comment %} <button type="button" class="ml-3 inline-flex items-center px-3 py-1 rounded-md border text-xs hover:bg-gray-50" data-view-order="{{ order.id }}">View details</button> {% endcomment %}
+                    <div class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10" role="menu" data-order-menu="{{ order.id }}">
+                      <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" data-action="details" data-view-order="{{ order.id }}">View details</button>
+                      <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" data-action="track" data-oid="{{ order.id }}">Track</button>
+                      {% if order.status == 'delivered' %}<button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" data-action="invoice" data-oid="{{ order.id }}">Invoice</button>{% endif %}
+                      {% if order.status != 'delivered' and order.status != 'shipped' and order.status != 'cancelled' %}
+                      <div class="border-t my-1"></div>
+                      <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" data-action="cancel" data-oid="{{ order.id }}">Cancel</button>
+                      {% endif %}
+                      {% if order.status == 'delivered' %}
+                      <div class="border-t my-1"></div>
+                      {% if order.can_return %}<button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" data-action="return" data-oid="{{ order.id }}">Return</button>{% endif %}
+                      {% if order.can_replace %}<button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" data-action="replace" data-oid="{{ order.id }}">Replace</button>{% endif %}
+                      <div class="border-t my-1"></div>
+                      <button class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50" data-action="warranty" data-oid="{{ order.id }}">Warranty</button>
+                      {% endif %}
+                  </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="p-6 text-center text-gray-500">No orders found.</div>
+            {% endif %}
+          </div>
+        </div>
+        {% if page_obj and page_obj.paginator.num_pages > 1 %}
+        <div class="mt-4 flex justify-center">
+          <nav class="inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+            {% if page_obj.has_previous %}
+              <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if start_date %}&start={{ start_date }}{% endif %}{% if end_date %}&end={{ end_date }}{% endif %}" class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-300 bg-white text-gray-700 text-xs md:text-sm hover:bg-gray-50">Previous</a>
+            {% else %}
+              <span class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-200 bg-gray-100 text-gray-400 text-xs md:text-sm">Previous</span>
+            {% endif %}
+            {% for i in page_obj.paginator.page_range %}
+              {% if i == page_obj.number %}
+                <span class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-300 bg-black text-white text-xs md:text-sm">{{ i }}</span>
+              {% else %}
+                <a href="?page={{ i }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if start_date %}&start={{ start_date }}{% endif %}{% if end_date %}&end={{ end_date }}{% endif %}" class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-300 bg-white text-gray-700 text-xs md:text-sm hover:bg-gray-50">{{ i }}</a>
+              {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if start_date %}&start={{ start_date }}{% endif %}{% if end_date %}&end={{ end_date }}{% endif %}" class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-300 bg-white text-gray-700 text-xs md:text-sm hover:bg-gray-50">Next</a>
+            {% else %}
+              <span class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-200 bg-gray-100 text-gray-400 text-xs md:text-sm">Next</span>
+            {% endif %}
+          </nav>
+        </div>
+        {% endif %}
+          </div>
+          <div class="md:col-span-1 mt-[2.6rem]">
+            <div class="hidden md:block bg-gray-50 ring-1 ring-gray-200 rounded-xl p-5 mb-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-gray-500">Signed in as</p>
+                  <p class="text-lg text-gray-900 break-all">{{ customer_email }}</p>
+                </div>
+                <a href="{% url 'public_account_logout' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-900 text-white hover:bg-black text-xs">Logout</a>
+              </div>
+            </div>
+
+            <!-- Notifications Section -->
+            <div class="bg-white ring-1 ring-gray-200 rounded-xl p-4 mb-6" id="notifications-section">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-medium text-gray-900 flex items-center gap-2">
+                  Notifications
+                  <span id="notif-badge" class="hidden px-1.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold min-w-[18px] text-center">0</span>
+                </h3>
+                <button type="button" id="notif-refresh" class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Refresh</button>
+              </div>
+              <div id="notif-loading" class="py-4 text-center text-gray-400 text-sm">Loading...</div>
+              <div id="notif-list" class="hidden space-y-2 max-h-64 overflow-y-auto"></div>
+              <div id="notif-empty" class="hidden py-4 text-center text-gray-500 text-sm">No notifications.</div>
+            </div>
+
+            <div class="bg-white ring-1 ring-gray-200 rounded-xl p-4 mb-6">
+              <h3 class="text-sm font-medium text-gray-900 mb-3">Your Credits</h3>
+              {% if customer_credits %}
+                <div class="space-y-2">
+                  {% for cr in customer_credits %}
+                    <div class="rounded-xl border border-gray-200 p-3">
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="text-sm font-semibold text-gray-900">
+                          {% if cr.credit_type == 'percent' %}
+                            {{ cr.credit_value }}% discount
+                          {% else %}
+                            ₹{{ cr.remaining_amount|default:cr.credit_value }} credit
+                          {% endif %}
+                        </div>
+                        <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 ring-1 ring-gray-200">
+                          {% if cr.scope == 'categories' %}Selected categories{% else %}All catalog{% endif %}
+                        </span>
+                      </div>
+                      {% if cr.note %}
+                        <div class="text-xs text-gray-500 mt-1">{{ cr.note }}</div>
+                      {% endif %}
+                      {% if cr.valid_until %}
+                        <div class="text-[11px] text-gray-500 mt-2">Valid until: {{ cr.valid_until|date:"M d, Y" }}</div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-sm text-gray-500">No active credits.</div>
+              {% endif %}
+            </div>
+
+            <div class="hidden md:block bg-white ring-1 ring-gray-200 rounded-xl p-4 mb-6">
+              <h3 class="text-sm font-medium text-gray-900 mb-3">Filters</h3>
+              <form method="get" class="flex flex-col gap-3">
+                <div class="w-full">
+                  <label class="text-sm text-gray-600">Status</label>
+                  <select name="status" class="w-full h-10 rounded-md border border-gray-300 px-3 text-sm mt-1">
+                    <option value="">All</option>
+                    <option value="created" {% if status_filter == 'created' %}selected{% endif %}>Created</option>
+                    <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                    <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+                    <option value="shipped" {% if status_filter == 'shipped' %}selected{% endif %}>Shipped</option>
+                    <option value="delivered" {% if status_filter == 'delivered' %}selected{% endif %}>Delivered</option>
+                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                  </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3 w-full">
+                  <div class="min-w-0">
+                    <label class="text-sm text-gray-600">From</label>
+                    <input type="date" name="start" value="{{ start_date|default:'' }}" class="w-full max-w-full min-w-0 h-10 rounded-md border border-gray-300 px-3 text-sm mt-1"/>
+                  </div>
+                  <div class="min-w-0">
+                    <label class="text-sm text-gray-600">To</label>
+                    <input type="date" name="end" value="{{ end_date|default:'' }}" class="w-full max-w-full min-w-0 h-10 rounded-md border border-gray-300 px-3 text-sm mt-1"/>
+                  </div>
+                </div>
+                <div class="flex justify-end">
+                  <button type="submit" class="h-10 px-4 rounded-md bg-gray-900 text-white text-sm">Apply</button>
+                </div>
+              </form>
+            </div>
+
+            <h2 class="text-xl font-medium tracking-tight text-gray-900 mb-3">Your Wishlist</h2>
+            <div id="acct-wishlist" class="bg-white ring-1 ring-gray-200 rounded-xl divide-y">
+              {% if wishlist_items %}
+                {% for w in wishlist_items %}
+                <div class="p-4 flex items-center gap-3">
+                  <div class="w-16 h-16 bg-white flex items-center justify-center ring-1 ring-gray-200 rounded-md overflow-hidden">
+                    {% if w.product.image1 %}
+                    <img src="{{ w.product.image1.url }}" {% media_attrs website w.product.image1.url w.product.title %} class="object-contain w-full h-full" />
+                    {% else %}
+                    <span class="text-xs text-gray-400">No Image</span>
+                    {% endif %}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <a href="{% url 'public_product_detail' product_slug=w.product.slug|default:'_' %}" class="text-sm text-gray-900 line-clamp-2 hover:underline">{{ w.product.title }}</a>
+                    <div class="text-sm text-gray-700">₹{{ w.product.price }}</div>
+                  </div>
+                  <button
+                    type="button"
+                    class="wishlist-remove-btn px-3 py-1.5 rounded-md border text-xs hover:bg-gray-50 ml-auto"
+                    data-remove-url="{% url 'public_wishlist_remove' product_id=w.product.product_id|default:'0' %}"
+                    data-product-title="{{ w.product.title|escapejs }}"
+                    data-csrf="{{ csrf_token }}"
+                  >Remove</button>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="p-6 text-center text-gray-500">No items in wishlist.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="max-w-md mx-auto">
+        <h2 class="text-2xl font-semibold tracking-tight text-gray-900 mb-4">Sign in</h2>
+        <p class="text-sm text-gray-600 mb-4">Enter your email to receive a one-time code</p>
+        <div id="acct-msg" class="hidden mb-3 rounded-md px-4 py-3 text-sm"></div>
+        <form id="acct-email-form" class="space-y-3">
+          {% csrf_token %}
+          <input type="email" name="email" required placeholder="you@example.com" class="w-full h-12 rounded-lg border border-gray-300 px-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+          <button type="submit" id="acct-send-btn" class="w-full h-12 rounded-lg bg-gray-900 text-white hover:bg-black inline-flex items-center justify-center">
+            <span id="acct-send-spinner" class="hidden mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+            <span id="acct-send-text">Send code</span>
+          </button>
+        </form>
+        <form id="acct-otp-form" class="space-y-3 mt-4 hidden">
+          {% csrf_token %}
+          <input type="text" name="otp" inputmode="numeric" pattern="[0-9]{4,8}" required placeholder="Enter code" class="w-full h-12 rounded-lg border border-gray-300 px-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+          <button type="submit" class="w-full h-12 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white">Verify & Sign in</button>
+          <button type="button" id="acct-resend" class="w-full h-10 rounded-lg border border-gray-300 text-gray-800">Resend code</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var emailForm = document.getElementById('acct-email-form');
+  var otpForm = document.getElementById('acct-otp-form');
+  var msg = document.getElementById('acct-msg');
+  if (!emailForm) return;
+  var sendBtn = document.getElementById('acct-send-btn');
+  var sendSpinner = document.getElementById('acct-send-spinner');
+  var sendText = document.getElementById('acct-send-text');
+  function setSendLoading(isLoading){
+    try{
+      if (!sendBtn) return;
+      sendBtn.disabled = !!isLoading;
+      if (sendSpinner) sendSpinner.classList.toggle('hidden', !isLoading);
+      if (sendText) sendText.textContent = isLoading ? 'Sending…' : 'Send code';
+      sendBtn.classList.toggle('opacity-70', !!isLoading);
+      sendBtn.classList.toggle('cursor-not-allowed', !!isLoading);
+      sendBtn.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+    }catch(_){}
+  }
+  function showMsg(text, ok){
+    if (!msg) return; msg.textContent = text; msg.classList.remove('hidden');
+    msg.className = 'mb-3 rounded-md px-4 py-3 text-sm ' + (ok ? 'bg-black text-white' : 'bg-red-50 text-red-700 ring-1 ring-red-200');
+  }
+  emailForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var fd = new FormData(emailForm);
+    setSendLoading(true);
+    try{
+      var res = await fetch('{% url "public_account_send_otp" %}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+      var data = await res.json();
+      if (res.ok && data.success){ showMsg('Code sent. Check your email.', true); emailForm.classList.add('hidden'); otpForm.classList.remove('hidden'); }
+      else { showMsg((data && data.error) || 'Failed to send code.', false); }
+    } catch(err){ showMsg('Network error. Please try again.', false); }
+    finally { setSendLoading(false); }
+  });
+  if (otpForm){
+    otpForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var fd = new FormData(otpForm);
+      try{
+        var res = await fetch('{% url "public_account_verify_otp" %}', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+        var data = await res.json();
+        if (res.ok && data.success){
+          try{
+            // If a next was provided in query string when navigating to Account, redirect back after login
+            const params = new URLSearchParams(window.location.search);
+            const nextUrl = params.get('next');
+            if (nextUrl) { window.location.href = nextUrl; return; }
+          }catch(_){ }
+          window.location.reload();
+        }
+        else { showMsg((data && data.error) || 'Invalid code.', false); }
+      }catch(err){ showMsg('Network error. Please try again.', false); }
+    });
+  }
+  var resend = document.getElementById('acct-resend');
+  if (resend){
+    resend.addEventListener('click', function(){
+      emailForm.classList.remove('hidden');
+      otpForm.classList.add('hidden');
+      setSendLoading(false);
+    });
+  }
+});
+</script>
+<!-- Order Details Modal -->
+<div id="order-modal" class="fixed inset-0 z-[10000] hidden">
+  <div class="absolute inset-0 bg-black/60"></div>
+  <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white w-[92%] max-w-2xl rounded-lg shadow-lg">
+    <div class="flex items-center justify-between px-4 py-3 border-b">
+      <h3 class="text-base font-semibold">Order details</h3>
+      <button type="button" id="order-modal-close" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-50" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="max-h-[70vh] overflow-y-auto p-4" id="order-modal-body">
+      <!-- filled dynamically -->
+    </div>
+    <div class="p-4 border-t text-right">
+      <button type="button" id="order-modal-close-2" class="px-4 py-2 rounded-md border hover:bg-gray-50">Close</button>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const modal = document.getElementById('order-modal');
+    const body = document.getElementById('order-modal-body');
+    // Single action modal (reused)
+    let actionModal = document.getElementById('order-action-modal');
+    if (!actionModal){
+      const wrap = document.createElement('div');
+      wrap.innerHTML = '<div id="order-action-modal" class="fixed inset-0 z-[10000] hidden"><div class="absolute inset-0 bg-black/60"></div><div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white w-[92%] max-w-md rounded-lg shadow-lg"><div class="flex items-center justify-between px-4 py-3 border-b"><h3 id="oam-title" class="text-base font-semibold">Action</h3><button type="button" id="oam-close" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-50" aria-label="Close"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button></div><form id="oam-form" class="p-4 space-y-3" enctype="multipart/form-data"><div id="oam-fields" class="space-y-3"></div><div class="p-4 border-t flex items-center justify-end gap-2"><button type="button" id="oam-cancel" class="px-4 py-2 rounded-md border hover:bg-gray-50">Close</button><button type="submit" id="oam-submit" class="px-4 py-2 rounded-md bg-gray-900 text-white">Submit</button></div></form></div></div>';
+      document.body.appendChild(wrap.firstChild);
+      actionModal = document.getElementById('order-action-modal');
+    }
+    const oam = {
+      root: actionModal,
+      title: actionModal.querySelector('#oam-title'),
+      form: actionModal.querySelector('#oam-form'),
+      fields: actionModal.querySelector('#oam-fields'),
+      closeBtn: actionModal.querySelector('#oam-close'),
+      cancelBtn: actionModal.querySelector('#oam-cancel'),
+      submitBtn: actionModal.querySelector('#oam-submit'),
+      open(){ this.root.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); },
+      close(){ this.root.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); this.form.reset(); this.fields.innerHTML = ''; this.form.setAttribute('data-action',''); this.form.setAttribute('data-oid',''); }
+    };
+    ;[oam.closeBtn, oam.cancelBtn].forEach(function(b){ if(b) b.addEventListener('click', function(){ oam.close(); }); });
+    // Prevent outer handlers from closing while interacting inside modal
+    try {
+      oam.root.addEventListener('click', function(ev){
+        const inner = ev.target.closest('form, select, input, textarea, button, .rounded-lg');
+        if (inner) ev.stopPropagation();
+      });
+    } catch(_){}
+    const closeButtons = [];
+    try{ closeButtons.push(document.getElementById('order-modal-close')); }catch(_){}
+    try{ closeButtons.push(document.getElementById('order-modal-close-2')); }catch(_){}
+    function fmtINR(x){ try { return new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 }).format(parseFloat(x||0)); } catch(e){ return '₹' + (x||0); } }
+    function open(){ modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
+    function close(){ modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+    closeButtons.forEach(function(btn){ if (btn) btn.addEventListener('click', close); });
+
+    // Toast helper (global within this IIFE)
+    function showToast(message, ok){
+      let root = document.getElementById('toast-root');
+      if (!root){
+        root = document.createElement('div');
+        root.id = 'toast-root';
+        root.className = 'fixed bottom-4 right-4 z-[10001] space-y-2';
+        root.setAttribute('aria-live', 'polite');
+        document.body.appendChild(root);
+      }
+      const el = document.createElement('div');
+      el.className = (ok ? 'bg-emerald-600 text-white' : 'bg-red-50 text-red-700 ring-1 ring-red-200') + ' rounded-lg shadow px-4 py-3 flex items-start gap-3 max-w-sm';
+      el.innerHTML = (ok
+        ? '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mt-0.5 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mt-0.5 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>') +
+        '<div class="text-sm leading-5">' + message + '</div>' +
+        '<button type="button" aria-label="Close" class="ml-auto text-xs ' + (ok ? 'text-white/80 hover:text-white' : 'text-red-700/70 hover:text-red-700') + '">✕</button>';
+      const closeBtn = el.querySelector('button');
+      closeBtn.addEventListener('click', function(){ el.remove(); });
+      root.appendChild(el);
+      setTimeout(()=>{ try{ el.remove(); }catch(_){} }, 3500);
+    }
+    // Kebab menu toggle and auto-close (ignore clicks inside action modal)
+    document.addEventListener('click', function(e){
+      if (e.target.closest('#order-action-modal')) return;
+      const btn = e.target.closest('[data-order-menu-btn]');
+      const menus = document.querySelectorAll('[data-order-menu]');
+      if (btn){
+        const id = btn.getAttribute('data-order-id');
+        menus.forEach(function(m){ if (m.getAttribute('data-order-menu') !== id) m.classList.add('hidden'); });
+        const menu = document.querySelector('[data-order-menu="' + id + '"]');
+        if (menu){ menu.classList.toggle('hidden'); }
+        return;
+      }
+      if (!e.target.closest('[data-order-menu]')){
+        menus.forEach(function(m){ m.classList.add('hidden'); });
+      }
+    });
+    document.addEventListener('click', async function(e){
+      if (e.target.closest('#order-action-modal')) return;
+      const t = e.target; if (!t) return;
+      const oid = t.getAttribute('data-view-order');
+      if (!oid) return;
+      e.preventDefault();
+      try{
+        const url = '{% url "public_order_details_json" order_id=0|default:'0' %}'.replace('/0/', '/' + oid + '/');
+        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
+        const o = data.order;
+        let html = '';
+        html += '<div class="grid grid-cols-2 gap-3 text-sm">' +
+                '<div><div class="text-gray-500">Order #</div><div class="font-medium">' + (o.order_number || o.id) + '</div></div>' +
+                '<div><div class="text-gray-500">Status</div><div class="font-medium capitalize">' + o.status + '</div></div>' +
+                '<div class="col-span-2"><div class="text-gray-500">Placed at</div><div class="font-medium">' + new Date(o.placed_at).toLocaleString() + '</div></div>' +
+                '<div class="col-span-2"><div class="text-gray-500">Customer</div><div class="font-medium">' + (o.customer_name||'') + ' • ' + (o.customer_email||'') + ' • ' + (o.customer_phone||'') + '</div></div>' +
+                '<div class="col-span-2"><div class="text-gray-500">Shipping Address</div><div class="font-medium">' + (o.shipping_address||'') + '</div></div>' +
+                '</div>';
+        html += '<div class="mt-4"><h4 class="text-sm font-semibold mb-2">Items</h4>';
+        html += '<div class="divide-y">';
+        (o.items||[]).forEach(function(it){
+          const variant = (it.variant_label && String(it.variant_label).trim().length > 0) ? '<div class="text-xs text-gray-500">' + it.variant_label + '</div>' : '';
+          html += '<div class="py-2 flex items-center justify-between gap-3">' +
+                  '<div class="flex-1 min-w-0"><div class="text-sm text-gray-900 line-clamp-2">' + it.title + '</div>' +
+                  variant +
+                  '<div class="text-xs text-gray-600">Qty: ' + it.quantity + '</div></div>' +
+                  '<div class="text-right"><div class="text-sm font-medium">' + fmtINR(it.line_total) + '</div>' +
+                  '<div class="text-xs text-gray-500">' + fmtINR(it.unit_price) + ' ea</div></div>' +
+                  '</div>';
+        });
+        html += '</div></div>';
+        html += '<div class="mt-4 grid grid-cols-2 gap-3 text-sm">' +
+                '<div><div class="text-gray-500">Subtotal</div><div class="font-medium">' + fmtINR(o.subtotal) + '</div></div>' +
+                '<div><div class="text-gray-500">Discount</div><div class="font-medium">' + fmtINR(o.discount) + '</div></div>' +
+                '<div><div class="text-gray-500">Tax</div><div class="font-medium">' + fmtINR(o.tax) + '</div></div>' +
+                '<div><div class="text-gray-500">Shipping</div><div class="font-medium">' + fmtINR(o.shipping) + '</div></div>' +
+                '<div class="col-span-2"><div class="text-gray-900 font-semibold">Total</div><div class="text-base font-bold">' + fmtINR(o.total) + '</div></div>' +
+                '</div>';
+        body.innerHTML = html; open();
+      } catch(err) {
+        body.innerHTML = '<div class="p-4 text-sm text-red-600">Failed to load order details.</div>'; open();
+      }
+    });
+    window.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+    // Handle kebab menu action clicks (ignore clicks inside action modal)
+    document.addEventListener('click', async function(e){
+      if (e.target.closest('#order-action-modal')) return;
+      const a = e.target.closest('[data-action]');
+      if (!a) return;
+      const oid = a.getAttribute('data-oid') || a.getAttribute('data-view-order');
+      const action = a.getAttribute('data-action');
+      if (!oid || !action) return;
+      e.preventDefault();
+      // Hide any open kebab menus before opening other UI to avoid reflow issues
+      try { document.querySelectorAll('[data-order-menu]').forEach(function(m){ m.classList.add('hidden'); }); } catch(_){ }
+      async function postForm(url, form){
+        const res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: form });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
+        return data;
+      }
+      try{
+        if (action === 'details'){
+          const btn = document.querySelector('[data-view-order="' + oid + '"]'); if (btn) btn.click(); return;
+        }
+        if (action === 'track'){
+          const url = '{% url "public_order_track" order_id=0|default:'0' %}'.replace('/0/', '/' + oid + '/');
+          const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+          const data = await res.json(); if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
+          const tr = data.track;
+          let html = '<div class="space-y-2">' +
+            '<div class="text-sm"><span class="text-gray-500">Order Status:</span> <span class="font-medium capitalize">' + (tr.status||'') + '</span></div>' +
+            '<div class="text-sm"><span class="text-gray-500">Tracking ID:</span> <span class="font-medium">' + (tr.tracking_id||'') + '</span></div>' +
+            '<div class="text-sm"><span class="text-gray-500">Shipments:</span></div>';
+          (tr.shipments||[]).forEach(function(s){ html += '<div class="text-xs text-gray-700">' + (s.provider||'') + ' • ' + (s.tracking_number||'') + ' • ' + (s.status||'') + '</div>'; });
+          html += '</div>';
+          body.innerHTML = html; open(); return;
+        }
+        if (action === 'invoice'){
+          const url = '{% url "public_order_invoice" order_id=0|default:'0' %}'.replace('/0/', '/' + oid + '/');
+          const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+          const data = await res.json(); if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
+          openInvoiceModal(data.invoice); return;
+        }
+        if (action === 'cancel'){
+          oam.title.textContent = 'Cancel Order';
+          oam.fields.innerHTML = '' +
+            '<div>' +
+              '<label class="block text-sm text-gray-700">Reason</label>' +
+              '<select name="reason" id="oam-cancel-reason" class="mt-1 w-full h-10 rounded-md border border-gray-300 px-3 text-sm">' +
+                '<option value="Changed my mind">Changed my mind</option>' +
+                '<option value="Ordered by mistake">Ordered by mistake</option>' +
+                '<option value="Found a better price">Found a better price</option>' +
+                '<option value="Delivery taking too long">Delivery taking too long</option>' +
+                '<option value="Other">Other</option>' +
+              '</select>' +
+            '</div>' +
+            '<div id="oam-cancel-other" class="hidden">' +
+              '<label class="block text-sm text-gray-700">Please describe</label>' +
+              '<textarea name="other_reason" rows="3" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="Tell us more..."></textarea>' +
+            '</div>';
+          // Toggle other textarea
+          setTimeout(function(){
+            const sel = document.getElementById('oam-cancel-reason');
+            const oth = document.getElementById('oam-cancel-other');
+            if (sel && oth){ sel.addEventListener('change', function(){ oth.classList.toggle('hidden', sel.value !== 'Other'); }); oth.classList.toggle('hidden', sel.value !== 'Other'); }
+          }, 0);
+          oam.form.setAttribute('data-action','cancel'); oam.form.setAttribute('data-oid', oid); oam.open(); return;
+        }
+        if (action === 'return' || action === 'replace'){
+          oam.title.textContent = action === 'return' ? 'Return Request' : 'Replace Request';
+          oam.fields.innerHTML = '<div><label class="block text-sm text-gray-700">Reason</label><input required type="text" name="reason" class="mt-1 w-full h-10 rounded-md border border-gray-300 px-3 text-sm" placeholder="Reason"/></div><div><label class="block text-sm text-gray-700">Attachment (optional)</label><input type="file" name="attachment" class="mt-1 w-full text-sm"/></div>';
+          oam.form.setAttribute('data-action', action); oam.form.setAttribute('data-oid', oid); oam.open(); return;
+        }
+        if (action === 'warranty'){
+          const checkUrl = '{% url "public_order_warranty" order_id=0|default:'0' %}'.replace('/0/', '/' + oid + '/');
+          const checkRes = await fetch(checkUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+          const check = await checkRes.json(); if (!checkRes.ok || !check.success) throw new Error(check.error || 'Failed');
+          if (!check.available){ showToast('This product has no warranty.', false); return; }
+          oam.title.textContent = 'Warranty Claim';
+          oam.fields.innerHTML = '<div><label class="block text-sm text-gray-700">Describe the issue</label><textarea required name="description" rows="4" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="Describe the problem..."></textarea></div><div><label class="block text-sm text-gray-700">Attachment (optional)</label><input type="file" name="attachment" class="mt-1 w-full text-sm"/></div>';
+          oam.form.setAttribute('data-action','warranty'); oam.form.setAttribute('data-oid', oid); oam.open(); return;
+        }
+      } catch(err){
+        showToast(err.message || 'Action failed', false);
+      }
+    });
+
+    // Submit handler for action modal
+    oam.form.addEventListener('submit', async function(ev){
+      ev.preventDefault();
+      const action = oam.form.getAttribute('data-action');
+      const oid = oam.form.getAttribute('data-oid');
+      if (!action || !oid) return;
+      const fd = new FormData(oam.form);
+      try{
+        if (action === 'cancel'){
+          const url = '{% url "public_order_cancel" order_id=0|default:'0' %}'.replace('/0/', '/' + oid + '/');
+          await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd }).then(r=>r.json()).then(j=>{ if(!j.success) throw new Error(j.error||'Failed'); });
+          oam.close(); showToast('Your order has been cancelled.', true); setTimeout(function(){ window.location.reload(); }, 800); return;
+        }
+        if (action === 'return' || action === 'replace'){
+          const url = (action === 'return' ? '{% url "public_order_return" order_id=0|default:'0' %}' : '{% url "public_order_replace" order_id=0|default:'0' %}').replace('/0/', '/' + oid + '/');
+          await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd }).then(r=>r.json()).then(j=>{ if(!j.success) throw new Error(j.error||'Failed'); });
+          oam.close();
+          showToast((action === 'return' ? 'Return request submitted.' : 'Replacement request submitted.') + ' We\'ll notify you shortly.', true);
+          // Replace the action button with a "Requested" indicator in the menu
+          try {
+            const menu = document.querySelector('[data-order-menu="' + oid + '"]');
+            if (menu) {
+              const actionBtn = menu.querySelector('[data-action="' + action + '"][data-oid="' + oid + '"]');
+              if (actionBtn) {
+                const label = document.createElement('span');
+                label.className = 'w-full text-left px-3 py-2 text-xs text-gray-400 italic flex items-center gap-1 pointer-events-none';
+                label.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-emerald-500 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>' + (action === 'return' ? 'Return' : 'Replace') + ' requested';
+                actionBtn.replaceWith(label);
+              }
+            }
+          } catch(_){}
+          return;
+        }
+        if (action === 'warranty'){
+          const url = '{% url "public_order_warranty" order_id=0|default:'0' %}'.replace('/0/', '/' + oid + '/');
+          await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd }).then(r=>r.json()).then(j=>{ if(!j.success) throw new Error(j.error||'Failed'); });
+          oam.close();
+          showToast('Warranty claim submitted. We\'ll notify you shortly.', true);
+          // Replace the warranty button with a "Requested" indicator
+          try {
+            const menu = document.querySelector('[data-order-menu="' + oid + '"]');
+            if (menu) {
+              const actionBtn = menu.querySelector('[data-action="warranty"][data-oid="' + oid + '"]');
+              if (actionBtn) {
+                const label = document.createElement('span');
+                label.className = 'w-full text-left px-3 py-2 text-xs text-gray-400 italic flex items-center gap-1 pointer-events-none';
+                label.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-emerald-500 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Warranty requested';
+                actionBtn.replaceWith(label);
+              }
+            }
+          } catch(_){}
+          return;
+        }
+      } catch(err){ showToast(err.message || 'Action failed', false); }
+    });
+  })();
+  </script>
+</div><!-- /#order-modal -->
+
+<!-- Invoice Modal -->
+<div id="invoice-modal" style="display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;padding:1rem;">
+  <!-- Backdrop -->
+  <div id="invoice-modal-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
+  <!-- Card -->
+  <div style="position:relative;background:#fff;width:100%;max-width:680px;border-radius:16px;box-shadow:0 25px 60px rgba(0,0,0,0.25);display:flex;flex-direction:column;max-height:90vh;max-height:90dvh;">
+    <!-- Header -->
+    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #f0f0f0;border-radius:16px 16px 0 0;background:#fff;">
+      <span style="font-size:15px;font-weight:600;color:#111;">Invoice</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" id="invoice-download-btn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:500;border:none;cursor:pointer;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span id="inv-dl-label">Download PDF</span>
+        </button>
+        <button type="button" id="invoice-modal-close" style="width:32px;height:32px;border-radius:50%;border:1px solid #e5e7eb;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- Scrollable body -->
+    <div id="invoice-content" style="flex:1;min-height:0;overflow-y:auto;padding:20px;-webkit-overflow-scrolling:touch;"></div>
+  </div>
+</div>
+
+  <script>
+  (function(){
+    const invoiceModal = document.getElementById('invoice-modal');
+    const invoiceContent = document.getElementById('invoice-content');
+    const invoiceCloseBtn = document.getElementById('invoice-modal-close');
+    const invoiceOverlay = document.getElementById('invoice-modal-overlay');
+    const invoiceDownloadBtn = document.getElementById('invoice-download-btn');
+
+    function fmtINR(x){ try { return new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:2 }).format(parseFloat(x||0)); } catch(e){ return '₹' + (x||0); } }
+    function fmtDate(iso){ try { return new Date(iso).toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' }); } catch(e){ return iso; } }
+    function esc(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+    let _currentInvNumber = 'invoice';
+
+    function openInvoiceModal(inv){
+      _currentInvNumber = inv.invoice_number || 'invoice';
+      const seller = inv.seller || {};
+      const discount = parseFloat(inv.discount||0);
+      const tax = parseFloat(inv.tax||0);
+      const shipping = parseFloat(inv.shipping||0);
+
+      let itemsRows = '';
+      (inv.items||[]).forEach(function(it, i){
+        const variant = it.variant_label ? '<div class="text-xs text-gray-400 mt-0.5">'+esc(it.variant_label)+'</div>' : '';
+        itemsRows += `
+          <tr class="${i%2===0?'bg-white':'bg-gray-50/50'}">
+            <td class="px-4 py-3 text-sm text-gray-800">${esc(it.title)}${variant}</td>
+            <td class="px-4 py-3 text-sm text-center text-gray-600">${esc(String(it.quantity))}</td>
+            <td class="px-4 py-3 text-sm text-right text-gray-600">${fmtINR(it.unit_price)}</td>
+            <td class="px-4 py-3 text-sm text-right font-medium text-gray-900">${fmtINR(it.line_total)}</td>
+          </tr>`;
+      });
+
+      const sellerBlock = `
+        <div>
+          <div class="font-semibold text-gray-900 text-sm">{{ website.content.site_name }}</div>
+          ${seller.address ? `<div class="text-xs text-gray-500 mt-1">${esc(seller.address)}</div>` : ''}
+          ${seller.email ? `<div class="text-xs text-gray-500">${esc(seller.email)}</div>` : ''}
+          ${seller.phone ? `<div class="text-xs text-gray-500">${esc(seller.phone)}</div>` : ''}
+        </div>`;
+
+      const customerBlock = `
+        <div>
+          <div class="font-semibold text-gray-900 text-sm">${esc(inv.customer_name||'—')}</div>
+          ${inv.customer_email ? `<div class="text-xs text-gray-500 mt-1">${esc(inv.customer_email)}</div>` : ''}
+          ${inv.customer_phone ? `<div class="text-xs text-gray-500">${esc(inv.customer_phone)}</div>` : ''}
+          ${inv.shipping_address ? `<div class="text-xs text-gray-500 mt-1">${esc(inv.shipping_address)}</div>` : ''}
+        </div>`;
+
+      invoiceContent.innerHTML = `
+        <!-- Invoice Header -->
+        <div class="flex items-start justify-between mb-6">
+          <div>
+            <div class="text-2xl font-bold tracking-tight text-gray-900">{{ website.content.site_name|default:'Store' }}</div>
+            ${seller.address ? `<div class="text-xs text-gray-500 mt-1 max-w-[200px]">${esc(seller.address)}</div>` : ''}
+          </div>
+          <div class="text-right">
+            <div class="text-xl font-bold text-gray-800 tracking-widest uppercase">Invoice</div>
+            <div class="mt-1 text-xs text-gray-500"># <span class="font-mono font-semibold text-gray-700">${esc(inv.invoice_number)}</span></div>
+          </div>
+        </div>
+
+        <div class="h-px bg-gradient-to-r from-gray-900 via-gray-400 to-transparent mb-6"></div>
+
+        <!-- Meta row -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <div class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Invoice Date</div>
+            <div class="text-sm font-medium text-gray-800">${fmtDate(inv.placed_at)}</div>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <div class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Order ID</div>
+            <div class="text-sm font-mono font-medium text-gray-800">#${esc(String(inv.order_id))}</div>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <div class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Payment</div>
+            <div class="text-sm font-medium text-gray-800 capitalize">${inv.payment_method ? esc(inv.payment_method) : 'Paid'}</div>
+          </div>
+        </div>
+
+        <!-- Seller / Customer -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="rounded-xl border border-gray-100 p-4">
+            <div class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">From</div>
+            ${sellerBlock}
+          </div>
+          <div class="rounded-xl border border-gray-100 p-4">
+            <div class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Bill To</div>
+            ${customerBlock}
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="rounded-xl border border-gray-200 overflow-hidden mb-6">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-900 text-white">
+                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Item</th>
+                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-center">Qty</th>
+                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">Unit Price</th>
+                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">${itemsRows}</tbody>
+          </table>
+        </div>
+
+        <!-- Totals -->
+        <div class="flex justify-end mb-6">
+          <div class="w-full max-w-xs space-y-2">
+            <div class="flex items-center justify-between text-sm text-gray-600">
+              <span>Subtotal</span><span class="font-medium text-gray-900">${fmtINR(inv.subtotal)}</span>
+            </div>
+            ${discount > 0 ? `<div class="flex items-center justify-between text-sm text-gray-600"><span>Discount</span><span class="font-medium text-emerald-600">− ${fmtINR(inv.discount)}</span></div>` : ''}
+            ${tax > 0 ? `<div class="flex items-center justify-between text-sm text-gray-600"><span>Tax &amp; GST</span><span class="font-medium text-gray-900">${fmtINR(inv.tax)}</span></div>` : ''}
+            ${shipping > 0 ? `<div class="flex items-center justify-between text-sm text-gray-600"><span>Shipping</span><span class="font-medium text-gray-900">${fmtINR(inv.shipping)}</span></div>` : ''}
+            <div class="h-px bg-gray-200 my-2"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-base font-bold text-gray-900">Grand Total</span>
+              <span class="text-lg font-bold text-gray-900">${fmtINR(inv.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="border-t border-dashed border-gray-200 pt-4 text-center">
+          <p class="text-xs text-gray-400">Thank you for your purchase! For any queries, please contact <span class="text-gray-600">${esc(seller.email||seller.name)}</span>.</p>
+        </div>
+      `;
+
+      invoiceModal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      // Responsive label
+      const dlLabel = document.getElementById('inv-dl-label');
+      if (dlLabel) dlLabel.textContent = window.innerWidth < 480 ? 'PDF' : 'Download PDF';
+    }
+
+    window.openInvoiceModal = openInvoiceModal;
+
+    function closeInvoiceModal(){
+      invoiceModal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    invoiceCloseBtn.addEventListener('click', closeInvoiceModal);
+    invoiceOverlay.addEventListener('click', closeInvoiceModal);
+    window.addEventListener('keydown', function(e){ if(e.key==='Escape') closeInvoiceModal(); });
+
+    function _loadScript(src){
+      return new Promise(function(resolve, reject){
+        if(document.querySelector('script[src="'+src+'"]')){resolve();return;}
+        var s=document.createElement('script');
+        s.src=src; s.onload=resolve;
+        s.onerror=function(){reject(new Error('Failed to load '+src));};
+        document.head.appendChild(s);
+      });
+    }
+
+    invoiceDownloadBtn.addEventListener('click', async function(){
+      const btn = invoiceDownloadBtn;
+      const dlLabel = document.getElementById('inv-dl-label');
+      const origLabel = dlLabel ? dlLabel.textContent : 'Download PDF';
+      btn.disabled = true;
+      if(dlLabel) dlLabel.textContent = 'Generating…';
+
+      try {
+        await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+        await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+
+        const el = invoiceContent;
+
+        // Temporarily expand element so full content (not just visible scroll area) is captured
+        const prev = { overflow: el.style.overflow, maxHeight: el.style.maxHeight, height: el.style.height };
+        el.style.overflow = 'visible';
+        el.style.maxHeight = 'none';
+        el.style.height = 'auto';
+
+        const canvas = await window.html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: el.scrollWidth,
+          windowHeight: el.scrollHeight
+        });
+
+        // Restore original styles
+        el.style.overflow = prev.overflow;
+        el.style.maxHeight = prev.maxHeight;
+        el.style.height = prev.height;
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageW = pdf.internal.pageSize.getWidth();   // 210 mm
+        const pageH = pdf.internal.pageSize.getHeight();  // 297 mm
+        const margin = 10;
+        const usableW = pageW - margin * 2;
+        const usableH = pageH - margin * 2;
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.97);
+        const imgW = usableW;
+        const imgH = (canvas.height / canvas.width) * imgW;
+        const totalPages = Math.ceil(imgH / usableH);
+
+        for(let p = 0; p < totalPages; p++){
+          if(p > 0) pdf.addPage();
+          // Shift the image upward on each subsequent page to reveal the next slice
+          pdf.addImage(imgData, 'JPEG', margin, margin - (p * usableH), imgW, imgH);
+        }
+
+        pdf.save(_currentInvNumber + '.pdf');
+      } catch(err){
+        console.error('PDF generation error:', err);
+        alert('Could not generate PDF. Please try again.');
+      } finally {
+        btn.disabled = false;
+        if(dlLabel) dlLabel.textContent = origLabel;
+      }
+    });
+  })();
+  </script>
+
+  <!-- Notifications Async Polling -->
+  {% if customer_email %}
+  <script>
+  (function(){
+    const notifList = document.getElementById('notif-list');
+    const notifLoading = document.getElementById('notif-loading');
+    const notifEmpty = document.getElementById('notif-empty');
+    const notifBadge = document.getElementById('notif-badge');
+    const notifRefresh = document.getElementById('notif-refresh');
+    
+    // Mobile elements
+    const mobileNotifBtn = document.getElementById('mobile-notif-btn');
+    const mobileNotifBadge = document.getElementById('mobile-notif-badge');
+    const mobileNotifDrawer = document.getElementById('mobile-notif-drawer');
+    const mobileNotifClose = document.getElementById('mobile-notif-close');
+    const mobileNotifOverlay = document.getElementById('mobile-notif-overlay');
+    const mobileNotifList = document.getElementById('mobile-notif-list');
+    const mobileNotifEmpty = document.getElementById('mobile-notif-empty');
+    
+    if (!notifList) return;
+    
+    // Mobile drawer toggle
+    if (mobileNotifBtn && mobileNotifDrawer) {
+      mobileNotifBtn.addEventListener('click', function() {
+        mobileNotifDrawer.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        syncMobileNotifications();
+      });
+    }
+    if (mobileNotifClose) {
+      mobileNotifClose.addEventListener('click', closeMobileDrawer);
+    }
+    if (mobileNotifOverlay) {
+      mobileNotifOverlay.addEventListener('click', closeMobileDrawer);
+    }
+    function closeMobileDrawer() {
+      if (mobileNotifDrawer) mobileNotifDrawer.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+    
+    function syncMobileNotifications() {
+      if (!mobileNotifList || !notifList) return;
+      mobileNotifList.innerHTML = notifList.innerHTML;
+      if (notifEmpty && !notifEmpty.classList.contains('hidden')) {
+        mobileNotifEmpty.classList.remove('hidden');
+      } else {
+        mobileNotifEmpty.classList.add('hidden');
+      }
+    }
+    
+    const POLL_INTERVAL = 30000; // 30 seconds
+    let lastPollTime = null;
+    let pollTimer = null;
+    
+    function formatDate(isoStr) {
+      try {
+        const d = new Date(isoStr);
+        const now = new Date();
+        const diff = (now - d) / 1000; // seconds
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      } catch (e) { return ''; }
+    }
+    
+    function renderNotification(n) {
+      const isRead = n.is_read;
+      return `
+        <div class="rounded-lg border ${isRead ? 'border-gray-100 bg-white' : 'border-indigo-100 bg-indigo-50/50'} p-3 cursor-pointer transition hover:bg-gray-50"
+             data-notif-id="${n.id}" ${!isRead ? 'data-notif-unread="true"' : ''}>
+          <div class="flex items-start gap-2">
+            <div class="flex-shrink-0 mt-0.5">
+              ${!isRead 
+                ? '<div class="w-2 h-2 rounded-full bg-indigo-600"></div>'
+                : '<div class="w-2 h-2 rounded-full bg-gray-300"></div>'}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-900 truncate">${n.title}</div>
+              <div class="text-xs text-gray-600 line-clamp-2 mt-0.5">${n.message}</div>
+              <div class="text-[10px] text-gray-400 mt-1">${formatDate(n.created_at)}</div>
+              ${n.link ? `<a href="${n.link}" class="text-xs text-indigo-600 hover:underline mt-1 inline-block" target="_blank">View →</a>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function updateBadge(count) {
+      const badges = [notifBadge, mobileNotifBadge];
+      badges.forEach(badge => {
+        if (!badge) return;
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      });
+    }
+    
+    async function fetchNotifications(since) {
+      try {
+        let url = '{% url "public_customer_notifications" %}';
+        if (since) {
+          url = '{% url "public_customer_notifications_poll" %}?since=' + encodeURIComponent(since);
+        }
+        const res = await fetch(url, { credentials: 'same-origin' });
+        const data = await res.json();
+        return data;
+      } catch (e) {
+        return { success: false };
+      }
+    }
+    
+    async function loadNotifications(append) {
+      if (!append) {
+        notifLoading.classList.remove('hidden');
+        notifList.classList.add('hidden');
+        notifEmpty.classList.add('hidden');
+      }
+      
+      const data = await fetchNotifications(append ? lastPollTime : null);
+      
+      notifLoading.classList.add('hidden');
+      
+      if (!data.success) {
+        notifEmpty.textContent = 'Failed to load notifications.';
+        notifEmpty.classList.remove('hidden');
+        return;
+      }
+      
+      updateBadge(data.unread_count || 0);
+      
+      if (append && data.notifications && data.notifications.length > 0) {
+        // Prepend new notifications
+        const existingIds = new Set();
+        notifList.querySelectorAll('[data-notif-id]').forEach(el => {
+          existingIds.add(el.getAttribute('data-notif-id'));
+        });
+        data.notifications.reverse().forEach(n => {
+          if (!existingIds.has(n.id)) {
+            notifList.insertAdjacentHTML('afterbegin', renderNotification(n));
+          }
+        });
+      } else if (!append) {
+        if (!data.notifications || data.notifications.length === 0) {
+          notifEmpty.classList.remove('hidden');
+          notifList.classList.add('hidden');
+          return;
+        }
+        
+        notifList.innerHTML = data.notifications.map(renderNotification).join('');
+        notifList.classList.remove('hidden');
+      }
+      
+      // Update last poll time
+      if (data.notifications && data.notifications.length > 0) {
+        lastPollTime = data.notifications[0].created_at;
+      } else if (!lastPollTime) {
+        lastPollTime = new Date().toISOString();
+      }
+    }
+    
+    async function markAsRead(notifId) {
+      try {
+        const url = '{% url "public_customer_notification_mark_read" notification_id="00000000-0000-0000-0000-000000000000" %}'.replace('00000000-0000-0000-0000-000000000000', notifId);
+        await fetch(url, { method: 'POST', credentials: 'same-origin' });
+        
+        // Update UI
+        const el = notifList.querySelector(`[data-notif-id="${notifId}"]`);
+        if (el) {
+          el.classList.remove('border-indigo-100', 'bg-indigo-50/50');
+          el.classList.add('border-gray-100', 'bg-white');
+          el.removeAttribute('data-notif-unread');
+          const dot = el.querySelector('.rounded-full');
+          if (dot) {
+            dot.classList.remove('bg-indigo-600');
+            dot.classList.add('bg-gray-300');
+          }
+        }
+        
+        // Update badge
+        const currentCount = parseInt(notifBadge.textContent) || 0;
+        updateBadge(Math.max(0, currentCount - 1));
+      } catch (e) {}
+    }
+    
+    // Click to mark as read
+    notifList.addEventListener('click', function(e) {
+      const item = e.target.closest('[data-notif-id]');
+      if (item && item.hasAttribute('data-notif-unread')) {
+        markAsRead(item.getAttribute('data-notif-id'));
+      }
+    });
+    
+    // Mobile notification click handler
+    if (mobileNotifList) {
+      mobileNotifList.addEventListener('click', function(e) {
+        const item = e.target.closest('[data-notif-id]');
+        if (item && item.hasAttribute('data-notif-unread')) {
+          markAsRead(item.getAttribute('data-notif-id'));
+          // Also update mobile list item
+          item.classList.remove('border-indigo-100', 'bg-indigo-50/50');
+          item.classList.add('border-gray-100', 'bg-white');
+          item.removeAttribute('data-notif-unread');
+          const dot = item.querySelector('.rounded-full');
+          if (dot) {
+            dot.classList.remove('bg-indigo-600');
+            dot.classList.add('bg-gray-300');
+          }
+        }
+      });
+    }
+    
+    // Refresh button
+    if (notifRefresh) {
+      notifRefresh.addEventListener('click', function() {
+        lastPollTime = null;
+        loadNotifications(false);
+      });
+    }
+    
+    // Initial load
+    loadNotifications(false);
+    
+    // Start polling
+    pollTimer = setInterval(function() {
+      loadNotifications(true);
+    }, POLL_INTERVAL);
+    
+    // Stop polling when page is hidden
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        if (pollTimer) clearInterval(pollTimer);
+      } else {
+        loadNotifications(true);
+        pollTimer = setInterval(function() {
+          loadNotifications(true);
+        }, POLL_INTERVAL);
+      }
+    });
+  })();
+  </script>
+  {% endif %}
+
+  {% if customer_email %}
+  <!-- Wishlist AJAX remove -->
+  <script>
+  (function(){
+    function showWishlistToast(message, ok){
+      var root = document.getElementById('wishlist-toast-root');
+      if (!root){
+        root = document.createElement('div');
+        root.id = 'wishlist-toast-root';
+        root.className = 'fixed top-4 right-4 z-[99999] flex flex-col gap-2';
+        root.setAttribute('aria-live', 'polite');
+        document.body.appendChild(root);
+      }
+      var el = document.createElement('div');
+      el.className = (ok
+        ? 'bg-emerald-600 text-white'
+        : 'bg-red-50 text-red-700 ring-1 ring-red-200') +
+        ' rounded-lg shadow-lg px-4 py-3 flex items-center gap-3 max-w-xs min-w-[220px] transition-all duration-300';
+      el.innerHTML = (ok
+        ? '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>') +
+        '<div class="text-sm leading-5 flex-1">' + message + '</div>' +
+        '<button type="button" aria-label="Close" class="ml-auto text-xs opacity-70 hover:opacity-100">✕</button>';
+      el.querySelector('button').addEventListener('click', function(){ el.remove(); });
+      root.prepend(el);
+      setTimeout(function(){ try { el.remove(); } catch(_){} }, 3500);
+    }
+
+    document.addEventListener('click', async function(e){
+      var btn = e.target.closest('.wishlist-remove-btn');
+      if (!btn) return;
+      e.preventDefault();
+      var url = btn.getAttribute('data-remove-url');
+      var csrf = btn.getAttribute('data-csrf');
+      var title = btn.getAttribute('data-product-title') || 'Product';
+      btn.disabled = true;
+      btn.textContent = '...';
+      try {
+        var fd = new FormData();
+        fd.append('csrfmiddlewaretoken', csrf);
+        var res = await fetch(url, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: fd,
+          credentials: 'same-origin'
+        });
+        var data = await res.json();
+        if (res.ok && data.success){
+          var row = btn.closest('.p-4');
+          if (row){
+            row.style.transition = 'opacity 0.25s';
+            row.style.opacity = '0';
+            setTimeout(function(){
+              row.remove();
+              var wishlistEl = document.getElementById('acct-wishlist');
+              if (wishlistEl && !wishlistEl.querySelector('.p-4')){
+                wishlistEl.innerHTML = '<div class="p-6 text-center text-gray-500">No items in wishlist.</div>';
+              }
+            }, 250);
+          }
+          showWishlistToast('\u201c' + title + '\u201d removed from wishlist.', true);
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Remove';
+          showWishlistToast((data && data.error) || 'Could not remove item.', false);
+        }
+      } catch(err){
+        btn.disabled = false;
+        btn.textContent = 'Remove';
+        showWishlistToast('Network error. Please try again.', false);
+      }
+    });
+  })();
+  </script>
+  {% endif %}
+{% endblock %}
+
+

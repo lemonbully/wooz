@@ -1,0 +1,29 @@
+{% comment %}
+Seven product-image slots. Slot 1 is the main image. On edit, any images
+already saved are shown first; new uploads are added as further gallery images.
+The view reads request.FILES for image1..image7.
+{% endcomment %}
+<div class="app-f--full">
+  <span class="pal-field__label">Product images <span class="app-field-hint" style="display:inline">— first image is the main image</span></span>
+
+  {% if existing_images %}
+    <div class="app-imggrid">
+      {% for img in existing_images %}
+        <figure class="app-imgcell">
+          <img src="{{ img.image.url }}" alt="{{ img.alt_text }}">
+          <figcaption>Image {{ forloop.counter }}</figcaption>
+        </figure>
+      {% endfor %}
+    </div>
+    <p class="app-field-hint">Upload below to add more images.</p>
+  {% endif %}
+
+  <div class="app-slots">
+    {% for i in "1234567" %}
+      <label class="app-slot">
+        <span class="app-slot__n">Image {{ i }}{% if i == "1" and not existing_images %} <span class="app-req">*</span>{% endif %}</span>
+        <input type="file" name="image{{ i }}" accept="image/*"{% if i == "1" and not existing_images %} required{% endif %}>
+      </label>
+    {% endfor %}
+  </div>
+</div>

@@ -1,0 +1,49 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Out of stock{% endblock %}
+{% block crumb %}Out of stock{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Catalogue</p>
+    <h1 class="app-head__title pal-mt-4">Out of stock &amp; low</h1>
+    <p class="app-head__lead">Products that need restocking before they disappear from your storefront.</p>
+  </div></div>
+
+  <div class="app-block">
+    <div class="app-block__head"><p class="pal-mono">Out of stock</p><span class="app-pill">{{ out_of_stock|length }}</span></div>
+    {% if out_of_stock %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Product</th><th>Category</th><th class="app-table__num">Price</th><th></th></tr></thead>
+          <tbody>
+            {% for p in out_of_stock %}
+              <tr><td class="app-table__strong">{{ p.title }}</td><td>{{ p.category.name|default:"—" }}</td><td class="app-table__num">{{ site.currency }} {{ p.price }}</td><td class="app-table__actions"><a href="{% url 'store:product_edit' site.id p.id %}" class="app-iconbtn">Restock</a></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="app-card__body"><p class="app-note-inline">Nothing is out of stock. 🎉</p></div>
+    {% endif %}
+  </div>
+
+  <div class="app-block">
+    <div class="app-block__head"><p class="pal-mono">Running low</p><span class="app-pill">{{ low_stock|length }}</span></div>
+    {% if low_stock %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Product</th><th class="app-table__num">On hand</th><th class="app-table__num">Threshold</th><th></th></tr></thead>
+          <tbody>
+            {% for p in low_stock %}
+              <tr><td class="app-table__strong">{{ p.title }}</td><td class="app-table__num"><span class="app-badge app-badge--warn">{{ p.stock_on_hand }}</span></td><td class="app-table__num">{{ p.low_stock_threshold }}</td><td class="app-table__actions"><a href="{% url 'store:product_edit' site.id p.id %}" class="app-iconbtn">Restock</a></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="app-card__body"><p class="app-note-inline">No products are running low.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

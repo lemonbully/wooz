@@ -1,0 +1,94 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Order #{{ order.number }}{% endblock %}
+{% block crumb %}Order #{{ order.number }}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Order #{{ order.number }} · {{ order.created_at|date:"d M Y, H:i" }}</p>
+      <h1 class="app-head__title pal-mt-4">{{ order.customer_name|default:"Guest" }}</h1>
+      <p class="app-head__lead">
+        <span class="app-badge app-badge--{{ order.status }}">{{ order.get_status_display }}</span>
+        {% if order.payment_method %}· {{ order.payment_method }}{% endif %}
+      </p>
+    </div>
+    <div class="app-head__actions">
+      <form method="post" action="{% url 'store:order_status' site.id order.id %}" class="app-inline-form">
+        {% csrf_token %}
+        <select name="status" class="pal-select">
+          {% for st in status_choices %}
+            <option value="{{ st.value }}" {% if order.status == st.value %}selected{% endif %}>{{ st.label }}</option>
+          {% endfor %}
+        </select>
+        <button class="pal-btn" type="submit">Update</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-split">
+      <section>
+        <div class="app-card__head"><h2 class="app-card__title">Items</h2></div>
+        <div class="app-tablewrap" style="border-top:0;">
+          <table class="app-table">
+            <thead><tr><th>Product</th><th class="app-table__num">Qty</th><th class="app-table__num">Unit</th><th class="app-table__num">Total</th></tr></thead>
+            <tbody>
+              {% for item in items %}
+                <tr>
+                  <td><span class="app-table__strong">{{ item.title }}</span>{% if item.variant_label %}<div class="app-sub">{{ item.variant_label }}</div>{% endif %}</td>
+                  <td class="app-table__num">{{ item.quantity }}</td>
+                  <td class="app-table__num">{{ item.unit_price }}</td>
+                  <td class="app-table__num">{{ item.line_total }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4"><p class="app-note-inline">No line items recorded.</p></td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="app-meta">
+          <div class="app-meta__row"><span class="app-meta__k">Subtotal</span><span class="app-meta__v">{{ site.currency }} {{ order.subtotal }}</span></div>
+          <div class="app-meta__row"><span class="app-meta__k">Discount</span><span class="app-meta__v">− {{ site.currency }} {{ order.discount_amount }}</span></div>
+          <div class="app-meta__row"><span class="app-meta__k">Tax</span><span class="app-meta__v">{{ site.currency }} {{ order.tax_amount }}</span></div>
+          <div class="app-meta__row"><span class="app-meta__k">Shipping</span><span class="app-meta__v">{{ site.currency }} {{ order.shipping_amount }}</span></div>
+          <div class="app-meta__row app-meta__row--total"><span class="app-meta__k">Total</span><span class="app-meta__v">{{ site.currency }} {{ order.total }}</span></div>
+        </div>
+      </section>
+
+      <aside>
+        <div class="app-card__head"><h2 class="app-card__title">Customer</h2></div>
+        <div class="app-card__body">
+          <div class="app-kv">
+            <div><dt>Name</dt><dd>{{ order.customer_name|default:"—" }}</dd></div>
+            <div><dt>Email</dt><dd>{{ order.customer_email|default:"—" }}</dd></div>
+            <div><dt>Phone</dt><dd>{{ order.customer_phone|default:"—" }}</dd></div>
+            {% if order.gstin %}<div><dt>GSTIN</dt><dd>{{ order.gstin }}</dd></div>{% endif %}
+          </div>
+          <h3 class="app-subhead">Shipping</h3>
+          <p class="app-address">{{ order.shipping_address|default:"—" }}<br>{{ order.shipping_city }} {{ order.shipping_state }} {{ order.shipping_pincode }}</p>
+          {% if order.tracking_id %}<p class="app-sub">Tracking · {{ order.tracking_id }}</p>{% endif %}
+        </div>
+
+        {% if payments %}
+          <div class="app-card__head"><h2 class="app-card__title">Payments</h2></div>
+          <div class="app-card__body">
+            {% for p in payments %}
+              <div class="app-feed__item"><p class="app-feed__t">{{ p.get_gateway_display }} · {{ p.get_status_display }}</p><p class="app-feed__b">{{ site.currency }} {{ p.amount }}</p></div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if requests %}
+          <div class="app-card__head"><h2 class="app-card__title">Requests</h2></div>
+          <div class="app-card__body">
+            {% for r in requests %}
+              <div class="app-feed__item"><p class="app-feed__t">{{ r.get_request_type_display }} · <span class="app-badge app-badge--{{ r.status }}">{{ r.get_status_display }}</span></p><p class="app-feed__b">{{ r.reason|default:r.description|default:"—" }}</p></div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </aside>
+    </div>
+  </div>
+</div>
+{% endblock %}

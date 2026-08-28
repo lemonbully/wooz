@@ -1,0 +1,44 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Bills{% endblock %}
+{% block crumb %}Bills{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Money</p>
+    <h1 class="app-head__title pal-mt-4">Bills</h1>
+    <p class="app-head__lead">What this store owes OneWooz for the platform. Each billing period rolls per-order charges into one invoice.</p>
+  </div></div>
+
+  <div class="app-block">
+    <div class="app-kpis">
+      <div class="app-kpi"><p class="app-kpi__label">Outstanding</p><p class="app-kpi__value">{{ site.currency }} {{ outstanding }}</p></div>
+      <div class="app-kpi"><p class="app-kpi__label">Billing cycle</p><p class="app-kpi__value">{% if config %}{{ config.get_billing_cycle_type_display }}{% else %}—{% endif %}</p></div>
+      <div class="app-kpi"><p class="app-kpi__label">Per-order charge</p><p class="app-kpi__value">{% if config %}{% if config.per_order_charge_type == 'percent' %}{{ config.per_order_charge_value }}%{% else %}{{ site.currency }} {{ config.per_order_charge_value }}{% endif %}{% else %}—{% endif %}</p></div>
+    </div>
+  </div>
+
+  <div class="app-block">
+    {% if bills %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Invoice</th><th>Period</th><th class="app-table__num">Orders</th><th class="app-table__num">Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for b in bills %}
+              <tr>
+                <td class="app-table__id">{{ b.invoice_number|default:b.id }}</td>
+                <td>{{ b.period_start|date:"d M" }} → {{ b.period_end|date:"d M Y" }}</td>
+                <td class="app-table__num">{{ b.total_orders }}</td>
+                <td class="app-table__num">{{ b.currency }} {{ b.total_amount }}</td>
+                <td><span class="app-badge app-badge--{% if b.status == 'paid' %}ok{% elif b.status == 'pending_review' %}warn{% else %}danger{% endif %}">{{ b.get_status_display }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="app-empty"><h2 class="app-empty__title">No bills yet</h2><p class="app-empty__text">Invoices appear here at the end of each billing period.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

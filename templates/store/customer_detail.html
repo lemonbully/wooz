@@ -1,0 +1,39 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · {{ customer.name|default:customer.email }}{% endblock %}
+{% block crumb %}{{ customer.name|default:customer.email }}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Customer</p>
+    <h1 class="app-head__title pal-mt-4">{{ customer.name|default:customer.email }}</h1>
+    <p class="app-head__lead">{{ customer.email }}{% if customer.phone %} · {{ customer.phone }}{% endif %}</p>
+  </div></div>
+
+  <div class="app-block">
+    <div class="app-kpis">
+      <div class="app-kpi"><p class="app-kpi__label">Orders</p><p class="app-kpi__value">{{ order_count }}</p></div>
+      <div class="app-kpi"><p class="app-kpi__label">Total spent</p><p class="app-kpi__value">{{ site.currency }} {{ spent }}</p></div>
+      <div class="app-kpi"><p class="app-kpi__label">Addresses</p><p class="app-kpi__value">{{ addresses|length }}</p></div>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-card__head"><h2 class="app-card__title">Order history</h2></div>
+    {% if orders %}
+      <div class="app-tablewrap" style="border-top:0;">
+        <table class="app-table">
+          <thead><tr><th>Order</th><th>Placed</th><th>Status</th><th class="app-table__num">Total</th></tr></thead>
+          <tbody>
+            {% for o in orders %}
+              <tr><td class="app-table__id"><a href="{% url 'store:order_detail' site.id o.id %}">#{{ o.number }}</a></td><td>{{ o.created_at|date:"d M Y" }}</td><td><span class="app-badge app-badge--{{ o.status }}">{{ o.get_status_display }}</span></td><td class="app-table__num">{{ site.currency }} {{ o.total }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="app-card__body"><p class="app-note-inline">No orders from this customer yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

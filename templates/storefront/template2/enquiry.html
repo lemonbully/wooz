@@ -1,0 +1,301 @@
+{% extends 'storefront/template2/base.html' %}
+{% load static %}
+{% load website_filters %}
+
+{% block content %}
+<div class="bg-white font-sans leading-normal tracking-normal min-h-screen antialiased overflow-x-hidden">
+    <div class="max-w-7xl mx-auto px-8 sm:px-6 lg:px-8 pb-20 sm:py-16 lg:py-[2rem]">
+        <!-- Light themed contact form + testimonial (Image 2 inspired) -->
+        <div class="bg-gray-100 rounded-3xl overflow-hidden mb-0 sm:mb-20 lg:mb-24">
+          <div class="lg:grid lg:grid-cols-12">
+              <!-- Testimonial / Aside  - Mobile-->
+              <div class="block md:mt-10 md:hidden lg:col-span-5 bg-white p-6 sm:p-10 lg:p-12">
+                <div class="flex items-center gap-3">
+                    <svg class="h-6 w-6 text-indigo-600" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 12l9-9 9 9-9 9-9-9z"/></svg>
+                    <span class="text-indigo-700 font-semibold text-lg">{{ website.content.site_name|default:'Workcation' }}</span>
+                </div>
+
+                <blockquote class="mt-6 text-lg leading-8 text-gray-700">
+                    "{{ website.content.contact_info.ceo_message|default:'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nemo expedita voluptas culpa sapiente alias molestiae. Numquam corrupti in laborum sed rerum et corporis.' }}"
+                </blockquote>
+
+                <div class="mt-8 mb-10 flex items-center gap-4">
+                    <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-semibold">
+                        {% if website.content.contact_info.ceo_profile_picture %}
+                            <img src="{{ website.content.contact_info.ceo_profile_picture }}" {% media_attrs website website.content.contact_info.ceo_profile_picture "Profile" %} class="h-12 w-12 object-cover">
+                        {% elif website.content.desktop_logo %}
+                            <img src="{{ website.content.desktop_logo }}" {% media_attrs website website.content.desktop_logo "Logo" %} class="h-8 w-8 object-contain">
+                        {% else %}
+                            {% with dn=website.content.contact_info.ceo_name|default:'BG' %}
+                                {{ dn|slice:":1"|upper }}
+                            {% endwith %}
+                        {% endif %}
+                    </span>
+                    <div>
+                        <div class="font-semibold text-gray-900">{{ website.content.contact_info.ceo_designation|default:'CEO' }}</div>
+                        <div class="text-sm text-gray-600">{{ website.content.contact_info.ceo_name|default:'Workcation' }}</div>
+                    </div>
+                </div>
+              </div>
+              <!-- Form -->
+              <div class="lg:col-span-7 p-6 sm:p-10 lg:p-12">
+                  <h2 class="text-2xl sm:text-4xl font-bold text-gray-900 leading-tight">Let's talk about your project</h2>
+                  <p class="mt-3 text-gray-600">We help companies and individuals build out their brand guidelines.</p>
+
+                  {% if messages %}
+                      {% for message in messages %}
+                          <div class="mt-6 mb-2 p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">{{ message }}</div>
+                      {% endfor %}
+                  {% endif %}
+
+                  <form id="contactForm" method="post" action="{% url 'public_enquiry' %}" class="mt-6 sm:mt-8 space-y-5 sm:space-y-6">
+                      {% csrf_token %}
+                      <!-- Hidden fields to preserve backend expectations -->
+                      <input type="hidden" name="name" id="full_name_hidden">
+                      <input type="hidden" name="email" id="email_hidden">
+                      <input type="hidden" name="subject" id="subject_hidden" value="New enquiry from website">
+
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                          <div>
+                              <label for="full_name" class="block text-sm font-medium text-gray-700">Full name</label>
+                              <input id="full_name" type="text" autocomplete="name" class="mt-2 w-full rounded-xl border-gray-200 bg-white px-4 py-3 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="John Doe" required>
+                          </div>
+                          <div>
+                              <label for="phone" class="block text-sm font-medium text-gray-700">Phone</label>
+                              <input id="phone" name="phone" type="tel" autocomplete="tel" class="mt-2 w-full rounded-xl border-gray-200 bg-white px-4 py-3 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="123-456-7890" required>
+                          </div>                    
+                      </div>
+
+                      <div>
+                          <label for="message" class="block text-sm font-medium text-gray-700">Message</label>
+                          <textarea id="message" name="message" rows="5" class="mt-2 w-full rounded-xl border-gray-200 bg-white px-4 py-3 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Tell us a little about your project" required></textarea>
+                      </div>
+
+                      <div class="pt-2">
+                          <button type="submit" class="w-full sm:w-auto inline-flex justify-center rounded-xl bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-indigo-700 active:scale-[.98] transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Let's talk</button>
+                      </div>
+
+                      <p class="mt-2 text-xs sm:text-sm text-gray-500">
+                        By submitting this form, I agree to the
+                        <a class="underline hover:text-gray-700" href="{% url 'privacy_policy_page' %}">privacy policy</a>.
+                      </p>
+                  </form>
+              </div>
+
+              <!-- Testimonial / Aside -->
+              <div class="hidden md:block lg:col-span-5 bg-white/70 border-t lg:border-t-0 lg:border-l border-gray-200 p-6 sm:p-10 lg:p-12">
+                  <div class="flex items-center gap-3">
+                      <svg class="h-6 w-6 text-indigo-600" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 12l9-9 9 9-9 9-9-9z"/></svg>
+                      <span class="text-indigo-700 font-semibold text-lg">{{ website.content.site_name|default:'Workcation' }}</span>
+                  </div>
+
+                  <blockquote class="mt-6 text-lg leading-8 text-gray-700">
+                      "{{ website.content.contact_info.ceo_message|default:'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nemo expedita voluptas culpa sapiente alias molestiae. Numquam corrupti in laborum sed rerum et corporis.' }}"
+                  </blockquote>
+
+                  <div class="mt-8 flex items-center gap-4">
+                      <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-semibold">
+                          {% if website.content.contact_info.ceo_profile_picture %}
+                              <img src="{{ website.content.contact_info.ceo_profile_picture }}" {% media_attrs website website.content.contact_info.ceo_profile_picture "Profile" %} class="h-12 w-12 object-cover">
+                          {% elif website.content.desktop_logo %}
+                              <img src="{{ website.content.desktop_logo }}" {% media_attrs website website.content.desktop_logo "Logo" %} class="h-8 w-8 object-contain">
+                          {% else %}
+                              {% with dn=website.content.contact_info.ceo_name|default:'Contact Name Goes Here' %}
+                                  {{ dn|slice:":1"|upper }}
+                              {% endwith %}
+                          {% endif %}
+                      </span>
+                      <div>
+                          <div class="font-semibold text-gray-900">{{ website.content.contact_info.ceo_designation|default:'CEO' }}</div>
+                          <div class="text-sm text-gray-600">{{ website.content.contact_info.ceo_name|default:'Contact Name Goes HEre' }}</div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+        <!-- Our offices (Image 1 inspired) -->
+        <div class="mt-10 sm:mt-12 md:px-0">
+            <div class="max-w-3xl">
+                <h1 class="text-3xl sm:text-5xl uppercase font-semibold text-gray-900 tracking-tight leading-tight">Our office</h1>
+                <p class="mt-3 text-base sm:text-xl text-gray-600">Reach us at our headquarters and channels below. Our team is available on business days and quick to respond.</p>
+            </div>
+
+            <div class="mt-10 sm:mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
+                <!-- Office address -->
+                <div class="border-l-4 sm:border-l-4 border-t-0 sm:border-t-0 pl-4 sm:pl-6 pt-4 sm:pt-0 border-[#2f302f]">
+                    <h3 class="text-xl font-semibold uppercase text-gray-900">Our Office</h3>
+                    <p class="mt-3 text-gray-600 leading-relaxed sm:leading-relaxed leading-loose">{{ website.content.contact_info.address|default:"4556 Brendan Ferry<br>Los Angeles, CA 90210"|safe }}</p>
+                </div>
+
+                <!-- Email -->
+                <div class="border-l-4 sm:border-l-4 border-t-0 sm:border-t-0 pl-4 sm:pl-6 pt-4 sm:pt-0 border-[#2f302f]">
+                    <h3 class="text-xl font-semibold uppercase text-gray-900">Email</h3>
+                    <p class="mt-3 text-gray-600 leading-loose sm:leading-normal">
+                        <a class="text-indigo-600 hover:text-indigo-700" href="mailto:{{ website.content.contact_info.contact_email|default:'contact@example.com' }}">{{ website.content.contact_info.contact_email|default:'contact@example.com' }}</a>
+                    </p>
+                </div>
+
+                <!-- Phone -->
+                <div class="border-l-4 sm:border-l-4 border-t-0 sm:border-t-0 pl-4 sm:pl-6 pt-4 sm:pt-0 border-[#2f302f]">
+                    <h3 class="text-xl font-semibold uppercase text-gray-900">Phone</h3>
+                    <p class="mt-3 text-gray-600 leading-loose sm:leading-normal">
+                        <a class="text-indigo-600 hover:text-indigo-700" href="tel:{{ website.content.contact_info.mobile_number|default:'+1234567890' }}">{{ website.content.contact_info.mobile_number|default:'+1 (234) 567-890' }}</a>
+                    </p>
+                </div>
+
+                <!-- Office hours -->
+                <div class="border-l-4 sm:border-l-4 border-t-0 sm:border-t-0 pl-4 sm:pl-6 pt-4 sm:pt-0 border-[#2f302f]">
+                    <h3 class="text-xl font-semibold uppercase text-gray-900">Office hours</h3>
+                    <p class="mt-3 text-gray-600 leading-loose sm:leading-normal">
+                        {% with start_day=website.content.contact_info.office_start_day|default:'Monday' %}
+                        {% with end_day=website.content.contact_info.office_end_day|default:'Friday' %}
+                        {% with start_time=website.content.contact_info.office_start_time|default:'09:30' %}
+                        {% with end_time=website.content.contact_info.office_end_time|default:'18:30' %}
+                        {% with holidays=website.content.contact_info.office_holidays|default_if_none:'' %}
+                            {{ start_day }} – {{ end_day }}: 
+                            {% if ":" in start_time %}
+                                {{ start_time }}
+                            {% else %}
+                                {{ start_time|slice:":2" }}:{{ start_time|slice:"2:" }}
+                            {% endif %} – 
+                            {% if ":" in end_time %}
+                                {{ end_time }}
+                            {% else %}
+                                {{ end_time|slice:":2" }}:{{ end_time|slice:"2:" }}
+                            {% endif %}
+                            <br>
+                            {% if holidays %}
+                                {% if holidays|length > 1 %}
+                                    {% for day in holidays %}
+                                        {% if forloop.last and not forloop.first %}and {% endif %}{{ day }}{% if not forloop.last and holidays|length > 2 %}, {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    {{ holidays|join:", " }}
+                                {% endif %}: Closed
+                            {% endif %}
+                        {% endwith %}
+                        {% endwith %}
+                        {% endwith %}
+                        {% endwith %}
+                        {% endwith %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {% with map=website.content.contact_info.map_location %}
+        {% if map %}
+        <div class="mt-12 sm:mt-16">
+            <div class="max-w-3xl">
+                <h2 class="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">Find us on the map</h2>
+                <p class="mt-2 text-sm sm:text-base text-gray-600">Get directions to our location.</p>
+            </div>
+            <div class="mt-5 rounded-3xl overflow-hidden border border-gray-200 bg-gray-50 h-72 sm:h-96 shadow-sm">
+                <iframe
+                    src="{{ map }}"
+                    class="w-full h-full"
+                    frameborder="0"
+                    style="border:0;"
+                    allowfullscreen=""
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    aria-label="Google Maps location"
+                ></iframe>
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var form = document.getElementById('contactForm');
+  if (!form) return;
+  // Legacy multi-field support (first/last name, website, budget)
+  var first = document.getElementById('first_name');
+  var last = document.getElementById('last_name');
+  var website = document.getElementById('website');
+  var budget = document.getElementById('budget');
+  // Current single-field inputs
+  var fullNameInput = document.getElementById('full_name');
+  var phoneInput = document.getElementById('phone');
+  var emailHidden = document.getElementById('email_hidden');
+  var fullNameHidden = document.getElementById('full_name_hidden');
+  var subjectHidden = document.getElementById('subject_hidden');
+
+  function buildPayload() {
+    var fd = new FormData(form);
+    if (fullNameHidden) {
+      var fullName = '';
+      if (first || last) {
+        fullName = ((first && first.value) ? first.value : '') + ' ' + ((last && last.value) ? last.value : '');
+      } else if (fullNameInput) {
+        fullName = fullNameInput.value || '';
+      }
+      fullNameHidden.value = fullName.trim();
+    }
+    if (budget && subjectHidden && (!subjectHidden.value || subjectHidden.value === 'New enquiry from website')) {
+      subjectHidden.value = 'Enquiry - Budget: ' + budget.value;
+    }
+    if (website && emailHidden) {
+      var w = (website.value || '').trim();
+      var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      emailHidden.value = emailPattern.test(w) ? w : '';
+    }
+    return new URLSearchParams(new FormData(form));
+  }
+
+  function setSubmittingState(isSubmitting) {
+    var btn = form.querySelector('button[type="submit"]');
+    if (!btn) return;
+    btn.disabled = isSubmitting;
+    if (isSubmitting) {
+      btn.dataset.originalText = btn.textContent;
+      btn.textContent = 'Sending...';
+      btn.classList.add('opacity-70', 'cursor-not-allowed');
+    } else {
+      btn.textContent = btn.dataset.originalText || 'Let\'s talk';
+      btn.classList.remove('opacity-70', 'cursor-not-allowed');
+    }
+  }
+
+  function showAlert(kind, text) {
+    var alert = document.createElement('div');
+    alert.className = 'mt-6 mb-2 p-4 rounded-lg ' + (kind === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800');
+    alert.textContent = text;
+    form.parentNode.insertBefore(alert, form);
+    setTimeout(function(){ alert.remove(); }, 6000);
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    setSubmittingState(true);
+    var payload = buildPayload();
+    fetch(form.action, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': form.querySelector('input[name="csrfmiddlewaretoken"]').value, 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: payload.toString()
+    }).then(function(res){
+      return res.json().then(function(data){ return { ok: res.ok, data: data }; });
+    }).then(function(result){
+      if (result.ok && result.data && result.data.status === 'success') {
+        showAlert('success', result.data.message || 'Sent successfully.');
+        form.reset();
+      } else {
+        var err = (result.data && (result.data.errors || result.data.message)) || 'Something went wrong. Please try again.';
+        if (Array.isArray(err)) { err = err.join(' '); }
+        showAlert('error', err);
+      }
+    }).catch(function(){
+      showAlert('error', 'Network error. Please try again.');
+    }).finally(function(){
+      setSubmittingState(false);
+    });
+  });
+});
+</script>
+
+{# Enquiry page must render contact-specific FAQs managed in edit_website #}
+{% include 'storefront/template2/components/contact_faq.html' %}
+{% endblock %}

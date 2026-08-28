@@ -1,0 +1,93 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Custom domain{% endblock %}
+{% block crumb %}Custom domain{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Storefront</p>
+    <h1 class="app-head__title pal-mt-4">Custom domain</h1>
+    <p class="app-head__lead">
+      Serve your store on your own domain instead of
+      <code>{{ site.slug }}.{{ storefront_apex }}</code>. Point your DNS at
+      OneWooz, then verify.
+    </p>
+  </div></div>
+
+  {# ---- Current domain + status ---- #}
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head">
+        <h2 class="app-card__title">Your domain</h2>
+        {% if site.custom_domain %}
+          {% if site.custom_domain_verified %}
+            <span class="app-pill app-pill--live">Verified</span>
+          {% else %}
+            <span class="app-pill">Pending verification</span>
+          {% endif %}
+        {% endif %}
+      </div>
+      <div class="app-card__body">
+        <form method="post" action="{% url 'store:domain_save' site.id %}" class="app-form">
+          {% csrf_token %}
+          <label class="pal-field">
+            <span class="pal-field__label">Domain</span>
+            <input class="pal-input" type="text" name="custom_domain"
+                   value="{{ site.custom_domain }}"
+                   placeholder="shop.yourbrand.com" autocomplete="off" spellcheck="false">
+          </label>
+          <p class="app-form__hint">Use a subdomain like <code>shop.yourbrand.com</code> or <code>www.yourbrand.com</code> (recommended), or your root domain.</p>
+          <div class="app-form__foot pal-btn-row">
+            <button class="pal-btn" type="submit">Save domain</button>
+            {% if site.custom_domain %}
+            <button class="pal-btn pal-btn--ghost" type="submit"
+                    formaction="{% url 'store:domain_verify' site.id %}">Verify now</button>
+            {% endif %}
+          </div>
+        </form>
+
+        {% if site.custom_domain %}
+        <form method="post" action="{% url 'store:domain_remove' site.id %}" class="pal-mt-8">
+          {% csrf_token %}
+          <button class="pal-link" type="submit">Remove this domain</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---- DNS instructions ---- #}
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">DNS setup</h2></div>
+      <div class="app-card__body">
+        <p class="app-form__hint pal-mt-0">
+          At your domain registrar / DNS provider, add this record. It usually
+          takes a few minutes to an hour to take effect.
+        </p>
+
+        <div class="app-kv pal-mt-8">
+          <div><dt>Type</dt><dd>CNAME</dd></div>
+          <div><dt>Name / Host</dt><dd>{{ site.custom_domain|default:"your subdomain (e.g. shop)" }}</dd></div>
+          <div><dt>Value / Target</dt><dd><code>{{ cname_target }}</code></dd></div>
+          <div><dt>TTL</dt><dd>300 (or lowest available)</dd></div>
+        </div>
+
+        <div class="pal-alert pal-mt-12">
+          <p class="pal-alert__title">Using your root domain (no subdomain)?</p>
+          Most providers don’t allow a CNAME on the root (<code>yourbrand.com</code>).
+          Use an <strong>ALIAS</strong> / <strong>ANAME</strong> record to
+          <code>{{ cname_target }}</code> if your provider supports it, or point
+          the <code>www</code> subdomain with the CNAME above and redirect the root to it.
+        </div>
+
+        <p class="app-form__hint pal-mt-12">
+          After the record is live, click <strong>Verify now</strong> above. Once
+          verified, your storefront answers on your domain; secure HTTPS is
+          provisioned automatically shortly after.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

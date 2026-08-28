@@ -1,0 +1,85 @@
+{% extends "ud/_shell.html" %}
+{% load static %}
+
+{% block title %}Choose a design · OneWooz{% endblock %}
+{% block crumb %}Choose a design{% endblock %}
+
+{% block main %}
+<div class="app-page">
+
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">03 — Choose a design</p>
+      <h1 class="app-head__title pal-mt-4">Pick your storefront design</h1>
+      <p class="app-head__lead">
+        Two designs, each tuned for how you sell. The one that matches
+        <strong>{{ site.name }}</strong> is recommended — but you can pick either,
+        and change it later. Everything is editable afterwards.
+      </p>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="tpl-grid">
+      {% for theme in themes %}
+      <form method="post" class="tpl-card {% if theme.recommended %}tpl-card--rec{% endif %}">
+        {% csrf_token %}
+        <input type="hidden" name="theme" value="{{ theme.value }}">
+
+        <div class="tpl-card__preview tpl-card__preview--{{ theme.value }}">
+          <span class="tpl-card__audience">{{ theme.audience }}</span>
+          {% if theme.recommended %}<span class="tpl-card__rec">Recommended</span>{% endif %}
+          <div class="tpl-card__mock" aria-hidden="true">
+            <span class="tpl-card__mock-bar"></span>
+            <span class="tpl-card__mock-hero"></span>
+            <span class="tpl-card__mock-row"><i></i><i></i><i></i></span>
+          </div>
+        </div>
+
+        <div class="tpl-card__body">
+          <h2 class="tpl-card__title">{{ theme.name }}</h2>
+          <p class="tpl-card__desc">{{ theme.description }}</p>
+          <div class="tpl-card__foot">
+            <a href="{{ storefront_url }}" target="_blank" rel="noopener"
+               class="pal-btn pal-btn--ghost pal-btn--sm">Preview</a>
+            <button type="submit" class="pal-btn pal-btn--sm">
+              Use this design <span class="pal-btn__arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+      </form>
+      {% endfor %}
+    </div>
+
+    <p class="app-wizard__note pal-mt-16">
+      Not sure? Choose the recommended design — you can switch anytime from the editor.
+    </p>
+  </div>
+</div>
+
+<style nonce="{{ csp_nonce }}">
+  .tpl-grid{display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .tpl-card{display:flex;flex-direction:column;border:1px solid var(--pal-line,#e5e5e0);
+    border-radius:14px;overflow:hidden;background:var(--pal-surface,#fff);transition:box-shadow .2s,border-color .2s}
+  .tpl-card:hover{box-shadow:0 8px 30px rgba(0,0,0,.08);border-color:var(--pal-accent,#4b2bf5)}
+  .tpl-card--rec{border-color:var(--pal-accent,#4b2bf5)}
+  .tpl-card__preview{position:relative;height:180px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#eef0ff,#f7f5ff)}
+  .tpl-card__preview--template2{background:linear-gradient(135deg,#eef7f3,#f4f8ff)}
+  .tpl-card__audience{position:absolute;top:12px;left:12px;font:600 11px/1 ui-sans-serif,system-ui;
+    letter-spacing:.08em;text-transform:uppercase;color:#4b2bf5;background:#fff;padding:5px 9px;border-radius:999px}
+  .tpl-card__rec{position:absolute;top:12px;right:12px;font:600 11px/1 ui-sans-serif,system-ui;
+    color:#fff;background:#4b2bf5;padding:5px 9px;border-radius:999px}
+  .tpl-card__mock{width:78%;display:flex;flex-direction:column;gap:8px}
+  .tpl-card__mock-bar{height:10px;border-radius:4px;background:rgba(30,41,59,.18)}
+  .tpl-card__mock-hero{height:64px;border-radius:8px;background:rgba(75,43,245,.22)}
+  .tpl-card__preview--template2 .tpl-card__mock-hero{background:rgba(16,122,90,.22)}
+  .tpl-card__mock-row{display:flex;gap:8px}
+  .tpl-card__mock-row i{flex:1;height:34px;border-radius:6px;background:rgba(30,41,59,.12)}
+  .tpl-card__body{padding:1.1rem 1.2rem 1.3rem;display:flex;flex-direction:column;gap:.5rem;flex:1}
+  .tpl-card__title{font-size:1.05rem;font-weight:700;color:var(--pal-ink,#171714)}
+  .tpl-card__desc{font-size:.9rem;color:var(--pal-muted,#55554d);flex:1}
+  .tpl-card__foot{display:flex;gap:.6rem;margin-top:.6rem}
+  .pal-btn--sm{padding:.45rem .9rem;font-size:.85rem}
+</style>
+{% endblock %}

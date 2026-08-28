@@ -1,0 +1,168 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% firstof website.content.site_name website.content.websiteName "Website" as site_name %}
+    {% if seo.page_meta_title %}
+    <title>{{ seo.page_meta_title }}</title>
+    {% elif page_title %}
+    <title>{{ site_name }} - {{ page_title }}</title>
+    {% else %}
+    <title>{{ site_name }}</title>
+    {% endif %}
+    <!-- Performance hints -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://app.1matrix.io" crossorigin>
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="//app.1matrix.io">
+    <!-- Tailwind CSS (compiled + self-hosted for CSP safety) -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={% now 'U' %}">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">    
+    <!-- Favicon -->
+    {% if website.content.favicon %}
+    <link rel="icon" href="{{ website.content.favicon }}" type="image/x-icon">
+    {% endif %}
+    <!-- SEO Tags -->
+    {% firstof seo.meta_description page.content.meta_description website.content.seo.meta_description website.content.meta_description website.content.description as desc %}
+    {% if desc %}<meta name="description" content="{{ desc }}">{% endif %}
+    {% firstof website.content.seo.keywords website.content.seo.meta_keywords page.content.meta_keywords website.content.meta_keywords as kws %}
+    {% if kws %}<meta name="keywords" content="{{ kws }}">{% endif %}
+    <!-- Custom Meta Tags (safe meta-only rendering) -->
+    {% if website.content.seo.custom_meta_tags %}
+        {% for tag in website.content.seo.custom_meta_tags %}
+            {% if tag.kind == 'property' and tag.key and tag.content %}
+                <meta property="{{ tag.key|escape }}" content="{{ tag.content|escape }}">
+            {% elif tag.kind == 'http_equiv' and tag.key and tag.content %}
+                <meta http-equiv="{{ tag.key|escape }}" content="{{ tag.content|escape }}">
+            {% elif tag.key and tag.content %}
+                <meta name="{{ tag.key|escape }}" content="{{ tag.content|escape }}">
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    {% if noindex %}
+    <meta name="robots" content="noindex, nofollow">
+    {% else %}
+    <meta name="robots" content="index, follow">
+    {% endif %}
+    <!-- Open Graph Tags -->
+    {% firstof seo.og_title website.content.seo.og_title seo.meta_title website.content.seo.meta_title page.title website.content.site_name website.content.websiteName as ogt %}
+    {% if ogt %}<meta property="og:title" content="{{ ogt }}">{% endif %}
+    {% firstof seo.og_description website.content.seo.og_description seo.meta_description website.content.seo.meta_description page.content.meta_description website.content.meta_description website.content.description as ogd %}
+    {% if ogd %}<meta property="og:description" content="{{ ogd }}">{% endif %}
+    {% firstof seo.og_site_name website.content.site_name website.content.websiteName as ogsn %}
+    {% if ogsn %}<meta property="og:site_name" content="{{ ogsn }}">{% endif %}
+    {% firstof seo.og_url canonical_url as ogu %}
+    {% if ogu %}<meta property="og:url" content="{{ ogu }}">{% endif %}
+    {% firstof seo.og_image website.content.seo.og_image as ogi %}
+    {% if ogi %}<meta property="og:image" content="{{ ogi }}">{% endif %}
+    <meta property="og:type" content="website">
+    <!-- Twitter Card Tags -->
+    {% firstof seo.twitter_image as twi %}
+    <meta name="twitter:card" content="{% if twi %}summary_large_image{% else %}summary{% endif %}">
+    {% firstof seo.twitter_title seo.meta_title as twt %}
+    {% if twt %}<meta name="twitter:title" content="{{ twt }}">{% endif %}
+    {% firstof seo.twitter_description seo.meta_description as twd %}
+    {% if twd %}<meta name="twitter:description" content="{{ twd }}">{% endif %}
+    {% if twi %}<meta name="twitter:image" content="{{ twi }}">{% endif %}
+    {% firstof seo.twitter_url canonical_url as twu %}
+    {% if twu %}<meta name="twitter:url" content="{{ twu }}">{% endif %}
+    {% firstof seo.twitter_brand_name as twsite %}
+    {% if twsite %}<meta name="twitter:site" content="{{ twsite }}">{% endif %}
+    {% if canonical_url %}
+    <link rel="canonical" href="{{ canonical_url }}">
+    {% endif %}
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        {% if not embedded %}
+        /* Prevent layout shift: reserve fixed header space from first paint */
+        body {
+            padding-top: var(--header-height, 0px);
+        }
+        {% endif %}
+        {% if website.content.custom_css %}
+        {{ website.content.custom_css|safe }}
+        {% endif %}
+    </style>
+    
+    {% if page_schema_json %}
+    <script type="application/ld+json">
+        {{ page_schema_json|safe }}
+    </script>
+    {% endif %}
+    {% if website.content.seo.raw_schema_json %}
+    <script type="application/ld+json">
+        {{ website.content.seo.raw_schema_json|safe }}
+    </script>
+    {% endif %}
+
+    <!-- Custom Head Tags (Tracking, Analytics, Meta, etc.) -->
+    {% if website.content.head_scripts %}
+    {{ website.content.head_scripts|safe }}
+    {% endif %}
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="flex flex-col min-h-screen">
+    <!-- Header (hidden when embedded) -->
+    {% if not embedded %}
+    <header>
+        {% block header %}
+            {% include "storefront/components/navigation.html" %}
+        {% endblock %}
+    </header>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer (hidden when embedded) -->
+    {% if not embedded %}
+    <footer>
+        {% block footer %}
+            {% include "storefront/components/footer.html" %}
+        {% endblock %}
+    </footer>
+    {% endif %}
+    
+    <!-- Global Scripts -->
+    <script>
+        // Common functionality across all pages
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    if (targetId !== '#') {
+                        const targetElement = document.querySelector(targetId);
+                        if (targetElement) {
+                            targetElement.scrollIntoView({
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                });
+            });
+        });
+        
+        {% if website.content.custom_js %}
+        // Custom JavaScript from website settings
+        {{ website.content.custom_js|safe }}
+        {% endif %}
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html> 

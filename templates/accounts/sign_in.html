@@ -43,13 +43,9 @@
 {% endblock %}
 
 {% block auth_footer %}
-  {% comment %}
-  Public sign-up is currently disabled; accounts are created by an operator via
-  `python manage.py createuser`. Re-enable this link when sign-up returns.
   <p class="auth__footer">
     New to OneWooz? <a href="{% url 'accounts:sign_up' %}">Create an account</a>
   </p>
-  {% endcomment %}
 {% endblock %}
 
 {% block scripts %}

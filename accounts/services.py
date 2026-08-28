@@ -30,11 +30,76 @@ __all__ = [
     "clear_pending_login",
     "remember_device",
     "safe_next_url",
+    "is_signup_allowed",
+    "begin_email_verification",
+    "resolve_email_verification",
+    "clear_email_verification",
 ]
 
 PENDING_SESSION_KEY = "pending_login"
+EMAIL_VERIFY_SESSION_KEY = "email_verify"
+EMAIL_VERIFY_MAX_AGE = 600  # ten minutes to enter the emailed code
 TRUSTED_DEVICE_COOKIE = "ow_td"
 TRUSTED_DEVICE_DAYS = 30
+
+
+# --------------------------------------------------------------------------
+# Sign-up allowlist
+# --------------------------------------------------------------------------
+
+
+def is_signup_allowed(email: str) -> bool:
+    """Whether ``email`` may create an account during the private beta.
+
+    The allowlist lives in ``settings.SIGNUP_ALLOWLIST`` rather than being
+    hardcoded here, so the set of test users is one config value to change and
+    never requires editing a view.
+    """
+    allow = {a.strip().lower() for a in getattr(settings, "SIGNUP_ALLOWLIST", [])}
+    return (email or "").strip().lower() in allow
+
+
+# --------------------------------------------------------------------------
+# Emailed-code verification (a step in every sign-in and sign-up)
+# --------------------------------------------------------------------------
+
+
+def begin_email_verification(request, *, flow: str, email: str, data: dict) -> None:
+    """Park a half-finished sign-in/sign-up awaiting an emailed one-time code.
+
+    Only what is needed to finish the flow is stored, server-side in the
+    session: for a sign-in that is the user id; for a sign-up the profile fields
+    and an already-hashed password, never a plaintext one. The code itself is
+    never held here — only :mod:`accounts.otp` (server-side, hashed) knows it.
+    """
+    request.session[EMAIL_VERIFY_SESSION_KEY] = {
+        "flow": flow,
+        "email": email,
+        "at": timezone.now().isoformat(),
+        **data,
+    }
+
+
+def resolve_email_verification(request):
+    """Return the parked verification state, or ``None`` if absent/expired."""
+    state = request.session.get(EMAIL_VERIFY_SESSION_KEY)
+    if not state:
+        return None
+    started = state.get("at")
+    if started:
+        try:
+            age = (timezone.now() - timezone.datetime.fromisoformat(started)).total_seconds()
+            if age > EMAIL_VERIFY_MAX_AGE:
+                clear_email_verification(request)
+                return None
+        except (TypeError, ValueError):
+            clear_email_verification(request)
+            return None
+    return state
+
+
+def clear_email_verification(request) -> None:
+    request.session.pop(EMAIL_VERIFY_SESSION_KEY, None)
 
 
 # --------------------------------------------------------------------------

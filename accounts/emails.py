@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -11,8 +13,10 @@ from core.hosts import Surface
 
 __all__ = ["send_magic_link", "send_login_code", "send_new_device_notice"]
 
+logger = logging.getLogger(__name__)
 
-def _send(to: str, subject: str, template: str, context: dict) -> None:
+
+def _send(to: str, subject: str, template: str, context: dict) -> bool:
     # Email is rendered without a request — often from a Celery worker — so
     # the origin comes from settings rather than the live host. In development
     # that means links carry DEV_PORT; if you run runserver on another port,
@@ -36,11 +40,22 @@ def _send(to: str, subject: str, template: str, context: dict) -> None:
         html_body = ""
     if html_body:
         message.attach_alternative(html_body, "text/html")
-    message.send(fail_silently=False)
+
+    # A transport failure (SMTP refusal, an unreachable provider, or — in an
+    # SES sandbox — an unverified recipient) must not surface as a 500. It is
+    # logged with its cause and reported to the caller as a boolean, so an
+    # authentication view can tell the visitor "we couldn't send that" rather
+    # than leaking the recipient address through an unhandled stack trace.
+    try:
+        message.send(fail_silently=False)
+    except Exception:
+        logger.exception("Could not deliver %r email", template)
+        return False
+    return True
 
 
-def send_magic_link(email: str, url: str, *, minutes: int) -> None:
-    _send(
+def send_magic_link(email: str, url: str, *, minutes: int) -> bool:
+    return _send(
         email,
         "Your OneWooz sign-in link",
         "magic_link",
@@ -48,8 +63,8 @@ def send_magic_link(email: str, url: str, *, minutes: int) -> None:
     )
 
 
-def send_login_code(email: str, code: str, *, minutes: int) -> None:
-    _send(
+def send_login_code(email: str, code: str, *, minutes: int) -> bool:
+    return _send(
         email,
         f"{code} is your OneWooz sign-in code",
         "login_code",
@@ -57,13 +72,13 @@ def send_login_code(email: str, code: str, *, minutes: int) -> None:
     )
 
 
-def send_new_device_notice(email: str, *, ip: str, user_agent: str, when) -> None:
+def send_new_device_notice(email: str, *, ip: str, user_agent: str, when) -> bool:
     """Tell the owner about a sign-in from somewhere new.
 
     Sent after the fact rather than as a challenge: the value is that a
     compromise the user did not initiate becomes visible to them quickly.
     """
-    _send(
+    return _send(
         email,
         "New sign-in to your OneWooz account",
         "new_device",

@@ -1,0 +1,17 @@
+{
+  "LaunchTemplate": {
+    "LaunchTemplateSpecification": { "LaunchTemplateName": "onewooz-ecs", "Version": "$Latest" },
+    "Overrides": [
+      { "InstanceType": "t4g.medium" },
+      { "InstanceType": "m6g.medium" },
+      { "InstanceType": "m7g.medium" },
+      { "InstanceType": "t4g.large" },
+      { "InstanceType": "m6g.large" },
+      { "InstanceType": "m7g.large" }
+    ]
+  },
+  "InstancesDistribution": {
+    "OnDemandBaseCapacity": 0,
+    "OnDemandPercentageAboveBaseCapacity": 100
+  }
+}

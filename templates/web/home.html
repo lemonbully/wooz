@@ -1,5 +1,5 @@
 {% extends "web/_shell.html" %}
-{% load onewooz %}
+{% load static onewooz %}
 
 {% block title %}OneWooz — commerce infrastructure, one click deep{% endblock %}
 
@@ -82,26 +82,26 @@
               <nav class="pal-store__nav" aria-hidden="true"><span>Shop</span><span>Story</span><span>Cart&nbsp;(2)</span></nav>
             </div>
             <div class="pal-store__hero">
-              <img src="https://picsum.photos/seed/onewooz-ceramics/1000/560" alt="" loading="lazy" width="1000" height="560">
+              <img src="{% static 'img/hero-img1.png' %}" alt="" loading="lazy" width="1000" height="560">
               <div class="pal-store__hero-copy">
                 <div class="pal-store__hero-kicker">New — Winter table</div>
-                <div class="pal-store__hero-title">Made to be used every day.</div>
+                <div class="pal-store__hero-title">Made to Wear.</div>
               </div>
             </div>
             <div class="pal-store__grid" aria-hidden="true">
               <div class="pal-store__cell">
-                <img src="https://picsum.photos/seed/onewooz-p1/400/500" alt="" loading="lazy" width="400" height="500">
-                <div class="pal-store__cell-name">Stoneware mug</div>
+                <img src="{% static 'img/hero-img2.png' %}" alt="" loading="lazy" width="400" height="500">
+                <div class="pal-store__cell-name">Stoneware Cap</div>
                 <div class="pal-store__cell-price">₹ 640</div>
               </div>
               <div class="pal-store__cell">
-                <img src="https://picsum.photos/seed/onewooz-p2/400/500" alt="" loading="lazy" width="400" height="500">
-                <div class="pal-store__cell-name">Linen napkin set</div>
+                <img src="{% static 'img/hero-img3.png' %}" alt="" loading="lazy" width="400" height="500">
+                <div class="pal-store__cell-name">Classic Hoodie</div>
                 <div class="pal-store__cell-price">₹ 1,200</div>
               </div>
               <div class="pal-store__cell">
-                <img src="https://picsum.photos/seed/onewooz-p3/400/500" alt="" loading="lazy" width="400" height="500">
-                <div class="pal-store__cell-name">Cast pan, 10&Prime;</div>
+                <img src="{% static 'img/hero-img4.png' %}" alt="" loading="lazy" width="400" height="500">
+                <div class="pal-store__cell-name">Classic Loose-Fit</div>
                 <div class="pal-store__cell-price">₹ 3,450</div>
               </div>
             </div>
@@ -112,8 +112,7 @@
     </div>
   </div>
 </section>
-
-{# ------------------------------------------------------------------ Logos #}
+{% comment %} 
 <section class="pal-section pal-section--tight pal-ruled">
   <div class="pal-container">
     <p class="pal-mono pal-center" style="margin-bottom:1.75rem;">Trusted across apparel · food · industrial supply · home</p>
@@ -126,7 +125,7 @@
       <span class="pal-logos__item">Wilder</span>
     </div>
   </div>
-</section>
+</section> {% endcomment %}
 
 {# ----------------------------------------------------------- Order ticker #}
 {% comment %}

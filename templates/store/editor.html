@@ -1,0 +1,526 @@
+{% extends "store/_shell.html" %}
+{% load static %}
+
+{% block title %}Edit content · {{ site.name }} · OneWooz{% endblock %}
+{% block crumb %}Edit content{% endblock %}
+
+{% block main %}
+<div class="ed" id="ed">
+  {% csrf_token %}
+
+  <header class="ed-top">
+    <div class="ed-top__title">
+      <p class="pal-mono pal-mono--accent">Storefront</p>
+      <h1>Edit content</h1>
+    </div>
+    <div class="ed-top__right">
+      <div class="ed-save" id="ed-save" data-state="idle"><span class="ed-save__dot"></span><span id="ed-save__text">Saved</span></div>
+      <a href="{{ storefront_url }}" target="_blank" rel="noopener" class="pal-btn pal-btn--ghost">View storefront →</a>
+    </div>
+  </header>
+
+  {# ---- Horizontal tab strip (scroll-hinted) ---- #}
+  <div class="ow-scroller is-horizontal ed-tabs-wrap" data-scroller>
+    <nav class="ed-tabs ow-scroller__area" id="ed-tabs" data-scroller-area aria-label="Content sections"></nav>
+    <button type="button" class="ow-hint ow-hint--start" aria-label="Scroll left for more"><span class="ow-hint__arw">←</span> More</button>
+    <button type="button" class="ow-hint ow-hint--end" aria-label="Scroll right for more"><span class="ow-hint__arw">→</span> More</button>
+  </div>
+
+  <div class="ed-body">
+    <div class="ed-fields" id="ed-fields"></div>
+  </div>
+</div>
+
+{{ sections|json_script:"ed-sections" }}
+{{ content_data|json_script:"ed-content" }}
+{{ datasets|json_script:"ed-datasets" }}
+
+<style nonce="{{ csp_nonce }}">
+  /* Palantir treatment (see onewooz_design.md): squared, hairline-ruled, mono
+     metadata labels, one accent, no soft shadows. Uses the .pal tokens. */
+  .ed { display: flex; flex-direction: column; min-height: calc(100dvh - 61px); background: var(--pal-paper, #f4f4f2); }
+
+  .ed-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    padding: 1.5rem 2rem 1.25rem; border-bottom: 1px solid var(--pal-line); background: var(--pal-panel, #fff); }
+  .ed-top__title h1 { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2rem); letter-spacing: -0.03em; color: var(--pal-ink); margin-top: 0.35rem; }
+  .ed-top__right { display: flex; align-items: center; gap: 1rem; }
+  .ed-save { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); white-space: nowrap; }
+  .ed-save__dot { width: 7px; height: 7px; background: var(--positive, #0f7a53); flex: none; }
+  .ed-save[data-state="saving"] .ed-save__dot { background: var(--pal-accent); }
+  .ed-save[data-state="error"] .ed-save__dot { background: #b42318; }
+
+  /* Horizontal tabs */
+  .ed-tabs-wrap { border-bottom: 1px solid var(--pal-line); background: var(--pal-panel, #fff); }
+  .ed-tabs { display: flex; gap: 0; padding: 0 1.25rem; }
+  .ed-tab { display: inline-flex; align-items: center; gap: 0.5rem; white-space: nowrap; cursor: pointer;
+    padding: 0.95rem 0.95rem; border: 0; border-bottom: 2px solid transparent; background: none;
+    font-family: var(--pal-font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--pal-muted); transition: color 140ms ease, border-color 140ms ease; }
+  .ed-tab:hover { color: var(--pal-ink); }
+  .ed-tab[aria-current="true"] { color: var(--pal-ink); border-bottom-color: var(--pal-accent); }
+  .ed-tab__ico { width: 16px; height: 16px; flex: none; opacity: 0.85; }
+  .ed-tab__ico svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Fields */
+  .ed-body { flex: 1; overflow-y: auto; }
+  .ed-fields { margin: 0 auto; padding: 2.25rem 2rem 5rem; }
+  @media (max-width: 40rem) { .ed-fields { padding: 1.5rem 1.1rem 4rem; } }
+  .ed-panel { display: none; }
+  .ed-panel.is-active { display: block; }
+  .ed-panel__head { margin-bottom: 1.75rem; padding-bottom: 1rem; border-bottom: 1px solid var(--pal-line); }
+  .ed-panel__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.35rem; letter-spacing: -0.02em; color: var(--pal-ink); }
+  .ed-panel__hint { font-size: 0.9rem; line-height: 1.55; color: var(--pal-muted); margin-top: 0.4rem; max-width: 60ch; }
+
+  .ed-field { margin-bottom: 1.6rem; }
+  .ed-field__label { display: block; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 0.45rem; }
+  .ed-field__help { font-size: 0.78rem; line-height: 1.5; color: var(--pal-faint); margin-top: 0.4rem; }
+
+  .ed-input, .ed-textarea, .ed-select {
+    width: 100%; font: inherit; font-size: 0.92rem; color: var(--pal-ink);
+    background: var(--pal-panel, #fff); border: 1px solid var(--pal-line); border-radius: 0;
+    padding: 0.7rem 0.8rem; transition: border-color 140ms ease, box-shadow 140ms ease; }
+  .ed-input::placeholder, .ed-textarea::placeholder { color: var(--pal-faint); }
+  .ed-input:focus, .ed-textarea:focus, .ed-select:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .ed-textarea { min-height: 6.5rem; resize: vertical; line-height: 1.6; }
+  .ed-textarea--code { font-family: var(--pal-font-mono); font-size: 0.8rem; min-height: 8rem; }
+  .ed-select { appearance: none; cursor: pointer; padding-right: 2rem;
+    background-image: linear-gradient(45deg, transparent 50%, var(--pal-muted) 50%), linear-gradient(135deg, var(--pal-muted) 50%, transparent 50%);
+    background-position: calc(100% - 1rem) 55%, calc(100% - 0.65rem) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+
+  .ed-color { display: flex; align-items: center; gap: 0.6rem; }
+  .ed-color__swatch { position: relative; width: 42px; height: 40px; flex: none; border: 1px solid var(--pal-line); overflow: hidden; cursor: pointer; }
+  .ed-color__swatch input { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); border: 0; padding: 0; cursor: pointer; }
+  .ed-color .ed-input { max-width: 9.5rem; font-family: var(--pal-font-mono); text-transform: uppercase; }
+
+  .ed-image { display: flex; gap: 0.8rem; align-items: flex-start; }
+  .ed-image__tile { width: 68px; height: 68px; flex: none; border: 1px solid var(--pal-line); background: var(--pal-paper-2, #ececea);
+    display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; color: var(--pal-faint); }
+  .ed-image__tile:hover { border-color: var(--pal-accent); color: var(--pal-accent); }
+  .ed-image__tile img { width: 100%; height: 100%; object-fit: cover; }
+  .ed-image__tile svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+  .ed-image__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+  .ed-image__row { display: flex; gap: 0.4rem; }
+
+  .ed-check { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
+  .ed-check input { width: 1.05rem; height: 1.05rem; accent-color: var(--pal-accent); flex: none; }
+  .ed-check__label { font-size: 0.9rem; color: var(--pal-ink); }
+
+  .ed-group { border: 1px solid var(--pal-line); padding: 1.15rem 1.15rem 0.1rem; background: var(--pal-panel, #fff); }
+
+  .ed-list { display: flex; flex-direction: column; gap: 0.9rem; }
+  .ed-card { border: 1px solid var(--pal-line); background: var(--pal-panel, #fff); }
+  .ed-card__head { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.55rem 0.6rem 0.9rem; border-bottom: 1px solid var(--pal-line); background: var(--pal-paper-2, #ececea); }
+  .ed-card__title { font-family: var(--pal-font-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
+  .ed-card__rm { border: 0; background: none; color: var(--pal-faint); cursor: pointer; padding: 0.3rem 0.5rem; display: inline-flex; }
+  .ed-card__rm:hover { color: #b42318; }
+  .ed-card__rm svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .ed-card__body { padding: 1rem; }
+  .ed-card__body .ed-field:last-child { margin-bottom: 0; }
+  .ed-add { display: inline-flex; align-items: center; gap: 0.4rem; align-self: flex-start; cursor: pointer; margin-top: 0.2rem;
+    border: 1px dashed var(--pal-line); background: none; border-radius: 0; padding: 0.65rem 0.95rem;
+    font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-accent);
+    transition: border-color 140ms ease, color 140ms ease; }
+  .ed-add:hover { border-color: var(--pal-accent); }
+  .ed-add svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+  /* Rich-text (TinyMCE mounts over this; also a graceful fallback if it can't load) */
+  .ed-richtext { width: 100%; min-height: 9rem; font: inherit; font-size: 0.9rem; color: var(--pal-ink);
+    background: var(--pal-panel, #fff); border: 1px solid var(--pal-line); border-radius: 0; padding: 0.7rem 0.8rem; line-height: 1.6; }
+  .tox-tinymce { border: 1px solid var(--pal-line) !important; border-radius: 0 !important; }
+
+  /* Policies accordion — one open at a time */
+  .ed-acc { border: 1px solid var(--pal-line); }
+  .ed-acc__item + .ed-acc__item { border-top: 1px solid var(--pal-line); }
+  .ed-acc__hdr { width: 100%; display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+    padding: 0.95rem 1.1rem; background: var(--pal-panel, #fff); border: 0; text-align: left;
+    font-family: var(--pal-font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-ink); }
+  .ed-acc__hdr:hover { background: var(--pal-paper-2, #ececea); }
+  .ed-acc__item.is-open > .ed-acc__hdr { color: var(--pal-accent-ink, #3a1fd0); background: var(--pal-paper-2, #ececea); }
+  .ed-acc__chev { width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 160ms ease; }
+  .ed-acc__item.is-open > .ed-acc__hdr .ed-acc__chev { transform: rotate(-135deg); }
+  .ed-acc__body { display: none; padding: 1.15rem; border-top: 1px solid var(--pal-line); }
+  .ed-acc__item.is-open > .ed-acc__body { display: block; }
+  .ed-acc__body .ed-field:last-child { margin-bottom: 0; }
+
+  /* Nested tree (Core pages → Subpages → Child pages) */
+  .ed-card .ed-card { background: var(--pal-paper, #f4f4f2); }
+  .ed-card .ed-card .ed-card { background: var(--pal-panel, #fff); }
+  .ed-card__body > .ed-field[data-field-wrap="subpages"],
+  .ed-card__body > .ed-field[data-field-wrap="children"] {
+    margin-top: 1.15rem; padding-top: 0.95rem; border-top: 1px solid var(--pal-line); }
+  .ed-field[data-field-wrap="subpages"] > .ed-field__label,
+  .ed-field[data-field-wrap="children"] > .ed-field__label { color: var(--pal-accent-ink, #3a1fd0); }
+  .ed-field[data-field-wrap="subpages"] > .ed-list,
+  .ed-field[data-field-wrap="children"] > .ed-list { border-left: 2px solid var(--pal-line); padding-left: 0.85rem; }
+</style>
+
+{% comment %} {# Free (GPL) TinyMCE build from jsDelivr — no API key. Loaded before the editor
+   script so window.tinymce is ready when a rich-text field is opened. #} {% endcomment %}
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js" referrerpolicy="origin"></script>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  var SECTIONS = JSON.parse(document.getElementById("ed-sections").textContent);
+  var CONTENT = JSON.parse(document.getElementById("ed-content").textContent) || {};
+  var DATASETS = JSON.parse(document.getElementById("ed-datasets").textContent) || {};
+  var root = document.getElementById("ed");
+  var tabsEl = document.getElementById("ed-tabs");
+  var fieldsEl = document.getElementById("ed-fields");
+  var saveEl = document.getElementById("ed-save");
+  var saveText = document.getElementById("ed-save__text");
+  var csrf = (root.querySelector("[name=csrfmiddlewaretoken]") || {}).value || "";
+  var saveBase = "{% url 'store:editor_save_section' site.id 'SECTION' %}";
+  var uploadUrl = "{% url 'store:editor_upload' site.id %}";
+  var siteId = "{{ site.id }}";
+  var UID = 0;
+  var activePanelKey = null;
+
+  // ---- Rich text (TinyMCE, free build) --------------------------------
+  var TINY_CONFIG = {
+    menubar: "edit view insert format tools table",
+    plugins: "advlist autolink lists link image charmap preview anchor searchreplace visualblocks visualchars code fullscreen insertdatetime media table emoticons help wordcount",
+    toolbar: "undo redo | blocks fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | blockquote hr | removeformat code fullscreen preview",
+    height: 360,
+    menubar_sticky: true,
+    branding: false,
+    promotion: false,
+    license_key: "gpl",
+    content_style: "body{font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.6}",
+    automatic_uploads: true,
+    file_picker_types: "image",
+    images_upload_handler: function (blobInfo) {
+      return new Promise(function (resolve, reject) {
+        var fd = new FormData();
+        fd.append("file", blobInfo.blob(), blobInfo.filename());
+        fetch(uploadUrl, { method: "POST", headers: { "X-CSRFToken": csrf }, body: fd })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { if (d && d.url) resolve(d.url); else reject("Upload failed"); })
+          .catch(function () { reject("Upload failed"); });
+      });
+    },
+    setup: function (editor) {
+      editor.on("change input undo redo keyup SetContent", function () {
+        editor.save();
+        var ta = editor.getElement();
+        if (ta) ta.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    }
+  };
+  function initRichtextIn(scope) {
+    if (!scope || !window.tinymce) return;
+    scope.querySelectorAll("textarea.ed-richtext").forEach(function (ta) {
+      if (ta.dataset.tmceReady) return;
+      ta.dataset.tmceReady = "1";
+      window.tinymce.init(Object.assign({ target: ta }, TINY_CONFIG));
+    });
+  }
+  function destroyRichtextIn(scope) {
+    if (!scope || !window.tinymce) return;
+    scope.querySelectorAll("textarea.ed-richtext").forEach(function (ta) {
+      var ed = ta.id ? window.tinymce.get(ta.id) : null;
+      if (ed) ed.remove();
+      delete ta.dataset.tmceReady;
+    });
+  }
+  function syncRichtext() { if (window.tinymce) window.tinymce.triggerSave(); }
+
+  var ICONS = {
+    brand:'<path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/>',
+    appearance:'<rect x="3" y="4" width="18" height="16"/><path d="M4 15l4-4 3 3 3-3 6 6"/><circle cx="8.5" cy="8.5" r="1.3"/>',
+    hero:'<rect x="3" y="4" width="18" height="12"/><path d="M3 20h18"/>',
+    home:'<path d="M3 10l9-7 9 7"/><path d="M5 9v11h14V9"/>',
+    blogs:'<path d="M4 4h11l5 5v11H4z"/><path d="M15 4v5h5"/><path d="M8 13h8M8 17h8"/>',
+    pages:'<path d="M9 3h7l4 4v14H9z"/><path d="M16 3v4h4"/><path d="M5 7v13a1 1 0 0 0 1 1h10"/>',
+    about:'<circle cx="12" cy="8" r="3.2"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+    why:'<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>',
+    testimonials:'<path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/>',
+    faq:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"/><path d="M12 17h.01"/>',
+    footer:'<rect x="3" y="4" width="18" height="16"/><path d="M3 15h18"/>',
+    contact:'<rect x="3" y="5" width="18" height="14"/><path d="m4 7 8 6 8-6"/>',
+    seo:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+    policies:'<path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h8"/>',
+    certifications:'<circle cx="12" cy="9" r="6"/><path d="m8.5 14-1.5 7 5-3 5 3-1.5-7"/>',
+    scripts:'<path d="m9 8-4 4 4 4"/><path d="m15 8 4 4-4 4"/>'
+  };
+
+  function el(t,c,a){var e=document.createElement(t); if(c)e.className=c; if(a)Object.keys(a).forEach(function(k){e.setAttribute(k,a[k]);}); return e;}
+  function svg(p,w){return '<svg viewBox="0 0 24 24" width="'+(w||16)+'" height="'+(w||16)+'">'+p+'</svg>';}
+  function v(x){return x===undefined||x===null?"":x;}
+
+  function scalarInput(field, value) {
+    var t = field.type;
+    if (t === "richtext") {
+      var rta = el("textarea", "ed-richtext", { "data-field": field.name, id: "tmce-" + (++UID) });
+      rta.value = v(value); return rta;
+    }
+    if (t === "textarea") {
+      var ta = el("textarea", "ed-textarea", { "data-field": field.name });
+      ta.value = v(value); return ta;
+    }
+    if (t === "select") {
+      var sel = el("select", "ed-select", { "data-field": field.name });
+      var opts = field.options_from ? (DATASETS[field.options_from] || []) : (field.options || []);
+      if (field.options_from) { var blank = el("option"); blank.value = ""; blank.textContent = "Select…"; sel.appendChild(blank); }
+      opts.forEach(function (o) {
+        var opt = el("option"); opt.value = o.value; opt.textContent = o.label;
+        if (String(v(value)) === String(o.value)) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      return sel;
+    }
+    if (t === "checkbox") {
+      var lab = el("label", "ed-check");
+      var cb = el("input", null, { type: "checkbox", "data-field": field.name }); cb.checked = !!value;
+      var txt = el("span", "ed-check__label"); txt.textContent = field.label || "";
+      lab.appendChild(cb); lab.appendChild(txt); return lab;
+    }
+    if (t === "color") {
+      var box = el("div", "ed-color");
+      var sw = el("span", "ed-color__swatch");
+      var picker = el("input", null, { type: "color" });
+      var text = el("input", "ed-input", { type: "text", "data-field": field.name, placeholder: "#000000" });
+      text.value = v(value);
+      picker.value = /^#[0-9a-fA-F]{6}$/.test(v(value)) ? value : "#4b2bf5";
+      sw.style.background = text.value || "#4b2bf5";
+      picker.addEventListener("input", function () { text.value = picker.value; sw.style.background = picker.value; text.dispatchEvent(new Event("input", { bubbles: true })); });
+      text.addEventListener("input", function () { if (/^#[0-9a-fA-F]{3,8}$/.test(text.value)) sw.style.background = text.value; });
+      sw.appendChild(picker); box.appendChild(sw); box.appendChild(text); return box;
+    }
+    if (t === "image") {
+      var wrap = el("div", "ed-image");
+      var tile = el("span", "ed-image__tile", { title: "Upload image" });
+      if (value) { var im0 = el("img"); im0.src = value; tile.appendChild(im0); }
+      else tile.innerHTML = svg('<rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>', 20);
+      var body = el("div", "ed-image__body");
+      var rowr = el("div", "ed-image__row");
+      var input = el("input", "ed-input", { type: "text", "data-field": field.name, placeholder: "Image URL…" }); input.value = v(value);
+      var btn = el("button", "pal-btn pal-btn--ghost", { type: "button" }); btn.textContent = "Upload"; btn.style.padding = "0.5rem 0.8rem";
+      var file = el("input", null, { type: "file", accept: "image/*" }); file.style.display = "none";
+      function setImg(u){ input.value = u; tile.innerHTML = ""; var im = el("img"); im.src = u; tile.appendChild(im); input.dispatchEvent(new Event("input", { bubbles: true })); }
+      tile.addEventListener("click", function(){ file.click(); });
+      btn.addEventListener("click", function(){ file.click(); });
+      input.addEventListener("input", function(){ if (input.value){ tile.innerHTML=""; var im=el("img"); im.src=input.value; tile.appendChild(im);} });
+      file.addEventListener("change", function(){
+        if (!file.files || !file.files[0]) return;
+        var fd = new FormData(); fd.append("file", file.files[0]); setStatus("saving");
+        fetch(uploadUrl, { method:"POST", headers:{ "X-CSRFToken": csrf }, body: fd })
+          .then(function(r){ return r.json(); }).then(function(d){ if (d && d.url) setImg(d.url); else setStatus("error"); })
+          .catch(function(){ setStatus("error"); });
+      });
+      rowr.appendChild(input); rowr.appendChild(btn);
+      body.appendChild(rowr); body.appendChild(file);
+      wrap.appendChild(tile); wrap.appendChild(body); return wrap;
+    }
+    var inp = el("input", "ed-input", { type: t === "number" ? "number" : "text", "data-field": field.name });
+    inp.value = v(value); return inp;
+  }
+
+  function fieldBlock(field, value) {
+    var wrap = el("div", "ed-field", { "data-field-wrap": field.name });
+    if (field.type !== "checkbox") {
+      var lab = el("label", "ed-field__label"); lab.textContent = field.label || field.name; wrap.appendChild(lab);
+    }
+    if (field.type === "object") {
+      var group = el("div", "ed-group", { "data-object": field.name });
+      var obj = (value && typeof value === "object") ? value : {};
+      field.subfields.forEach(function (sf) { group.appendChild(fieldBlock(sf, obj[sf.name])); });
+      wrap.appendChild(group);
+      wireConditionals(group, field.subfields);
+    } else if (field.type === "list") {
+      var list = el("div", "ed-list", { "data-list": field.name });
+      (Array.isArray(value) ? value : []).forEach(function (item, i) { list.appendChild(listRow(field, item, i)); });
+      wrap.appendChild(list);
+      var add = el("button", "ed-add", { type: "button" });
+      add.innerHTML = svg('<path d="M12 5v14M5 12h14"/>', 14) + "<span>Add " + (field.item_label || "item").toLowerCase() + "</span>";
+      add.addEventListener("click", function () { var row = listRow(field, {}, list.children.length); list.appendChild(row); renumber(list, field); initRichtextIn(row); queueSave(field._section); });
+      wrap.appendChild(add);
+    } else {
+      wrap.appendChild(scalarInput(field, value));
+    }
+    if (field.help) { var hp = el("p", "ed-field__help"); hp.textContent = field.help; wrap.appendChild(hp); }
+    return wrap;
+  }
+
+  function listRow(field, item, i) {
+    var card = el("div", "ed-card");
+    var head = el("div", "ed-card__head");
+    var t = el("span", "ed-card__title"); t.textContent = (field.item_label || "Item") + " " + (i + 1);
+    var rm = el("button", "ed-card__rm", { type: "button", title: "Remove" });
+    rm.innerHTML = svg('<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>', 15);
+    rm.addEventListener("click", function () { var list = card.parentNode; destroyRichtextIn(card); card.remove(); renumber(list, field); queueSave(field._section); });
+    head.appendChild(t); head.appendChild(rm);
+    var body = el("div", "ed-card__body");
+    field.item_fields.forEach(function (f) { var b = fieldBlock(f, item ? item[f.name] : ""); b.setAttribute("data-item-field", f.name); body.appendChild(b); });
+    card.appendChild(head); card.appendChild(body);
+    wireConditionals(body, field.item_fields);
+    return card;
+  }
+  function renumber(list, field) {
+    Array.prototype.forEach.call(list.querySelectorAll(":scope > .ed-card > .ed-card__head > .ed-card__title"), function (t, i) {
+      t.textContent = (field.item_label || "Item") + " " + (i + 1);
+    });
+  }
+
+  // Show/hide dependent fields (e.g. banner category/product target) within a scope.
+  function wireConditionals(scope, fields) {
+    fields.forEach(function (f) {
+      if (!f.show_if) return;
+      var wrap = scope.querySelector(":scope > [data-field-wrap='" + f.name + "']");
+      var ctrl = scope.querySelector("[data-field='" + f.show_if.field + "']");
+      if (!wrap || !ctrl) return;
+      function apply() { wrap.style.display = f.show_if.in.indexOf(ctrl.value) >= 0 ? "" : "none"; }
+      ctrl.addEventListener("change", apply); ctrl.addEventListener("input", apply); apply();
+    });
+  }
+
+  // Recursive gather over field wrappers, so a list item can itself hold lists
+  // (core page → subpages → child pages) and still serialise correctly.
+  function readControl(wrap, field) {
+    var e2 = wrap.querySelector("[data-field='" + field.name + "']");
+    if (!e2) return field.type === "checkbox" ? false : "";
+    return field.type === "checkbox" ? e2.checked : e2.value;
+  }
+  function gatherValue(wrap, field) {
+    if (field.type === "list") {
+      var list = wrap.querySelector(":scope > .ed-list");
+      var out = [];
+      if (list) Array.prototype.forEach.call(list.querySelectorAll(":scope > .ed-card"), function (card) {
+        var body = card.querySelector(":scope > .ed-card__body");
+        var obj = {};
+        field.item_fields.forEach(function (f) {
+          var w = body ? body.querySelector(":scope > [data-field-wrap='" + f.name + "']") : null;
+          obj[f.name] = w ? gatherValue(w, f) : (f.type === "checkbox" ? false : "");
+        });
+        out.push(obj);
+      });
+      return out;
+    }
+    if (field.type === "object") {
+      var group = wrap.querySelector(":scope > .ed-group");
+      var o = {};
+      field.subfields.forEach(function (sf) {
+        var w = group ? group.querySelector(":scope > [data-field-wrap='" + sf.name + "']") : null;
+        o[sf.name] = w ? gatherValue(w, sf) : (sf.type === "checkbox" ? false : "");
+      });
+      return o;
+    }
+    return readControl(wrap, field);
+  }
+  function gatherSection(section) {
+    var panel = document.getElementById("ed-panel-" + section.key);
+    var values = {};
+    section.fields.forEach(function (f) {
+      var w = panel.querySelector(":scope > [data-field-wrap='" + f.name + "']");
+      values[f.name] = w ? gatherValue(w, f) : (f.type === "checkbox" ? false : "");
+    });
+    return values;
+  }
+
+  var timers = {};
+  function queueSave(key) { clearTimeout(timers[key]); setStatus("saving"); timers[key] = setTimeout(function () { doSave(key); }, 650); }
+  function doSave(key) {
+    var section = SECTIONS.filter(function (s) { return s.key === key; })[0]; if (!section) return;
+    syncRichtext();
+    fetch(saveBase.replace("SECTION", key), { method:"POST", headers:{ "Content-Type":"application/json", "X-CSRFToken": csrf }, body: JSON.stringify({ values: gatherSection(section) }) })
+      .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function () { setStatus("saved"); })
+      .catch(function () { setStatus("error"); });
+  }
+  function setStatus(state) {
+    saveEl.setAttribute("data-state", state === "saved" ? "idle" : state);
+    saveText.textContent = state === "saving" ? "Saving…" : state === "error" ? "Couldn't save" : "Saved";
+  }
+
+  // ---- Accordion (one open at a time, remembered across refreshes) ----
+  function accKey(sectionKey) { return "ow-ed-acc:" + siteId + ":" + sectionKey; }
+  function buildAccordion(section, panel) {
+    var acc = el("div", "ed-acc", { "data-acc-section": section.key });
+    section.fields.forEach(function (f) {
+      var item = el("div", "ed-acc__item", { "data-acc": f.name });
+      var hdr = el("button", "ed-acc__hdr", { type: "button" });
+      hdr.innerHTML = '<span class="ed-acc__ttl">' + (f.label || f.name) + '</span><span class="ed-acc__chev" aria-hidden="true"></span>';
+      var body = el("div", "ed-acc__body");
+      body.appendChild(fieldBlock(f, CONTENT[f.name]));
+      hdr.addEventListener("click", function () { openAcc(section.key, f.name, true); });
+      item.appendChild(hdr); item.appendChild(body);
+      acc.appendChild(item);
+    });
+    panel.appendChild(acc);
+  }
+  function openAcc(sectionKey, name, toggle) {
+    var acc = document.querySelector("[data-acc-section='" + sectionKey + "']");
+    if (!acc) return;
+    var already = acc.querySelector(".ed-acc__item.is-open");
+    var target = acc.querySelector("[data-acc='" + name + "']");
+    var isSame = already === target;
+    Array.prototype.forEach.call(acc.querySelectorAll(".ed-acc__item"), function (it) { it.classList.remove("is-open"); });
+    var openName = "";
+    if (target && !(toggle && isSame)) {
+      target.classList.add("is-open");
+      openName = name;
+      initRichtextIn(target.querySelector(".ed-acc__body"));
+    }
+    try { localStorage.setItem(accKey(sectionKey), openName); } catch (e) {}
+  }
+  function restoreAcc(sectionKey, fields) {
+    var stored = "";
+    try { stored = localStorage.getItem(accKey(sectionKey)) || ""; } catch (e) {}
+    var valid = fields.some(function (f) { return f.name === stored; });
+    var name = valid ? stored : (fields[0] ? fields[0].name : "");
+    if (name) openAcc(sectionKey, name, false);
+  }
+
+  SECTIONS.forEach(function (section, i) {
+    section.fields.forEach(function (f) { f._section = section.key; });
+    var tab = el("button", "ed-tab", { type: "button", "data-tab": section.key });
+    tab.innerHTML = '<span class="ed-tab__ico">' + svg(ICONS[section.icon] || ICONS[section.key] || ICONS.brand) + '</span><span>' + section.label + '</span>';
+    if (i === 0) tab.setAttribute("aria-current", "true");
+    tab.addEventListener("click", function () { activate(section.key); });
+    tabsEl.appendChild(tab);
+
+    var panel = el("div", "ed-panel" + (i === 0 ? " is-active" : ""), { id: "ed-panel-" + section.key });
+    var head = el("div", "ed-panel__head");
+    var h = el("h2", "ed-panel__title"); h.textContent = section.label; head.appendChild(h);
+    if (section.hint) { var hp = el("p", "ed-panel__hint"); hp.textContent = section.hint; head.appendChild(hp); }
+    panel.appendChild(head);
+    if (section.layout === "accordion") {
+      buildAccordion(section, panel);
+    } else {
+      section.fields.forEach(function (f) { panel.appendChild(fieldBlock(f, CONTENT[f.name])); });
+      wireConditionals(panel, section.fields);
+    }
+    fieldsEl.appendChild(panel);
+  });
+  activePanelKey = SECTIONS.length ? SECTIONS[0].key : null;
+
+  function activate(key) {
+    if (activePanelKey && activePanelKey !== key) {
+      var prev = document.getElementById("ed-panel-" + activePanelKey);
+      if (prev) destroyRichtextIn(prev);
+    }
+    activePanelKey = key;
+    Array.prototype.forEach.call(tabsEl.children, function (t) { t.setAttribute("aria-current", t.getAttribute("data-tab") === key ? "true" : "false"); });
+    Array.prototype.forEach.call(fieldsEl.children, function (p) { p.classList.toggle("is-active", p.id === "ed-panel-" + key); });
+    document.querySelector(".ed-body").scrollTop = 0;
+
+    var panel = document.getElementById("ed-panel-" + key);
+    var section = SECTIONS.filter(function (s) { return s.key === key; })[0];
+    if (section && section.layout === "accordion") {
+      restoreAcc(key, section.fields);   // inits the open item's editor
+    } else if (panel) {
+      initRichtextIn(panel);
+    }
+
+    // The active tab should scroll into the visible part of the strip.
+    var active = tabsEl.querySelector("[aria-current='true']");
+    if (active && active.scrollIntoView) active.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  }
+
+  fieldsEl.addEventListener("input", function (e) { var p = e.target.closest(".ed-panel"); if (p) queueSave(p.id.replace("ed-panel-", "")); });
+  fieldsEl.addEventListener("change", function (e) { if (e.target.type === "checkbox" || e.target.tagName === "SELECT") { var p = e.target.closest(".ed-panel"); if (p) queueSave(p.id.replace("ed-panel-", "")); } });
+
+  if (window.OWScrollHint) window.OWScrollHint.initAll();
+})();
+</script>
+{% endblock %}

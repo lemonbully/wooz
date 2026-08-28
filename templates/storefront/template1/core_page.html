@@ -1,0 +1,975 @@
+{% extends "storefront/template1/base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block extra_head %}
+{{ block.super }}
+{% if schema_json %}
+<script type="application/ld+json">{{ schema_json|safe }}</script>
+{% endif %}
+<style>
+    /* ========================================
+       Core Page - Refined Editorial Design
+       Elegant, minimal, content-focused
+       ======================================== */
+    
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+    
+    :root {
+        --cp-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --cp-font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+        --cp-text: #1a1a1a;
+        --cp-text-muted: #737373;
+        --cp-text-light: #a3a3a3;
+        --cp-border: #e5e5e5;
+        --cp-border-light: #f0f0f0;
+        --cp-bg: #fafafa;
+        --cp-bg-elevated: #ffffff;
+        --cp-accent: #171717;
+        --cp-accent-subtle: #404040;
+        --cp-sidebar-w: 260px;
+        --cp-header-h: var(--header-height, 72px);
+        --cp-content-max: 720px;
+        --cp-transition: 180ms ease;
+    }
+    
+    /* Layout */
+    .cp-layout {
+        display: flex;
+        min-height: calc(100vh - var(--cp-header-h));
+        background: var(--cp-bg);
+    }
+    
+    /* Sidebar */
+    .cp-sidebar {
+        display: none;
+        width: var(--cp-sidebar-w);
+        flex-shrink: 0;
+        background: var(--cp-bg-elevated);
+        border-right: 1px solid var(--cp-border-light);
+    }
+    
+    @media (min-width: 1024px) {
+        .cp-sidebar {
+            display: block;
+            position: sticky;
+            top: var(--cp-header-h);
+            height: calc(100vh - var(--cp-header-h));
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        .cp-sidebar::-webkit-scrollbar { width: 0; background: transparent; }
+    }
+    
+    .cp-sidebar-inner {
+        padding: 2rem 1.5rem;
+    }
+    
+    .cp-sidebar-title {
+        font-family: var(--cp-font-serif);
+        font-size: 1.125rem;
+        font-weight: 500;
+        color: var(--cp-text);
+        line-height: 1.4;
+        letter-spacing: -0.01em;
+    }
+    
+    .cp-sidebar-desc {
+        margin-top: 0.5rem;
+        font-family: var(--cp-font-sans);
+        font-size: 0.8125rem;
+        color: var(--cp-text-muted);
+        line-height: 1.5;
+    }
+    
+    /* Navigation */
+    .cp-nav {
+        margin-top: 2rem;
+    }
+    
+    .cp-nav-label {
+        font-family: var(--cp-font-sans);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--cp-text-light);
+        padding: 0 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .cp-nav-link {
+        display: flex;
+        align-items: center;
+        padding: 0.625rem 0.75rem;
+        margin: 0.125rem 0;
+        border-radius: 6px;
+        font-family: var(--cp-font-sans);
+        font-size: 0.875rem;
+        font-weight: 400;
+        color: var(--cp-text-muted);
+        text-decoration: none;
+        transition: all var(--cp-transition);
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+    }
+    
+    .cp-nav-link:hover {
+        color: var(--cp-text);
+        background: var(--cp-border-light);
+    }
+    
+    .cp-nav-link.active {
+        color: var(--cp-text);
+        background: var(--cp-border-light);
+        font-weight: 500;
+    }
+    
+    .cp-nav-link.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 2px;
+        height: 1rem;
+        background: var(--cp-accent);
+        border-radius: 1px;
+    }
+    
+    .cp-nav-group {
+        position: relative;
+    }
+    
+    .cp-nav-nested {
+        display: none;
+        margin-left: 1rem;
+        padding-left: 0.75rem;
+        border-left: 1px solid var(--cp-border);
+    }
+    
+    .cp-nav-nested.show { display: block; }
+    
+    .cp-nav-nested .cp-nav-link {
+        font-size: 0.8125rem;
+        padding: 0.5rem 0.75rem;
+        color: var(--cp-text-light);
+    }
+    
+    .cp-nav-nested .cp-nav-link:hover,
+    .cp-nav-nested .cp-nav-link.active {
+        color: var(--cp-text);
+    }
+    
+    .cp-nav-back {
+        margin-top: 2.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--cp-border-light);
+    }
+    
+    .cp-nav-back a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: var(--cp-font-sans);
+        font-size: 0.8125rem;
+        color: var(--cp-text-light);
+        text-decoration: none;
+        transition: color var(--cp-transition);
+    }
+    
+    .cp-nav-back a:hover { color: var(--cp-text); }
+    
+    /* Main Content */
+    .cp-main {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    @media (min-width: 1024px) {
+        .cp-main {
+            height: calc(100vh - var(--cp-header-h));
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+    }
+    
+    .cp-main-inner {
+        max-width: calc(var(--cp-content-max) + 6rem);
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem 4rem;
+    }
+    
+    @media (min-width: 768px) {
+        .cp-main-inner { padding: 3rem 3rem 5rem; }
+    }
+    
+    /* Mobile Toggle */
+    .cp-mobile-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        width: 100%;
+        padding: 0.875rem 1rem;
+        margin-bottom: 1.5rem;
+        background: var(--cp-bg-elevated);
+        border: 1px solid var(--cp-border);
+        border-radius: 8px;
+        font-family: var(--cp-font-sans);
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--cp-text);
+        cursor: pointer;
+        transition: border-color var(--cp-transition);
+    }
+    
+    .cp-mobile-toggle:hover { border-color: var(--cp-text-light); }
+    
+    @media (min-width: 1024px) { .cp-mobile-toggle { display: none; } }
+    
+    .cp-mobile-nav {
+        display: none;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: var(--cp-bg-elevated);
+        border: 1px solid var(--cp-border);
+        border-radius: 8px;
+    }
+    
+    .cp-mobile-nav.show { display: block; }
+    
+    @media (min-width: 1024px) { .cp-mobile-nav { display: none !important; } }
+    
+    /* Breadcrumb */
+    .cp-breadcrumb {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+        margin-bottom: 2rem;
+        font-family: var(--cp-font-sans);
+        font-size: 0.8125rem;
+        color: var(--cp-text-light);
+    }
+    
+    .cp-breadcrumb a {
+        color: var(--cp-text-light);
+        text-decoration: none;
+        transition: color var(--cp-transition);
+    }
+    
+    .cp-breadcrumb a:hover { color: var(--cp-text); }
+    
+    .cp-breadcrumb-sep { opacity: 0.4; }
+    
+    .cp-breadcrumb-current {
+        color: var(--cp-text-muted);
+        font-weight: 500;
+    }
+    
+    /* Article Header */
+    .cp-header {
+        margin-bottom: 2.5rem;
+        padding-bottom: 2.5rem;
+        border-bottom: 1px solid var(--cp-border-light);
+    }
+    
+    .cp-title {
+        font-family: var(--cp-font-serif);
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        font-weight: 500;
+        color: var(--cp-text);
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+    }
+    
+    .cp-subtitle {
+        margin-top: 1rem;
+        font-family: var(--cp-font-sans);
+        font-size: 1.125rem;
+        color: var(--cp-text-muted);
+        line-height: 1.6;
+    }
+    
+    .cp-hero-image {
+        margin-top: 2rem;
+        aspect-ratio: 21/9;
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--cp-border-light);
+    }
+    
+    .cp-hero-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .cp-hero-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--cp-text-light);
+    }
+    
+    /* Article Content */
+    .cp-content {
+        font-family: var(--cp-font-serif);
+        font-size: 1.125rem;
+        line-height: 1.8;
+        color: var(--cp-text);
+    }
+    
+    .cp-content p {
+        margin-bottom: 1.5rem;
+    }
+    
+    .cp-content h1, .cp-content h2, .cp-content h3, .cp-content h4 {
+        font-family: var(--cp-font-serif);
+        font-weight: 600;
+        color: var(--cp-text);
+        letter-spacing: -0.01em;
+    }
+    
+    .cp-content h1 { font-size: 1.875rem; margin: 3rem 0 1.25rem; }
+    .cp-content h2 { font-size: 1.5rem; margin: 2.5rem 0 1rem; }
+    .cp-content h3 { font-size: 1.25rem; margin: 2rem 0 0.875rem; }
+    .cp-content h4 { font-size: 1.125rem; margin: 1.75rem 0 0.75rem; }
+    
+    .cp-content ul, .cp-content ol {
+        margin: 1.5rem 0;
+        padding-left: 1.5rem;
+    }
+    
+    .cp-content li {
+        margin-bottom: 0.625rem;
+        padding-left: 0.25rem;
+    }
+    
+    .cp-content a {
+        color: var(--cp-accent);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        transition: opacity var(--cp-transition);
+    }
+    
+    .cp-content a:hover { opacity: 0.7; }
+    
+    .cp-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 6px;
+        margin: 2rem 0;
+    }
+    
+    .cp-content blockquote {
+        margin: 2rem 0;
+        padding: 1.25rem 1.5rem;
+        background: var(--cp-border-light);
+        border-radius: 6px;
+        font-style: italic;
+        color: var(--cp-text-muted);
+    }
+    
+    .cp-content table {
+        width: 100%;
+        margin: 2rem 0;
+        border-collapse: collapse;
+        font-family: var(--cp-font-sans);
+        font-size: 0.9375rem;
+    }
+    
+    .cp-content th, .cp-content td {
+        padding: 0.875rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--cp-border);
+    }
+    
+    .cp-content th {
+        font-weight: 600;
+        color: var(--cp-text);
+    }
+    
+    /* Nested Section */
+    .cp-nested {
+        margin-top: 3rem;
+        padding-top: 2.5rem;
+        border-top: 1px solid var(--cp-border-light);
+    }
+    
+    .cp-nested-header {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    @media (min-width: 640px) {
+        .cp-nested-header {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+        }
+    }
+    
+    .cp-nested-label {
+        font-family: var(--cp-font-sans);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--cp-text-light);
+    }
+    
+    .cp-nested-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .cp-nested-tab {
+        padding: 0.5rem 1rem;
+        font-family: var(--cp-font-sans);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--cp-text-muted);
+        background: transparent;
+        border: 1px solid var(--cp-border);
+        border-radius: 100px;
+        cursor: pointer;
+        transition: all var(--cp-transition);
+    }
+    
+    .cp-nested-tab:hover {
+        border-color: var(--cp-text-light);
+        color: var(--cp-text);
+    }
+    
+    .cp-nested-tab.active {
+        background: var(--cp-accent);
+        border-color: var(--cp-accent);
+        color: white;
+    }
+    
+    .cp-nested-article {
+        padding: 2rem;
+        background: var(--cp-bg-elevated);
+        border: 1px solid var(--cp-border);
+        border-radius: 12px;
+    }
+    
+    .cp-nested-title {
+        font-family: var(--cp-font-serif);
+        font-size: 1.375rem;
+        font-weight: 500;
+        color: var(--cp-text);
+        line-height: 1.3;
+    }
+    
+    .cp-nested-subtitle {
+        margin-top: 0.375rem;
+        font-family: var(--cp-font-sans);
+        font-size: 0.9375rem;
+        color: var(--cp-text-muted);
+    }
+    
+    .cp-nested-image {
+        width: 100%;
+        max-height: 280px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-top: 1.5rem;
+    }
+    
+    .cp-nested-body {
+        margin-top: 1.5rem;
+    }
+    
+    /* Empty State */
+    .cp-empty {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    
+    .cp-empty-text {
+        font-family: var(--cp-font-sans);
+        font-size: 0.9375rem;
+        color: var(--cp-text-muted);
+    }
+    
+    
+    /* Animations */
+    .cp-fade {
+        animation: cpFade 300ms ease-out;
+    }
+    
+    @keyframes cpFade {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Hide for SEO links */
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+{% website_base_path website request as website_base %}
+
+<div class="cp-layout">
+    <!-- Sidebar -->
+    <aside class="cp-sidebar">
+        <div class="cp-sidebar-inner">
+            <h1 class="cp-sidebar-title">{{ core_page.title }}</h1>
+            {% if core_page.subtitle %}
+            <p class="cp-sidebar-desc">{{ core_page.subtitle }}</p>
+            {% endif %}
+            
+            <nav class="cp-nav">
+                <div class="cp-nav-label">Contents</div>
+                
+                <a href="{{ website_base }}{{ core_page.slug }}/"
+                   class="cp-nav-link active"
+                   data-nav="overview"
+                   data-overview="1">
+                    Overview
+                </a>
+                
+                {% for sp in subpages %}
+                <div class="cp-nav-group">
+                    <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/"
+                       class="cp-nav-link"
+                       data-nav="subpage"
+                       data-subpage="{{ sp.slug }}">
+                        {{ sp.title }}
+                    </a>
+                    
+                    {% if sp.nested_subpages.all %}
+                    <div class="cp-nav-nested" data-nested-for="{{ sp.slug }}">
+                        {% for n in sp.nested_subpages.all %}
+                        {% if n.is_active %}
+                        <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/"
+                           class="cp-nav-link"
+                           data-nav="nested"
+                           data-subpage="{{ sp.slug }}"
+                           data-nested="{{ n.slug }}">
+                            {{ n.title }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </nav>
+            
+            <div class="cp-nav-back">
+                <a href="{{ website_base }}core-pages/">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    All Pages
+                </a>
+            </div>
+        </div>
+        
+        <!-- SEO tree -->
+        <nav class="sr-only" aria-label="Page hierarchy">
+            <ul>
+                <li>
+                    <a href="{{ website_base }}{{ core_page.slug }}/">{{ core_page.title }}</a>
+                    <ul>
+                        {% for sp in subpages %}
+                        <li>
+                            <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/">{{ sp.title }}</a>
+                            {% if sp.nested_subpages.all %}
+                            <ul>
+                                {% for n in sp.nested_subpages.all %}
+                                {% if n.is_active %}
+                                <li><a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/">{{ n.title }}</a></li>
+                                {% endif %}
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <!-- Main -->
+    <main class="cp-main">
+        <div class="cp-main-inner">
+            <!-- Mobile Toggle -->
+            <button type="button" class="cp-mobile-toggle" id="cp-mobile-toggle">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                <span>Contents</span>
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-left:auto">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            
+            <!-- Mobile Nav -->
+            <div class="cp-mobile-nav" id="cp-mobile-nav">
+                <a href="{{ website_base }}{{ core_page.slug }}/" class="cp-nav-link active" data-nav="overview" data-overview="1">Overview</a>
+                {% for sp in subpages %}
+                <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/" class="cp-nav-link" data-nav="subpage" data-subpage="{{ sp.slug }}">{{ sp.title }}</a>
+                {% endfor %}
+            </div>
+            
+            <!-- Breadcrumb -->
+            <nav class="cp-breadcrumb" id="cp-breadcrumb" aria-label="Breadcrumb">
+                <a href="{{ website_base }}core-pages/">Pages</a>
+                <span class="cp-breadcrumb-sep">/</span>
+                <span class="cp-breadcrumb-current" id="cp-breadcrumb-page">{{ core_page.title }}</span>
+            </nav>
+            
+            <!-- Article -->
+            <article class="cp-fade">
+                <header class="cp-header">
+                    <h2 class="cp-title" id="cp-title">{{ core_page.title }}</h2>
+                    <p class="cp-subtitle {% if not core_page.subtitle %}hidden{% endif %}" id="cp-subtitle">{{ core_page.subtitle|default:'' }}</p>
+                    
+                    <div class="cp-hero-image" id="cp-hero-wrap">
+                        {% if core_page.image %}
+                        <img src="{{ core_page.image }}" alt="{{ core_page.title }}" id="cp-hero-img">
+                        {% else %}
+                        <div class="cp-hero-placeholder" id="cp-hero-placeholder">
+                            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <img src="" alt="" id="cp-hero-img" class="hidden">
+                        {% endif %}
+                    </div>
+                </header>
+                
+                <!-- Overview Content -->
+                <div id="cp-overview">
+                    {% if core_page.content %}
+                    <div class="cp-content">{{ core_page.content|safe }}</div>
+                    {% else %}
+                    <div class="cp-empty">
+                        <p class="cp-empty-text">Select a topic from the menu to begin reading.</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Subpage Section -->
+                <div id="cp-subpage" class="hidden">
+                    <!-- Nested Tabs (shown when subpage has nested items) -->
+                    <div id="cp-nested" class="cp-nested hidden">
+                        <div class="cp-nested-header">
+                            <span class="cp-nested-label">Related Topics</span>
+                            <div class="cp-nested-tabs" id="cp-nested-tabs"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Subpage Content (shown when no nested is selected) -->
+                    <div id="cp-subpage-content">
+                        <div class="cp-content" id="cp-subpage-html"></div>
+                    </div>
+                    
+                    <!-- Nested Content (shown when nested is selected, replaces subpage content) -->
+                    <div class="cp-nested-article hidden" id="cp-nested-article">
+                        <h3 class="cp-nested-title" id="cp-nested-title"></h3>
+                        <p class="cp-nested-subtitle hidden" id="cp-nested-subtitle"></p>
+                        <img src="" alt="" class="cp-nested-image hidden" id="cp-nested-img">
+                        <div class="cp-nested-body cp-content" id="cp-nested-html"></div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </main>
+</div>
+
+<!-- Data -->
+{% if subpages %}
+<div class="hidden" id="cp-data">
+    {% for subpage in subpages %}
+    <div id="cp-data-{{ subpage.slug }}"
+         data-title="{{ subpage.title }}"
+         data-subtitle="{{ subpage.subtitle|default:'' }}"
+         data-image="{{ subpage.image|default:'' }}">
+        <div class="cp-data-html">{{ subpage.content|safe }}</div>
+        {% if subpage.nested_subpages.all %}
+        <div class="cp-data-nested">
+            {% for n in subpage.nested_subpages.all %}
+            {% if n.is_active %}
+            <div class="cp-nested-item"
+                 data-slug="{{ n.slug }}"
+                 data-title="{{ n.title }}"
+                 data-subtitle="{{ n.subtitle|default:'' }}"
+                 data-image="{{ n.image|default:'' }}">
+                {{ n.content|safe }}
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+(function() {
+    'use strict';
+    
+    const SLUG = "{{ core_page.slug|escapejs }}";
+    const BASE = "{{ website_base|escapejs }}".replace(/\/$/, '') + '/';
+    const TITLE = "{{ core_page.title|escapejs }}";
+    const SUBTITLE = "{{ core_page.subtitle|default:''|escapejs }}";
+    const IMAGE = "{{ core_page.image|default:''|escapejs }}";
+    
+    const $ = id => document.getElementById(id);
+    const $$ = sel => document.querySelectorAll(sel);
+    
+    const data = $('cp-data');
+    const titleEl = $('cp-title');
+    const subtitleEl = $('cp-subtitle');
+    const heroImg = $('cp-hero-img');
+    const heroPlaceholder = $('cp-hero-placeholder');
+    const overview = $('cp-overview');
+    const subpageWrap = $('cp-subpage');
+    const subpageHtml = $('cp-subpage-html');
+    const nestedWrap = $('cp-nested');
+    const nestedTabs = $('cp-nested-tabs');
+    const subpageContent = $('cp-subpage-content');
+    const nestedArticle = $('cp-nested-article');
+    const nestedTitle = $('cp-nested-title');
+    const nestedSubtitle = $('cp-nested-subtitle');
+    const nestedImg = $('cp-nested-img');
+    const nestedHtml = $('cp-nested-html');
+    const breadcrumb = $('cp-breadcrumb-page');
+    const mobileToggle = $('cp-mobile-toggle');
+    const mobileNav = $('cp-mobile-nav');
+    
+    // Store nested items for current subpage
+    let currentNestedItems = [];
+    
+    let currentSub = null, currentNested = null;
+    
+    const buildUrl = (sub, nested) => {
+        let url = BASE + SLUG + '/';
+        if (sub) url += sub + '/';
+        if (nested) url += nested + '/';
+        return url;
+    };
+    
+    const parseUrl = () => {
+        let path = location.pathname;
+        if (path.startsWith(BASE)) path = path.slice(BASE.length);
+        const parts = path.split('/').filter(Boolean);
+        if (!parts.length || parts[0] !== SLUG) return { sub: null, nested: null };
+        return { sub: parts[1] || null, nested: parts[2] || null };
+    };
+    
+    const esc = text => {
+        const d = document.createElement('div');
+        d.textContent = text || '';
+        return d.innerHTML;
+    };
+    
+    const updateNav = (sub, nested) => {
+        $$('.cp-nav-link').forEach(el => el.classList.remove('active'));
+        $$('.cp-nav-nested').forEach(el => el.classList.remove('show'));
+        
+        if (!sub) {
+            $$('[data-overview="1"]').forEach(el => el.classList.add('active'));
+        } else {
+            $$(`[data-subpage="${sub}"][data-nav="subpage"]`).forEach(el => el.classList.add('active'));
+            $$(`[data-nested-for="${sub}"]`).forEach(el => el.classList.add('show'));
+            if (nested) $$(`[data-nested="${nested}"]`).forEach(el => el.classList.add('active'));
+        }
+    };
+    
+    const updateHero = (title, subtitle, image) => {
+        if (titleEl) titleEl.textContent = title || TITLE;
+        if (subtitleEl) {
+            subtitleEl.textContent = subtitle || '';
+            subtitleEl.classList.toggle('hidden', !subtitle);
+        }
+        if (heroImg && heroPlaceholder) {
+            if (image) {
+                heroImg.src = image;
+                heroImg.alt = title || '';
+                heroImg.classList.remove('hidden');
+                heroPlaceholder?.classList.add('hidden');
+            } else {
+                heroImg.classList.add('hidden');
+                heroPlaceholder?.classList.remove('hidden');
+            }
+        }
+    };
+    
+    const updateBreadcrumb = (sub, nested) => {
+        if (!breadcrumb) return;
+        let html = `<a href="${buildUrl()}">${esc(TITLE)}</a>`;
+        if (sub) {
+            html += `<span class="cp-breadcrumb-sep">/</span>`;
+            if (nested) {
+                html += `<a href="${buildUrl(currentSub)}">${esc(sub)}</a>`;
+                html += `<span class="cp-breadcrumb-sep">/</span>`;
+                html += `<span class="cp-breadcrumb-current">${esc(nested)}</span>`;
+            } else {
+                html += `<span class="cp-breadcrumb-current">${esc(sub)}</span>`;
+            }
+        } else {
+            html = `<span class="cp-breadcrumb-current">${esc(TITLE)}</span>`;
+        }
+        breadcrumb.innerHTML = html;
+    };
+    
+    const renderNested = (slug, items, { push = true } = {}) => {
+        const item = items.find(i => i.dataset.slug === slug);
+        if (!item) return;
+        currentNested = item.dataset.slug;
+        
+        // Hide subpage content, show nested article
+        subpageContent?.classList.add('hidden');
+        nestedArticle?.classList.remove('hidden');
+        
+        if (nestedTitle) nestedTitle.textContent = item.dataset.title || '';
+        if (nestedSubtitle) {
+            nestedSubtitle.textContent = item.dataset.subtitle || '';
+            nestedSubtitle.classList.toggle('hidden', !item.dataset.subtitle);
+        }
+        if (nestedImg) {
+            if (item.dataset.image) {
+                nestedImg.src = item.dataset.image;
+                nestedImg.alt = item.dataset.title || '';
+                nestedImg.classList.remove('hidden');
+            } else {
+                nestedImg.classList.add('hidden');
+            }
+        }
+        if (nestedHtml) nestedHtml.innerHTML = item.innerHTML || '';
+        
+        nestedTabs?.querySelectorAll('.cp-nested-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.nested === currentNested);
+        });
+        
+        if (push) {
+            history.pushState({ sub: currentSub, nested: currentNested }, '', buildUrl(currentSub, currentNested));
+        }
+        
+        const subData = $('cp-data-' + currentSub);
+        updateBreadcrumb(subData?.dataset.title, item.dataset.title);
+        updateNav(currentSub, currentNested);
+        
+        // Auto-scroll to nested content for better UX
+        setTimeout(() => {
+            nestedArticle?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+    };
+    
+    // Show subpage content, hide nested article
+    const showSubpageContent = () => {
+        currentNested = null;
+        subpageContent?.classList.remove('hidden');
+        nestedArticle?.classList.add('hidden');
+        nestedTabs?.querySelectorAll('.cp-nested-tab').forEach(t => t.classList.remove('active'));
+    };
+    
+    const renderSubpage = (sub, nested, { push = true } = {}) => {
+        if (!data) return;
+        const el = $('cp-data-' + sub);
+        if (!el) return;
+        
+        currentSub = sub;
+        currentNested = null;
+        
+        updateHero(el.dataset.title, el.dataset.subtitle, el.dataset.image);
+        
+        overview?.classList.add('hidden');
+        subpageWrap?.classList.remove('hidden');
+        const htmlEl = el.querySelector('.cp-data-html');
+        if (subpageHtml) subpageHtml.innerHTML = htmlEl ? htmlEl.innerHTML : '';
+        
+        const nestedData = el.querySelector('.cp-data-nested');
+        const items = nestedData ? Array.from(nestedData.querySelectorAll('.cp-nested-item')) : [];
+        currentNestedItems = items; // Store for later use
+        
+        if (items.length) {
+            nestedWrap?.classList.remove('hidden');
+            
+            // Build tabs
+            if (nestedTabs) {
+                nestedTabs.innerHTML = items.map(i => `<button type="button" class="cp-nested-tab" data-nested="${i.dataset.slug}">${esc(i.dataset.title || 'Topic')}</button>`).join('');
+                nestedTabs.querySelectorAll('.cp-nested-tab').forEach(t => {
+                    t.addEventListener('click', () => renderNested(t.dataset.nested, items));
+                });
+            }
+            
+            // Only render nested content if explicitly requested via URL
+            if (nested && items.find(i => i.dataset.slug === nested)) {
+                renderNested(nested, items, { push: false });
+            } else {
+                // Show subpage content, not nested
+                showSubpageContent();
+            }
+        } else {
+            nestedWrap?.classList.add('hidden');
+        }
+        
+        updateBreadcrumb(el.dataset.title, currentNested ? items.find(i => i.dataset.slug === currentNested)?.dataset.title : null);
+        updateNav(sub, currentNested);
+        
+        // URL only includes nested slug if nested is selected
+        if (push) history.pushState({ sub, nested: currentNested }, '', buildUrl(sub, currentNested));
+    };
+    
+    const renderOverview = ({ push = true } = {}) => {
+        currentSub = null;
+        currentNested = null;
+        updateHero(TITLE, SUBTITLE, IMAGE);
+        overview?.classList.remove('hidden');
+        subpageWrap?.classList.add('hidden');
+        nestedWrap?.classList.add('hidden');
+        updateBreadcrumb(null, null);
+        updateNav(null, null);
+        if (push) history.pushState({ sub: null, nested: null }, '', buildUrl());
+    };
+    
+    const init = () => {
+        $$('.cp-nav-link[data-overview]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); renderOverview(); }));
+        $$('.cp-nav-link[data-subpage][data-nav="subpage"]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); renderSubpage(el.dataset.subpage, null); }));
+        $$('.cp-nav-link[data-nested]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); renderSubpage(el.dataset.subpage, el.dataset.nested); }));
+        mobileToggle?.addEventListener('click', () => mobileNav?.classList.toggle('show'));
+        
+        window.addEventListener('popstate', e => {
+            const s = e.state || parseUrl();
+            if (s.sub) renderSubpage(s.sub, s.nested, { push: false });
+            else renderOverview({ push: false });
+        });
+        
+        const p = parseUrl();
+        if (p.sub) renderSubpage(p.sub, p.nested, { push: false });
+        else renderOverview({ push: false });
+    };
+    
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+})();
+</script>
+{% endblock %}

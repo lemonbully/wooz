@@ -1,0 +1,88 @@
+{% comment %}
+Shared top-bar actions for every authenticated app page (dashboard + store
+surfaces): a store-profile switcher and the account menu. Driven by the
+`profile_*` context processor (ud.context_processors.dashboard_nav), so it
+always shows which account this is, which store profile is current, and lets the
+owner switch profiles or sign out from anywhere.
+{% endcomment %}
+{% if request.user.is_authenticated %}
+<div class="app-top__actions">
+
+  {# ---- Store profile switcher ---- #}
+  <details class="app-acct app-switcher">
+    <summary aria-label="Switch store profile">
+      <span class="app-switcher__badge" aria-hidden="true">
+        {% if profile_current %}{{ profile_current.name|slice:":1"|upper }}{% else %}☰{% endif %}
+      </span>
+      <span class="app-switcher__label">
+        <span class="app-switcher__k">Store profile</span>
+        <span class="app-switcher__name">{% if profile_current %}{{ profile_current.name }}{% else %}Select a store{% endif %}</span>
+      </span>
+      <svg class="app-acct__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <div class="app-acct__panel app-switcher__panel">
+      <div class="app-acct__head">
+        <div class="app-acct__name">Your store profiles</div>
+        <div class="app-acct__mail">Each store is a separate profile — its products, orders and content never mix. Switch to work on another.</div>
+      </div>
+      {% if profile_sites %}
+      <div class="app-acct__links app-switcher__list">
+        {% for s in profile_sites %}
+        <a href="{% url 'store:overview' s.id %}"{% if profile_current and s.id == profile_current.id %} aria-current="true"{% endif %}>
+          <span class="app-switcher__dot" aria-hidden="true"></span>
+          <span class="app-switcher__row">
+            <span class="app-switcher__row-name">{{ s.name }}</span>
+            <span class="app-switcher__row-meta">{{ s.get_business_model_display }} · {{ s.get_status_display }}</span>
+          </span>
+          {% if profile_current and s.id == profile_current.id %}<span class="app-switcher__cur">Current</span>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="app-switcher__empty">No stores yet — create your first profile below.</div>
+      {% endif %}
+      <div class="app-acct__sep" aria-hidden="true"></div>
+      <div class="app-acct__links">
+        <a href="{% url 'ud:create_site' %}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Create another store
+        </a>
+        <a href="{% url 'ud:dashboard' %}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          All stores
+        </a>
+      </div>
+    </div>
+  </details>
+
+  {# ---- Account menu ---- #}
+  <details class="app-acct">
+    <summary aria-label="Account menu">
+      <span class="app-avatar" aria-hidden="true">{{ request.user.display_name|default:request.user.email|slice:":1" }}</span>
+      <span class="app-acct__who">{{ request.user.email }}</span>
+      <svg class="app-acct__caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <div class="app-acct__panel">
+      <div class="app-acct__head">
+        <div class="app-acct__name">{{ request.user.display_name|default:"Your account" }}</div>
+        <div class="app-acct__mail">{{ request.user.email }}</div>
+      </div>
+      <div class="app-acct__links">
+        <a href="{% url 'accounts:security' %}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="M9 12l2 2 4-4"/></svg>
+          Security &amp; devices
+        </a>
+        <div class="app-acct__sep" aria-hidden="true"></div>
+        <form method="post" action="{% url 'accounts:sign_out' %}">
+          {% csrf_token %}
+          <button type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+            Sign out
+          </button>
+        </form>
+      </div>
+    </div>
+  </details>
+
+</div>
+{% endif %}

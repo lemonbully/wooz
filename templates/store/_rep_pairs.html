@@ -1,0 +1,19 @@
+{% comment %}
+Repeatable two-input rows (FAQs, specs, extras, variant types). Include with:
+`label`, `name_a`/`ph_a`, `name_b`/`ph_b`, and `rows` — a list of {a, b} dicts
+for prefill. The view zips getlist(name_a) with getlist(name_b).
+{% endcomment %}
+<div class="app-rep app-f--full" data-rep>
+  <span class="pal-field__label">{{ label }}</span>
+  <div class="app-rep__rows">
+    {% for r in rows %}
+      <div class="app-rep__row app-rep__row--pair">
+        <input type="text" name="{{ name_a }}" value="{{ r.a }}" placeholder="{{ ph_a }}" class="app-rep__in">
+        <input type="text" name="{{ name_b }}" value="{{ r.b }}" placeholder="{{ ph_b }}" class="app-rep__in">
+        <button type="button" class="app-rep__del" aria-label="Remove">&times;</button>
+      </div>
+    {% endfor %}
+  </div>
+  <template class="app-rep__tmpl"><div class="app-rep__row app-rep__row--pair"><input type="text" name="{{ name_a }}" placeholder="{{ ph_a }}" class="app-rep__in"><input type="text" name="{{ name_b }}" placeholder="{{ ph_b }}" class="app-rep__in"><button type="button" class="app-rep__del" aria-label="Remove">&times;</button></div></template>
+  <button type="button" class="app-rep__add pal-btn pal-btn--ghost">+ Add</button>
+</div>

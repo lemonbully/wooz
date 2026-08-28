@@ -1,0 +1,2841 @@
+{% extends "storefront/template2/base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block title %}{{ product.title }} · {{ website.name|default:website.content.site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Cross-browser thin horizontal scrollbar */
+.scroll-small {
+  -webkit-overflow-scrolling: touch; 
+  scrollbar-width: thin;             
+  scrollbar-color: #cbd5e1 transparent; 
+}
+
+/* WebKit / Blink (Chrome, Edge, Safari) */
+.scroll-small::-webkit-scrollbar {
+  height: 6px; /* horizontal scrollbar height */
+  background: transparent;
+}
+
+.scroll-small::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-small::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;   /* thumb color */
+  border-radius: 9999px;       /* pill shape */
+  border: 2px solid transparent; /* gives a little breathing room */
+  background-clip: content-box; /* makes border appear as padding */
+}
+
+/* Optional: hover state to make thumb more visible on hover/focus */
+.scroll-small::-webkit-scrollbar-thumb:hover,
+.scroll-small:focus-visible::-webkit-scrollbar-thumb {
+  background-color: #94a3b8;
+  cursor: pointer;
+}
+
+/* Hide scrollbar for tabs nav while keeping scroll (mobile and cross-browser) */
+#tabs-nav {
+  -ms-overflow-style: none;  /* IE and old Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+#tabs-nav::-webkit-scrollbar { /* Chrome, Safari, new Edge */
+  height: 0; /* hide horizontal scrollbar */
+  width: 0;  /* safety for vertical if ever present */
+  background: transparent;
+}
+#tabs-nav::-webkit-scrollbar-track { background: transparent; }
+#tabs-nav::-webkit-scrollbar-thumb { background: transparent; }
+
+/* Note: Portrait video sizing is enforced via JS inline styles to avoid
+   dependence on Tailwind arbitrary classes in compiled builds. */
+
+</style>
+{% endblock %}
+
+{% block page_content %}
+{% website_base_path website request as website_base %}
+<script>
+  tailwind.config = {
+      theme: {
+          extend: {
+              screens: {
+                  'lg-mid': { min: '1024px', max: '1184px' },
+              },
+          },
+      },
+  };
+</script>
+<section class="bg-white pb-6 md:px-0 md:py-10">
+  <div class="mx-auto lg-mid:mx-[2rem]">
+    <!-- Breadcrumbs -->
+    <nav class="mt-8 md:mt-0 md:mb-6 ml-8 md:ml-8 md:px-4 sm:px-8 md:px-12 text-[10px] sm:text-xs text-gray-500 uppercase tracking-[0.15em] sm:tracking-[0.2em] overflow-hidden whitespace-nowrap overflow-ellipsis">
+      <div class="pl-2 md:pl-0 flex flex-wrap items-center">
+        <a href="{{ website_base }}" class="hover:text-gray-900 transition-colors">Home</a>
+        <span class="mx-1 sm:mx-2">/</span>
+        {% if product.category %}
+        <a href="{{ website_base }}category/{{ product.category.slug }}/" class="hover:text-gray-900 transition-colors truncate max-w-[40%] sm:max-w-none">{{ product.category.name }}</a>
+        <span class="mx-1 sm:mx-2">/</span>
+        {% endif %}
+        <span class="text-gray-900 truncate max-w-[50%] sm:max-w-none">{{ product.title }}</span>
+      </div>
+    </nav>
+
+    <!-- Product Details -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:[grid-template-columns:1fr_1fr_320px] gap-6 md:gap-8 lg:gap-10 px-4 md:px-0 lg:ml-0 w-full mx-auto lg:items-start">
+      {% block pdp_sticky_sidebar %}
+      <!-- Sticky purchase sidebar within section (desktop) -->
+      <aside class="hidden lg:block lg:col-start-3 lg:row-start-1">
+        <div class="w-[280px] rounded-xl ring-1 ring-gray-200 bg-white shadow-sm overflow-hidden">
+          <div class="p-6">
+            {% with specs=product.specifications %}
+            <div class="flex items-baseline gap-2">
+              <div id="sidebar-price" class="text-[28px] leading-none font-semibold text-gray-900">₹{{ product.price }}</div>
+              {% if specs and specs.mrp %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through">₹{{ specs.mrp }}</div>
+              {% elif specs and specs.original_price %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through">₹{{ specs.original_price }}</div>
+              {% elif product.mrp %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through">₹{{ product.mrp }}</div>
+              {% else %}
+              <div id="sidebar-mrp" class="text-gray-400 line-through hidden"></div>
+              {% endif %}
+            </div>
+            {% if specs and specs.prime or specs.is_prime %}
+            <div class="mt-2 flex items-center gap-1 text-sky-700">
+              <span class="font-semibold">prime</span>
+            </div>
+            {% endif %}
+            <div class="mt-2 text-[13px] text-gray-800">
+              <span class="font-medium">FREE delivery</span>
+              <span id="purch-delivery-date" class="font-semibold"></span>.
+            </div>
+            <div class="mt-3 flex items-start gap-2 text-[13px] text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21s7-5.686 7-11a7 7 0 10-14 0c0 5.314 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"/></svg>
+              <span>
+                Deliver to
+                <span class="font-medium">{{ request.user.first_name|default:'You' }}</span>
+                {% if website and website.city %}- {{ website.city }}{% endif %}
+                {% if website and website.pincode %} {{ website.pincode }}{% endif %}
+              </span>
+            </div>
+            <!-- Pincode serviceability checker (desktop) -->
+            {% if has_delhivery %}
+            <div class="mt-3">
+              <label for="service-pincode-input" class="block text-[11px] uppercase tracking-[0.2em] text-gray-500 mb-1">
+                Check delivery to your pincode
+              </label>
+              <div class="flex items-center gap-2">
+                <input
+                  id="service-pincode-input"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="6"
+                  class="flex-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-[13px] text-gray-900 shadow-sm focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:outline-none transition"
+                  placeholder="Enter 6-digit PIN code" />
+                <button
+                  id="service-pincode-btn"
+                  type="button"
+                  class="inline-flex items-center justify-center rounded-full bg-gray-900 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white shadow-sm hover:bg-black focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-900 transition">
+                  Check
+                </button>
+              </div>
+              <p id="service-pincode-msg" class="mt-2 text-xs hidden"></p>
+            </div>
+            {% endif %}
+            <div class="mt-4 text-[18px] font-semibold {% if product.in_stock|default:True %}text-green-600{% else %}text-red-600{% endif %}">
+              {% if product.in_stock|default:True %}In stock{% else %}Out of stock{% endif %}
+            </div>
+            <div class="mt-3 space-y-2 text-[13px]">
+              {% if specs and specs.ships_from %}
+              <div class="flex"><span class="w-24 text-gray-600">Ships from</span><span class="text-gray-900">{{ specs.ships_from }}</span></div>
+              {% elif website and website.name %}
+              <div class="flex"><span class="w-24 text-gray-600">Ships from</span><span class="text-gray-900">{{ website.name }}</span></div>
+              {% endif %}
+              {% if specs and specs.sold_by %}
+              <div class="flex"><span class="w-24 text-gray-600">Sold by</span><span class="text-blue-700">{{ specs.sold_by }}</span></div>
+              {% elif product.seller_name %}
+              <div class="flex"><span class="w-24 text-gray-600">Sold by</span><span class="text-blue-700">{{ product.seller_name }}</span></div>
+              {% endif %}
+              {% if specs and specs.packaging %}
+              <div class="flex"><span class="w-24 text-gray-600">Packaging</span><span class="text-gray-900">{{ specs.packaging }}</span></div>
+              {% endif %}
+              {% if specs and specs.gift_options %}
+              <div class="flex"><span class="w-24 text-gray-600">Gift options</span><span class="text-blue-700">{{ specs.gift_options }}</span></div>
+              {% endif %}
+            </div>
+            <div class="mt-4">
+              <label class="block text-[13px] text-gray-800 mb-1">Quantity:</label>
+              <select id="purch-qty" class="w-full h-8 rounded-md border border-gray-300 px-2 py-1 text-[11px] leading-[1.1] focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                {% num_range 1 101 as qty_range %}
+                {% for i in qty_range %}
+                <option class="text-[11px]" style="line-height:1.1;padding:2px 6px;" value="{{ i }}">{{ i }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mt-4 space-y-3">
+              {% if is_d2c %}
+              <a id="purch-add" href="{{ website_base }}cart/add/{{ product.product_id }}/?qty=1" class="block w-full text-center rounded-full bg-[#FFCE12] text-black font-medium py-2.5 text-sm">Add to Cart</a>
+              <a id="purch-buy" href="{{ website_base }}cart/add/{{ product.product_id }}/?qty=1&buy=1" class="block w-full text-center rounded-full bg-black text-white font-medium py-2.5 text-sm">Buy Now</a>
+              {% else %}
+              <a href="{% url 'public_enquiry' %}?product={{ product.product_id }}" class="block w-full text-center rounded-full bg-black text-white font-medium py-2.5 text-sm">Enquiry</a>
+              {% endif %}
+            </div>
+            <div class="mt-4">
+              <button id="purch-wishlist" type="button" class="w-full flex items-center justify-between rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 hover:bg-gray-50">
+                <span>Add to Wish List</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div id="purch-wishlist-msg" class="hidden mt-2 text-xs"></div>
+            </div>
+            {% endwith %}
+          </div>
+        </div>
+      </aside>
+      {% endblock %}
+      <!-- Gallery -->
+      <div class="lg:ml-12 lg:sticky lg:top-24 lg:self-start">
+        <div class="lg:flex lg:gap-0 overflow-hidden sm:overflow-visible">
+          <!-- Vertical thumbnails (desktop) -->
+          <div id="desktop-thumbs" class="hidden lg:flex lg:flex-col lg:w-24 gap-1 lg:justify-start" style="height:425px;overflow:hidden;">
+            {% for i in "1234567" %}
+              {% with image_attr="image"|add:i %}
+              {% with img=product|getattribute:image_attr %}
+              {% if img %}
+              <button class="thumb overflow-hidden bg-white flex-shrink-0 w-full" data-type="image" data-url="{{ img.url }}">
+                <img src="{{ img.url }}" {% media_attrs website img.url product.title %} class="w-full object-contain" style="height:80px;" />
+              </button>
+              {% endif %}
+              {% endwith %}
+              {% endwith %}
+            {% endfor %}
+            {% comment %}
+            Video thumbnail removed by requirement: play button is shown on the main image instead.
+            {% if product_video and product_video.url %}
+            <button class="thumb overflow-hidden bg-white ring-1 ring-gray-200 rounded-sm flex-shrink-0" data-type="video" data-video-type="{{ product_video.type }}" data-video-url="{{ product_video.url|media_cdn_url }}"{% if product_video.embed_url %} data-video-embed="{{ product_video.embed_url }}"{% endif %}>
+              <div class="relative !w-20 !h-20 bg-white flex items-center justify-center">
+                <img src="{% if product_video.thumb_url %}{{ product_video.thumb_url }}{% elif product.image1 %}{{ product.image1.url }}{% else %}https://via.placeholder.com/600x600?text=Video{% endif %}" alt="{{ product.title }} video thumbnail" class="!w-20 !h-20 object-cover" />
+                <div class="absolute inset-0 bg-black/20"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <span class="inline-flex items-center justify-center h-9 w-9 rounded-full bg-white/90 ring-1 ring-white shadow">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 text-gray-900" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  </span>
+                </div>
+                <span class="absolute bottom-1 right-1 rounded-full bg-white/90 px-2 py-0.5 text-[9px] uppercase tracking-[0.2em] text-gray-900 ring-1 ring-gray-200">Video</span>
+              </div>
+            </button>
+            {% endif %}
+            {% endcomment %}
+          </div>
+
+          <!-- Main image (with zoom controls) -->
+          <div id="pdp-image-stage" class="relative mt-4 sm:mt-0 w-full bg-white overflow-hidden aspect-square sm:max-w-[420px] md:aspect-square lg:aspect-square max-w-[600px] sm:w-[425px] sm:h-[425px] mx-auto sm:mx-0 touch-pan-y select-none" data-zoom-enabled="{% if enable_product_detail_zoom == False %}false{% else %}true{% endif %}">
+            {% with images=product.image1|default:None %}
+            {% endwith %}
+            <!-- Zoom controls (conditionally shown based on setting) -->
+            {% if enable_product_detail_zoom != False %}
+            <div id="pdp-zoom-controls" class="absolute left-3 top-3 z-10 flex items-center gap-2 rounded-full bg-white/90 backdrop-blur px-2 py-2 shadow ring-1 ring-gray-200">
+              <button id="pdp-zoom-out" type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-900 ring-1 ring-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900" aria-label="Zoom out" title="Zoom out">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+              </button>
+              <button id="pdp-zoom-in" type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-900 text-white ring-1 ring-gray-900 hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-900" aria-label="Zoom in" title="Zoom in">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              </button>
+              <button id="pdp-zoom-reset" type="button" class="hidden sm:inline-flex items-center justify-center rounded-full bg-white px-3 h-9 text-xs font-semibold uppercase tracking-[0.15em] text-gray-800 ring-1 ring-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900" aria-label="Reset zoom" title="Reset zoom">
+                Reset
+              </button>
+            </div>
+            {% endif %}
+
+            <img
+              id="active-image"
+              src="{% if product.image1 %}{{ product.image1.url }}{% else %}https://via.placeholder.com/600x600?text=Product{% endif %}"
+              {% media_attrs website product.image1.url product.title %}
+              class="absolute inset-0 w-full h-full object-contain p-0 origin-center transition-transform duration-200 ease-out will-change-transform"
+              style="transform: translate(var(--pdp-tx, 0px), var(--pdp-ty, 0px)) scale(var(--pdp-scale, 1));" />
+            
+            <!-- Image navigation dots (mobile) -->
+            <div id="pdp-image-dots" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 lg:hidden">
+              <!-- Dots will be added dynamically via JS -->
+            </div>
+
+            {% if product_video and product_video.url %}
+            <!-- Main image play button: bottom-right of the image stage -->
+            <button
+              id="pdp-main-play"
+              type="button"
+              class="absolute right-2 bottom-2 sm:right-3 sm:bottom-3 z-20 inline-flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-black text-white hover:bg-black focus:outline-none focus:ring-2 focus:ring-white transition shadow-lg"
+              aria-label="Play product video"
+              data-video-type="{{ product_video.type }}"
+              data-video-url="{{ product_video.url }}"
+              data-video-orientation="{{ product_video.orientation|default:'landscape' }}"
+              {% if product_video.embed_url %}data-video-embed="{{ product_video.embed_url }}"{% endif %}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 sm:h-6 sm:w-6" fill="white" aria-hidden="true">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </button>
+            {% endif %}
+            <!-- Badges -->
+            <div class="absolute top-3 right-3 space-y-1.5 flex flex-col items-end">
+              {% with specs=product.specifications %}
+                {% if specs %}
+                  {% if specs.discount %}
+                    <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount }}%</span>
+                  {% elif specs.discount_percentage %}
+                    <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount_percentage }}%</span>
+                  {% endif %}
+                {% endif %}
+              {% endwith %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Thumbnails (mobile) -->
+        <div id="mobile-thumbs" class="grid grid-cols-4 gap-3 md:gap-4 lg:hidden mt-4">
+          <!-- Tailwind safelist for dynamically-applied grid-cols-* in the JS below -->
+          <div class="hidden grid-cols-1 grid-cols-2 grid-cols-3 grid-cols-4 grid-cols-5 grid-cols-6 grid-cols-7 grid-cols-8"></div>
+          {% for i in "1234567" %}
+            {% with image_attr="image"|add:i %}
+            {% with img=product|getattribute:image_attr %}
+            {% if img %}
+            <button class="thumb overflow-hidden bg-white" data-type="image" data-url="{{ img.url }}">
+              <img src="{{ img.url }}" {% media_attrs website img.url product.title %} class="!h-20 !md:h-24 w-full object-cover" />
+            </button>
+            {% endif %}
+            {% endwith %}
+            {% endwith %}
+          {% endfor %}
+          {% comment %}
+          Video thumbnail removed by requirement: play button is shown on the main image instead.
+          {% if product_video and product_video.url %}
+          <button class="thumb overflow-hidden bg-white ring-1 ring-gray-200 rounded-sm" data-type="video" data-video-type="{{ product_video.type }}" data-video-url="{{ product_video.url|media_cdn_url }}"{% if product_video.embed_url %} data-video-embed="{{ product_video.embed_url }}"{% endif %}>
+            <div class="relative w-full !h-20 bg-white">
+              <img src="{% if product_video.thumb_url %}{{ product_video.thumb_url }}{% elif product.image1 %}{{ product.image1.url }}{% else %}https://via.placeholder.com/600x600?text=Video{% endif %}" alt="{{ product.title }} video thumbnail" class="absolute inset-0 w-full !h-[100%] object-cover" />
+              <div class="absolute inset-0 bg-black/20"></div>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="inline-flex items-center justify-center h-9 w-9 rounded-full bg-white/90 ring-1 ring-white shadow">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 text-gray-900" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </span>
+              </div>
+              <span class="absolute bottom-1 right-1 rounded-full bg-white/90 px-2 py-0.5 text-[9px] uppercase tracking-[0.2em] text-gray-900 ring-1 ring-gray-200">Video</span>
+            </div>
+          </button>
+          {% endif %}
+          {% endcomment %}
+        </div>
+      </div>
+
+      <script>
+        document.addEventListener('DOMContentLoaded', function(){
+          // Mobile thumbnails: auto grid columns
+          var container = document.getElementById('mobile-thumbs');
+          if(container) {
+            var thumbs = container.querySelectorAll('button.thumb');
+            var cols = thumbs ? thumbs.length : 0;
+            if (cols > 0) {
+              container.className = container.className
+                .split(' ')
+                .filter(function(c){ return !/^grid-cols-\d+$/.test(c); })
+                .join(' ')
+                .trim();
+              container.classList.add('grid-cols-' + cols);
+            }
+          }
+
+          // Desktop thumbnails: auto-size to fill container height without scrollbar
+          var dtContainer = document.getElementById('desktop-thumbs');
+          if(dtContainer) {
+            var dtThumbs = dtContainer.querySelectorAll('button.thumb');
+            var n = dtThumbs.length;
+            if(n > 0) {
+              var containerH = dtContainer.offsetHeight; // 425px
+              var gap = 4; // gap-1 = 4px
+              // Use at least 5 slots so fewer images don't grow oversized
+              var slots = Math.max(n, 5);
+              var thumbH = Math.floor((containerH - (slots - 1) * gap) / slots);
+              dtThumbs.forEach(function(btn) {
+                var img = btn.querySelector('img');
+                if(img) img.style.height = thumbH + 'px';
+              });
+            }
+          }
+        });
+      </script>
+
+      <!-- Details -->
+      <div class="ml-[1rem] mt-[1rem] md:mt-0 md:ml-2 lg:ml-0 lg:pr-2">
+        <h1 class="text-2xl sm:text-3xl md:text-2xl font-normal text-gray-900">{{ product.title }}</h1>
+        <div class="mt-2 flex items-center">
+          <div class="flex items-center">
+            <a href="#reviews-section" class="flex items-center">
+            {% num_range 0 rating_full as full_range %}
+            {% for i in full_range %}
+                <svg class="w-4 h-4 text-black fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            {% endfor %}
+            {% if rating_half %}
+                <svg class="w-4 h-4 text-black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <defs>
+                        <linearGradient id="half-star-gradient" x1="0" x2="1" y1="0" y2="0">
+                            <stop offset="50%" stop-color="currentColor"></stop>
+                            <stop offset="50%" stop-color="#e5e7eb"></stop>
+                        </linearGradient>
+                    </defs>
+                    <path fill="url(#half-star-gradient)" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+            {% endif %}
+            {% num_range 0 rating_empty as empty_range %}
+            {% for i in empty_range %}
+                <svg class="w-4 h-4 text-gray-200 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            {% endfor %}
+            </a>
+          </div>
+          {% with rating=avg_rating|default_if_none:0|default:0 %}
+            {% if total_reviews %}
+              <span class="ml-2 text-sm text-gray-600">{{ rating|floatformat:1 }} out of 5</span>
+              <span class="ml-2 text-xs text-gray-500">{{ total_reviews }} review{{ total_reviews|pluralize }}</span>
+            {% else %}
+              <span class="ml-2 text-sm text-gray-500">No ratings yet</span>
+            {% endif %}
+          {% endwith %}
+        </div>
+        <div class="mt-4 flex items-center space-x-3">
+          {% with specs=product.specifications %}
+            {% if specs and specs.mrp %}
+              <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
+              <span id="product-mrp" class="text-gray-400 line-through">₹{{ specs.mrp }}</span>
+            {% elif specs and specs.original_price %}
+              <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
+              <span id="product-mrp" class="text-gray-400 line-through">₹{{ specs.original_price }}</span>
+            {% elif product.mrp %}
+              <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
+              <span id="product-mrp" class="text-gray-400 line-through">₹{{ product.mrp }}</span>
+            {% else %}
+              <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
+              <span id="product-mrp" class="text-gray-400 line-through hidden"></span>
+            {% endif %}
+          {% endwith %}
+        </div>
+        {% if product.trusted_icons %}
+        <div class="mt-6 md:mt-5 flex flex-wrap gap-[1.5rem] md:gap-5">
+          <style>
+            @media (max-width: 640px) {
+              .trusted-row-mobile { flex-wrap: nowrap; overflow-x: auto; gap: 2rem; }
+              .trusted-row-mobile > div { flex: 0 0 auto; }
+            }
+          </style>
+          <div class="py-2 sm:py-0 w-full flex trusted-row-mobile gap-[2rem] sm:gap-6 items-center">
+          {% for badge in product.trusted_icons %}
+          <div class="flex flex-col items-center">
+            <span class="inline-flex h-12 w-12 sm:h-11 sm:w-11 items-center justify-center gap-3 rounded-full bg-gray-100 text-gray-700 ring-1 ring-gray-400" title="{{ badge }}" aria-label="{{ badge }}">
+              {% if 'Delivery' in badge or 'Shipping' in badge %}
+                <!-- Truck icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <rect x="2" y="9" width="10" height="6" rx="1"></rect>
+                  <path d="M12 10h4l3 3v2h-3.5"></path>
+                  <circle cx="6" cy="17" r="1.5" fill="currentColor"></circle>
+                  <circle cx="16" cy="17" r="1.5" fill="currentColor"></circle>
+                </svg>
+              {% elif 'warranty' in badge|lower %}
+                <!-- Shield check icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M12 3l7 3v6c0 4.418-3.582 7-7 9-3.418-2-7-4.582-7-9V6l7-3z"></path>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+              {% elif badge == 'Non returnable' %}
+                <!-- Prohibited icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <circle cx="12" cy="12" r="7"></circle>
+                  <path d="M8.5 8.5l7 7"></path>
+                </svg>
+              {% elif badge == 'Cash On Delivery' %}
+                <!-- Rupee symbol -->
+                <span class="text-lg font-semibold leading-none">₹</span>
+              {% elif badge == 'Secure Payment' %}
+                <!-- Lock icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <rect x="6" y="10" width="12" height="9" rx="2"></rect>
+                  <path d="M8 10V8a4 4 0 118 0v2"></path>
+                </svg>
+              {% elif 'Return' in badge %}
+                <!-- Rotate/return arrow icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M16 8a6 6 0 10.2 8.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  <path d="M16 4v4h-4" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              {% elif badge == 'Fast Delivery' %}
+                <!-- Bolt icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M13 3L6 14h5l-1 7 7-11h-5l1-7z" stroke-linejoin="round"></path>
+                </svg>
+              {% elif badge == 'Secure Packaging' %}
+                <!-- Box/cube icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M3 7l9-4 9 4-9 4-9-4z"></path>
+                  <path d="M3 7v10l9 4 9-4V7"></path>
+                  <path d="M12 11v10"></path>
+                </svg>
+              {% else %}
+                <!-- Generic check circle -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <circle cx="12" cy="12" r="7"></circle>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+              {% endif %}
+            </span>
+            <span class="mt-1.5 text-[11px] text-gray-700 text-center">
+              {% with words=badge|split:" " %}
+                {% if words|length > 1 %}
+                  {{ words.0 }}<br>
+                  {% for word in words|slice:"1:" %}
+                    {{ word }}{% if not forloop.last %} {% endif %}
+                  {% endfor %}
+                {% else %}
+                  {{ badge }}
+                {% endif %}
+              {% endwith %}
+            </span>
+          </div>
+          {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        <!-- Product Variations -->
+        {% if product.variants %}
+        <div class="mt-5">
+            <div class="grid grid-cols-1 md:flex md:flex-col gap-1.5">
+                {% for variant_type in product.variants %}
+                <div class="bg-white shadow-xs {% if not forloop.first %}mt-2{% endif %}" data-variant-type="{{ variant_type.name|lower }}">
+                    <h4 class="font-medium text-gray-900 mb-1.5 text-sm md:text-xs">{{ variant_type.name }}</h4>
+                    <div class="flex flex-wrap gap-1.5 md:gap-2 gap-2 variant-options">
+                        {% for value in variant_type.values %}
+                        {% if variant_type.name|lower == 'color' or variant_type.name|lower == 'colour' %}
+                        <div class="flex items-center px-2.5 py-1.5 text-sm md:text-xs md:px-2.5 md:py-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 ring-1 ring-gray-400 rounded cursor-pointer transition-colors variant-option {% if forloop.first %}selected{% endif %}" 
+                             data-variant-type="{{ variant_type.name|lower }}" 
+                             data-variant-value="{{ value.value }}">
+                            <span class="md:w-3.5 md:h-3.5 w-4 h-4 rounded-full md:mr-1.5 mr-2" style="background-color: {{ value.value }}"></span>
+                            {{ value.value }}
+                        </div>
+                        {% else %}
+                        <div class="md:px-2.5 md:py-1.5 px-3 py-2 text-sm md:text-xs bg-gray-50 hover:bg-gray-100 ring-1 ring-gray-400 rounded cursor-pointer transition-colors variant-option {% if forloop.first %}selected{% endif %}" 
+                             data-variant-type="{{ variant_type.name|lower }}" 
+                             data-variant-value="{{ value.value }}">
+                            {{ value.value }}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        <!-- Product Features Section -->
+        {% if d2c_details and d2c_details.features %}
+        <div class="w-full">
+          <div class="bg-white overflow-hidden">
+            <div class="py-6">
+              <h3 class="text-base font-semibold text-gray-900 mb-4">Features</h3>
+              <div class="flex">
+                <div class="flex-1">
+                  {% for feature in d2c_details.features|slice:":2" %}
+                  <div class="flex items-start mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500 mt-0.5 mr-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-sm text-gray-700">{{ feature }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div class="flex-1">
+                  {% for feature in d2c_details.features|slice:"2:4" %}
+                  <div class="flex items-start mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500 mt-0.5 mr-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-sm text-gray-700">{{ feature }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% block pdp_mobile_purchase_actions %}
+        <!-- Mobile purchase actions (visible when sticky sidebar is hidden) -->
+        <div class="lg:hidden">
+          <div class="bg-white py-4 pr-4 space-y-3">
+            <div class="mt-2 text-[13px] text-gray-800">
+              <span class="font-medium">FREE delivery</span>
+              <span id="purch-delivery-date" class="font-semibold"></span>.
+            </div>
+            <div class="mt-3 flex items-start gap-2 text-[13px] text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21s7-5.686 7-11a7 7 0 10-14 0c0 5.314 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"/></svg>
+              <span>
+                Deliver to
+                <span class="font-medium">{{ request.user.first_name|default:'You' }}</span>
+                {% if website and website.city %}- {{ website.city }}{% endif %}
+                {% if website and website.pincode %} {{ website.pincode }}{% endif %}
+              </span>
+            </div>
+              {% if has_delhivery %}
+              <!-- Pincode serviceability checker (mobile) -->
+              <div class="mt-3">
+                <label for="service-pincode-input-m" class="block text-[11px] uppercase tracking-[0.2em] text-gray-500 mb-1">
+                  Check delivery to your pincode
+                </label>
+                <div class="flex items-center gap-2">
+                  <input
+                    id="service-pincode-input-m"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="6"
+                    class="flex-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-[13px] text-gray-900 shadow-sm focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:outline-none transition"
+                    placeholder="Enter 6-digit PIN code" />
+                  <button
+                    id="service-pincode-btn-m"
+                    type="button"
+                    class="inline-flex items-center justify-center rounded-full bg-gray-900 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-white shadow-sm hover:bg-black focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-900 transition">
+                    Check
+                  </button>
+                </div>
+                <p id="service-pincode-msg-m" class="mt-2 text-xs hidden"></p>
+              </div>
+              {% endif %}
+            <div class="flex flex-row gap-4">
+              <div class="flex items-baseline gap-2">
+                <div id="mobile-price" class="text-[22px] leading-none font-semibold text-gray-900">₹{{ product.price }}</div>
+                {% with specs=product.specifications %}
+                {% if specs and specs.mrp %}
+                <div id="mobile-mrp" class="text-gray-400 line-through">₹{{ specs.mrp }}</div>
+                {% elif specs and specs.original_price %}
+                <div id="mobile-mrp" class="text-gray-400 line-through">₹{{ specs.original_price }}</div>
+                {% elif product.mrp %}
+                <div id="mobile-mrp" class="text-gray-400 line-through">₹{{ product.mrp }}</div>
+                {% else %}
+                <div id="mobile-mrp" class="text-gray-400 line-through hidden"></div>
+                {% endif %}
+                {% endwith %}
+              </div>
+              <div class="text-[18px] font-semibold {% if product.in_stock|default:True %}text-green-600{% else %}text-red-600{% endif %}">
+                {% if product.in_stock|default:True %}In stock{% else %}Out of stock{% endif %}
+              </div>
+            </div>
+            <div>
+              <label class="block text-[12px] text-gray-800 mb-1">Quantity</label>
+              <select id="purch-qty-m" class="w-full h-8 rounded-md border border-gray-300 px-2 py-1 text-[11px] leading-[1.1] focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                {% num_range 1 101 as qty_range_m %}
+                {% for i in qty_range_m %}
+                <option class="text-[11px]" style="line-height:1.1;padding:2px 6px;" value="{{ i }}">{{ i }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="space-y-2">
+              {% if is_d2c %}
+              <a id="purch-add-m" href="{{ website_base }}cart/add/{{ product.product_id }}/?qty=1" class="block w-full text-center rounded-full bg-[#FFCE12] text-black font-medium py-2.5 text-sm">Add to Cart</a>
+              <a id="purch-buy-m" href="{{ website_base }}cart/add/{{ product.product_id }}/?qty=1&buy=1" class="block w-full text-center rounded-full bg-black text-white font-medium py-2.5 text-sm">Buy Now</a>
+              <button id="purch-wishlist-m" type="button" class="w-full flex items-center justify-between rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 hover:bg-gray-50">
+                <span>Add to Wish List</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div id="purch-wishlist-msg-m" class="hidden mt-2 text-xs"></div>
+              {% else %}
+              <a href="{% url 'public_enquiry' %}?product={{ product.product_id }}" class="block w-full text-center rounded-full bg-black text-white font-medium py-2.5 text-sm">Enquiry</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endblock %}
+        {% if d2c_details and d2c_details.bullets %}
+        <div class="w-full">
+          <div class="bg-white overflow-hidden">
+            <div class="py-6">
+              <h3 class="text-base font-semibold text-gray-900 mb-3">About this item</h3>
+              <ul id="bullets-list" class="list-disc list-outside ml-5 space-y-2 text-sm text-gray-800 leading-6 marker:text-gray-700">
+                {% for point in d2c_details.bullets %}
+                <li class="{% if forloop.counter > 3 %}hidden sm:list-item{% endif %}">{{ point }}</li>
+                {% endfor %}
+              </ul>
+              {% if d2c_details.bullets|length > 3 %}
+              <div class="mt-3 sm:hidden">
+                <button type="button" id="bullets-read-more" class="inline-flex items-center rounded-full border border-gray-400 bg-white px-3 py-1.5 ml-5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600">Read more</button>
+                <button type="button" id="bullets-read-less" class="inline-flex items-center rounded-full border border-gray-400 bg-white px-3 py-1.5 ml-5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 hidden">Read less</button>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Description/Specifications Tabs -->
+    <section class="mt-10 md:mt-[7rem] px-4 md:px-0">
+      <div class="w-full mx-auto px-4 sm:px-6 lg:px-12">
+        <div class="border-b border-gray-200 overflow-hidden">
+          <nav id="tabs-nav" class="flex items-center overflow-x-auto scrollbar-hide md:overflow-visible gap-6 md:gap-10 pb-2 -mb-2">
+            <button type="button" id="tab-desc" class="py-3 -mb-px uppercase tracking-[0.2em] text-[13px] md:text-xs font-medium border-b-2 border-gray-900 text-gray-900 whitespace-nowrap">Description</button>
+            <button type="button" id="tab-addl" class="py-3 -mb-px uppercase tracking-[0.2em] text-[13px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Item Details</button>
+            <button type="button" id="tab-manufacturer" class="py-3 -mb-px uppercase tracking-[0.2em] text-[13px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Manufacturer & Packer</button>
+            <button type="button" id="tab-others" class="py-3 -mb-px uppercase tracking-[0.2em] text-[13px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Others</button>
+          </nav>
+        </div>
+        <div class="pt-6">
+          <!-- Description Content -->
+          <div id="panel-desc">
+            {% if product.description %}
+            <div class="text-justify text-sm md:text-sm max-w-none text-gray-700">
+              {{ product.description|linebreaks }}
+            </div>
+            {% else %}
+            <div class="text-xs text-gray-500">No description available.</div>
+            {% endif %}
+          </div>
+          <!-- Additional Information (Specifications) Content -->
+          <div id="panel-addl" class="hidden">
+            {% with d=d2c_details %}
+            {% if d %}
+            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {% if d.material %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Material</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.material }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d.colour %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Colour</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.colour }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d.recommended_use %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Recommended Use</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.recommended_use }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d.handling_time %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Handling Time</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.handling_time }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d.accessories %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Accessories</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">
+                    <ul class="list-disc list-inside space-y-1">
+                      {% for a in d.accessories %}
+                      <li>{{ a }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d.includes %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Includes</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">
+                    <ul class="list-disc list-inside space-y-1">
+                      {% for inc in d.includes %}
+                      <li>{{ inc }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.product_length and product.product_breadth and product.product_height %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Product Dimensions</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.product_length }} x {{ product.product_breadth }} x {{ product.product_height }} {{ product.product_unit }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.package_length and product.package_breadth and product.package_height %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Package Dimensions</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.package_length }} x {{ product.package_breadth }} x {{ product.package_height }} {{ product.package_unit }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.weight_value %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Product Weight</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.weight_value }} {{ product.weight_unit }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.package_weight_value %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Package Weight</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.package_weight_value }} {{ product.package_weight_unit }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.country_of_origin %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Country of Origin</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.country_of_origin }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.return_type %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Return Type</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.return_type }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.dangerous_good %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Dangerous Good</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.dangerous_good }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.guarantee_warranty %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Guarantee/Warranty</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.guarantee_warranty }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d.warning %}
+              <div class="rounded-xl bg-red-50 ring-1 ring-red-100 shadow-sm hover:bg-red-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-red-600">Warning</h4>
+                  </div>
+                  <div class="text-red-600 text-[14px] md:text-sm break-words">{{ d.warning }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d.support and d.support.phone %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Customer Support Number</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.support.phone }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if d.support and d.support.email %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Customer Support Email</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.support.email }}</div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center py-8"><div class="text-xs text-gray-500">No additional information available.</div></div>
+            {% endif %}
+            {% endwith %}
+          </div>
+          
+          <!-- Manufacturer & Packer Content -->
+          <div id="panel-manufacturer" class="hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {% if product.manufacturer_contact %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Manufacturer Contact</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.manufacturer_contact }}</div>
+                </div>
+              </div>
+              {% endif %}
+              {% if product.packer_contact %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Packer Contact</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.packer_contact }}</div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+            {% if not product.manufacturer_contact and not product.packer_contact %}
+            <div class="text-center py-8">
+              <div class="text-xs text-gray-500">No manufacturer or packer details available.</div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Others Content (only extras) -->
+          <div id="panel-others" class="hidden">
+            {% if d2c_details and d2c_details.extras %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {% for extra in d2c_details.extras %}
+              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+                <div class="flex flex-col p-4">
+                  <div class="mb-2">
+                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">{{ extra.name|default:extra.type|capfirst }}</h4>
+                  </div>
+                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ extra.text }}</div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+              <div class="text-xs text-gray-500">No other details available.</div>
+            </div>
+            {% endif %}
+          </div>
+          <!-- Reviews Content (removed; see dedicated section below FAQs) -->
+        </div>
+      </div>
+    </section>
+
+    <div class="mt-[5rem] w-full">
+      {% include 'storefront/template1/components/product_faq.html' %}
+    </div>
+    <!-- Reviews Section (Below FAQs) -->
+    <section id="reviews-section" class="mt-10 md:mt-14 bg-white px-4 md:px-0">
+      <div class="w-full mx-auto px-4 sm:px-6 lg:px-12 py-8">
+        <div class="text-center max-w-3xl mx-auto mb-6">
+          <h2 class="text-lg uppercase tracking-[0.25em] text-gray-800 font-semibold">Product Reviews</h2>
+          <p class="mt-2 text-sm text-gray-700">Share your experience with {{ product.title }}.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Summary -->
+          <div class="lg:col-span-1 p-5 bg-gray-100 rounded-md">
+            <div class="text-sm uppercase tracking-[0.2em] text-blue-700">Overall Rating</div>
+            <div class="mt-2 flex items-end gap-3">
+              <div class="text-4xl font-semibold text-gray-900">{{ avg_rating|default:0|floatformat:1 }}</div>
+              <div class="text-sm text-gray-600">/ 5</div>
+            </div>
+            <div class="mt-2 text-xs text-gray-600">Based on {{ total_reviews|default:0 }} review{{ total_reviews|default:0|pluralize }}</div>
+            <div class="mt-4 flex items-center">
+              {% num_range 0 rating_full as full_range2 %}
+              {% for i in full_range2 %}
+                <svg class="w-5 h-5 text-amber-500 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+              {% endfor %}
+              {% if rating_half %}
+                <svg class="w-5 h-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="half-star-gradient-3" x1="0" x2="1" y1="0" y2="0"><stop offset="50%" stop-color="currentColor"></stop><stop offset="50%" stop-color="#e5e7eb"></stop></linearGradient></defs><path fill="url(#half-star-gradient-3)" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+              {% endif %}
+              {% num_range 0 rating_empty as empty_range2 %}
+              {% for i in empty_range2 %}
+                <svg class="w-5 h-5 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+              {% endfor %}
+            </div>
+          </div>
+          <!-- Reviews list and form -->
+          <div class="lg:col-span-2">
+            {% if reviews %}
+              <ul class="space-y-4">
+                {% for r in reviews %}
+                <li class="bg-white rounded-2xl ring-1 ring-gray-200 shadow-sm p-5">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <div class="text-sm font-medium text-gray-900">{{ r.name|default:'Anonymous' }}</div>
+                      <div class="text-[11px] text-gray-600">{{ r.created_at|date:'M d, Y' }}</div>
+                    </div>
+                    <div class="flex items-center">
+                      {% for i in "12345" %}
+                        {% if forloop.counter <= r.rating %}
+                          <svg class="w-4 h-4 text-amber-500 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        {% else %}
+                          <svg class="w-4 h-4 text-gray-300 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% if r.title %}<div class="mt-1 text-sm font-medium text-gray-900">{{ r.title }}</div>{% endif %}
+                  <p class="mt-2 text-sm text-gray-700 leading-relaxed">{{ r.comment|linebreaksbr }}</p>
+                  {% if r.photo %}
+                  <div class="mt-3">
+                    <img src="{{ r.photo.url }}" alt="Review photo" class="w-24 h-24 object-cover rounded-md ring-1 ring-gray-200" />
+                  </div>
+                  {% endif %}
+                  {% if customer_email and r.email and r.email|lower == customer_email|lower %}
+                  <div class="mt-3">
+                    <form method="post" action="{% url 'public_review_delete' product_id=product.product_id|default:'0' %}" onsubmit="return confirm('Delete your review?');">
+                      {% csrf_token %}
+                      <button type="submit" class="text-xs text-red-600 hover:text-red-700">Delete</button>
+                    </form>
+                  </div>
+                  {% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <div class="text-sm text-gray-600 bg-yellow-50 p-4 rounded-lg">No reviews yet. Be the first to review.</div>
+            {% endif %}
+            <!-- Review form (Accordion) -->
+            <div class="mt-6 bg-white shadow-sm rounded-xl">
+              <button id="review-accordion-btn" type="button" class="w-full flex items-center justify-between px-5 py-4" aria-controls="review-accordion-panel" aria-expanded="false" data-default-open="{% if total_reviews %}1{% else %}0{% endif %}">
+                <span class="text-sm font-medium text-gray-900">Write a review</span>
+                <svg id="review-accordion-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 text-gray-500 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div id="review-accordion-panel" class="border-t border-gray-100 {% if not total_reviews %}hidden{% endif %}">
+                <div class="p-5">
+                  {% if is_d2c and not customer_email %}
+                    <div class="text-sm text-gray-600 bg-yellow-50 p-4 rounded-lg">Please sign in from Account to write a review.</div>
+                    <div class="mt-4">
+                      {% url 'public_product_detail' product_slug=product.slug|default:'_' as purl %}
+                      <a href="{% url 'public_user_account' %}?next={{ purl|add:'#reviews-section'|urlencode }}" class="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs uppercase tracking-[0.15em] hover:bg-gray-800">Go to Account &amp; Sign In</a>
+                    </div>
+                  {% elif is_d2c and not can_review %}
+                    <div class="text-sm text-gray-600 bg-yellow-50 p-4 rounded-lg">Only customers with delivered orders for this product can review.</div>
+                  {% else %}
+                    <div class="text-sm text-emerald-700 bg-emerald-50 p-4 rounded-lg">
+                      {% if is_b2b %}Use your email to create or update your review anytime.{% else %}You can update your existing review from this form.{% endif %}
+                    </div>
+                  {% endif %}
+                  <form method="post" action="{% url 'submit_product_review' product_id=product.product_id|default:'0' %}" enctype="multipart/form-data" class="space-y-3">
+                    {% csrf_token %}
+                    {% if is_b2b or customer_email and can_review %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Name</label>
+                        <input type="text" name="name" value="{% if my_review and my_review.name %}{{ my_review.name }}{% endif %}" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Your name" />
+                      </div>
+                      <div>
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Email</label>
+                        <input type="email" name="email" value="{% if my_review and my_review.email %}{{ my_review.email }}{% endif %}" {% if is_b2b %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="you@example.com" />
+                      </div>
+                      <div>
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Rating</label>
+                        <select name="rating" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                          <option value="5" {% if my_review and my_review.rating == 5 %}selected{% endif %}>5 - Excellent</option>
+                          <option value="4" {% if my_review and my_review.rating == 4 %}selected{% endif %}>4 - Good</option>
+                          <option value="3" {% if my_review and my_review.rating == 3 %}selected{% endif %}>3 - Average</option>
+                          <option value="2" {% if my_review and my_review.rating == 2 %}selected{% endif %}>2 - Poor</option>
+                          <option value="1" {% if my_review and my_review.rating == 1 %}selected{% endif %}>1 - Terrible</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Title</label>
+                        <input type="text" name="title" value="{% if my_review and my_review.title %}{{ my_review.title }}{% endif %}" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Optional title" />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Review</label>
+                      <textarea name="comment" rows="4" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Share your experience with this product" required>{% if my_review and my_review.comment %}{{ my_review.comment }}{% endif %}</textarea>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Add Photo (optional)</label>
+                      <input type="file" name="photo" accept="image/*" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+                    </div>
+                    <div class="flex items-center justify-end">
+                      <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 text-white text-xs uppercase tracking-[0.15em] hover:bg-blue-700 shadow-sm transition-colors">Submit Review</button>
+                    </div>
+                    {% endif %}
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Related products -->
+    <style>
+      .related-product-image-link { width: 100%; height: 100%; }
+      .related-bs-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 4fr) minmax(0, 1fr);
+        gap: 0.5rem;
+        width: 100%;
+        align-items: stretch;
+      }
+      @media (max-width: 768px) {
+        .related-bs-actions { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); }
+        .related-bs-content {
+          width: 100%;
+          max-width: 42vw;
+          overflow: hidden;
+        }
+        .related-bs-title {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      }
+    </style>
+    {% if related_products %}
+    <div class="mt-14 px-4 md:px-0">
+      <div class="text-center max-w-4xl mx-auto mb-6">
+        <h2 class="text-lg uppercase tracking-[0.25em] text-gray-800 font-normal">You may also like</h2>
+      </div>
+      <div id="related-slider" class="relative">
+        <button type="button" class="hidden md:hidden absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Previous" onclick="relatedPrev()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <button type="button" class="hidden md:hidden absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Next" onclick="relatedNext()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <div id="related-viewport" class="overflow-hidden">
+          <div id="related-track" class="flex mx-auto sm:max-w-[90%] transition-transform duration-500 ease-out will-change-transform">
+            {% for item in related_products %}
+              <div class="related-slide box-border flex-none basis-1/2 lg:basis-1/4 px-0 md:px-3">
+                <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] m-4" style="border-radius: 8px;">
+                  <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
+                    {% if item.image1 %}
+                    <a href="{% url 'public_product_detail' product_slug=item.slug|default:'_' %}" class="group relative flex items-center justify-center flex-shrink-0 related-product-image-link">
+                      <span class="relative w-full h-full flex items-center justify-center">
+                        {% if website.content.enable_product_hover_swap and item.image2 %}
+                        <img src="{{ item.image1.url }}" {% media_attrs website item.image1.url item.title %} class="block w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0" data-no-srcset="true"/>
+                        <img src="{{ item.image2.url }}" {% media_attrs website item.image2.url item.title %} class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100" data-no-srcset="true"/>
+                        {% else %}
+                        <img src="{{ item.image1.url }}" {% media_attrs website item.image1.url item.title %} class="block w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" data-no-srcset="true"/>
+                        {% endif %}
+                      </span>
+                    </a>
+                    {% else %}
+                    <div class="absolute inset-0 flex items-center justify-center bg-gray-100"></div>
+                    {% endif %}
+                    {% if item.specifications %}
+                    <div class="absolute top-2 right-2 flex flex-col items-end space-y-1.5 pointer-events-none">
+                      {% with specs=item.specifications %}
+                        {% if specs.discount %}
+                          <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount }}%</span>
+                        {% elif specs.discount_percentage %}
+                          <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount_percentage }}%</span>
+                        {% endif %}
+                      {% endwith %}
+                    </div>
+                    {% endif %}
+                  </div>
+                  <div class="px-2 sm:px-3 md:px-4 py-4 text-left related-bs-content">
+                    <a href="{% url 'public_product_detail' product_slug=item.slug|default:'_' %}"
+                       class="block text-[12px] sm:text-[15px] font-normal uppercase leading-tight text-gray-900 hover:text-black transition-colors break-words related-bs-title">
+                      {{ item.title }}
+                    </a>
+                    {% if show_price_in_lists %}
+                    <div class="mt-1 text-gray-700">
+                      <a href="{% url 'public_product_detail' product_slug=item.slug|default:'_' %}"
+                         class="inline-flex items-baseline justify-start gap-1.5 hover:text-black transition-colors max-w-full">
+                        {% with specs=item.specifications %}
+                          <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words">{{ item.currency|currency_symbol }}{{ item.price }}</span>
+                          {% if specs and specs.mrp %}
+                            <span class="text-[15px] text-gray-400 line-through break-words">{{ item.currency|currency_symbol }}{{ specs.mrp }}</span>
+                          {% elif specs and specs.original_price %}
+                            <span class="text-[15px] text-gray-400 line-through break-words">{{ item.currency|currency_symbol }}{{ specs.original_price }}</span>
+                          {% endif %}
+                        {% endwith %}
+                      </a>
+                    </div>
+                    {% endif %}
+                    <div class="mt-1.5 related-bs-actions">
+                      {% if is_b2b %}
+                      <button type="button"
+                         class="inline-flex items-center justify-center gap-1 w-full h-7 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
+                         style="border: 1px solid #888888;"
+                         onclick="openRelatedEnquiryModal('{{ item.product_id }}')"
+                         aria-label="Send enquiry for {{ item.title }}">
+                        <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Send Enquiry</span>
+                      </button>
+                      <a href="{% url 'public_product_whatsapp' product_id=item.product_id|default:'0' %}"
+                         class="w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-[#25D366] bg-white hover:bg-gray-50 transition"
+                         style="border: 1px solid #888888;"
+                         aria-label="Share {{ item.title }} on WhatsApp">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-4 h-4" fill="currentColor" aria-hidden="true">
+                          <path d="M16.02 3.2c-7.07 0-12.8 5.73-12.8 12.8 0 2.26.6 4.48 1.74 6.43L3.2 28.8l6.53-1.72a12.75 12.75 0 0 0 6.29 1.64h.01c7.07 0 12.8-5.73 12.8-12.8 0-3.42-1.33-6.63-3.75-9.05a12.7 12.7 0 0 0-9.06-3.67Zm0 23.31h-.01a10.5 10.5 0 0 1-5.35-1.46l-.38-.23-3.88 1.02 1.04-3.78-.24-.39a10.54 10.54 0 1 1 18.81-5.67c0 5.8-4.72 10.51-10.49 10.51Zm5.76-7.85c-.31-.15-1.83-.9-2.12-1-.28-.1-.49-.15-.69.16-.2.3-.79 1-.97 1.2-.18.2-.36.22-.67.07-.31-.15-1.3-.48-2.48-1.54-.92-.82-1.54-1.84-1.72-2.15-.18-.31-.02-.48.13-.63.14-.14.31-.36.46-.54.15-.18.2-.31.31-.51.1-.2.05-.38-.03-.54-.08-.15-.69-1.67-.95-2.28-.25-.6-.5-.52-.69-.53-.18-.01-.38-.01-.59-.01-.2 0-.54.08-.82.38-.28.31-1.08 1.06-1.08 2.58 0 1.52 1.11 2.99 1.26 3.2.15.2 2.18 3.33 5.27 4.67.74.32 1.32.51 1.77.66.74.24 1.41.2 1.94.12.59-.09 1.83-.75 2.09-1.47.26-.72.26-1.33.18-1.47-.08-.13-.28-.2-.59-.36Z"/>
+                        </svg>
+                      </a>
+                      {% else %}
+                      <a href="{{ website_base }}cart/add/{{ item.product_id }}/?qty=1"
+                         class="inline-flex items-center justify-center gap-1 w-full h-7 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
+                         style="border: 1px solid #888888;"
+                         aria-label="Add {{ item.title }} to cart">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7">
+                          <circle cx="9" cy="20" r="1.6"></circle><circle cx="18" cy="20" r="1.6"></circle>
+                          <path d="M3 4h2l2.1 10.2a1 1 0 0 0 1 .8h9.9a1 1 0 0 0 1-.8L21 8H7.2"></path>
+                        </svg>
+                        <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Add To Cart</span>
+                      </a>
+                      <button type="button"
+                         class="js-related-wishlist w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-gray-700 bg-white hover:bg-gray-50 transition"
+                         style="border: 1px solid #888888;"
+                         data-wishlist-url="{% url 'public_wishlist_add' product_id=item.product_id|default:'0' %}"
+                         aria-label="Add {{ item.title }} to wishlist">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" stroke-width="1.7">
+                          <path d="M12 21s-6.7-4.35-9.2-8.07C.87 10.13 1.5 6.7 4.4 5.2a5 5 0 0 1 5.6.77L12 7.7l2-1.73a5 5 0 0 1 5.6-.77c2.9 1.5 3.53 4.93 1.6 7.73C18.7 16.65 12 21 12 21z"></path>
+                        </svg>
+                      </button>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% empty %}
+              <div class="w-full text-center text-gray-500 py-6">No related products available.</div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="mt-6 flex items-center justify-center gap-3">
+          <button id="related-prev" type="button" class="bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Previous" onclick="relatedPrev()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button id="related-next" type="button" class="bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Next" onclick="relatedNext()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- PDP Enquiry Modal -->
+<div id="pdp-enquiry-modal" class="fixed inset-0 z-50 hidden" data-enquiry-mode="{{ enquiry_form_mode|default:'mobile_qty' }}">
+  <div class="absolute inset-0 bg-black/50"></div>
+  <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-gray-200">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <h3 class="text-base font-semibold text-gray-900">Product Enquiry</h3>
+        <button type="button" id="pdp-enquiry-close" class="text-gray-400 hover:text-gray-600">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5"><path fill="currentColor" d="M6.4 5l12.6 12.6-1.4 1.4L5 6.4z"/><path fill="currentColor" d="M5 17.6L17.6 5l1.4 1.4L6.4 19z"/></svg>
+        </button>
+      </div>
+      <form id="pdp-enquiry-form" method="post" action="{% url 'public_enquiry' %}" class="px-5 py-4">
+        {% csrf_token %}
+        <input type="hidden" name="products" value="{{ product.product_id }}" />
+        <div id="pdp-enquiry-alert" class="hidden mb-3 text-sm rounded-md px-3 py-2"></div>
+        <div class="space-y-4">
+          <div id="pdp-mobile-field" class="{% if enquiry_form_mode == 'email_qty' %}hidden{% endif %}">
+            <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Mobile Number</label>
+            <input type="tel" name="mobile" inputmode="numeric" pattern="[0-9]{8,14}" maxlength="14" required class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter mobile number" />
+          </div>
+          <div id="pdp-email-field" class="{% if enquiry_form_mode != 'email_qty' and enquiry_form_mode != 'all' %}hidden{% endif %}">
+            <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Email Address</label>
+            <input type="email" name="email" {% if enquiry_form_mode == 'email_qty' or enquiry_form_mode == 'all' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter your email" />
+          </div>
+          <div id="pdp-quantity-field" class="{% if enquiry_form_mode == 'mobile_only' %}hidden{% endif %}">
+            <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Quantity</label>
+            <input type="number" name="quantity" min="1" step="1" {% if enquiry_form_mode != 'mobile_only' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter quantity" />
+          </div>
+        </div>
+        <div class="mt-5 flex items-center justify-end gap-2">
+          <button type="button" id="pdp-enquiry-cancel" class="inline-flex items-center justify-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-black text-white text-xs uppercase tracking-[0.15em] hover:bg-gray-800 shadow-sm transition-colors">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+</div>
+
+<script>
+  function openRelatedEnquiryModal(productId) {
+    var input = document.querySelector('#pdp-enquiry-form input[name="products"]');
+    if (input) input.value = productId;
+    var modal = document.getElementById('pdp-enquiry-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      try { if (window.applyPdpEnquiryMode) window.applyPdpEnquiryMode(modal.getAttribute('data-enquiry-mode')); } catch(e) {}
+    }
+  }
+</script>
+
+<script>
+  // B2B: Dynamically show/hide enquiry modal fields based on mode:
+  // - mobile_only: mobile required, quantity hidden
+  // - mobile_qty: mobile + quantity required
+  // - email_qty: email + quantity required
+  // - all: mobile + email + quantity required
+  (function(){
+    function q(sel, root){ return (root || document).querySelector(sel); }
+    function setShown(el, show){
+      if (!el) return;
+      el.classList.toggle('hidden', !show);
+    }
+    function setRequiredAndEnabled(input, required, enabled){
+      if (!input) return;
+      if (required) input.setAttribute('required', '');
+      else input.removeAttribute('required');
+      input.disabled = !enabled;
+      if (!enabled) {
+        try { input.value = ''; } catch(e) {}
+      }
+    }
+
+    window.applyPdpEnquiryMode = function(mode){
+      var modal = document.getElementById('pdp-enquiry-modal');
+      if (!modal) return;
+      var m = (mode || modal.getAttribute('data-enquiry-mode') || 'mobile_qty');
+      m = (m || '').toString().trim();
+      if (!m) m = 'mobile_qty';
+
+      var mobileWrap = document.getElementById('pdp-mobile-field');
+      var emailWrap = document.getElementById('pdp-email-field');
+      var qtyWrap = document.getElementById('pdp-quantity-field');
+
+      var mobileInput = q('input[name="mobile"]', mobileWrap);
+      var emailInput = q('input[name="email"]', emailWrap);
+      var qtyInput = q('input[name="quantity"]', qtyWrap);
+
+      var showMobile = (m === 'mobile_only' || m === 'mobile_qty' || m === 'all');
+      var showEmail = (m === 'email_qty' || m === 'all');
+      var showQty = (m === 'mobile_qty' || m === 'email_qty' || m === 'all');
+
+      setShown(mobileWrap, showMobile);
+      setShown(emailWrap, showEmail);
+      setShown(qtyWrap, showQty);
+
+      setRequiredAndEnabled(mobileInput, (m === 'mobile_only' || m === 'mobile_qty' || m === 'all'), showMobile);
+      setRequiredAndEnabled(emailInput, (m === 'email_qty' || m === 'all'), showEmail);
+      setRequiredAndEnabled(qtyInput, (m === 'mobile_qty' || m === 'email_qty' || m === 'all'), showQty);
+    };
+
+    document.addEventListener('DOMContentLoaded', function(){
+      try { window.applyPdpEnquiryMode(); } catch(e) {}
+    });
+  })();
+</script>
+
+<!-- PDP Video Modal -->
+<div id="pdp-video-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" style="display:none;">
+  <div id="pdp-video-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div id="pdp-video-modal-shell" class="relative z-10 w-full max-w-4xl mx-4 sm:mx-auto">
+    <div class="rounded-2xl bg-white shadow-2xl overflow-hidden">
+      <!-- Removed header, keep close button floating in top right over video -->
+      <div class="relative bg-black">
+        <button type="button" id="pdp-video-close" class="absolute top-3 right-3 z-10 inline-flex items-center justify-center rounded-full p-2 text-gray-200" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <div id="pdp-video-aspect" class="w-full aspect-video flex items-center justify-center">
+          <iframe id="pdp-video-iframe" class="w-full h-full hidden" src="" title="Product video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <video id="pdp-video-el" class="w-full h-full hidden object-contain" playsinline preload="auto" loop autoplay controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture>
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const active = document.getElementById('active-image');
+    const stage = document.getElementById('pdp-image-stage');
+    const zoomInBtn = document.getElementById('pdp-zoom-in');
+    const zoomOutBtn = document.getElementById('pdp-zoom-out');
+    const zoomResetBtn = document.getElementById('pdp-zoom-reset');
+
+    // Check if zoom is enabled via data attribute
+    const zoomEnabled = stage ? (stage.getAttribute('data-zoom-enabled') !== 'false') : true;
+
+    // --- Image gallery swipe functionality ---
+    const imageUrls = [];
+    let currentImageIndex = 0;
+    
+    // Collect all product image URLs
+    {% for i in "1234567" %}
+      {% with image_attr="image"|add:i %}
+      {% with img=product|getattribute:image_attr %}
+      {% if img %}
+        imageUrls.push("{{ img.url }}");
+      {% endif %}
+      {% endwith %}
+      {% endwith %}
+    {% endfor %}
+    
+    // Initialize dots indicator
+    function initImageDots() {
+      const dotsContainer = document.getElementById('pdp-image-dots');
+      if (!dotsContainer || imageUrls.length <= 1) return;
+      
+      dotsContainer.innerHTML = '';
+      imageUrls.forEach((url, index) => {
+        const dot = document.createElement('div');
+        dot.className = index === 0 ? 'w-2 h-2 rounded-full bg-gray-900 transition-all duration-200' : 'w-2 h-2 rounded-full bg-gray-300 transition-all duration-200';
+        dot.dataset.index = index;
+        dotsContainer.appendChild(dot);
+      });
+    }
+    
+    // Update active dot
+    function updateDots() {
+      const dotsContainer = document.getElementById('pdp-image-dots');
+      if (!dotsContainer) return;
+      
+      const dots = dotsContainer.querySelectorAll('div');
+      dots.forEach((dot, index) => {
+        if (index === currentImageIndex) {
+          dot.className = 'w-2 h-2 rounded-full bg-gray-900 transition-all duration-200';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-gray-300 transition-all duration-200';
+        }
+      });
+    }
+    
+    // Change to specific image
+    function changeImage(index) {
+      if (index < 0 || index >= imageUrls.length) return;
+      currentImageIndex = index;
+      if (active) {
+        active.src = imageUrls[currentImageIndex];
+        updateDots();
+      }
+    }
+    
+    // Swipe detection
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    let isSwiping = false;
+    const minSwipeDistance = 50;
+    
+    initImageDots();
+
+    // --- Image zoom + pan (no dependencies) ---
+    const MIN_SCALE = 1;
+    const MAX_SCALE = zoomEnabled ? 3 : 1;
+    const STEP = 0.25;
+    let scale = 1;
+    let tx = 0;
+    let ty = 0;
+
+    function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+    function clampPan() {
+      if (!stage) return;
+      const r = stage.getBoundingClientRect();
+      const maxX = Math.max(0, (scale - 1) * r.width / 2);
+      const maxY = Math.max(0, (scale - 1) * r.height / 2);
+      tx = clamp(tx, -maxX, maxX);
+      ty = clamp(ty, -maxY, maxY);
+    }
+
+    function applyTransform() {
+      if (!active) return;
+      clampPan();
+      active.style.setProperty('--pdp-scale', String(scale));
+      active.style.setProperty('--pdp-tx', tx + 'px');
+      active.style.setProperty('--pdp-ty', ty + 'px');
+      updateZoomButtons();
+    }
+
+    function updateZoomButtons() {
+      if (zoomOutBtn) zoomOutBtn.classList.toggle('opacity-50', scale <= MIN_SCALE);
+      if (zoomOutBtn) zoomOutBtn.classList.toggle('pointer-events-none', scale <= MIN_SCALE);
+      if (zoomInBtn) zoomInBtn.classList.toggle('opacity-50', scale >= MAX_SCALE);
+      if (zoomInBtn) zoomInBtn.classList.toggle('pointer-events-none', scale >= MAX_SCALE);
+      if (zoomResetBtn) zoomResetBtn.classList.toggle('hidden', scale === 1 && tx === 0 && ty === 0);
+    }
+
+    function resetZoom() {
+      scale = 1;
+      tx = 0;
+      ty = 0;
+      applyTransform();
+    }
+
+    function zoomTo(newScale, clientX, clientY) {
+      if (!stage) {
+        scale = clamp(newScale, MIN_SCALE, MAX_SCALE);
+        applyTransform();
+        return;
+      }
+      const prev = scale;
+      const next = clamp(newScale, MIN_SCALE, MAX_SCALE);
+      if (next === prev) return;
+
+      // Keep the point under the cursor stable (best-effort)
+      const r = stage.getBoundingClientRect();
+      const px = (typeof clientX === 'number' ? (clientX - r.left) : (r.width / 2)) - r.width / 2;
+      const py = (typeof clientY === 'number' ? (clientY - r.top) : (r.height / 2)) - r.height / 2;
+      const ratio = next / prev;
+      tx = (1 - ratio) * px + ratio * tx;
+      ty = (1 - ratio) * py + ratio * ty;
+      scale = next;
+      applyTransform();
+    }
+
+    // Only attach zoom event handlers if zoom is enabled
+    if (zoomEnabled) {
+      if (zoomInBtn) zoomInBtn.addEventListener('click', function(){ zoomTo(scale + STEP); });
+      if (zoomOutBtn) zoomOutBtn.addEventListener('click', function(){ zoomTo(scale - STEP); });
+      if (zoomResetBtn) zoomResetBtn.addEventListener('click', function(){ resetZoom(); });
+
+      // Wheel to zoom (trackpad/mouse). Prevent page scroll while zooming over the image.
+      if (stage) {
+        stage.addEventListener('wheel', function(e){
+          if (!active) return;
+          // Zoom in on wheel up (deltaY < 0), zoom out on wheel down (deltaY > 0)
+          const dir = e.deltaY > 0 ? -1 : 1;
+          if (dir === 0) return;
+          e.preventDefault();
+          zoomTo(scale + dir * STEP, e.clientX, e.clientY);
+        }, { passive: false });
+
+        // Double click / double tap to toggle zoom
+        stage.addEventListener('dblclick', function(e){
+          e.preventDefault();
+          if (scale === 1) zoomTo(2, e.clientX, e.clientY);
+          else resetZoom();
+        });
+      }
+    }
+
+    // Drag to pan when zoomed & swipe to change image when not zoomed
+    if (zoomEnabled) {
+      (function(){
+        if (!stage) return;
+        let dragging = false;
+        let startX = 0, startY = 0, startTx = 0, startTy = 0;
+
+        function onDown(e){
+          // Store initial touch position for swipe detection
+          touchStartX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+          touchStartY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+          
+          if (scale <= 1) {
+            // Not zoomed - prepare for swipe
+            isSwiping = true;
+            return;
+          }
+          // Zoomed - prepare for pan
+          dragging = true;
+          stage.setPointerCapture && stage.setPointerCapture(e.pointerId);
+          startX = e.clientX;
+          startY = e.clientY;
+          startTx = tx;
+          startTy = ty;
+        }
+        function onMove(e){
+          if (dragging && scale > 1) {
+            // Pan when zoomed
+            tx = startTx + (e.clientX - startX);
+            ty = startTy + (e.clientY - startY);
+            applyTransform();
+          }
+        }
+        function onUp(e){
+          if (isSwiping && scale <= 1) {
+            // Handle swipe
+            touchEndX = e.clientX || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : touchStartX);
+            touchEndY = e.clientY || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : touchStartY);
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Check if horizontal swipe is dominant and exceeds minimum distance
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+              if (deltaX > 0) {
+                // Swipe right - previous image
+                const prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : imageUrls.length - 1;
+                changeImage(prevIndex);
+                resetZoom();
+              } else {
+                // Swipe left - next image
+                const nextIndex = currentImageIndex < imageUrls.length - 1 ? currentImageIndex + 1 : 0;
+                changeImage(nextIndex);
+                resetZoom();
+              }
+            }
+            isSwiping = false;
+          }
+          dragging = false;
+        }
+
+        stage.addEventListener('pointerdown', onDown);
+        stage.addEventListener('pointermove', onMove);
+        stage.addEventListener('pointerup', onUp);
+        stage.addEventListener('pointercancel', onUp);
+        stage.addEventListener('pointerleave', onUp);
+        
+        // Also support touch events for better mobile compatibility
+        // Track whether this is a horizontal swipe to prevent scroll only when needed
+        let isHorizontalSwipe = false;
+        
+        stage.addEventListener('touchstart', function(e) {
+          const touch = e.touches[0];
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+          isHorizontalSwipe = false;
+          if (scale <= 1) isSwiping = true;
+          // Don't preventDefault here - allow scroll detection to happen first
+        }, { passive: true });
+        
+        stage.addEventListener('touchmove', function(e) {
+          if (!e.touches || !e.touches[0]) return;
+          const touch = e.touches[0];
+          const deltaX = Math.abs(touch.clientX - touchStartX);
+          const deltaY = Math.abs(touch.clientY - touchStartY);
+          
+          // If zoomed in, prevent scroll to allow panning
+          if (scale > 1) {
+            e.preventDefault();
+            return;
+          }
+          
+          // Determine if this is a horizontal swipe (for image change)
+          // Only prevent default scroll if horizontal movement is dominant
+          if (deltaX > deltaY && deltaX > 10) {
+            isHorizontalSwipe = true;
+            e.preventDefault(); // Prevent scroll only for horizontal swipes
+          }
+          // For vertical swipes, allow normal page scrolling (don't preventDefault)
+        }, { passive: false });
+        
+        stage.addEventListener('touchend', function(e) {
+          if (isSwiping && scale <= 1 && e.changedTouches && e.changedTouches[0]) {
+            const touch = e.changedTouches[0];
+            touchEndX = touch.clientX;
+            touchEndY = touch.clientY;
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Only change image if it was a horizontal swipe
+            if (isHorizontalSwipe && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+              if (deltaX > 0) {
+                const prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : imageUrls.length - 1;
+                changeImage(prevIndex);
+                resetZoom();
+              } else {
+                const nextIndex = currentImageIndex < imageUrls.length - 1 ? currentImageIndex + 1 : 0;
+                changeImage(nextIndex);
+                resetZoom();
+              }
+            }
+            isSwiping = false;
+          }
+          isHorizontalSwipe = false;
+        }, { passive: true });
+      })();
+    } else {
+      // When zoom is disabled, still enable swipe
+      (function(){
+        if (!stage) return;
+        
+        // Track whether this is a horizontal swipe to prevent scroll only when needed
+        let isHorizontalSwipe = false;
+        
+        stage.addEventListener('touchstart', function(e) {
+          const touch = e.touches[0];
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+          isHorizontalSwipe = false;
+          isSwiping = true;
+          // Don't preventDefault here - allow scroll detection to happen first
+        }, { passive: true });
+        
+        stage.addEventListener('touchmove', function(e) {
+          if (!e.touches || !e.touches[0]) return;
+          const touch = e.touches[0];
+          const deltaX = Math.abs(touch.clientX - touchStartX);
+          const deltaY = Math.abs(touch.clientY - touchStartY);
+          
+          // Determine if this is a horizontal swipe (for image change)
+          // Only prevent default scroll if horizontal movement is dominant
+          if (deltaX > deltaY && deltaX > 10) {
+            isHorizontalSwipe = true;
+            e.preventDefault(); // Prevent scroll only for horizontal swipes
+          }
+          // For vertical swipes, allow normal page scrolling (don't preventDefault)
+        }, { passive: false });
+        
+        stage.addEventListener('touchend', function(e) {
+          if (isSwiping && e.changedTouches && e.changedTouches[0]) {
+            const touch = e.changedTouches[0];
+            touchEndX = touch.clientX;
+            touchEndY = touch.clientY;
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Only change image if it was a horizontal swipe
+            if (isHorizontalSwipe && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+              if (deltaX > 0) {
+                const prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : imageUrls.length - 1;
+                changeImage(prevIndex);
+              } else {
+                const nextIndex = currentImageIndex < imageUrls.length - 1 ? currentImageIndex + 1 : 0;
+                changeImage(nextIndex);
+              }
+            }
+            isSwiping = false;
+          }
+          isHorizontalSwipe = false;
+        }, { passive: true });
+      })();
+    }
+
+    const videoModal = document.getElementById('pdp-video-modal');
+    const videoModalShell = document.getElementById('pdp-video-modal-shell');
+    const videoAspect = document.getElementById('pdp-video-aspect');
+    const videoBackdrop = document.getElementById('pdp-video-backdrop');
+    const videoClose = document.getElementById('pdp-video-close');
+    const videoIframe = document.getElementById('pdp-video-iframe');
+    const videoEl = document.getElementById('pdp-video-el');
+
+    function closeVideoModal() {
+      if (videoIframe) {
+        videoIframe.setAttribute('src', '');
+        videoIframe.classList.add('hidden');
+      }
+      if (videoEl) {
+        try { videoEl.pause(); } catch (e) {}
+        videoEl.removeAttribute('src');
+        // Remove all source children too
+        while (videoEl.firstChild) { videoEl.removeChild(videoEl.firstChild); }
+        try { videoEl.load(); } catch (e) {}
+        videoEl.classList.add('hidden');
+      }
+      if (videoModal) {
+        videoModal.classList.add('hidden');
+        videoModal.classList.remove('flex');
+        videoModal.style.display = 'none';
+      }
+      // Reset modal layout back to landscape defaults
+      try {
+        if (videoModalShell) {
+          videoModalShell.classList.remove('max-w-md');
+          videoModalShell.classList.remove('max-w-[420px]');
+          videoModalShell.classList.add('max-w-4xl');
+          // Reset any inline sizing overrides
+          videoModalShell.style.maxWidth = '';
+          videoModalShell.style.width = '';
+        }
+        if (videoAspect) {
+          videoAspect.classList.remove('aspect-[9/16]');
+          videoAspect.classList.add('aspect-video');
+          // Reset any inline sizing overrides
+          videoAspect.style.maxHeight = '';
+          videoAspect.style.aspectRatio = '';
+        }
+      } catch (e) {}
+      try { document.body.style.overflow = ''; } catch (e) {}
+    }
+
+    function openVideoModal(btn) {
+      if (!videoModal) return;
+      const vType = (btn && btn.getAttribute('data-video-type')) || '';
+      const vUrl = (btn && btn.getAttribute('data-video-url')) || '';
+      const vEmbed = (btn && btn.getAttribute('data-video-embed')) || '';
+      const vOriRaw = (btn && btn.getAttribute('data-video-orientation')) || 'landscape';
+      const vOri = (vOriRaw || 'landscape').toLowerCase() === 'portrait' ? 'portrait' : 'landscape';
+      if (!vUrl && !vEmbed) return;
+
+      // reset both players
+      if (videoIframe) { videoIframe.setAttribute('src', ''); videoIframe.classList.add('hidden'); }
+      if (videoEl) {
+        try { videoEl.pause(); } catch (e) {}
+        videoEl.removeAttribute('src');
+        while (videoEl.firstChild) { videoEl.removeChild(videoEl.firstChild); }
+        try { videoEl.load(); } catch (e) {}
+        videoEl.classList.add('hidden');
+      }
+
+      if (vType === 'youtube' && vEmbed && videoIframe) {
+        // YouTube embed
+        // Best-effort: disable controls + loop + autoplay.
+        // Loop requires playlist=<videoId> for YouTube embeds.
+        var vid = '';
+        try {
+          var m = (vEmbed || '').match(/\/embed\/([a-zA-Z0-9_-]+)/);
+          vid = (m && m[1]) ? m[1] : '';
+        } catch (e) { vid = ''; }
+        var qp = 'autoplay=1&rel=0&controls=0&playsinline=1&modestbranding=1&loop=1';
+        if (vid) qp += '&playlist=' + encodeURIComponent(vid);
+        const src = vEmbed + (vEmbed.indexOf('?') === -1 ? '?' : '&') + qp;
+        videoIframe.setAttribute('src', src);
+        videoIframe.classList.remove('hidden');
+      } else if (videoEl && vUrl) {
+        // Direct video file - use source element for better MIME type handling
+        const sourceEl = document.createElement('source');
+        sourceEl.setAttribute('src', vUrl);
+        // Detect MIME type from URL extension
+        const ext = (vUrl.split('?')[0] || '').split('.').pop().toLowerCase();
+        const mimeMap = { 'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg', 'mov': 'video/quicktime', 'ogv': 'video/ogg' };
+        sourceEl.setAttribute('type', mimeMap[ext] || 'video/mp4');
+        videoEl.appendChild(sourceEl);
+        // No controls, autoplay + loop for a clean popup experience
+        try { videoEl.controls = false; } catch (e) {}
+        try { videoEl.loop = true; } catch (e) {}
+        try { videoEl.autoplay = true; } catch (e) {}
+        videoEl.load();
+        videoEl.classList.remove('hidden');
+        videoEl.play().catch(function(e) { console.log('Video autoplay blocked:', e); });
+      }
+
+      // Apply layout based on orientation (portrait vs landscape)
+      try {
+        if (videoModalShell) {
+          videoModalShell.classList.remove('max-w-4xl', 'max-w-md', 'max-w-[420px]');
+          if (vOri === 'portrait') {
+            // Portrait: constrain by viewport height so it never covers the full screen,
+            // and do NOT rely on Tailwind arbitrary classes existing in compiled CSS.
+            // Width is derived from height (9:16) with a hard cap of ~420px.
+            videoModalShell.style.width = '100%';
+            videoModalShell.style.maxWidth = 'min(420px, calc(85vh * 9 / 16))';
+          } else {
+            videoModalShell.classList.add('max-w-4xl');
+            videoModalShell.style.maxWidth = '';
+            videoModalShell.style.width = '';
+          }
+        }
+        if (videoAspect) {
+          videoAspect.classList.remove('aspect-video', 'aspect-[9/16]', 'pdp-portrait-aspect');
+          if (vOri === 'portrait') {
+            videoAspect.classList.add('aspect-[9/16]');
+            // Ensure portrait sizing even if Tailwind aspect utilities are missing
+            videoAspect.style.maxHeight = '85vh';
+            videoAspect.style.aspectRatio = '9 / 16';
+          } else {
+            videoAspect.classList.add('aspect-video');
+            videoAspect.style.maxHeight = '';
+            videoAspect.style.aspectRatio = '';
+          }
+        }
+      } catch (e) {}
+
+      // Show modal with flex centering
+      videoModal.classList.remove('hidden');
+      videoModal.classList.add('flex');
+      videoModal.style.display = 'flex';
+      try { document.body.style.overflow = 'hidden'; } catch (e) {}
+    }
+
+    if (videoBackdrop) videoBackdrop.addEventListener('click', closeVideoModal);
+    if (videoClose) videoClose.addEventListener('click', closeVideoModal);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeVideoModal();
+    });
+
+    document.querySelectorAll('.thumb').forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        const t = btn.getAttribute('data-type') || 'image';
+        if (t === 'video') {
+          openVideoModal(btn);
+          return;
+        }
+        if (!active) return;
+
+        // Read the thumbnail image URL (from data-url or img src)
+        const thumbImg = btn.querySelector('img');
+        const thumbSrc = btn.getAttribute('data-url') || (thumbImg && thumbImg.getAttribute('src'));
+        if (!thumbSrc) return;
+
+        // Find the index of this image in imageUrls array
+        const imgIndex = imageUrls.indexOf(thumbSrc);
+        if (imgIndex !== -1) {
+          changeImage(imgIndex);
+        } else {
+          // Fallback if not found
+          active.setAttribute('src', thumbSrc);
+        }
+        resetZoom();
+      });
+    });
+    // Main image play button: open video modal when clicked
+    var mainPlayBtn = document.getElementById('pdp-main-play');
+    if (mainPlayBtn) {
+      mainPlayBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        // Reuse openVideoModal defined in this scope
+        try { openVideoModal(this); } catch (err) { console.error('Failed to open video modal:', err); }
+      });
+    }
+
+    // Tabs logic (Description, Item Details, Manufacturer & Packer, Others)
+    const tabDesc = document.getElementById('tab-desc');
+    const tabAddl = document.getElementById('tab-addl');
+    const tabManufacturer = document.getElementById('tab-manufacturer');
+    const tabOthers = document.getElementById('tab-others');
+    const panelDesc = document.getElementById('panel-desc');
+    const panelAddl = document.getElementById('panel-addl');
+    const panelManufacturer = document.getElementById('panel-manufacturer');
+    const panelOthers = document.getElementById('panel-others');
+
+    function activate(tab) {
+      const map = {
+        desc: {btn: tabDesc, panel: panelDesc},
+        addl: {btn: tabAddl, panel: panelAddl},
+        manufacturer: {btn: tabManufacturer, panel: panelManufacturer},
+        others: {btn: tabOthers, panel: panelOthers}
+      };
+      Object.keys(map).forEach(k => {
+        const {btn, panel} = map[k];
+        if (!btn || !panel) return;
+        if (k === tab) {
+          btn.classList.add('text-gray-900','border-gray-900');
+          btn.classList.remove('text-gray-500','border-transparent');
+          panel.classList.remove('hidden');
+        } else {
+          btn.classList.remove('text-gray-900','border-gray-900');
+          btn.classList.add('text-gray-500','border-transparent');
+          panel.classList.add('hidden');
+        }
+      });
+
+      // On mobile, scroll the active tab to the leftmost position
+      var nav = document.getElementById('tabs-nav');
+      var entry = map[tab];
+      if (nav && entry && entry.btn && window.innerWidth < 768) { // md breakpoint
+        var btn = entry.btn;
+        var offset = btn.offsetLeft - nav.offsetLeft;
+        nav.scrollTo({ left: offset, behavior: 'smooth' });
+      }
+    }
+
+    tabDesc && tabDesc.addEventListener('click', () => activate('desc'));
+    tabAddl && tabAddl.addEventListener('click', () => activate('addl'));
+    tabManufacturer && tabManufacturer.addEventListener('click', () => activate('manufacturer'));
+    tabOthers && tabOthers.addEventListener('click', () => activate('others'));
+
+    // Initialize default
+    activate('desc');
+    // Initial zoom state
+    applyTransform();
+  });
+</script>
+
+<!-- Open reviews accordion automatically when returning with #reviews-section -->
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    try {
+      if (window.location.hash === '#reviews-section') {
+        var panel = document.getElementById('review-accordion-panel');
+        var btn = document.getElementById('review-accordion-btn');
+        var icon = document.getElementById('review-accordion-icon');
+        if (panel && panel.classList.contains('hidden')) {
+          panel.classList.remove('hidden');
+          if (btn) btn.setAttribute('aria-expanded', 'true');
+          if (icon) icon.style.transform = 'rotate(180deg)';
+        }
+        // Smoothly scroll into view for better UX
+        var section = document.getElementById('reviews-section');
+        if (section && section.scrollIntoView) {
+          setTimeout(function(){ section.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+        }
+      }
+    } catch (e) {}
+  });
+</script>
+
+<!-- Fixed sidebar helpers -->
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    var qty = document.getElementById('purch-qty');
+    var qtyM = document.getElementById('purch-qty-m');
+    var add = document.getElementById('purch-add');
+    var buy = document.getElementById('purch-buy');
+    var addM = document.getElementById('purch-add-m');
+    var buyM = document.getElementById('purch-buy-m');
+    var wish = document.getElementById('purch-wishlist');
+    var wishMsg = document.getElementById('purch-wishlist-msg');
+    var wishM = document.getElementById('purch-wishlist-m');
+    var wishMsgM = document.getElementById('purch-wishlist-msg-m');
+    function isVisible(el){
+      try { return !!(el && !el.disabled && el.getClientRects && el.getClientRects().length > 0); }
+      catch(_) { return false; }
+    }
+    function getSelectedQty(){
+      // IMPORTANT: both desktop and mobile qty selects exist in the DOM; pick the visible one.
+      var v = null;
+      if (isVisible(qty)) v = qty.value;
+      else if (isVisible(qtyM)) v = qtyM.value;
+      else v = (qty && qty.value) || (qtyM && qtyM.value) || '1';
+      v = String(v || '').trim();
+      var n = parseInt(v, 10);
+      if (!isFinite(n) || n < 1) n = 1;
+      return String(n);
+    }
+    function syncLinks(){
+      var q = getSelectedQty();
+      if(add && add.href){
+        var url = new URL(add.href, window.location.origin);
+        url.searchParams.set('qty', q);
+        add.href = url.pathname + '?' + url.searchParams.toString();
+      }
+      if(addM && addM.href){
+        var urlm = new URL(addM.href, window.location.origin);
+        urlm.searchParams.set('qty', q);
+        addM.href = urlm.pathname + '?' + urlm.searchParams.toString();
+      }
+      if(buy && buy.href){
+        var url2 = new URL(buy.href, window.location.origin);
+        url2.searchParams.set('qty', q);
+        url2.searchParams.set('buy', '1');
+        buy.href = url2.pathname + '?' + url2.searchParams.toString();
+      }
+      if(buyM && buyM.href){
+        var url2m = new URL(buyM.href, window.location.origin);
+        url2m.searchParams.set('qty', q);
+        url2m.searchParams.set('buy', '1');
+        buyM.href = url2m.pathname + '?' + url2m.searchParams.toString();
+      }
+    }
+    if(qty){ qty.addEventListener('change', syncLinks); }
+    if(qtyM){ qtyM.addEventListener('change', syncLinks); }
+    syncLinks();
+
+    // Compute a friendly delivery date (+5 days) if not provided
+    var dd = document.getElementById('purch-delivery-date');
+    if(dd){
+      var d = new Date();
+      d.setDate(d.getDate() + 5);
+      var opts = { weekday: 'long', day: 'numeric', month: 'long' };
+      dd.textContent = ' ' + d.toLocaleDateString(undefined, opts);
+    }
+
+    // Add to wishlist via AJAX
+    if(wish){
+      wish.addEventListener('click', async function(){
+        try{
+          var url = '{% url "public_wishlist_add" product_id=product.product_id|default:'0' %}';
+          var res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' } });
+          var data = await res.json();
+          if(res.ok && data.success){
+            if(wishMsg){ wishMsg.className = 'mt-2 text-xs text-green-700 bg-green-50 ring-1 ring-green-200 rounded px-2 py-1'; wishMsg.textContent = data.added ? 'Added to your wishlist.' : 'Already in your wishlist.'; wishMsg.classList.remove('hidden'); }
+          } else {
+            if(data && data.login_required){ window.location.href = '{% url "public_user_account" %}'; return; }
+            if(wishMsg){ wishMsg.className = 'mt-2 text-xs text-red-700 bg-red-50 ring-1 ring-red-200 rounded px-2 py-1'; wishMsg.textContent = (data && data.error) || 'Could not add to wishlist.'; wishMsg.classList.remove('hidden'); }
+          }
+        } catch(err){ if(wishMsg){ wishMsg.className = 'mt-2 text-xs text-red-700 bg-red-50 ring-1 ring-red-200 rounded px-2 py-1'; wishMsg.textContent = 'Network error.'; wishMsg.classList.remove('hidden'); } }
+      });
+    }
+
+    // Mobile: Add to wishlist via AJAX
+    if(wishM){
+      wishM.addEventListener('click', async function(){
+        try{
+          var url = '{% url "public_wishlist_add" product_id=product.product_id|default:'0' %}';
+          var res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' } });
+          var data = await res.json();
+          if(res.ok && data.success){
+            if(wishMsgM){ wishMsgM.className = 'mt-2 text-xs text-green-700 bg-green-50 ring-1 ring-green-200 rounded px-2 py-1'; wishMsgM.textContent = data.added ? 'Added to your wishlist.' : 'Already in your wishlist.'; wishMsgM.classList.remove('hidden'); }
+          } else {
+            if(data && data.login_required){ window.location.href = '{% url "public_user_account" %}'; return; }
+            if(wishMsgM){ wishMsgM.className = 'mt-2 text-xs text-red-700 bg-red-50 ring-1 ring-red-200 rounded px-2 py-1'; wishMsgM.textContent = (data && data.error) || 'Could not add to wishlist.'; wishMsgM.classList.remove('hidden'); }
+          }
+        } catch(err){ if(wishMsgM){ wishMsgM.className = 'mt-2 text-xs text-red-700 bg-red-50 ring-1 ring-red-200 rounded px-2 py-1'; wishMsgM.textContent = 'Network error.'; wishMsgM.classList.remove('hidden'); } }
+      });
+    }
+
+    var relatedWishlistButtons = document.querySelectorAll('.js-related-wishlist');
+    relatedWishlistButtons.forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        var url = btn.getAttribute('data-wishlist-url');
+        if(!url || btn.disabled){ return; }
+        btn.disabled = true;
+        try{
+          var res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' } });
+          var data = await res.json();
+          if(res.ok && data && data.success){
+            btn.classList.add('text-red-500', 'border-red-200', 'bg-red-50');
+          } else if(data && data.login_required){
+            window.location.href = '{% url "public_user_account" %}';
+            return;
+          }
+        } catch(err) {}
+        finally { btn.disabled = false; }
+      });
+    });
+  });
+  // Keep sidebar from overlapping footer on very small heights (best-effort)
+  window.addEventListener('resize', function(){ /* no-op; reserved for future adjustments */ });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var inputDesktop = document.getElementById('service-pincode-input');
+    var btnDesktop = document.getElementById('service-pincode-btn');
+    var msgDesktop = document.getElementById('service-pincode-msg');
+
+    var inputMobile = document.getElementById('service-pincode-input-m');
+    var btnMobile = document.getElementById('service-pincode-btn-m');
+    var msgMobile = document.getElementById('service-pincode-msg-m');
+
+    function setMessage(el, type, text) {
+      if (!el) return;
+      var base = 'mt-2 text-xs rounded px-2 py-1';
+      if (type === 'info') {
+        el.className = base + ' text-gray-700 bg-gray-50 ring-1 ring-gray-200';
+      } else if (type === 'success') {
+        el.className = base + ' text-green-700 bg-green-50 ring-1 ring-green-200';
+      } else if (type === 'error') {
+        el.className = base + ' text-red-700 bg-red-50 ring-1 ring-red-200';
+      } else {
+        el.className = 'mt-2 text-xs';
+      }
+      el.textContent = text || '';
+      el.classList.remove('hidden');
+    }
+
+    async function handleCheck(source) {
+      var input = source === 'desktop' ? inputDesktop : inputMobile;
+      var btn = source === 'desktop' ? btnDesktop : btnMobile;
+      var msg = source === 'desktop' ? msgDesktop : msgMobile;
+
+      if (!input || !btn || !msg) return;
+
+      var raw = (input.value || '').trim();
+      var cleaned = (raw.replace(/[^0-9]/g, '') || '').slice(0, 6);
+      input.value = cleaned;
+
+      if (!cleaned || cleaned.length !== 6) {
+        setMessage(msg, 'error', 'Please enter a valid 6-digit PIN code.');
+        return;
+      }
+
+      setMessage(msg, 'info', 'Checking serviceability for ' + cleaned + ' ...');
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-not-allowed');
+
+      try {
+        var url = "{% url 'public_pincode_serviceability' %}?pincode=" + encodeURIComponent(cleaned);
+        var res = await fetch(url, {
+          method: 'GET',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        var data = {};
+        try { data = await res.json(); } catch (e) { data = {}; }
+
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+
+        if (!res.ok || data.ok === false && !data.serviceable) {
+          var msgText = (data && data.message) || 'Unable to check serviceability right now.';
+          setMessage(msg, 'error', msgText);
+          return;
+        }
+
+        if (data.serviceable) {
+          setMessage(msg, 'success', data.message || ('Good news! We deliver to ' + cleaned + '.'));
+        } else {
+          setMessage(msg, 'error', data.message || 'We are not yet delivering to this PIN code.');
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+        setMessage(msg, 'error', 'Network error. Please try again.');
+      }
+    }
+
+    if (btnDesktop && inputDesktop && msgDesktop) {
+      btnDesktop.addEventListener('click', function() { handleCheck('desktop'); });
+      inputDesktop.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') { handleCheck('desktop'); }
+      });
+    }
+
+    if (btnMobile && inputMobile && msgMobile) {
+      btnMobile.addEventListener('click', function() { handleCheck('mobile'); });
+      inputMobile.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') { handleCheck('mobile'); }
+      });
+    }
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    var openBtn = document.getElementById('open-pdp-enquiry');
+    var modal = document.getElementById('pdp-enquiry-modal');
+    var closeBtn = document.getElementById('pdp-enquiry-close');
+    var cancelBtn = document.getElementById('pdp-enquiry-cancel');
+    var form = document.getElementById('pdp-enquiry-form');
+    var alertBox = document.getElementById('pdp-enquiry-alert');
+
+    function showModal(){ if(modal) modal.classList.remove('hidden'); }
+    function hideModal(){ if(modal) modal.classList.add('hidden'); }
+
+    if(openBtn){ openBtn.addEventListener('click', function(e){ e.preventDefault(); showModal(); }); }
+    if(closeBtn){ closeBtn.addEventListener('click', hideModal); }
+    if(cancelBtn){ cancelBtn.addEventListener('click', hideModal); }
+    if(modal){ modal.addEventListener('click', function(e){ if(e.target === modal) hideModal(); }); }
+
+    if(form){
+      form.addEventListener('submit', async function(e){
+        e.preventDefault();
+        if(!form.action) return;
+        var fd = new FormData(form);
+        try{
+          var res = await fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+          var data = await res.json();
+          if(res.ok && data.status === 'success'){
+            if(alertBox){ alertBox.className = 'mb-3 text-sm rounded-md px-3 py-2 bg-green-50 text-green-700 ring-1 ring-green-200'; alertBox.textContent = data.message; alertBox.classList.remove('hidden'); }
+            setTimeout(function(){ hideModal(); if(alertBox){ alertBox.classList.add('hidden'); } }, 1200);
+          } else {
+            var errText = (data && data.errors) ? data.errors.join(' ') : 'Something went wrong.';
+            if(alertBox){ alertBox.className = 'mb-3 text-sm rounded-md px-3 py-2 bg-red-50 text-red-700 ring-1 ring-red-200'; alertBox.textContent = errText; alertBox.classList.remove('hidden'); }
+          }
+        }catch(err){
+          if(alertBox){ alertBox.className = 'mb-3 text-sm rounded-md px-3 py-2 bg-red-50 text-red-700 ring-1 ring-red-200'; alertBox.textContent = 'Network error. Please try again.'; alertBox.classList.remove('hidden'); }
+        }
+      });
+    }
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('review-accordion-btn');
+    const panel = document.getElementById('review-accordion-panel');
+    const icon = document.getElementById('review-accordion-icon');
+    if (!btn || !panel) return;
+
+    const defaultOpen = btn.getAttribute('data-default-open') === '1';
+    if (defaultOpen) {
+      btn.setAttribute('aria-expanded', 'true');
+      panel.classList.remove('hidden');
+      icon && icon.classList.add('rotate-180');
+    } else {
+      btn.setAttribute('aria-expanded', 'false');
+      panel.classList.add('hidden');
+      icon && icon.classList.remove('rotate-180');
+    }
+
+    btn.addEventListener('click', function() {
+      const isOpen = btn.getAttribute('aria-expanded') === 'true';
+      if (isOpen) {
+        btn.setAttribute('aria-expanded', 'false');
+        panel.classList.add('hidden');
+        icon && icon.classList.remove('rotate-180');
+      } else {
+        btn.setAttribute('aria-expanded', 'true');
+        panel.classList.remove('hidden');
+        icon && icon.classList.add('rotate-180');
+      }
+    });
+  });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  function updateDropdownLabel(button, menu) {
+    if (!button || !menu) return;
+    var label = button.querySelector('.dropdown-label');
+    var placeholder = button.getAttribute('data-placeholder') || 'Select';
+    var checks = menu.querySelectorAll('input[type="checkbox"]:checked');
+    if (checks.length === 0) {
+      label.textContent = placeholder;
+    } else if (checks.length === 1) {
+      label.textContent = checks[0].closest('label').querySelector('span').textContent;
+    } else {
+      label.textContent = checks.length + ' selected';
+    }
+  }
+
+  function initDropdown(button, menu, onChange) {
+    if (!button || !menu) return;
+
+    button.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var isHidden = menu.classList.contains('hidden');
+      document.querySelectorAll('[id^="dd-"]').forEach(function(el){ el.classList.add('hidden'); });
+      if (isHidden) menu.classList.remove('hidden'); else menu.classList.add('hidden');
+    });
+
+    // Keyboard accessibility
+    button.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        menu.classList.remove('hidden');
+      }
+    });
+
+    menu.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (e.target && e.target.matches('input[type="checkbox"]')) {
+        updateDropdownLabel(button, menu);
+        if (typeof onChange === 'function') onChange();
+      }
+    });
+
+    document.addEventListener('click', function() { menu.classList.add('hidden'); });
+    updateDropdownLabel(button, menu);
+  }
+
+  var catButton = document.querySelector('[data-dropdown-toggle="dd-categories"]');
+  var catMenu = document.getElementById('dd-categories');
+  var prodButton = document.querySelector('[data-dropdown-toggle="dd-products"]');
+  var prodMenu = document.getElementById('dd-products');
+
+  function filterProductsByCategories() {
+    if (!catMenu || !prodMenu) return;
+    var selected = Array.from(catMenu.querySelectorAll('input[type="checkbox"]:checked')).map(function(cb){ return cb.value; });
+    var selectedSet = new Set(selected);
+    var labels = prodMenu.querySelectorAll('label');
+    labels.forEach(function(l){
+      var cat = l.getAttribute('data-category-id') || '';
+      var checkbox = l.querySelector('input[type="checkbox"]');
+      var show = selectedSet.size === 0 || selectedSet.has(cat);
+      if (!show && checkbox && checkbox.checked) { checkbox.checked = false; }
+      l.classList.toggle('hidden', !show);
+    });
+    updateDropdownLabel(prodButton, prodMenu);
+  }
+
+  initDropdown(catButton, catMenu, filterProductsByCategories);
+  initDropdown(prodButton, prodMenu);
+
+  // AJAX submit (no page reload)
+  var form = document.querySelector('#discuss-needs form');
+  if (form) {
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var fd = new FormData(form);
+      try {
+        var res = await fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+        var data = await res.json();
+        var box = document.getElementById('enquiry-msg');
+        if (res.ok && data.status === 'success') {
+          if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-black text-white ring-1 ring-green-200'; box.textContent = data.message; box.style.display='block'; }
+          form.querySelector('input[name="quantity"]').value = '';
+          form.querySelector('input[name="mobile"]').value = '';
+          form.querySelectorAll('input[type="checkbox"]').forEach(function(cb){ cb.checked = false; });
+          updateDropdownLabel(catButton, catMenu);
+          filterProductsByCategories();
+        } else {
+          var errText = (data && data.errors) ? data.errors.join(' ') : 'Something went wrong.';
+          if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = errText; box.style.display='block'; }
+        }
+      } catch (err) {
+        var box2 = document.getElementById('enquiry-msg');
+        if (box2) { box2.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box2.textContent = 'Network error. Please try again.'; box2.style.display='block'; }
+      }
+    });
+  }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var slider = document.getElementById('related-slider');
+  var track = document.getElementById('related-track');
+  if (!slider || !track) return;
+  var slides = track.querySelectorAll('.related-slide');
+  if (!slides || slides.length === 0) return;
+
+  var viewport = document.getElementById('related-viewport');
+  var index = 0;
+
+  function getSlideWidth() {
+    var first = track.querySelector('.related-slide');
+    return first ? first.getBoundingClientRect().width : 0;
+  }
+
+  function getVisibleCount() {
+    var slideW = getSlideWidth();
+    var vpW = viewport ? viewport.getBoundingClientRect().width : 0;
+    if (!slideW || !vpW) return 1;
+    var count = Math.round(vpW / slideW);
+    return Math.max(1, count);
+  }
+
+  function getMaxIndex() {
+    var vis = getVisibleCount();
+    return Math.max(0, slides.length - vis);
+  }
+
+  function update() {
+    var w = getSlideWidth();
+    track.style.transform = 'translateX(' + (-index * w) + 'px)';
+    updateButtons();
+  }
+
+  function updateButtons() {
+    var prevBtn = document.getElementById('related-prev');
+    var nextBtn = document.getElementById('related-next');
+    var disabledPrev = (index <= 0);
+    var disabledNext = (index >= getMaxIndex());
+    [prevBtn, nextBtn].forEach(function(btn){ if (!btn) return; btn.classList.remove('opacity-50','pointer-events-none'); });
+    if (prevBtn && disabledPrev) { prevBtn.classList.add('opacity-50','pointer-events-none'); }
+    if (nextBtn && disabledNext) { nextBtn.classList.add('opacity-50','pointer-events-none'); }
+  }
+
+  window.relatedNext = function() {
+    index = Math.min(index + 1, getMaxIndex());
+    update();
+  };
+  window.relatedPrev = function() {
+    index = Math.max(index - 1, 0);
+    update();
+  };
+
+  window.addEventListener('resize', function(){
+    // Clamp index in case visible count changed
+    index = Math.min(index, getMaxIndex());
+    update();
+  });
+
+  update();
+});
+</script>
+
+<!-- Product Variations JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Mobile bullets "Read more" toggle
+  (function(){
+    var list = document.getElementById('bullets-list');
+    var moreBtn = document.getElementById('bullets-read-more');
+    var lessBtn = document.getElementById('bullets-read-less');
+    if (!list || !moreBtn || !lessBtn) return;
+    moreBtn.addEventListener('click', function(){
+      var hiddenItems = list.querySelectorAll('li.hidden');
+      hiddenItems.forEach(function(li){ li.classList.remove('hidden'); });
+      moreBtn.classList.add('hidden');
+      lessBtn.classList.remove('hidden');
+    });
+    lessBtn.addEventListener('click', function(){
+      var items = list.querySelectorAll('li');
+      items.forEach(function(li, idx){ if (idx >= 3) { li.classList.add('hidden'); } });
+      lessBtn.classList.add('hidden');
+      moreBtn.classList.remove('hidden');
+    });
+  })();
+  // Product data
+  let productData = {
+    basePrice: {{ product.price|default:"null" }},
+    baseMrp: {{ product.mrp|default:"null" }},
+    variantCombinations: null
+  };
+
+  // Template2: currency symbol is fixed to INR (₹)
+  const currencySymbol = "₹";
+  
+  // Elements for price display
+  const productPriceEl = document.getElementById('product-price');
+  const productMrpEl = document.getElementById('product-mrp');
+  const sidebarPriceEl = document.getElementById('sidebar-price');
+  const sidebarMrpEl = document.getElementById('sidebar-mrp');
+  const mobilePriceEl = document.getElementById('mobile-price');
+  const mobileMrpEl = document.getElementById('mobile-mrp');
+  
+  // Get all variation option elements
+  const variantOptions = document.querySelectorAll('.variant-option');
+  
+  // Initialize with default selections (first option of each type)
+  const selectedVariants = {};
+  document.querySelectorAll('[data-variant-type]').forEach(variantTypeEl => {
+    const type = variantTypeEl.dataset.variantType;
+    const firstOption = variantTypeEl.querySelector('.variant-option');
+    if (firstOption) {
+      // Store type in lowercase for consistent matching
+      // For the format [{"name": "Color", "value": "red"}, ...], we need to match by name
+      // So we'll store the type with proper capitalization as in the data
+      selectedVariants[type.toLowerCase()] = firstOption.dataset.variantValue;
+      firstOption.classList.add('selected');
+      // Add visual styling to selected options
+      firstOption.classList.add('bg-gray-200');
+      firstOption.classList.remove('bg-gray-50');
+    }
+  });
+  
+  console.log('Initial selected variants:', {...selectedVariants});
+  
+  // Fetch variant data from API
+  async function fetchVariantData() {
+    try {
+      const productId = '{{ product.product_id }}';
+      const publicSlug = '{{ website.public_slug }}';
+      const response = await fetch(`/api/product/${productId}/variants/`);
+      
+      if (!response.ok) {
+        console.error('Failed to fetch variant data:', response.status);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('API response:', data); // Debug log
+      
+      if (data.status === 'success') {
+        productData = {
+          basePrice: data.base_price,
+          baseMrp: data.base_mrp,
+          variants: data.variants,
+          variantCombinations: data.variant_combinations
+        };
+        
+        console.log('Updated productData:', productData); // Debug log
+        
+        // Show debug info if available
+        if (data.debug) {
+          console.log('API Debug Info:', data.debug);
+        }
+        
+        // Check if we have valid variant combinations
+        if (!productData.variantCombinations || 
+            (Array.isArray(productData.variantCombinations) && productData.variantCombinations.length === 0)) {
+          console.warn('No variant combinations available in API response');
+        }
+        
+        // Initialize prices with the fetched data
+        updatePrices();
+      } else {
+        console.error('API returned error:', data.message);
+        if (data.error_type) {
+          console.error('Error type:', data.error_type);
+        }
+        if (data.details) {
+          console.error('Error details:', data.details);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching variant data:', error);
+    }
+  }
+  
+  // Add click event listeners to all variant options
+  variantOptions.forEach(option => {
+    option.addEventListener('click', function() {
+      const type = this.dataset.variantType;
+      const value = this.dataset.variantValue;
+      
+      console.log(`Selected variant option: ${type} = ${value}`);
+      
+      // Remove selected class from all options of this type
+      document.querySelectorAll(`.variant-option[data-variant-type="${type}"]`).forEach(opt => {
+        opt.classList.remove('selected', 'bg-gray-200');
+        opt.classList.add('bg-gray-50');
+      });
+      
+      // Add selected class to clicked option
+      this.classList.add('selected', 'bg-gray-200');
+      this.classList.remove('bg-gray-50');
+      
+      // Update selected variants - normalize the type to lowercase for consistency
+      selectedVariants[type.toLowerCase()] = value;
+      
+      // Debug log all selected variants
+      console.log('All selected variants after update:', {...selectedVariants});
+      
+      // Update prices based on selection
+      updatePrices();
+    });
+  });
+  
+  // Function to update prices based on selected variants
+  function updatePrices() {
+    console.log('Updating prices with selected variants:', selectedVariants);
+    
+    if (!productData.variantCombinations) {
+      console.log('No variant combinations available, using base price');
+      // Use base price if no variants
+      updatePriceDisplay(productData.basePrice, productData.baseMrp);
+      return;
+    }
+    
+    // Find matching variant combination
+    const matchingVariant = findMatchingVariant(selectedVariants);
+    
+    // Update prices if a matching variant is found
+    if (matchingVariant) {
+      console.log('Matching variant found, updating price to:', matchingVariant.price);
+      
+      // Ensure price and MRP are numbers
+      const price = parseFloat(matchingVariant.price);
+      const mrp = matchingVariant.mrp ? parseFloat(matchingVariant.mrp) : null;
+      
+      // Update price displays
+      updatePriceDisplay(price, mrp);
+      
+      // Update add to cart and buy now links with the selected variant
+      updateCartLinks(matchingVariant);
+    } else {
+      console.log('No matching variant found, using base price');
+      // Revert to base price if no matching variant found
+      updatePriceDisplay(productData.basePrice, productData.baseMrp);
+    }
+  }
+  
+  // Helper function to update all price displays
+  function updatePriceDisplay(price, mrp) {
+    console.log(`Updating price display: price=${price}, mrp=${mrp}`);
+    
+    // Skip update if price is null, undefined, or NaN
+    if (price === null || price === undefined || isNaN(price)) {
+      return;
+    }
+    
+    // Format price with 2 decimal places if needed
+    const formattedPrice = Number.isInteger(price) ? price : price.toFixed(2);
+    
+    // Update main price display
+    if (productPriceEl) {
+      productPriceEl.textContent = `${currencySymbol}${formattedPrice}`;
+    }
+    
+    // Update sidebar price display
+    if (sidebarPriceEl) {
+      sidebarPriceEl.textContent = `${currencySymbol}${formattedPrice}`;
+    }
+    
+    // Update mobile price display
+    if (mobilePriceEl) {
+      mobilePriceEl.textContent = `${currencySymbol}${formattedPrice}`;
+    }
+    
+    // Handle MRP display
+    if (mrp) {
+      // Format MRP with 2 decimal places if needed
+      const formattedMrp = Number.isInteger(mrp) ? mrp : mrp.toFixed(2);
+      
+      if (productMrpEl) {
+        productMrpEl.textContent = `${currencySymbol}${formattedMrp}`;
+        productMrpEl.classList.remove('hidden');
+      }
+      
+      if (sidebarMrpEl) {
+        sidebarMrpEl.textContent = `${currencySymbol}${formattedMrp}`;
+        sidebarMrpEl.classList.remove('hidden');
+      }
+      
+      if (mobileMrpEl) {
+        mobileMrpEl.textContent = `${currencySymbol}${formattedMrp}`;
+        mobileMrpEl.classList.remove('hidden');
+      }
+    } else {
+      // Hide MRP if not available
+      if (productMrpEl) productMrpEl.classList.add('hidden');
+      if (sidebarMrpEl) sidebarMrpEl.classList.add('hidden');
+      if (mobileMrpEl) mobileMrpEl.classList.add('hidden');
+    }
+  }
+  
+  // Function to find matching variant based on selected options
+  function findMatchingVariant(selectedOptions) {
+    if (!productData.variantCombinations) {
+      console.log('No variant combinations available');
+      return null;
+    }
+    
+    console.log('Finding variant for selected options:', selectedOptions);
+    
+    // Convert variantCombinations to array if it's not already
+    let combinations = [];
+    
+    if (Array.isArray(productData.variantCombinations)) {
+      combinations = productData.variantCombinations;
+    } else if (typeof productData.variantCombinations === 'object') {
+      combinations = Object.values(productData.variantCombinations);
+    } else {
+      console.error('Invalid variant combinations format:', productData.variantCombinations);
+      return null;
+    }
+    
+    console.log('Available combinations:', combinations);
+    
+    // Find a variant that matches all selected options
+    const matchingVariant = combinations.find(variant => {
+      if (!variant) {
+        console.log('Skipping undefined variant');
+        return false;
+      }
+      
+      // Handle array format attributes - convert to object if needed
+      if (Array.isArray(variant.attributes)) {
+        const attrObj = {};
+        variant.attributes.forEach(attr => {
+          if (attr && attr.name && attr.value) {
+            attrObj[attr.name.toLowerCase()] = attr.value;
+          }
+        });
+        
+        // For comparison purposes only (don't modify the original data)
+        const normalizedAttributes = attrObj;
+        
+        // Check if all selected attributes match this variant
+        let allMatch = true;
+        for (const [type, value] of Object.entries(selectedOptions)) {
+          // Case insensitive comparison and normalize whitespace
+          const normalizeValue = (val) => String(val).trim().toLowerCase();
+          const selectedVal = normalizeValue(value);
+          
+          // Find matching attribute in the normalized attributes
+          const typeKey = type.toLowerCase();
+          let found = false;
+          
+          // Try direct match
+          if (normalizedAttributes[typeKey]) {
+            const variantVal = normalizeValue(normalizedAttributes[typeKey]);
+            if (selectedVal === variantVal) {
+              found = true;
+            } else {
+              console.log(`Value mismatch for ${type}: selected=${selectedVal}, variant=${variantVal}`);
+              allMatch = false;
+              break;
+            }
+          } else {
+            // Try to find a case-insensitive match in the keys
+            const matchingKey = Object.keys(normalizedAttributes).find(
+              key => key.toLowerCase() === typeKey
+            );
+            
+            if (matchingKey) {
+              const variantVal = normalizeValue(normalizedAttributes[matchingKey]);
+              if (selectedVal === variantVal) {
+                found = true;
+              } else {
+                console.log(`Value mismatch for ${type}: selected=${selectedVal}, variant=${variantVal}`);
+                allMatch = false;
+                break;
+              }
+            }
+          }
+          
+          if (!found) {
+            console.log(`Attribute ${type} not found in variant`);
+            allMatch = false;
+            break;
+          }
+        }
+        
+        return allMatch;
+      } 
+      // Handle object format attributes
+      else if (typeof variant.attributes === 'object' && variant.attributes !== null) {
+        // Check if all selected attributes match this variant
+        let allMatch = true;
+        for (const [type, value] of Object.entries(selectedOptions)) {
+          // Case insensitive comparison and normalize whitespace
+          const normalizeValue = (val) => String(val).trim().toLowerCase();
+          const selectedVal = normalizeValue(value);
+          
+          // Handle different attribute formats
+          let variantVal;
+          if (typeof variant.attributes[type] !== 'undefined') {
+            variantVal = normalizeValue(variant.attributes[type]);
+          } else if (typeof variant.attributes[type.toLowerCase()] !== 'undefined') {
+            variantVal = normalizeValue(variant.attributes[type.toLowerCase()]);
+          } else if (typeof variant.attributes[type.toUpperCase()] !== 'undefined') {
+            variantVal = normalizeValue(variant.attributes[type.toUpperCase()]);
+          } else {
+            // Try to find a case-insensitive match in the keys
+            const matchingKey = Object.keys(variant.attributes).find(
+              key => key.toLowerCase() === type.toLowerCase()
+            );
+            
+            if (matchingKey) {
+              variantVal = normalizeValue(variant.attributes[matchingKey]);
+            } else {
+              console.log(`Attribute ${type} not found in variant`);
+              allMatch = false;
+              break;
+            }
+          }
+          
+          if (selectedVal !== variantVal) {
+            console.log(`Mismatch for ${type}: selected=${selectedVal}, variant=${variantVal}`);
+            allMatch = false;
+            break;
+          }
+        }
+        
+        return allMatch;
+      } else {
+        console.log('Invalid attributes format:', variant.attributes);
+        return false;
+      }
+    });
+    
+    console.log('Matching variant found:', matchingVariant);
+    return matchingVariant;
+  }
+  
+  // Function to update cart and buy links with selected variant
+  function updateCartLinks(variant) {
+    const addToCartBtn = document.getElementById('purch-add');
+    const buyNowBtn = document.getElementById('purch-buy');
+    const addToCartBtnM = document.getElementById('purch-add-m');
+    const buyNowBtnM = document.getElementById('purch-buy-m');
+    const qtySelect = document.getElementById('purch-qty');
+    const qtySelectM = document.getElementById('purch-qty-m');
+
+    function isVisible(el) {
+      try { return !!(el && !el.disabled && el.getClientRects && el.getClientRects().length > 0); }
+      catch (e) { return false; }
+    }
+    function getSelectedQty() {
+      // Pick the visible selector (desktop vs mobile). Both exist in DOM.
+      let v = null;
+      if (isVisible(qtySelect)) v = qtySelect.value;
+      else if (isVisible(qtySelectM)) v = qtySelectM.value;
+      else v = (qtySelect && qtySelect.value) || (qtySelectM && qtySelectM.value) || '1';
+      v = String(v || '').trim();
+      let n = parseInt(v, 10);
+      if (!isFinite(n) || n < 1) n = 1;
+      return String(n);
+    }
+    function setLink(a, { qty, buy, variantKey }) {
+      if (!a || !a.href) return;
+      const url = new URL(a.href, window.location.origin);
+      url.searchParams.set('qty', qty);
+      if (buy) url.searchParams.set('buy', '1'); else url.searchParams.delete('buy');
+      if (variantKey) url.searchParams.set('variant_key', variantKey); else url.searchParams.delete('variant_key');
+      a.href = url.pathname + '?' + url.searchParams.toString();
+    }
+
+    const qty = getSelectedQty();
+    const variantKey = (variant && variant.key) ? String(variant.key) : '';
+    setLink(addToCartBtn, { qty, buy: false, variantKey });
+    setLink(addToCartBtnM, { qty, buy: false, variantKey });
+    setLink(buyNowBtn, { qty, buy: true, variantKey });
+    setLink(buyNowBtnM, { qty, buy: true, variantKey });
+  }
+  
+  // Fetch variant data and initialize
+  fetchVariantData();
+});
+</script>
+{% endblock %} 

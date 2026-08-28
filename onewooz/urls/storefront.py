@@ -15,17 +15,14 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path
+from django.urls import include, path
 
 from core import health
 
 urlpatterns = [
     path("health/live/", health.live, name="health_live"),
+    path("", include("storefront.urls")),
 ]
-
-# Storefront routes are added in the phase that builds the storefront app.
-# Route order will matter here: specific paths (cart, checkout, account) must
-# precede the catch-all page slug.
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

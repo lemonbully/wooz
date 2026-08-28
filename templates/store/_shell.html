@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% comment %}
+Store-management shell. Same Palantir app chrome as the owner dashboard
+(`ud/_shell.html`), but the sidebar is scoped to one store and every route is
+per-store. A page sets `nav_active` (its sidebar key) and `crumb` (its title).
+{% endcomment %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/onewooz-pal.css' %}">
+<link rel="stylesheet" href="{% static 'css/onewooz-app.css' %}">
+{% endblock %}
+
+{% block body %}
+<div class="pal">
+<a href="#main" class="sr-only">Skip to content</a>
+
+<div class="app">
+
+  <aside class="app-side">
+    <a href="{% url 'store:overview' site.id %}" class="app-side__brand" aria-label="{{ site.name }} — overview">
+      <img class="app-side__brand-img" src="{% static 'img/Icon_main.png' %}" alt="" width="24" height="24">
+    </a>
+    <div class="ow-scroller is-vertical app-side__scroller" data-scroller>
+      <div class="ow-scroller__area" data-scroller-area>
+        {% include "store/_nav.html" %}
+      </div>
+      <button type="button" class="ow-hint ow-hint--start" aria-label="Scroll up for more"><span class="ow-hint__arw">↑</span> More</button>
+      <button type="button" class="ow-hint ow-hint--end" aria-label="Scroll down for more"><span class="ow-hint__arw">↓</span> More</button>
+    </div>
+    <div class="app-side__foot">
+      <span class="dot" aria-hidden="true"></span>
+      {{ site.get_status_display }}
+    </div>
+  </aside>
+
+  <div class="app-main">
+
+    <header class="app-top">
+      <div class="app-top__left">
+        <details class="app-mmenu">
+          <summary aria-label="Menu">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          </summary>
+          <div class="app-mmenu__panel">{% include "store/_nav.html" %}</div>
+        </details>
+
+        <nav class="app-top__crumb" aria-label="Breadcrumb">
+          <a href="{% url 'ud:dashboard' %}">OneWooz</a>
+          <span class="sep" aria-hidden="true">/</span>
+          <a href="{% url 'store:overview' site.id %}">{{ site.name }}</a>
+          <span class="sep" aria-hidden="true">/</span>
+          <span class="here">{% block crumb %}Overview{% endblock %}</span>
+        </nav>
+      </div>
+
+      {% include "ud/_topbar_actions.html" %}
+    </header>
+
+    <main id="main">
+      {% if messages %}
+        <div class="app-page app-page--flush">
+          {% for message in messages %}
+            <div class="pal-alert{% if message.tags == 'success' %} pal-alert--ok{% endif %}" role="status">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block main %}{% endblock %}
+    </main>
+
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/app/scroll-hint.js' %}" defer></script>
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var menus = Array.prototype.slice.call(document.querySelectorAll(".app-mmenu, .app-acct"));
+    document.addEventListener("click", function (e) {
+      menus.forEach(function (m) { if (m.open && !m.contains(e.target)) m.removeAttribute("open"); });
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") menus.forEach(function (m) { m.removeAttribute("open"); });
+    });
+    var mmenu = document.querySelector(".app-mmenu");
+    if (mmenu) {
+      mmenu.addEventListener("click", function (e) {
+        if (e.target.closest("a")) mmenu.removeAttribute("open");
+      });
+    }
+  })();
+</script>
+{% endblock %}

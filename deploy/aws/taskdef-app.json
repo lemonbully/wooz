@@ -1,0 +1,152 @@
+{
+  "family": "onewooz-app",
+  "networkMode": "host",
+  "requiresCompatibilities": ["EC2"],
+  "executionRoleArn": "arn:aws:iam::521831014282:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::521831014282:role/onewooz-task-role",
+  "cpu": "1536",
+  "memory": "3072",
+  "containerDefinitions": [
+    {
+      "name": "redis",
+      "image": "redis:7-alpine",
+      "essential": true,
+      "memoryReservation": 256,
+      "command": ["redis-server", "--save", "", "--appendonly", "no"],
+      "healthCheck": {
+        "command": ["CMD", "redis-cli", "ping"],
+        "interval": 15,
+        "timeout": 3,
+        "retries": 5,
+        "startPeriod": 10
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "onewooz-ecs",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "redis"
+        }
+      }
+    },
+    {
+      "name": "web",
+      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app:latest",
+      "essential": true,
+      "memoryReservation": 1024,
+      "command": ["web"],
+      "dependsOn": [{ "containerName": "redis", "condition": "HEALTHY" }],
+      "environment": [
+        { "name": "DJANGO_SETTINGS_MODULE", "value": "onewooz.settings.prod" },
+        { "name": "RUN_MIGRATIONS", "value": "1" },
+        { "name": "ONEWOOZ_DB_HOST", "value": "onewoozdb2.c72wgcao0a70.ap-south-1.rds.amazonaws.com" },
+        { "name": "ONEWOOZ_DB_NAME", "value": "onewooz" },
+        { "name": "ONEWOOZ_DB_USER", "value": "woozuser" },
+        { "name": "ONEWOOZ_DB_PORT", "value": "3306" },
+        { "name": "ONEWOOZ_REDIS_URL", "value": "redis://localhost:6379/1" },
+        { "name": "ONEWOOZ_AWS_REGION", "value": "ap-south-1" },
+        { "name": "ONEWOOZ_MEDIA_BUCKET", "value": "onewooz-media-bucket" },
+        { "name": "ONEWOOZ_CELERY_BROKER_URL", "value": "sqs://" },
+        { "name": "ONEWOOZ_SQS_PREFIX", "value": "onewooz-" }
+      ],
+      "secrets": [
+        { "name": "ONEWOOZ_SECRET_KEY", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/SECRET_KEY" },
+        { "name": "ONEWOOZ_FIELD_ENCRYPTION_KEY", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/FIELD_ENCRYPTION_KEY" },
+        { "name": "ONEWOOZ_CADDY_ASK_SECRET", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/CADDY_ASK_SECRET" },
+        { "name": "ONEWOOZ_DB_PASSWORD", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/DB_PASSWORD" },
+        { "name": "ONEWOOZ_EMAIL_HOST", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_HOST" },
+        { "name": "ONEWOOZ_EMAIL_USER", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_USER" },
+        { "name": "ONEWOOZ_EMAIL_PASSWORD", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_PASSWORD" }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health/live || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "onewooz-ecs",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "web"
+        }
+      }
+    },
+    {
+      "name": "worker",
+      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app:latest",
+      "essential": true,
+      "memoryReservation": 512,
+      "command": ["worker"],
+      "dependsOn": [{ "containerName": "redis", "condition": "HEALTHY" }],
+      "environment": [
+        { "name": "DJANGO_SETTINGS_MODULE", "value": "onewooz.settings.prod" },
+        { "name": "ONEWOOZ_DB_HOST", "value": "onewoozdb2.c72wgcao0a70.ap-south-1.rds.amazonaws.com" },
+        { "name": "ONEWOOZ_DB_NAME", "value": "onewooz" },
+        { "name": "ONEWOOZ_DB_USER", "value": "woozuser" },
+        { "name": "ONEWOOZ_DB_PORT", "value": "3306" },
+        { "name": "ONEWOOZ_REDIS_URL", "value": "redis://localhost:6379/1" },
+        { "name": "ONEWOOZ_AWS_REGION", "value": "ap-south-1" },
+        { "name": "ONEWOOZ_MEDIA_BUCKET", "value": "onewooz-media-bucket" },
+        { "name": "ONEWOOZ_CELERY_BROKER_URL", "value": "sqs://" },
+        { "name": "ONEWOOZ_SQS_PREFIX", "value": "onewooz-" }
+      ],
+      "secrets": [
+        { "name": "ONEWOOZ_SECRET_KEY", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/SECRET_KEY" },
+        { "name": "ONEWOOZ_FIELD_ENCRYPTION_KEY", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/FIELD_ENCRYPTION_KEY" },
+        { "name": "ONEWOOZ_CADDY_ASK_SECRET", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/CADDY_ASK_SECRET" },
+        { "name": "ONEWOOZ_DB_PASSWORD", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/DB_PASSWORD" },
+        { "name": "ONEWOOZ_EMAIL_HOST", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_HOST" },
+        { "name": "ONEWOOZ_EMAIL_USER", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_USER" },
+        { "name": "ONEWOOZ_EMAIL_PASSWORD", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_PASSWORD" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "onewooz-ecs",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "worker"
+        }
+      }
+    },
+    {
+      "name": "beat",
+      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app:latest",
+      "essential": true,
+      "memoryReservation": 256,
+      "command": ["beat"],
+      "dependsOn": [{ "containerName": "redis", "condition": "HEALTHY" }],
+      "environment": [
+        { "name": "DJANGO_SETTINGS_MODULE", "value": "onewooz.settings.prod" },
+        { "name": "ONEWOOZ_DB_HOST", "value": "onewoozdb2.c72wgcao0a70.ap-south-1.rds.amazonaws.com" },
+        { "name": "ONEWOOZ_DB_NAME", "value": "onewooz" },
+        { "name": "ONEWOOZ_DB_USER", "value": "woozuser" },
+        { "name": "ONEWOOZ_DB_PORT", "value": "3306" },
+        { "name": "ONEWOOZ_REDIS_URL", "value": "redis://localhost:6379/1" },
+        { "name": "ONEWOOZ_AWS_REGION", "value": "ap-south-1" },
+        { "name": "ONEWOOZ_MEDIA_BUCKET", "value": "onewooz-media-bucket" },
+        { "name": "ONEWOOZ_CELERY_BROKER_URL", "value": "sqs://" },
+        { "name": "ONEWOOZ_SQS_PREFIX", "value": "onewooz-" }
+      ],
+      "secrets": [
+        { "name": "ONEWOOZ_SECRET_KEY", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/SECRET_KEY" },
+        { "name": "ONEWOOZ_FIELD_ENCRYPTION_KEY", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/FIELD_ENCRYPTION_KEY" },
+        { "name": "ONEWOOZ_CADDY_ASK_SECRET", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/CADDY_ASK_SECRET" },
+        { "name": "ONEWOOZ_DB_PASSWORD", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/DB_PASSWORD" },
+        { "name": "ONEWOOZ_EMAIL_HOST", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_HOST" },
+        { "name": "ONEWOOZ_EMAIL_USER", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_USER" },
+        { "name": "ONEWOOZ_EMAIL_PASSWORD", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_PASSWORD" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "onewooz-ecs",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "beat"
+        }
+      }
+    }
+  ]
+}

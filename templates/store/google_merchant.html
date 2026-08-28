@@ -1,0 +1,31 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Google Merchant{% endblock %}
+{% block crumb %}Google Merchant{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Grow</p>
+    <h1 class="app-head__title pal-mt-4">Google Merchant</h1>
+    <p class="app-head__lead">Sync your catalogue to Google Merchant Center so products can appear in Shopping and free listings.</p>
+  </div></div>
+
+  <div class="app-block">
+    <div class="app-card__head">
+      <h2 class="app-card__title">Connection</h2>
+      <span class="app-badge app-badge--{% if config.status == 'connected' %}ok{% elif config.status == 'error' %}danger{% else %}muted{% endif %}">{{ config.get_status_display }}</span>
+    </div>
+    {% if config.last_synced_at %}<div class="app-card__body"><p class="app-sub">Last synced {{ config.last_synced_at|date:"d M Y, H:i" }}</p>{% if config.last_error %}<p class="app-field-err">{{ config.last_error }}</p>{% endif %}</div>{% endif %}
+  </div>
+
+  <div class="app-block">
+    <form method="post" class="app-form app-card" style="padding:1.5rem;">
+      {% csrf_token %}
+      {% include "store/_form.html" with wide_fields="service_account_json" %}
+      <div class="app-form__foot">
+        <button class="pal-btn" type="submit">Save &amp; connect</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{
+  "family": "onewooz-edge",
+  "networkMode": "host",
+  "requiresCompatibilities": ["EC2"],
+  "executionRoleArn": "arn:aws:iam::521831014282:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::521831014282:role/onewooz-task-role",
+  "cpu": "256",
+  "memory": "384",
+  "volumes": [
+    { "name": "caddy-data", "host": { "sourcePath": "/var/onewooz/caddy-data" } },
+    { "name": "caddy-config", "host": { "sourcePath": "/var/onewooz/caddy-config" } }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "caddy",
+      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-caddy:latest",
+      "essential": true,
+      "memoryReservation": 256,
+      "environment": [
+        { "name": "APP_UPSTREAM", "value": "localhost:8000" },
+        { "name": "ACME_EMAIL", "value": "admin@onewooz.com" },
+        { "name": "REDIS_HOST", "value": "127.0.0.1" },
+        { "name": "REDIS_PORT", "value": "6379" },
+        { "name": "REDIS_TLS", "value": "false" }
+      ],
+      "secrets": [
+        { "name": "CADDY_ASK_SECRET", "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/CADDY_ASK_SECRET" }
+      ],
+      "mountPoints": [
+        { "sourceVolume": "caddy-data", "containerPath": "/data" },
+        { "sourceVolume": "caddy-config", "containerPath": "/config" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "onewooz-ecs",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "caddy"
+        }
+      }
+    }
+  ]
+}

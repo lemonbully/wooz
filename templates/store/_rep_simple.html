@@ -1,0 +1,18 @@
+{% comment %}
+Generic repeatable single-value list. Include with `name`, `label`,
+`placeholder`, and `rows` (existing string values). The view reads
+request.POST.getlist(name).
+{% endcomment %}
+<div class="app-rep app-f--full" data-rep>
+  <span class="pal-field__label">{{ label }}</span>
+  <div class="app-rep__rows">
+    {% for v in rows %}
+      <div class="app-rep__row">
+        <input type="text" name="{{ name }}" value="{{ v }}" placeholder="{{ placeholder }}" class="app-rep__in">
+        <button type="button" class="app-rep__del" aria-label="Remove">&times;</button>
+      </div>
+    {% endfor %}
+  </div>
+  <template class="app-rep__tmpl"><div class="app-rep__row"><input type="text" name="{{ name }}" placeholder="{{ placeholder }}" class="app-rep__in"><button type="button" class="app-rep__del" aria-label="Remove">&times;</button></div></template>
+  <button type="button" class="app-rep__add pal-btn pal-btn--ghost">+ Add</button>
+</div>

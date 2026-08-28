@@ -1,0 +1,1059 @@
+{% extends "storefront/template2/base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block title %}{{ page_title|default:'All Products' }}{% endblock %}
+
+{% block page_content %}
+<style>
+.dropdown {
+  border: 1px solid #c1c2c5;
+  border-radius: 12px;
+  transition: all 300ms;
+  display: flex;
+  flex-direction: column;
+  min-height: 58px;
+  background-color: white;
+  overflow: hidden;
+  position: relative;
+  inset-inline: auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.dropdown input:where(:checked) ~ .list {
+  opacity: 1;
+  transform: translateY(-3rem) scale(1);
+  transition: all 500ms ease;
+  margin-top: 32px;
+  padding-top: 4px;
+  margin-bottom: -32px;
+}
+.dropdown input:where(:not(:checked)) ~ .list {
+  opacity: 0;
+  transform: translateY(3rem);
+  margin-top: -100%;
+  user-select: none;
+  height: 0px;
+  max-height: 0px;
+  min-height: 0px;
+  pointer-events: none;
+  transition: all 500ms ease-out;
+}
+.trigger {
+  cursor: pointer;
+  list-style: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  font-weight: 600;
+  color: inherit;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-flow: row;
+  gap: 1rem;
+  padding: 1rem;
+  height: max-content;
+  position: relative;
+  border-radius: inherit;
+  background-color: white;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+.dropdown input:where(:checked) + .trigger {
+  margin-bottom: 1rem;
+}
+.dropdown input:where(:checked) + .trigger::after {
+  transform: rotate(90deg);
+  transition-delay: 0ms;
+}
+
+.trigger:before {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.trigger:before { content: none; }
+.trigger { justify-content: flex-start; padding-right: 2.25rem; }
+.trigger::after {
+  content: "›";
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  width: 17px;
+  height: 17px;
+  color: #262626;
+  border-radius: 2px;
+  font-size: 22px;
+  transition: transform 350ms ease;
+}
+.trigger .label-left { color: #4b5563; font-weight: 600; }
+.trigger .value-right { color: #111827; font-weight: 600; margin-left: auto; }
+.list {
+  height: 100%;
+  max-height: 20rem;
+  width: calc(100% - calc(var(--w-scrollbar) / 2));
+  display: grid;
+  grid-auto-flow: row;
+  overflow: hidden auto;
+  gap: 1rem;
+  padding: 0 1rem;
+  margin-right: -8px;
+  --w-scrollbar: 8px;
+}
+.listitem {
+  height: 100%;
+  width: calc(100% + calc(calc(var(--w-scrollbar) / 2) + var(--w-scrollbar)));
+  list-style: none;
+}
+.article {
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  width: 100%;
+  border: 1px solid #c1c2c5;
+  display: block;
+  background-color: white;
+}
+.article:hover { background-color: #f3f4f6; }
+.article.is-active {
+  background-color: #f9fafb;
+  border-color: #111827;
+  font-weight: 700;
+}
+
+.webkit-scrollbar::-webkit-scrollbar {
+  width: var(--w-scrollbar);
+  height: var(--w-scrollbar);
+  border-radius: 9999px;
+}
+.webkit-scrollbar::-webkit-scrollbar-track {
+  background: #0000;
+}
+.webkit-scrollbar::-webkit-scrollbar-thumb {
+  background: #0000;
+  border-radius: 9999px;
+}
+.webkit-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #c1c2c5;
+}
+
+.product-image-link{
+  width: 100%;
+  height: 100%;
+}
+.best-seller-d2c-content{
+  overflow: hidden;
+}
+.best-seller-d2c-title{
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.best-seller-d2c-actions{
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+  align-items: stretch;
+}
+@media (max-width: 768px){
+  .best-seller-d2c-actions{
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+  }
+  .best-seller-d2c-content{
+    width: 42vw;
+    max-width: 100%;
+    margin-left: 4px;
+    margin-right: 4px;
+    overflow: hidden;
+  }
+}
+</style>
+<section class="py-8 md:py-12 bg-white">
+    <div class="container mx-auto px-4">
+        <!-- Mobile Filter Toggle Button -->
+        <div class="flex justify-between items-center mb-4 md:hidden">
+            <h1 class="text-xl font-normal text-gray-900 uppercase">All Products</h1>
+            <button id="mobileFilterToggle" class="px-4 py-2 bg-gray-100 text-gray-800 rounded-md flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Filters
+            </button>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <!-- Sidebar Filters -->
+            <aside id="filterSidebar" class="md:col-span-1 ml-0 md:ml-8 mr-0 md:mr-0 fixed md:relative inset-0 bg-white md:bg-transparent z-[60] transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+                <div class="h-full md:h-auto overflow-y-auto md:overflow-visible p-4 pt-16 pb-24 md:p-0">
+                    <!-- Mobile Close Button -->
+                    <div class="flex justify-between items-center mb-4 md:hidden sticky top-0 bg-white z-10 pb-2 pt-[3rem] border-b">
+                        <h2 class="text-lg font-medium">Filters</h2>
+                        <button id="closeMobileFilter" class="text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div class="">
+                            <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-3">Categories</h2>
+                            <form id="filtersForm" method="get" class="space-y-2">
+                                {% if sort %}<input type="hidden" name="sort" value="{{ sort }}" />{% endif %}
+                                {% for c in categories %}
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-gray-900" name="categories" value="{{ c.id }}" {% if c.id in selected_category_ids %}checked{% endif %} />
+                                    <span class="text-sm uppercase text-gray-700">{{ c.name }}</span>
+                                </label>
+                                {% endfor %}
+                            </form>
+                        </div>
+
+                        <!-- Dynamic Variant Filters -->
+                        <div id="variantFilters">
+                            <!-- Variant filters will be populated by JavaScript -->
+                        </div>
+                        <form method="get" class="">
+                            {% for cid in selected_category_ids %}
+                                <input type="hidden" name="categories" value="{{ cid }}" />
+                            {% endfor %}
+                            <div class="dropdown">
+                                <input id="sortDropdownToggle" type="checkbox" class="sr-only">
+                                <label for="sortDropdownToggle" class="trigger">
+                                    <span class="label-left text-sm">Sort</span>
+                                   
+                                </label>
+                                <ul class="list webkit-scrollbar">
+                                    <li class="listitem">
+                                        <button type="submit" name="sort" value="newest" class="article w-full text-left{% if not sort or sort == 'newest' %} is-active{% endif %}">Newest</button>
+                                    </li>
+                                    <li class="listitem">
+                                        <button type="submit" name="sort" value="price_asc" class="article w-full text-left{% if sort == 'price_asc' %} is-active{% endif %}">Price: Low to High</button>
+                                    </li>
+                                    <li class="listitem">
+                                        <button type="submit" name="sort" value="price_desc" class="article w-full text-left{% if sort == 'price_desc' %} is-active{% endif %}">Price: High to Low</button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!-- Sticky Apply Button (mobile) -->
+                <div class="md:hidden sticky bottom-0 left-0 right-0 bg-white border-t p-4">
+                    <button id="applyFiltersBtn" type="button" class="w-full py-3 bg-gray-900 text-white rounded-md">Apply Filters</button>
+                </div>
+            </aside>
+
+            <!-- Overlay for mobile filter sidebar -->
+            <div id="filterOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-[50] hidden md:hidden"></div>
+
+            <!-- Products Grid -->
+            <div class="md:col-span-3">
+                <!-- Category Header -->
+                <div class="mb-6">
+                    <h1 id="categoryHeader" class="hidden sm:block text-xl ml-2 md:text-2xl font-normal md:ml-[2rem] text-gray-900 uppercase">All Products</h1>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Get selected category IDs
+                            const selectedIds = [{% for id in selected_category_ids %}{{ id }}{% if not forloop.last %},{% endif %}{% endfor %}];
+                            
+                            // Get total number of available categories
+                            const totalCategories = {{ categories|length }};
+                            
+                            // If no categories selected or all categories selected, show "All Products"
+                            if (selectedIds.length === 0 || selectedIds.length === totalCategories) {
+                                document.getElementById('categoryHeader').textContent = 'All Products';
+                                return;
+                            }
+                            
+                            // Create mapping of category IDs to names
+                            const categoryMap = {
+                                {% for c in categories %}
+                                {{ c.id }}: "{{ c.name }}"{% if not forloop.last %},{% endif %}
+                                {% endfor %}
+                            };
+                            
+                            // Build display string
+                            const selectedCategories = selectedIds.map(id => categoryMap[id]);
+                            document.getElementById('categoryHeader').textContent = selectedCategories.join(', ');
+                        });
+                    </script>
+                </div>
+                {% if active_category_id and subcategories %}
+                <div class="mb-6 px-1 sm:px-2 md:px-4">
+                    <div class="flex flex-wrap gap-2">
+                        <a href="?categories={{ active_category_id }}{% if sort %}&sort={{ sort }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs border {% if not active_subcategory_id %}bg-black text-white border-black{% else %}bg-white text-gray-800 border-gray-300 hover:bg-gray-50{% endif %}">All</a>
+                        {% for sc in subcategories %}
+                        <a href="?categories={{ active_category_id }}&sub={{ sc.id }}{% if sort %}&sort={{ sort }}{% endif %}" class="px-3 py-1.5 rounded-full text-xs border {% if active_subcategory_id == sc.id %}bg-black text-white border-black{% else %}bg-white text-gray-800 border-gray-300 hover:bg-gray-50{% endif %}">{{ sc.name }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if products %}
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 md:gap-6" id="productsGrid">
+                    {% for product in products %}
+                    <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] md:m-4" style="border-radius: 8px;" data-product-id="{{ product.product_id }}" data-product-title="{{ product.title|lower }}">
+                        <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
+                            {% if product.image1 %}
+                            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                               class="group relative flex items-center justify-center flex-shrink-0 product-image-link">
+                              <span class="relative w-full h-full flex items-center justify-center">
+                              {% if website.content.enable_product_hover_swap and product.image2 %}
+                            <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="block w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0"/>
+                            <img src="{{ product.image2.url }}" {% media_attrs website product.image2.url product.title %} class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100"/>
+                              {% else %}
+                            <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="block w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"/>
+                              {% endif %}
+                              </span>
+                            </a>
+                            {% else %}
+                            <div class="absolute inset-0 flex items-center justify-center bg-gray-100"></div>
+                            {% endif %}
+
+                            {% comment %} Badges: NEW for recently featured; Discount from specifications if provided {% endcomment %}
+                            {% if product.specifications %}
+                            <div class="absolute top-2 right-2 flex flex-col items-end space-y-1.5 pointer-events-none">
+                                {% with specs=product.specifications %}
+                                    {% if specs %}
+                                        {% if specs.discount %}
+                                            <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount }}%</span>
+                                        {% elif specs.discount_percentage %}
+                                            <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount_percentage }}%</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="px-2 sm:px-3 md:px-4 py-4 text-left best-seller-d2c-content">
+                            {% if is_d2c or website.template.is_D2C %}
+                            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                               class="block text-[12px] sm:text-[13px] font-normal uppercase leading-tight text-gray-900 hover:text-black transition-colors break-words best-seller-d2c-title">
+                                {{ product.title }}
+                            </a>
+                            {% if show_price_in_lists %}
+                            <div class="mt-1 text-gray-700">
+                                <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                                   class="inline-flex items-baseline justify-start gap-1.5 hover:text-black transition-colors max-w-full">
+                                    {% with specs=product.specifications %}
+                                        <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words">{{ product.currency|currency_symbol }}{{ product.price }}</span>
+                                        {% if specs and specs.mrp %}
+                                            <span class="text-[15px] text-gray-400 line-through break-words">{{ product.currency|currency_symbol }}{{ specs.mrp }}</span>
+                                        {% elif specs and specs.original_price %}
+                                            <span class="text-[15px] text-gray-400 line-through break-words">{{ product.currency|currency_symbol }}{{ specs.original_price }}</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </a>
+                            </div>
+                            {% endif %}
+                            <div class="mt-1.5 best-seller-d2c-actions">
+                                <a href="{% url 'public_cart_add' product_id=product.product_id|default:'0' %}?qty=1"
+                                   class="inline-flex items-center justify-center gap-1 w-full h-7 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
+                                   style="border: 1px solid #888888;"
+                                   aria-label="Add {{ product.title }} to cart">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7">
+                                        <circle cx="9" cy="20" r="1.6"></circle>
+                                        <circle cx="18" cy="20" r="1.6"></circle>
+                                        <path d="M3 4h2l2.1 10.2a1 1 0 0 0 1 .8h9.9a1 1 0 0 0 1-.8L21 8H7.2"></path>
+                                    </svg>
+                                    <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Add To Cart</span>
+                                </a>
+                                <button type="button"
+                                        class="w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-gray-700 bg-white hover:bg-gray-50 transition js-listing-wishlist"
+                                        style="border: 1px solid #888888;"
+                                        data-wishlist-url="{% url 'public_wishlist_add' product_id=product.product_id|default:'0' %}"
+                                        data-account-url="{% url 'public_user_account' %}"
+                                        aria-label="Add {{ product.title }} to wishlist">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.7">
+                                        <path d="M12 21s-6.7-4.35-9.2-8.07C.87 10.13 1.5 6.7 4.4 5.2a5 5 0 0 1 5.6.77L12 7.7l2-1.73a5 5 0 0 1 5.6-.77c2.9 1.5 3.53 4.93 1.6 7.73C18.7 16.65 12 21 12 21z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            {% else %}
+                            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                               class="inline-block text-[11px] md:text-[13px] uppercase tracking-[0.2em] text-gray-800 hover:text-black transition-colors best-seller-d2c-title">
+                                {{ product.title }}
+                            </a>
+                            {% if show_price_in_lists %}
+                            <div class="mt-1 text-gray-700">
+                                <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                                   class="inline-flex items-baseline justify-start gap-1.5 hover:text-black transition-colors max-w-full">
+                                    {% with specs=product.specifications %}
+                                        <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words">{{ product.currency|currency_symbol }}{{ product.price }}</span>
+                                        {% if specs and specs.mrp %}
+                                            <span class="text-[15px] text-gray-400 line-through break-words">{{ product.currency|currency_symbol }}{{ specs.mrp }}</span>
+                                        {% elif specs and specs.original_price %}
+                                            <span class="text-[15px] text-gray-400 line-through break-words">{{ product.currency|currency_symbol }}{{ specs.original_price }}</span>
+                                        {% else %}
+                                            {# price only #}
+                                        {% endif %}
+                                    {% endwith %}
+                                </a>
+                            </div>
+                            {% endif %}
+                            <div class="mt-1.5 best-seller-d2c-actions">
+                                <button type="button"
+                                   class="inline-flex items-center justify-center gap-1 w-full h-6 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
+                                   style="border: 1px solid #888888;"
+                                   onclick="openListingEnquiryModal('{{ product.product_id }}')"
+                                   aria-label="Send enquiry for {{ product.title }}">
+                                    <span class="font-medium leading-none truncate">Send Enquiry</span>
+                                </button>
+                                <a href="{% url 'public_product_whatsapp' product_id=product.product_id|default:'0' %}"
+                                   class="w-full h-6 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-[#25D366] bg-white hover:bg-gray-50 transition"
+                                   style="border: 1px solid #888888;"
+                                   aria-label="Share {{ product.title }} on WhatsApp">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-4 h-4" fill="currentColor" aria-hidden="true">
+                                        <path d="M16.02 3.2c-7.07 0-12.8 5.73-12.8 12.8 0 2.26.6 4.48 1.74 6.43L3.2 28.8l6.53-1.72a12.75 12.75 0 0 0 6.29 1.64h.01c7.07 0 12.8-5.73 12.8-12.8 0-3.42-1.33-6.63-3.75-9.05a12.7 12.7 0 0 0-9.06-3.67Zm0 23.31h-.01a10.5 10.5 0 0 1-5.35-1.46l-.38-.23-3.88 1.02 1.04-3.78-.24-.39a10.54 10.54 0 1 1 18.81-5.67c0 5.8-4.72 10.51-10.49 10.51Zm5.76-7.85c-.31-.15-1.83-.9-2.12-1-.28-.1-.49-.15-.69.16-.2.3-.79 1-.97 1.2-.18.2-.36.22-.67.07-.31-.15-1.3-.48-2.48-1.54-.92-.82-1.54-1.84-1.72-2.15-.18-.31-.02-.48.13-.63.14-.14.31-.36.46-.54.15-.18.2-.31.31-.51.1-.2.05-.38-.03-.54-.08-.15-.69-1.67-.95-2.28-.25-.6-.5-.52-.69-.53-.18-.01-.38-.01-.59-.01-.2 0-.54.08-.82.38-.28.31-1.08 1.06-1.08 2.58 0 1.52 1.11 2.99 1.26 3.2.15.2 2.18 3.33 5.27 4.67.74.32 1.32.51 1.77.66.74.24 1.41.2 1.94.12.59-.09 1.83-.75 2.09-1.47.26-.72.26-1.33.18-1.47-.08-.13-.28-.2-.59-.36Z"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-10 text-gray-500">No products found for selected categories.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+<script>
+// Basic client-side search filter using ?q=
+document.addEventListener('DOMContentLoaded', function(){
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var q = (params.get('q') || '').trim().toLowerCase();
+        if (!q) return;
+        var grid = document.getElementById('productsGrid');
+        if (!grid) return;
+        var items = grid.querySelectorAll('[data-product-id]');
+        var visible = 0;
+        items.forEach(function(item){
+            var title = item.getAttribute('data-product-title') || '';
+            var show = title.indexOf(q) !== -1;
+            item.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        if (visible === 0) {
+            var noMsg = document.createElement('div');
+            noMsg.className = 'col-span-full text-center py-10 text-gray-500';
+            noMsg.textContent = 'No products found for "' + q + '"';
+            grid.appendChild(noMsg);
+        }
+    } catch (e) { /* noop */ }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updateDropdownLabel(button, menu) {
+        if (!button || !menu) return;
+        const label = button.querySelector('.dropdown-label');
+        const placeholder = button.getAttribute('data-placeholder') || 'Select';
+        const checks = menu.querySelectorAll('input[type="checkbox"]:checked');
+        if (checks.length === 0) {
+            label.textContent = placeholder;
+        } else if (checks.length === 1) {
+            label.textContent = checks[0].closest('label').querySelector('span').textContent;
+        } else {
+            label.textContent = checks.length + ' selected';
+        }
+    }
+
+    function initDropdown(button, menu, onChange) {
+        if (!button || !menu) return;
+
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isHidden = menu.classList.contains('hidden');
+            document.querySelectorAll('[id^="dd-"]').forEach(el => el.classList.add('hidden'));
+            if (isHidden) menu.classList.remove('hidden');
+            else menu.classList.add('hidden');
+        });
+
+        // Keyboard accessibility: open via keys without causing click toggle race
+        button.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                menu.classList.remove('hidden');
+            }
+        });
+
+        menu.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (e.target && e.target.matches('input[type="checkbox"]')) {
+                updateDropdownLabel(button, menu);
+                if (typeof onChange === 'function') onChange();
+            }
+        });
+
+        document.addEventListener('click', function() {
+            menu.classList.add('hidden');
+        });
+
+        updateDropdownLabel(button, menu);
+    }
+
+    const catButton = document.querySelector('[data-dropdown-toggle="dd-categories"]');
+    const catMenu = document.getElementById('dd-categories');
+    const prodButton = document.querySelector('[data-dropdown-toggle="dd-products"]');
+    const prodMenu = document.getElementById('dd-products');
+
+    function filterProductsByCategories() {
+        const selected = Array.from(catMenu.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        const selectedSet = new Set(selected);
+        const labels = prodMenu.querySelectorAll('label');
+        labels.forEach(l => {
+            const cat = l.getAttribute('data-category-id') || '';
+            const checkbox = l.querySelector('input[type="checkbox"]');
+            const show = selectedSet.size === 0 || selectedSet.has(cat);
+            if (!show && checkbox && checkbox.checked) {
+                checkbox.checked = false;
+            }
+            l.classList.toggle('hidden', !show);
+        });
+        updateDropdownLabel(prodButton, prodMenu);
+    }
+
+    initDropdown(catButton, catMenu, filterProductsByCategories);
+    initDropdown(prodButton, prodMenu);
+
+    // AJAX submit (no page reload)
+    const form = document.querySelector('#discuss-needs form');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fd = new FormData(form);
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd
+                });
+                const data = await res.json();
+                const box = document.getElementById('enquiry-msg');
+                if (res.ok && data.status === 'success') {
+                    if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-black text-white ring-1 ring-green-200'; box.textContent = data.message; box.style.display='block'; }
+                    // Reset minimal fields
+                    form.querySelector('input[name="quantity"]').value = '';
+                    form.querySelector('input[name="mobile"]').value = '';
+                    // Uncheck all checkboxes
+                    form.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    updateDropdownLabel(catButton, catMenu);
+                    filterProductsByCategories();
+                } else {
+                    const errText = (data && data.errors) ? data.errors.join(' ') : 'Something went wrong.';
+                    if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = errText; box.style.display='block'; }
+                }
+            } catch (err) {
+                const box = document.getElementById('enquiry-msg');
+                if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = 'Network error. Please try again.'; box.style.display='block'; }
+            }
+        });
+    }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Mobile filter sidebar toggle functionality
+    const mobileFilterToggle = document.getElementById('mobileFilterToggle');
+    const closeMobileFilter = document.getElementById('closeMobileFilter');
+    const filterSidebar = document.getElementById('filterSidebar');
+    const filterOverlay = document.getElementById('filterOverlay');
+    
+    if (mobileFilterToggle && filterSidebar) {
+        // Open filter sidebar
+        mobileFilterToggle.addEventListener('click', function() {
+            filterSidebar.classList.remove('-translate-x-full');
+            filterSidebar.classList.add('translate-x-0');
+            filterOverlay.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden'); // Prevent scrolling when sidebar is open
+        });
+        
+        // Close filter sidebar
+        if (closeMobileFilter) {
+            closeMobileFilter.addEventListener('click', function() {
+                filterSidebar.classList.remove('translate-x-0');
+                filterSidebar.classList.add('-translate-x-full');
+                filterOverlay.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            });
+        }
+        
+        // Close sidebar when clicking on overlay
+        if (filterOverlay) {
+            filterOverlay.addEventListener('click', function() {
+                filterSidebar.classList.remove('translate-x-0');
+                filterSidebar.classList.add('-translate-x-full');
+                filterOverlay.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            });
+        }
+    }
+    
+    // Handle category filter form submission
+    var form = document.getElementById('filtersForm');
+    if (!form) return;
+    var checkboxes = form.querySelectorAll('input[type="checkbox"][name="categories"]');
+    checkboxes.forEach(function (cb) {
+        cb.addEventListener('change', function () {
+            // On desktop, submit immediately; on mobile, wait for Apply button
+            if (window.matchMedia('(min-width: 768px)').matches) {
+                form.submit();
+            }
+        });
+    });
+    
+    // Extract all products with their variants
+    const products = [
+        {% for product in products %}
+            {
+                id: "{{ product.product_id }}",
+                title: "{{ product.title }}",
+                element: document.querySelector('[data-product-id="{{ product.product_id }}"]'),
+                variants: {% if product.variants %}{{ product.variants|safe }}{% else %}null{% endif %}
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    // Extract all variant types and their unique values
+    const variantTypes = new Map(); // Map of variant type name to Set of values
+    
+    // Process all products to extract variant types and values
+    products.forEach(product => {
+        if (product.variants && Array.isArray(product.variants)) {
+            product.variants.forEach(variant => {
+                if (variant && variant.name) {
+                    const variantName = variant.name.trim();
+                    if (!variantTypes.has(variantName)) {
+                        variantTypes.set(variantName, new Set());
+                    }
+                    
+                    const valueSet = variantTypes.get(variantName);
+                    if (variant.values && Array.isArray(variant.values)) {
+                        variant.values.forEach(val => {
+                            if (val && val.value) {
+                                valueSet.add(val.value);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    });
+    
+    // Get URL parameters for selected variants
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Sort variant types alphabetically
+    const sortedVariantTypes = Array.from(variantTypes.keys()).sort();
+    
+    // Get the container for variant filters
+    const variantFiltersContainer = document.getElementById('variantFilters');
+    variantFiltersContainer.innerHTML = '';
+    
+    // If no variant types found, don't show anything
+    if (sortedVariantTypes.length === 0) {
+        return;
+    }
+    
+    // Track all selected variant filters
+    const selectedVariantFilters = {};
+    
+    // Function to check if a product matches the selected variant filters
+    function productMatchesFilters(product, selectedFilters) {
+        // If no filters selected, show all products
+        if (Object.keys(selectedFilters).length === 0) {
+            return true;
+        }
+        
+        // If product has no variants, it doesn't match any variant filter
+        if (!product.variants || !Array.isArray(product.variants) || product.variants.length === 0) {
+            return false;
+        }
+        
+        // Check each filter type
+        for (const [variantType, selectedValues] of Object.entries(selectedFilters)) {
+            // Skip if no values selected for this variant type
+            if (selectedValues.length === 0) {
+                continue;
+            }
+            
+            // Find the matching variant type in the product
+            const matchingVariant = product.variants.find(v => 
+                v.name && v.name.toLowerCase() === variantType.toLowerCase()
+            );
+            
+            // If product doesn't have this variant type, it doesn't match
+            if (!matchingVariant || !Array.isArray(matchingVariant.values)) {
+                return false;
+            }
+            
+            // Check if any of the product's variant values match the selected values
+            const hasMatchingValue = matchingVariant.values.some(v => 
+                v && v.value && selectedValues.includes(v.value)
+            );
+            
+            // If no matching value for this variant type, product doesn't match
+            if (!hasMatchingValue) {
+                return false;
+            }
+        }
+        
+        // If we got here, the product matches all selected filters
+        return true;
+    }
+    
+    // Function to apply filters and show/hide products
+    function applyFilters() {
+        // Count how many products are visible
+        let visibleCount = 0;
+        
+        // Check each product against filters
+        products.forEach(product => {
+            if (product.element) {
+                const matches = productMatchesFilters(product, selectedVariantFilters);
+                
+                // Show or hide the product
+                if (matches) {
+                    product.element.style.display = '';
+                    visibleCount++;
+                } else {
+                    product.element.style.display = 'none';
+                }
+            }
+        });
+        
+        // Show a message if no products match
+        const noProductsMessage = document.getElementById('no-products-message');
+        if (visibleCount === 0) {
+            if (!noProductsMessage) {
+                const productsGrid = document.querySelector('.grid-cols-2.lg\\:grid-cols-4');
+                if (productsGrid) {
+                    const message = document.createElement('div');
+                    message.id = 'no-products-message';
+                    message.className = 'text-center py-10 text-gray-500 col-span-full';
+                    message.textContent = 'No products match the selected filters.';
+                    productsGrid.appendChild(message);
+                }
+            }
+        } else if (noProductsMessage) {
+            noProductsMessage.remove();
+        }
+    }
+    
+    // Create filter sections for each variant type
+    sortedVariantTypes.forEach(variantName => {
+        const values = variantTypes.get(variantName);
+        if (values.size === 0) return; // Skip if no values
+        
+        // Create filter section
+        const filterSection = document.createElement('div');
+        filterSection.className = 'mb-4';
+        
+        // Create toggle button
+        const toggleButton = document.createElement('button');
+        toggleButton.type = 'button';
+        toggleButton.className = 'w-full flex items-center justify-between text-sm text-gray-700 py-2 border-b border-gray-200';
+        toggleButton.innerHTML = `${variantName} <span class="toggle-icon">+</span>`;
+        
+        // Create options container
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'hidden pt-3 pl-2 space-y-2';
+        optionsContainer.id = `${variantName.toLowerCase().replace(/\s+/g, '-')}-options`;
+        
+        // Add event listener to toggle button
+        toggleButton.addEventListener('click', function() {
+            const toggleIcon = this.querySelector('.toggle-icon');
+            if (optionsContainer.classList.contains('hidden')) {
+                optionsContainer.classList.remove('hidden');
+                toggleIcon.textContent = '-';
+            } else {
+                optionsContainer.classList.add('hidden');
+                toggleIcon.textContent = '+';
+            }
+        });
+        
+        // Create form for the variant
+        const variantForm = document.createElement('div');
+        variantForm.className = 'space-y-2';
+        
+        // Initialize selected values array for this variant type
+        const variantKey = variantName.toLowerCase();
+        selectedVariantFilters[variantKey] = [];
+        
+        // Get current selected values for this variant from URL
+        const paramName = `variant_${variantName.toLowerCase().replace(/\s+/g, '_')}`;
+        const selectedValues = urlParams.getAll(paramName);
+        
+        // If values are selected in URL, add them to our filters
+        if (selectedValues.length > 0) {
+            selectedVariantFilters[variantKey] = selectedValues;
+        }
+        
+        // Add checkboxes for each value
+        const sortedValues = Array.from(values).sort();
+        sortedValues.forEach(value => {
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-3 cursor-pointer';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'h-4 w-4 rounded border-gray-300 text-gray-900';
+            checkbox.value = value;
+            
+            // Check if this value is selected
+            if (selectedValues.includes(value)) {
+                checkbox.checked = true;
+            }
+            
+            checkbox.addEventListener('change', function() {
+                const variantKey = variantName.toLowerCase();
+                
+                if (this.checked) {
+                    // Add value to selected filters
+                    if (!selectedVariantFilters[variantKey]) {
+                        selectedVariantFilters[variantKey] = [];
+                    }
+                    selectedVariantFilters[variantKey].push(value);
+                } else {
+                    // Remove value from selected filters
+                    if (selectedVariantFilters[variantKey]) {
+                        const index = selectedVariantFilters[variantKey].indexOf(value);
+                        if (index !== -1) {
+                            selectedVariantFilters[variantKey].splice(index, 1);
+                        }
+                    }
+                }
+                
+                // On desktop, apply immediately; on mobile, wait for Apply button
+                if (window.matchMedia('(min-width: 768px)').matches) {
+                    applyFilters();
+                }
+            });
+            
+            const span = document.createElement('span');
+            span.className = 'text-sm text-gray-700';
+            span.textContent = value;
+            
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            variantForm.appendChild(label);
+        });
+        
+        // Add form to options container
+        optionsContainer.appendChild(variantForm);
+        
+        // Add toggle button and options container to filter section
+        filterSection.appendChild(toggleButton);
+        filterSection.appendChild(optionsContainer);
+        
+        // Add filter section to container
+        variantFiltersContainer.appendChild(filterSection);
+    });
+    
+    // Apply filters on page load
+    applyFilters();
+
+    // Apply filters button (mobile)
+    const applyBtn = document.getElementById('applyFiltersBtn');
+    if (applyBtn) {
+        applyBtn.addEventListener('click', function() {
+            // Build URL params for categories and variants
+            const params = new URLSearchParams(window.location.search);
+
+            // Categories: collect checked values from the categories form
+            const categoryCheckboxes = document.querySelectorAll('#filtersForm input[name="categories"]');
+            // Remove existing categories params first
+            params.delete('categories');
+            categoryCheckboxes.forEach(function(cb){
+                if (cb.checked) {
+                    params.append('categories', cb.value);
+                }
+            });
+
+            // Variants: add selectedVariantFilters
+            // Clear existing variant_* params
+            Array.from(params.keys()).forEach(function(key){
+                if (key.startsWith('variant_')) {
+                    params.delete(key);
+                }
+            });
+            for (const [variantType, values] of Object.entries(selectedVariantFilters)) {
+                if (values && values.length > 0) {
+                    const paramName = `variant_${variantType.replace(/\s+/g, '_')}`;
+                    values.forEach(function(v){ params.append(paramName, v); });
+                }
+            }
+
+            // Preserve sort if present
+            const sortInput = document.querySelector('input[name="sort"]');
+            if (sortInput && sortInput.value) {
+                params.set('sort', sortInput.value);
+            }
+
+            // Navigate with updated query params
+            const url = `${window.location.pathname}?${params.toString()}`;
+            window.location.assign(url);
+        });
+    }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const wishlistButtons = document.querySelectorAll('.js-listing-wishlist');
+    if (!wishlistButtons.length) return;
+
+    wishlistButtons.forEach(function (button) {
+        button.addEventListener('click', async function () {
+            const url = button.getAttribute('data-wishlist-url');
+            const accountUrl = button.getAttribute('data-account-url');
+            if (!url || button.disabled) return;
+            button.disabled = true;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+                if (response.status === 401 && data && data.login_required) {
+                    window.location.href = accountUrl || url;
+                    return;
+                }
+                if (response.ok && data && data.success) {
+                    button.classList.add('text-red-500', 'border-red-200', 'bg-red-50');
+                }
+            } catch (e) {
+                // no-op
+            } finally {
+                button.disabled = false;
+            }
+        });
+    });
+});
+</script>
+
+<!-- B2B Listing Enquiry Modal -->
+<div id="listing-enquiry-modal" class="fixed inset-0 z-50 hidden" data-enquiry-mode="{{ website.content.enquiry_form_mode|default:'mobile_qty' }}">
+  <div class="absolute inset-0 bg-black/50" onclick="closeListingEnquiryModal()"></div>
+  <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-gray-200">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <h3 class="text-base font-semibold text-gray-900">Product Enquiry</h3>
+        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="closeListingEnquiryModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5"><path fill="currentColor" d="M6.4 5l12.6 12.6-1.4 1.4L5 6.4z"/><path fill="currentColor" d="M5 17.6L17.6 5l1.4 1.4L6.4 19z"/></svg>
+        </button>
+      </div>
+      <form id="listing-enquiry-form" method="post" action="{% url 'public_enquiry' %}" class="px-5 py-4">
+        {% csrf_token %}
+        <input type="hidden" name="products" id="listing-enquiry-product" value="" />
+        <div id="listing-enquiry-alert" class="hidden mb-3 text-sm rounded-md px-3 py-2"></div>
+        <div class="space-y-4">
+          <div id="listing-mobile-field" class="{% if website.content.enquiry_form_mode == 'email_qty' %}hidden{% endif %}">
+            <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Mobile Number</label>
+            <input type="tel" name="mobile" inputmode="numeric" pattern="[0-9]{8,14}" maxlength="14" {% if website.content.enquiry_form_mode != 'email_qty' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter mobile number" />
+          </div>
+          <div id="listing-email-field" class="{% if website.content.enquiry_form_mode != 'email_qty' and website.content.enquiry_form_mode != 'all' %}hidden{% endif %}">
+            <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Email Address</label>
+            <input type="email" name="email" {% if website.content.enquiry_form_mode == 'email_qty' or website.content.enquiry_form_mode == 'all' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter your email" />
+          </div>
+          <div id="listing-quantity-field" class="{% if website.content.enquiry_form_mode == 'mobile_only' %}hidden{% endif %}">
+            <label class="block text-[11px] uppercase tracking-[0.2em] text-gray-600">Quantity</label>
+            <input type="number" name="quantity" min="1" step="1" {% if website.content.enquiry_form_mode != 'mobile_only' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter quantity" />
+          </div>
+        </div>
+        <div class="mt-5 flex items-center justify-end gap-2">
+          <button type="button" class="inline-flex items-center justify-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50" onclick="closeListingEnquiryModal()">Cancel</button>
+          <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-black text-white text-xs uppercase tracking-[0.15em] hover:bg-gray-800 shadow-sm transition-colors">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+  function openListingEnquiryModal(productId) {
+    var input = document.getElementById('listing-enquiry-product');
+    if (input) input.value = productId;
+    var modal = document.getElementById('listing-enquiry-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      try { if (window.applyListingEnquiryMode) window.applyListingEnquiryMode(modal.getAttribute('data-enquiry-mode')); } catch(e) {}
+    }
+  }
+  function closeListingEnquiryModal() {
+    var modal = document.getElementById('listing-enquiry-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+  (function(){
+    function q(sel, root){ return (root || document).querySelector(sel); }
+    function setShown(el, show){ if (!el) return; el.classList.toggle('hidden', !show); }
+    function setReq(input, req, enabled){
+      if (!input) return;
+      if (req) input.setAttribute('required', ''); else input.removeAttribute('required');
+      input.disabled = !enabled;
+      if (!enabled) { try { input.value = ''; } catch(e) {} }
+    }
+    window.applyListingEnquiryMode = function(mode){
+      var modal = document.getElementById('listing-enquiry-modal');
+      if (!modal) return;
+      var m = (mode || modal.getAttribute('data-enquiry-mode') || 'mobile_qty').toString().trim() || 'mobile_qty';
+      var mW = document.getElementById('listing-mobile-field');
+      var eW = document.getElementById('listing-email-field');
+      var qW = document.getElementById('listing-quantity-field');
+      var showM = (m === 'mobile_only' || m === 'mobile_qty' || m === 'all');
+      var showE = (m === 'email_qty' || m === 'all');
+      var showQ = (m === 'mobile_qty' || m === 'email_qty' || m === 'all');
+      setShown(mW, showM); setShown(eW, showE); setShown(qW, showQ);
+      setReq(q('input[name="mobile"]', mW), showM, showM);
+      setReq(q('input[name="email"]', eW), showE, showE);
+      setReq(q('input[name="quantity"]', qW), showQ, showQ);
+    };
+    document.addEventListener('DOMContentLoaded', function(){ try { window.applyListingEnquiryMode(); } catch(e) {} });
+  })();
+  document.addEventListener('DOMContentLoaded', function(){
+    var form = document.getElementById('listing-enquiry-form');
+    var alertBox = document.getElementById('listing-enquiry-alert');
+    if (!form) return;
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var fd = new FormData(form);
+      try {
+        var res = await fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+        var data = await res.json();
+        if (res.ok && data.status === 'success') {
+          if (alertBox) { alertBox.className = 'mb-3 text-sm rounded-md px-3 py-2 bg-green-50 text-green-700 ring-1 ring-green-200'; alertBox.textContent = data.message; alertBox.classList.remove('hidden'); }
+          setTimeout(function(){ closeListingEnquiryModal(); if (alertBox) alertBox.classList.add('hidden'); form.reset(); }, 1400);
+        } else {
+          var err = (data && data.errors) ? data.errors.join(' ') : 'Something went wrong.';
+          if (alertBox) { alertBox.className = 'mb-3 text-sm rounded-md px-3 py-2 bg-red-50 text-red-700 ring-1 ring-red-200'; alertBox.textContent = err; alertBox.classList.remove('hidden'); }
+        }
+      } catch(err) {
+        if (alertBox) { alertBox.className = 'mb-3 text-sm rounded-md px-3 py-2 bg-red-50 text-red-700 ring-1 ring-red-200'; alertBox.textContent = 'Network error. Please try again.'; alertBox.classList.remove('hidden'); }
+      }
+    });
+  });
+</script>
+{% endblock %}
+
+

@@ -1,0 +1,44 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Customers{% endblock %}
+{% block crumb %}Customers{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">People</p>
+    <h1 class="app-head__title pal-mt-4">Customers</h1>
+    <p class="app-head__lead">Everyone who has ordered or enquired, with how much they’ve spent.</p>
+  </div></div>
+
+  <div class="app-block">
+    <form method="get" class="app-toolbar">
+      <div class="app-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" name="q" value="{{ q }}" placeholder="Search name, email or phone…">
+      </div>
+      <button class="pal-btn pal-btn--ghost" type="submit">Search</button>
+    </form>
+
+    {% if customers %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Customer</th><th>Phone</th><th class="app-table__num">Orders</th><th class="app-table__num">Spent</th></tr></thead>
+          <tbody>
+            {% for c in customers %}
+              <tr>
+                <td><a href="{% url 'store:customer_detail' site.id c.id %}" class="app-table__strong">{{ c.name|default:c.email }}</a><div class="app-sub">{{ c.email }}</div></td>
+                <td>{{ c.phone|default:"—" }}</td>
+                <td class="app-table__num">{{ c.order_count }}</td>
+                <td class="app-table__num">{{ site.currency }} {{ c.spent|default:"0" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "store/_pagination.html" with page=customers %}
+    {% else %}
+      <div class="app-empty"><h2 class="app-empty__title">No customers yet</h2><p class="app-empty__text">Customers appear here after their first order or enquiry.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

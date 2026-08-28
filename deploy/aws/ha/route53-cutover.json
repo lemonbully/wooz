@@ -1,0 +1,9 @@
+{
+  "Comment": "Cut platform hosts over from old EIP to the ALB (alias A records)",
+  "Changes": [
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"onewooz.com","Type":"A","AliasTarget":{"HostedZoneId":"ZP97RAFLXTNZK","DNSName":"onewooz-alb-1587607702.ap-south-1.elb.amazonaws.com","EvaluateTargetHealth":true}}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"www.onewooz.com","Type":"A","AliasTarget":{"HostedZoneId":"ZP97RAFLXTNZK","DNSName":"onewooz-alb-1587607702.ap-south-1.elb.amazonaws.com","EvaluateTargetHealth":true}}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"app.onewooz.com","Type":"A","AliasTarget":{"HostedZoneId":"ZP97RAFLXTNZK","DNSName":"onewooz-alb-1587607702.ap-south-1.elb.amazonaws.com","EvaluateTargetHealth":true}}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"admin.onewooz.com","Type":"A","AliasTarget":{"HostedZoneId":"ZP97RAFLXTNZK","DNSName":"onewooz-alb-1587607702.ap-south-1.elb.amazonaws.com","EvaluateTargetHealth":true}}}
+  ]
+}

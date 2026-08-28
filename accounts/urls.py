@@ -13,6 +13,8 @@ urlpatterns = [
     path("sign-in/", views.sign_in, name="sign_in"),
     path("sign-up/", views.sign_up, name="sign_up"),
     path("sign-out/", views.sign_out, name="sign_out"),
+    # Emailed one-time code — a step in every sign-in and sign-up
+    path("sign-in/email-code/", views.email_otp, name="email_otp"),
     # Second factor
     path("sign-in/verify/", views.mfa_challenge, name="mfa_challenge"),
     path("security/authenticator/", views.totp_enrol, name="totp_enrol"),

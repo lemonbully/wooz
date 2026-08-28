@@ -1,0 +1,2877 @@
+{% extends "storefront/template2/base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block title %}{{ website.content.site_name|default:"Home" }}{% endblock %}
+
+{% block page_content %}
+{% website_base_path website request as website_base %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Hero Section - Dynamically rendered based on selected style -->
+{% if website.content.hero_banners %}
+{% with hero_style=website.content.hero_banner_style|default:'style1' %}
+{% with theme_banner_title=website.content|dict_get:'theme.colors.bannerTitle' theme_banner_desc=website.content|dict_get:'theme.colors.bannerDescription' theme_banner_btn_bg=website.content|dict_get:'theme.colors.bannerButtonBg' theme_banner_btn_text=website.content|dict_get:'theme.colors.bannerButtonText' theme_banner_mobile_bg=website.content|dict_get:'theme.colors.bannerDescriptionMobileBg' %}
+
+{% if hero_style == 'style2' %}
+<!-- ========== STYLE 2: Full Background Hero - Unified Layout for All Screen Sizes ========== -->
+<style>
+    /* Style 2 Hero - Unified Full Background Layout */
+    #hero-style2 {
+        position: relative;
+        width: 100%;
+        background-color: #f0f0f0;
+        overflow: hidden;
+    }
+    
+    .slider-container-s2 {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+    
+    .slider-slide-s2 {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .slider-slide-s2:first-child {
+        position: relative;
+    }
+    
+    .slider-slide-s2:not(:first-child) {
+        position: absolute;
+        inset: 0;
+    }
+    
+    .hero-s2-layout {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+    
+    .hero-s2-bg-image {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+    }
+    
+    .hero-s2-bg-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center top;
+    }
+    
+    .hero-s2-content-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        z-index: 10;
+    }
+    
+    .hero-s2-title-block {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        flex-shrink: 1;
+        min-width: 0;
+    }
+    
+    .hero-s2-title {
+        font-weight: 200;
+        text-transform: uppercase;
+        line-height: 0.9;
+        color:rgb(49, 50, 50);
+        margin-bottom: 0.5rem;
+    }
+    
+    .hero-s2-desc {
+        font-family: sans-serif;
+        color: #6b7280;
+        line-height: 1.5;
+    }
+    
+    .hero-s2-btn-block {
+        display: flex;
+        align-items: flex-end;
+        flex-shrink: 0;
+    }
+    
+    .hero-s2-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        text-transform: uppercase;
+        background-color: #111827;
+        color: white;
+        border-radius: 9999px;
+        white-space: nowrap;
+        transition: all 0.3s ease;
+    }
+    
+    .hero-s2-btn:hover {
+        background-color: #000;
+    }
+    
+    /* Dot Navigation */
+    .hero-s2-dots {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        z-index: 30;
+    }
+    
+    .slider-dot-s2 {
+        cursor: pointer;
+        border: none;
+        outline: none;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+    
+    .slider-dot-s2.active {
+        background-color: #111827 !important;
+    }
+    
+    .slider-dot-s2:not(.active) {
+        background-color: rgba(156, 163, 175, 0.7);
+    }
+    
+    .slider-dot-s2:not(.active):hover {
+        background-color: rgba(107, 114, 128, 0.9);
+    }
+    
+    /* ============ MOBILE (< 768px) ============ */
+    @media (max-width: 767px) {
+        #hero-style2 {
+            height: auto;
+            min-height: 0;
+            aspect-ratio: 3 / 4;
+            max-height: 85vh;
+        }
+        .slider-container-s2 {
+            height: 100%;
+            min-height: 0;
+        }
+        .slider-slide-s2 {
+            height: 100%;
+        }
+        .hero-s2-layout {
+            height: 100%;
+        }
+        .hero-s2-bg-image {
+            height: 100%;
+        }
+        .hero-s2-bg-image img {
+            object-position: center center;
+        }
+        .hero-s2-content-overlay {
+            flex-direction: row;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 0 1rem 2.5rem 1rem;
+            gap: 0.5rem;
+        }
+        .hero-s2-title-block {
+            flex: 1;
+            min-width: 0;
+            max-width: 65%;
+        }
+        .hero-s2-title {
+            font-size: clamp(1.75rem, 8vw, 2.75rem);
+            letter-spacing: -0.01em;
+            margin-bottom: 0.5rem;
+            word-break: break-word;
+            line-height: 1;
+        }
+        .hero-s2-desc {
+            color: white;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            max-width: 100%;
+            line-height: 1.4;
+            margin-top: 0.25rem;
+        }
+        .hero-s2-btn-block {
+            flex-shrink: 0;
+            padding-bottom: 0;
+            align-self: flex-end;
+        }
+        .hero-s2-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.6rem;
+            letter-spacing: 0.06em;
+        }
+        .hero-s2-dots {
+            bottom: 0.75rem;
+            gap: 0.4rem;
+        }
+        .slider-dot-s2 {
+            width: 7px;
+            height: 7px;
+        }
+    }
+    
+    /* ============ SMALL MOBILE (< 375px) ============ */
+    @media (max-width: 374px) {
+        #hero-style2 {
+            aspect-ratio: 9 / 14;
+        }
+        .hero-s2-content-overlay {
+            padding: 0 0.75rem 2rem 0.75rem;
+        }
+        .hero-s2-title {
+            font-size: 1.5rem;
+        }
+        .hero-s2-desc {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.4rem;
+        }
+        .hero-s2-btn {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.55rem;
+        }
+    }
+    
+    /* ============ TABLET PORTRAIT (768px - 1023px) ============ */
+    @media (min-width: 768px) and (max-width: 1023px) {
+        #hero-style2 {
+            height: 75vh;
+            min-height: 550px;
+        }
+        .slider-container-s2 {
+            height: 75vh;
+            min-height: 550px;
+        }
+        .hero-s2-content-overlay {
+            padding: 0 2.5rem 6vh 2.5rem;
+        }
+        .hero-s2-title-block{
+            max-width: 45%;
+        }
+        .hero-s2-title {
+            font-size: 4rem;
+            letter-spacing: -0.02em;
+        }
+        .hero-s2-desc {
+            font-size: 0.9rem;
+            max-width: 320px;
+        }
+        .hero-s2-btn {
+            padding: 0.875rem 2rem;
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+        }
+        .hero-s2-btn-block {
+            padding-bottom: 0.25rem;
+        }
+        .hero-s2-dots {
+            bottom: 1.5rem;
+            gap: 0.625rem;
+        }
+        .slider-dot-s2 {
+            width: 10px;
+            height: 10px;
+        }
+    }
+    
+    /* ============ TABLET LANDSCAPE & SMALL DESKTOP (1024px - 1279px) ============ */
+    @media (min-width: 1024px) and (max-width: 1279px) {
+        #hero-style2 {
+            height: 70vh;
+            min-height: 500px;
+        }
+        .slider-container-s2 {
+            height: 70vh;
+            min-height: 500px;
+        }
+        .hero-s2-content-overlay {
+            padding: 0 3rem 7vh 3rem;
+        }
+        .hero-s2-title {
+            font-size: 4rem;
+            letter-spacing: -0.02em;
+        }
+        .hero-s2-desc {
+            font-size: 0.95rem;
+            max-width: 360px;
+        }
+        .hero-s2-btn {
+            padding: 1rem 2.25rem;
+            font-size: 0.8rem;
+            letter-spacing: 0.12em;
+        }
+        .hero-s2-btn-block {
+            padding-bottom: 0.375rem;
+        }
+        .hero-s2-dots {
+            bottom: 2rem;
+            gap: 0.75rem;
+        }
+        .slider-dot-s2 {
+            width: 11px;
+            height: 11px;
+        }
+    }
+    
+    /* ============ DESKTOP (1280px - 1535px) ============ */
+    @media (min-width: 1280px) and (max-width: 1535px) {
+        #hero-style2 {
+            height: 70vh;
+            min-height: 550px;
+        }
+        .slider-container-s2 {
+            height: 70vh;
+            min-height: 550px;
+        }
+        .hero-s2-content-overlay {
+            padding: 0 4rem 8vh 4rem;
+        }
+        .hero-s2-title-block{
+            max-width: 50%;
+        }
+        .hero-s2-title {
+            font-size: 5rem;
+            letter-spacing: -0.02em;
+        }
+        .hero-s2-desc {
+            font-size: 1rem;
+            max-width: 400px;
+        }
+        .hero-s2-btn {
+            padding: 1rem 2.5rem;
+            font-size: 0.85rem;
+            letter-spacing: 0.12em;
+        }
+        .hero-s2-btn-block {
+            padding-bottom: 0.5rem;
+        }
+        .hero-s2-dots {
+            bottom: 2.5rem;
+            gap: 0.75rem;
+        }
+        .slider-dot-s2 {
+            width: 12px;
+            height: 12px;
+        }
+    }
+    
+    /* ============ LARGE DESKTOP (1536px+) ============ */
+    @media (min-width: 1536px) {
+        #hero-style2 {
+            height: 70vh;
+            min-height: 600px;
+        }
+        .hero-s2-title-block{
+            max-width: 50%;
+        }
+        .slider-container-s2 {
+            height: 70vh;
+            min-height: 600px;
+        }
+        .hero-s2-content-overlay {
+            padding: 0 5rem 9vh 5rem;
+        }
+        .hero-s2-title {
+            font-size: 5rem;
+            font-weight: 200;
+            letter-spacing: -0.02em;
+        }
+        .hero-s2-desc {
+            margin-left: 6px;
+            font-size: 1rem;
+            max-width: 100%;
+        }
+        .hero-s2-btn {
+            padding: 1.125rem 3rem;
+            font-size: 0.875rem;
+            letter-spacing: 0.12em;
+        }
+        .hero-s2-btn-block {
+            padding-bottom: 0.625rem;
+        }
+        .hero-s2-dots {
+            bottom: 3rem;
+            gap: 0.875rem;
+        }
+        .slider-dot-s2 {
+            width: 12px;
+            height: 12px;
+        }
+    }
+</style>
+
+<section id="hero-style2">
+    <div class="slider-container-s2">
+        {% for banner in website.content.hero_banners %}
+        <div class="slider-slide-s2 {% if forloop.first %}opacity-100 z-10{% else %}opacity-0 z-0{% endif %}" style="transition: opacity 0.7s ease-in-out;">
+            <div class="hero-s2-layout">
+                <!-- Full Background Image -->
+                <div class="hero-s2-bg-image">
+                    {% with banner_image=banner|dict_get:'image' banner_mobile_image=banner|dict_get:'mobile_image' %}
+                    {% if banner_image or banner_mobile_image %}
+                    {% with banner_url=banner_image|default:banner_mobile_image|absolute_media_url banner_mobile_url=banner_mobile_image|default:banner_image|absolute_media_url %}
+                    <picture>
+                        <source media="(max-width: 767px)" srcset="{{ banner_mobile_url }}">
+                        <img src="{{ banner_url }}"
+                             {% media_attrs website banner_url banner.title|default:'Hero image' %}
+                             {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}
+                             data-no-srcset="true" />
+                    </picture>
+                    {% endwith %}
+                    {% else %}
+                    <div style="position:absolute;inset:0;background:linear-gradient(135deg,#e5e7eb 0%,#d1d5db 100%);"></div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                
+                <!-- Content Overlay -->
+                <div class="hero-s2-content-overlay">
+                    <!-- Title & Description -->
+                    <div class="hero-s2-title-block">
+                        {% if banner.title %}
+                        {% if forloop.counter == 1 %}
+                        <h1 class="hero-s2-title slide-content-s2 md:font-light" style="color: {{ banner.title_color|default:theme_banner_title|default:'#111827' }};">{{ banner.title }}</h1>
+                        {% elif forloop.counter == 2 %}
+                        <h2 class="hero-s2-title slide-content-s2 md:font-light" style="color: {{ banner.title_color|default:theme_banner_title|default:'#111827' }};">{{ banner.title }}</h2>
+                        {% elif forloop.counter == 3 %}
+                        <h3 class="hero-s2-title slide-content-s2 md:font-light" style="color: {{ banner.title_color|default:theme_banner_title|default:'#111827' }};">{{ banner.title }}</h3>
+                        {% else %}
+                        <h4 class="hero-s2-title slide-content-s2 md:font-light" style="color: {{ banner.title_color|default:theme_banner_title|default:'#111827' }};">{{ banner.title }}</h4>
+                        {% endif %}
+                        {% endif %}
+                        {% if banner.description %}
+                        {% with words=banner.description.split %}
+                            <p class="hero-s2-desc slide-content-s2 block md:hidden" style="color: {{ banner.description_color|default:theme_banner_desc|default:'#6b7280' }};">
+                                {{ words.0 }} {{ words.1 }} {{ words.2 }} {{ words.3 }}
+                            </p>
+                            <p class="hero-s2-desc slide-content-s2 block md:hidden" style="color: {{ banner.description_color|default:theme_banner_desc|default:'#6b7280' }};">
+                                {% for w in words|slice:"4:" %}
+                                    {{ w }}{% if not forloop.last %} {% endif %}
+                                {% endfor %}
+                            </p>
+                            <p class="hero-s2-desc slide-content-s2 hidden md:block" style="color: {{ banner.description_color|default:theme_banner_desc|default:'#6b7280' }};">
+                                {{ banner.description }}
+                            </p>
+                        {% endwith %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- CTA Button -->
+                    {% if banner.button_text and banner.button_url %}
+                    <div class="hero-s2-btn-block">
+                        <a href="{{ banner.button_url|public_href:website_base }}" class="hero-s2-btn slide-content-s2"
+                           style="background-color: {{ banner.button_bg_color|default:theme_banner_btn_bg|default:'#111827' }}; color: {{ banner.button_text_color|default:theme_banner_btn_text|default:'#ffffff' }};">
+                            {{ banner.button_text }}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Dot Navigation -->
+    {% if website.content.hero_banners|length > 1 %}
+    <div class="hero-s2-dots">
+        {% for banner in website.content.hero_banners %}
+        <button type="button" 
+                class="slider-dot-s2 {% if forloop.first %}active{% endif %}"
+                aria-label="Go to slide {{ forloop.counter }}"
+                data-slide-index="{{ forloop.counter0 }}">
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+
+<script>
+(function() {
+    'use strict';
+    
+    var slidesS2 = document.querySelectorAll('.slider-slide-s2');
+    var dotsS2 = document.querySelectorAll('.slider-dot-s2');
+    
+    if (!slidesS2 || slidesS2.length === 0) return;
+    
+    var currentSlideS2 = 0;
+    var totalSlides = slidesS2.length;
+    var autoSlideInterval = null;
+    
+    function updateDots() {
+        dotsS2.forEach(function(dot, idx) {
+            if (idx === currentSlideS2) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+    }
+    
+    function showSlide(n) {
+        // Calculate new index with wrapping
+        currentSlideS2 = ((n % totalSlides) + totalSlides) % totalSlides;
+        
+        // Update all slides
+        slidesS2.forEach(function(slide, idx) {
+            var contents = slide.querySelectorAll('.slide-content-s2');
+            
+            if (idx === currentSlideS2) {
+                // Show this slide
+                slide.style.opacity = '1';
+                slide.style.zIndex = '10';
+                slide.style.position = idx === 0 ? 'relative' : 'absolute';
+                if (idx !== 0) slide.style.inset = '0';
+                
+                // Animate content in
+                setTimeout(function() {
+                    contents.forEach(function(el, i) {
+                        setTimeout(function() {
+                            el.style.opacity = '1';
+                            el.style.transform = 'translateY(0)';
+                            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                        }, i * 100);
+                    });
+                }, 100);
+            } else {
+                // Hide this slide
+                slide.style.opacity = '0';
+                slide.style.zIndex = '0';
+                slide.style.position = 'absolute';
+                slide.style.inset = '0';
+                
+                // Reset content
+                contents.forEach(function(el) {
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(15px)';
+                });
+            }
+        });
+        
+        updateDots();
+    }
+    
+    function nextSlide() {
+        showSlide(currentSlideS2 + 1);
+    }
+    
+    function prevSlide() {
+        showSlide(currentSlideS2 - 1);
+    }
+    
+    function goToSlide(n) {
+        showSlide(n);
+        resetAutoSlide();
+    }
+    
+    function startAutoSlide() {
+        if (totalSlides > 1) {
+            autoSlideInterval = setInterval(nextSlide, 3000);
+        }
+    }
+    
+    function resetAutoSlide() {
+        if (autoSlideInterval) {
+            clearInterval(autoSlideInterval);
+        }
+        startAutoSlide();
+    }
+    
+    // Initialize slides
+    slidesS2.forEach(function(slide, idx) {
+        if (idx === 0) {
+            slide.style.position = 'relative';
+            slide.style.opacity = '1';
+            slide.style.zIndex = '10';
+        } else {
+            slide.style.position = 'absolute';
+            slide.style.inset = '0';
+            slide.style.opacity = '0';
+            slide.style.zIndex = '0';
+        }
+        
+        // Set initial content state
+        slide.querySelectorAll('.slide-content-s2').forEach(function(el) {
+            if (idx === 0) {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            } else {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(15px)';
+            }
+        });
+    });
+    
+    // Dot click handlers
+    dotsS2.forEach(function(dot) {
+        dot.addEventListener('click', function() {
+            var slideIndex = parseInt(this.getAttribute('data-slide-index'), 10);
+            if (!isNaN(slideIndex)) {
+                goToSlide(slideIndex);
+            }
+        });
+    });
+    
+    // Expose functions globally
+    window.moveSlideS2 = function(n) { showSlide(currentSlideS2 + n); resetAutoSlide(); };
+    window.goToSlideS2 = function(n) { goToSlide(n); };
+    
+    // Start auto-slide
+    startAutoSlide();
+    
+    // Show first slide
+    showSlide(0);
+})();
+</script>
+
+{% elif hero_style == 'style3' %}
+<!-- ========== STYLE 3: Elegant Split Hero (Single Banner, No Carousel) ========== -->
+<style>
+    /* Tablet Portrait (768px - 1023px): Stacked layout with 85vh container */
+    @media screen and (min-width: 768px) and (max-width: 1023px) {
+        .hero-style3-container {
+            height: 85vh !important;
+            min-height: 85vh !important;
+        }
+        .hero-style3-image {
+            height: 50vh !important;
+            flex-shrink: 0;
+        }
+        .hero-style3-content {
+            height: 35vh !important;
+            min-height: 35vh !important;
+            padding-top: 1.5rem !important;
+            padding-bottom: 1.5rem !important;
+        }
+    }
+    /* Desktop/Laptop (1024px+): Side-by-side layout with 70vh */
+    @media screen and (min-width: 1024px) {
+        .hero-style3-container {
+            height: 70vh !important;
+            min-height: 70vh !important;
+        }
+        .hero-style3-image {
+            height: 100% !important;
+        }
+    }
+</style>
+{% with banner=website.content.hero_banners.0 %}
+<section id="hero-style3" class="relative w-full overflow-visible lg:overflow-hidden" style="background-color: {{ website.content.hero_style3_left_bg|default:'#F5F1EA' }};">
+    <div class="hero-style3-container w-full h-auto overflow-hidden">
+        <div class="flex flex-col lg:flex-row h-full">
+            <!-- Image Section (appears first on mobile/tablet portrait, right side on desktop) -->
+            <div class="hero-style3-image w-full lg:w-1/2 relative h-[50vh] order-1 lg:order-2">
+                {% with banner_image=banner|dict_get:'image' banner_mobile_image=banner|dict_get:'mobile_image' %}
+                {% if banner_image or banner_mobile_image %}
+                {% with banner_url=banner_image|default:banner_mobile_image|absolute_media_url banner_mobile_url=banner_mobile_image|default:banner_image|absolute_media_url %}
+                <picture>
+                    <source media="(max-width: 767px)" srcset="{{ banner_mobile_url }}">
+                    <img src="{{ banner_url }}"
+                         {% media_attrs website banner_url banner.title|default:'Hero image' %}
+                         class="w-full h-full object-cover object-top"
+                         fetchpriority="high" loading="eager"
+                         data-no-srcset="true" />
+                </picture>
+                {% endwith %}
+                {% else %}
+                <div class="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 flex items-center justify-center">
+                    <span class="text-stone-400 text-sm uppercase tracking-widest">No Image</span>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+            <!-- Content Section (appears below image on mobile/tablet portrait, left side on desktop) -->
+            <div class="hero-style3-content w-full lg:w-1/2 flex items-center justify-center px-6 sm:px-10 lg:px-12 xl:px-16 py-10 sm:py-12 lg:py-20 order-2 lg:order-1 min-h-fit lg:h-full" style="background-color: {{ website.content.hero_style3_left_bg|default:'#F5F1EA' }};">
+                <div class="max-w-lg text-center lg:text-left my-auto">
+                    <span class="inline-block text-[13px] sm:text-[15px] uppercase tracking-[0.15em] text-gray-600 mb-4 sm:mb-5 font-medium">{{ banner.accent_text|default:"This Week's Highlights" }}</span>
+                    {% if banner.title %}
+                    <h1 class="text-2xl sm:text-3xl md:text-[2.8rem] font-medium capitalize text-gray-900 leading-[1.15] mb-3 sm:mb-4" style="color: {{ banner.title_color|default:theme_banner_title|default:'#111827' }};">
+                        {{ banner.title }}
+                    </h1>
+                    {% endif %}
+                    {% if banner.description %}
+                    <p class="text-sm sm:text-base text-gray-600 font-normal max-w-md mx-auto lg:mx-0 mb-4 sm:mb-5 leading-relaxed block md:hidden" style="color: {{ banner.description_color|default:theme_banner_desc|default:'#6b7280' }};">
+                        {{ banner.description }}
+                    </p>
+                    <p class="text-sm sm:text-base text-gray-600 font-normal max-w-md mx-auto lg:mx-0 mb-6 sm:mb-8 leading-relaxed hidden md:block" style="color: {{ banner.description_color|default:theme_banner_desc|default:'#6b7280' }};">
+                        {{ banner.description }}
+                    </p>
+                    {% endif %}
+                    {% if banner.button_text and banner.button_url %}
+                    <a href="{{ banner.button_url|public_href:website_base }}" 
+                       class="inline-flex items-center justify-center px-6 sm:px-7 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.22em] bg-gray-900 text-white hover:bg-black transition-colors duration-200"
+                       style="background-color: {{ banner.button_bg_color|default:theme_banner_btn_bg|default:'#111827' }}; color: {{ banner.button_text_color|default:theme_banner_btn_text|default:'#ffffff' }};">
+                        {{ banner.button_text }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endwith %}
+
+{% else %}
+<!-- ========== STYLE 1: Classic Full-Width Centered Carousel (Default) ========== -->
+<style>
+@supports not (aspect-ratio: 1536 / 600) {
+    .hero-fixed-1536-600 { position: relative; width: 100%; }
+    .hero-fixed-1536-600::before { content: ''; display: block; padding-top: 34.2448%; }
+    .hero-fixed-1536-600 > .slider-container { position: absolute; inset: 0; }
+}
+@media (max-width: 640px) {
+    #hero.hero-fixed-1536-600 {
+        aspect-ratio: unset;
+        height: auto;
+        min-height: 60vh;
+        min-height: 60svh;
+        min-height: -webkit-fill-available;
+    }
+    @supports (height: 100svh) {
+        #hero.hero-fixed-1536-600 {
+            min-height: 60svh;
+            height: 70svh;
+        }
+    }
+    #hero.hero-fixed-1536-600 .slider-container {
+        position: relative;
+        height: 100%;
+        min-height: inherit;
+    }
+    #hero.hero-fixed-1536-600 .slider-slide {
+        position: absolute;
+        inset: 0;
+        height: 100%;
+        min-height: inherit;
+    }
+    #hero.hero-fixed-1536-600 .slider-slide > .relative {
+        min-height: inherit;
+    }
+    #hero.hero-fixed-1536-600 .slider-slide .absolute.inset-0.z-0 {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 100%;
+    }
+    #hero.hero-fixed-1536-600 .slider-slide .absolute.inset-0.z-0 img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center center;
+    }
+}
+@supports (-webkit-touch-callout: none) {
+    @media (max-width: 640px) {
+        #hero.hero-fixed-1536-600 {
+            min-height: calc(60vh - env(safe-area-inset-bottom, 0px));
+            min-height: -webkit-fill-available;
+        }
+    }
+}
+</style>
+<script>
+(function() {
+    function setIOSViewportHeight() {
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (!isIOS) return;
+        
+        var hero = document.getElementById('hero');
+        if (!hero) return;
+        
+        var vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', vh + 'px');
+        
+        if (window.innerWidth <= 640) {
+            hero.style.minHeight = 'calc(var(--vh, 1vh) * 60)';
+            hero.style.height = 'calc(var(--vh, 1vh) * 70)';
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setIOSViewportHeight);
+    } else {
+        setIOSViewportHeight();
+    }
+    
+    var resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(setIOSViewportHeight, 100);
+    });
+    window.addEventListener('orientationchange', function() {
+        setTimeout(setIOSViewportHeight, 200);
+    });
+})();
+</script>
+<section id="hero" class="hero-fixed-1536-600 relative w-full bg-black overflow-hidden" style="aspect-ratio: 1536 / 600;">
+    <div class="relative w-full h-full">
+        <div class="slider-container absolute inset-0">
+        {% for banner in website.content.hero_banners %}
+        <div class="slider-slide absolute w-full h-full opacity-0 transition-all duration-1000 ease-in-out">
+            <div class="relative h-full w-full">
+                <div class="absolute inset-0 z-0 w-full h-full">
+                    {% with banner_image=banner|dict_get:'image' banner_mobile_image=banner|dict_get:'mobile_image' %}
+                    {% if banner_image or banner_mobile_image %}
+                        {% with banner_url=banner_image|default:banner_mobile_image|absolute_media_url banner_mobile_url=banner_mobile_image|default:banner_image|absolute_media_url %}
+                        <picture>
+                            <source media="(max-width: 767px)" srcset="{{ banner_mobile_url }}">
+                            <img
+                                src="{{ banner_url }}"
+                                {% media_attrs website banner_url "" %}
+                                aria-hidden="true"
+                                class="absolute inset-0 w-full h-full object-cover object-center"
+                                decoding="async"
+                                {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}
+                                data-no-srcset="true"
+                            />
+                        </picture>
+                        {% endwith %}
+                        <div class="absolute inset-0 bg-black w-full" style="opacity: {{ banner.overlay_opacity|default:50|opacity_from_percent }};"></div>
+                    {% else %}
+                        <div class="absolute inset-0 bg-black"></div>
+                        <div class="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black/60"></div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                
+                <div class="container text-white mx-auto px-4 py-10 md:py-6 text-center relative z-10 h-full flex flex-col justify-center">
+                    {% if banner.title %}
+                    {% if forloop.counter == 1 %}
+                    <h1 class="text-4xl sm:text-xs md:text-[1.5rem] lg:text-[2.2rem] xl:text-[2.7rem] 2xl:text-[3.2rem] font-light uppercase tracking-[0.18em] leading-[1.4] sm:leading-[1.5] md:leading-[0.95] lg:leading-[1.2] xl:leading-[1.3] 2xl:leading-[1.4] mb-4 transform translate-y-10 opacity-0 transition-all duration-1000 delay-200" style="color: {{ banner.title_color|default:theme_banner_title|default:'#ffffff' }};">
+                        {{ banner.title }}
+                    </h1>
+                    {% elif forloop.counter == 2 %}
+                    <h2 class="text-4xl sm:text-xs md:text-[1.5rem] lg:text-[2.2rem] xl:text-[2.7rem] 2xl:text-[3.2rem] font-light uppercase tracking-[0.18em] leading-[1.4] sm:leading-[1.5] md:leading-[0.95] lg:leading-[1.2] xl:leading-[1.3] 2xl:leading-[1.4] mb-4 transform translate-y-10 opacity-0 transition-all duration-1000 delay-200" style="color: {{ banner.title_color|default:theme_banner_title|default:'#ffffff' }};">
+                        {{ banner.title }}
+                    </h2>
+                    {% elif forloop.counter == 3 %}
+                    <h3 class="text-4xl sm:text-xs md:text-[1.5rem] lg:text-[2.2rem] xl:text-[2.7rem] 2xl:text-[3.2rem] font-light uppercase tracking-[0.18em] leading-[1.4] sm:leading-[1.5] md:leading-[0.95] lg:leading-[1.2] xl:leading-[1.3] 2xl:leading-[1.4] mb-4 transform translate-y-10 opacity-0 transition-all duration-1000 delay-200" style="color: {{ banner.title_color|default:theme_banner_title|default:'#ffffff' }};">
+                        {{ banner.title }}
+                    </h3>
+                    {% else %}
+                    <h4 class="text-4xl sm:text-xs md:text-[1.5rem] lg:text-[2.2rem] xl:text-[2.7rem] 2xl:text-[3.2rem] font-light uppercase tracking-[0.18em] leading-[1.4] sm:leading-[1.5] md:leading-[0.95] lg:leading-[1.2] xl:leading-[1.3] 2xl:leading-[1.4] mb-4 transform translate-y-10 opacity-0 transition-all duration-1000 delay-200" style="color: {{ banner.title_color|default:theme_banner_title|default:'#ffffff' }};">
+                        {{ banner.title }}
+                    </h4>
+                    {% endif %}
+                    {% endif %}
+                    {% if banner.description %}
+                    {% with theme_mobile_bg=website.content|dict_get:'theme.colors.bannerDescriptionMobileBg' %}
+                    {% with mobile_bg=banner.description_mobile_bg_color|default:theme_mobile_bg %}
+                    <p class="text-sm md:text-lg mb-6 max-w-3xl mx-auto px-4 sm:px-0 leading-[1.8] sm:leading-[1.4] md:leading-tight lg:leading-[1.5] xl:leading-[1.6] 2xl:leading-[1.7] tracking-wide md:font-light transform translate-y-10 opacity-0 transition-all duration-1000 delay-400" style="color: {{ banner.description_color|default:theme_banner_desc|default:'#d1d5db' }};">
+                        {{ banner.description }}
+                    </p>
+                    {% endwith %}
+                    {% endwith %}
+                    {% endif %}
+                    <div class="transform translate-y-10 opacity-0 delay-600 transition-all duration-1000">
+                        {% if banner.button_text and banner.button_url %}
+                        <a href="{{ banner.button_url|public_href:website_base }}" 
+                           class="inline-flex items-center justify-center text-xs md:text-sm px-10 py-4 md:px-8 md:py-3 font-light uppercase tracking-[0.25em] bg-black text-white rounded-none shadow-lg backdrop-blur-sm bg-opacity-90 relative overflow-hidden animate-fadeIn"
+                           style="background-color: {{ banner.button_bg_color|default:theme_banner_btn_bg|default:'#111827' }}; color: {{ banner.button_text_color|default:theme_banner_btn_text|default:'#ffffff' }};">
+                            <span class="relative z-10">{{ banner.button_text }}</span>
+                            <span class="absolute inset-0 bg-gradient-to-r from-gray-900 to-black opacity-10"></span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if website.content.hero_banners and website.content.hero_banners|length > 1 %}
+        <div class="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2">
+            {% for banner in website.content.hero_banners %}
+            <button type="button"
+                    class="slider-dot group w-6 h-6 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
+                    aria-label="Go to slide {{ forloop.counter }}"
+                    title="Go to slide {{ forloop.counter }}"
+                    onclick="goToSlide({{ forloop.counter0 }})">
+                <span class="sr-only">Go to slide {{ forloop.counter }}</span>
+                <span class="slider-dot-indicator w-2 h-2 rounded-full bg-white bg-opacity-50 group-hover:bg-opacity-100 transition-all"></span>
+            </button>
+            {% endfor %}
+        </div>
+        {% endif %}
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slider-slide');
+    const dots = document.querySelectorAll('.slider-dot');
+    if (!slides || slides.length === 0) return;
+
+    function showSlide(n) {
+        slides.forEach(slide => {
+            slide.style.opacity = '0';
+            slide.style.zIndex = '0';
+            slide.querySelectorAll('.transform').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(10px)';
+            });
+        });
+        dots.forEach(dot => {
+            const indicator = dot.querySelector('.slider-dot-indicator');
+            if (indicator) indicator.classList.remove('bg-opacity-100');
+            dot.removeAttribute('aria-current');
+        });
+
+        currentSlide = (n + slides.length) % slides.length;
+        slides[currentSlide].style.opacity = '1';
+        slides[currentSlide].style.zIndex = '1';
+        if (dots[currentSlide]) {
+            const indicator = dots[currentSlide].querySelector('.slider-dot-indicator');
+            if (indicator) indicator.classList.add('bg-opacity-100');
+            dots[currentSlide].setAttribute('aria-current', 'true');
+        }
+
+        slides[currentSlide].querySelectorAll('.transform').forEach(el => {
+            setTimeout(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, 200);
+        });
+    }
+
+    window.moveSlide = function(n) { showSlide(currentSlide + n); }
+    window.goToSlide = function(n) { showSlide(n); }
+
+    setInterval(() => window.moveSlide(1), 5000);
+    showSlide(0);
+});
+</script>
+{% endif %}
+
+{% endwith %}
+{% endwith %}
+{% endif %}
+
+<!-- Category Collections Section - Dynamically rendered based on selected style -->
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+{% with cats=homepage_categories|default:categories %}
+{% if cats or website.content.category_section_style == 'style3' and website.content.d2c_config.category_as_certificates_enabled == 'on' %}
+{% with cat_style=website.content.category_section_style|default:'style1' %}
+
+{% if cat_style == 'style2' %}
+<!-- ========== CATEGORY STYLE 2: Unified Responsive Multi-Item Slider ========== -->
+<style>
+    /* Category Style 2 - Unified Responsive Slider */
+    #cat2-section {
+        background-color: #EDEDED;
+        width: 100%;
+    }
+    #cat2-wrapper {
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+    }
+    #cat2-track {
+        display: flex;
+        gap:10px;
+        margin:10px;
+        transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        will-change: transform;
+    }
+    .cat2-slide {
+        flex: 0 0 auto;
+        position: relative;
+        overflow: hidden;
+        border-radius:10px ;
+    }
+    .cat2-slide-inner {
+        display: block;
+        width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    .cat2-slide-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+    }
+    .cat2-slide-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0) 100%);
+    }
+    .cat2-slide-content {
+        position: absolute;
+        left: 60px;
+        right: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        z-index: 5;
+    }
+    .cat2-slide-title {
+        color: white;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        line-height: 1.2;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .cat2-slide-arrow-btn {
+        width: 50px;
+        height: 50px;
+        min-width: 36px;
+        border-radius: 9999px;
+        border: 1px solid rgba(255,255,255,0.65);
+        background: rgba(255,255,255,0.12);
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+        transition: all 0.2s ease;
+    }
+    .cat2-slide-inner:hover .cat2-slide-arrow-btn {
+        background: rgba(255,255,255,0.22);
+        border-color: rgba(255,255,255,0.9);
+    }
+    .cat2-nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 20;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid rgba(0,0,0,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .cat2-nav-btn:hover {
+        background: white;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .cat2-nav-btn:active {
+        transform: translateY(-50%) scale(0.95);
+    }
+    .cat2-nav-prev { left: 0.75rem; }
+    .cat2-nav-next { right: 0.75rem; }
+    .cat2-no-img {
+        width: 100%;
+        height: 100%;
+        background-color: #d1d5db;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Mobile: 2 items visible */
+    @media (max-width: 767px) {
+        /* Enable native finger scrolling (free scroll) on mobile */
+        #cat2-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge legacy */
+        }
+        #cat2-wrapper::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+        #cat2-track {
+            transform: none !important; /* disable JS translate slider on mobile */
+        }
+        .cat2-slide {
+            width: 50%;
+            height: 35vh;
+            min-height: 260px;
+        }
+        .cat2-slide-title {
+            font-size: 0.95rem;
+            font-weight: 400;
+        }
+        .cat2-slide-content {
+            left: 1rem;
+            right: 1rem;
+            bottom: 1.25rem;
+        }
+        .cat2-slide-arrow-btn {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+        }
+        .cat2-nav-btn {
+            display: none;
+            width: 38px;
+            height: 38px;
+        }
+        .cat2-nav-prev { left: 0.5rem; }
+        .cat2-nav-next { right: 0.5rem; }
+    }
+    
+    /* Tablet Portrait: 3 items visible */
+    @media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+        .cat2-slide {
+            width: 33.3333%;
+            height: 55vh;
+            min-height: 320px;
+        }
+        .cat2-slide-title {
+            font-size: 1.15rem;
+        }
+    }
+    
+    /* Tablet Landscape: 3 items visible */
+    @media (min-width: 768px) and (orientation: landscape) {
+        .cat2-slide {
+            width: 33.3333%;
+            height: 65vh;
+            min-height: 380px;
+        }
+        .cat2-slide-title {
+            font-size: 1.35rem;
+        }
+        .cat2-slide-content {
+            bottom: 2rem;
+        }
+    }
+    
+    /* Desktop: 3 items visible */
+    @media (min-width: 1024px) {
+        .cat2-slide {
+            width: 33.3333%;
+            height: 70vh;
+            min-height: 450px;
+        }
+        .cat2-slide-title {
+            font-size: 1.5rem;
+        }
+        .cat2-slide-content {
+            bottom: 2.5rem;
+        }
+        .cat2-nav-btn {
+            width: 50px;
+            height: 50px;
+        }
+        .cat2-nav-prev { left: 1.25rem; }
+        .cat2-nav-next { right: 1.25rem; }
+    }
+</style>
+
+<section id="cat2-section">
+    <div id="cat2-wrapper">
+        <div id="cat2-track">
+            {% for c in cats|slice:":12" %}
+            {% if c.slug != 'recently-lauched' %}
+            <div class="cat2-slide" data-cat-index="{{ forloop.counter0 }}">
+                <a href="{{ website_base }}category/{{ c.slug }}/" class="cat2-slide-inner">
+                    {% if c.image %}
+                    <img src="{{ c.image.url }}" alt="{{ c.name }}" class="cat2-slide-img" data-no-srcset="true" loading="lazy" />
+                    {% else %}
+                    <div class="cat2-no-img">
+                        <span class="text-gray-500 text-2xl font-bold">{{ c.name|slice:":1"|upper }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="cat2-slide-overlay"></div>
+                    <div class="cat2-slide-content">
+                        <div class="cat2-slide-title">{{ c.name }}</div>
+                        <span class="cat2-slide-arrow-btn" aria-hidden="true">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M10 7h7v7"/>
+                            </svg>
+                        </span>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        
+        <!-- Navigation Buttons -->
+        <button type="button" class="cat2-nav-btn cat2-nav-prev" id="cat2-prev" aria-label="Previous categories">
+            <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <button type="button" class="cat2-nav-btn cat2-nav-next" id="cat2-next" aria-label="Next categories">
+            <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+    </div>
+</section>
+
+<script>
+(function() {
+    'use strict';
+    
+    var track = document.getElementById('cat2-track');
+    var wrapper = document.getElementById('cat2-wrapper');
+    var prevBtn = document.getElementById('cat2-prev');
+    var nextBtn = document.getElementById('cat2-next');
+    
+    if (!track || !wrapper || !prevBtn || !nextBtn) return;
+    
+    var slides = track.querySelectorAll('.cat2-slide');
+    var totalSlides = slides.length;
+    
+    if (totalSlides === 0) return;
+    
+    var currentPos = 0;
+    var isAnimating = false;
+
+    function isMobile() {
+        return window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+    }
+    
+    // Get number of visible slides based on screen size
+    function getVisibleCount() {
+        var w = window.innerWidth;
+        if (w < 768) return 2;  // Mobile: 2 items
+        return 3;               // Tablet & Desktop: 3 items
+    }
+    
+    // Calculate slide width as percentage
+    function getSlideWidthPercent() {
+        var visible = getVisibleCount();
+        return 100 / visible;
+    }
+    
+    // Get maximum slide position
+    function getMaxPos() {
+        var visible = getVisibleCount();
+        return Math.max(0, totalSlides - visible);
+    }
+    
+    // Update slider position and slide widths
+    function updateSlider() {
+        var widthPercent = getSlideWidthPercent();
+        var maxPos = getMaxPos();
+        
+        // Ensure current position is valid
+        if (currentPos > maxPos) currentPos = maxPos;
+        if (currentPos < 0) currentPos = 0;
+        
+        // Set width for each slide
+        for (var i = 0; i < slides.length; i++) {
+            slides[i].style.width = widthPercent + '%';
+        }
+
+        // Mobile: use native scrolling (no transform-based slider)
+        if (isMobile()) {
+            track.style.transform = 'none';
+            return;
+        }
+
+        // Tablet/Desktop: Calculate offset and apply transform
+        var offset = -(currentPos * widthPercent);
+        track.style.transform = 'translateX(' + offset + '%)';
+    }
+    
+    // Navigate to next set
+    function goNext() {
+        if (isAnimating) return;
+
+        if (isMobile()) {
+            wrapper.scrollBy({ left: Math.max(1, wrapper.clientWidth * 0.8), behavior: 'smooth' });
+            return;
+        }
+        
+        var maxPos = getMaxPos();
+        if (currentPos < maxPos) {
+            currentPos++;
+        } else {
+            currentPos = 0; // Loop back to start
+        }
+        
+        isAnimating = true;
+        updateSlider();
+        setTimeout(function() { isAnimating = false; }, 450);
+    }
+    
+    // Navigate to previous set
+    function goPrev() {
+        if (isAnimating) return;
+
+        if (isMobile()) {
+            wrapper.scrollBy({ left: -Math.max(1, wrapper.clientWidth * 0.8), behavior: 'smooth' });
+            return;
+        }
+        
+        var maxPos = getMaxPos();
+        if (currentPos > 0) {
+            currentPos--;
+        } else {
+            currentPos = maxPos; // Loop to end
+        }
+        
+        isAnimating = true;
+        updateSlider();
+        setTimeout(function() { isAnimating = false; }, 450);
+    }
+    
+    // Event listeners for buttons
+    nextBtn.addEventListener('click', goNext);
+    prevBtn.addEventListener('click', goPrev);
+    
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (isMobile()) return; // don't hijack touch devices / native scroll
+        var wrapper = document.getElementById('cat2-wrapper');
+        if (!wrapper) return;
+        
+        var rect = wrapper.getBoundingClientRect();
+        var isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+        
+        if (isVisible) {
+            if (e.key === 'ArrowRight') goNext();
+            if (e.key === 'ArrowLeft') goPrev();
+        }
+    });
+    
+    // Touch/Swipe support
+    // NOTE: On mobile we intentionally do NOT add swipe handlers because
+    // they fight with native horizontal scrolling. Tablet/Desktop can
+    // keep using buttons/keyboard + transform-based slider.
+    
+    // Handle window resize
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(updateSlider, 150);
+    });
+    
+    // Initialize
+    updateSlider();
+})();
+</script>
+
+{% elif cat_style == 'style3' %}
+<!-- ========== CATEGORY STYLE 3: Beige + Circular Categories (as screenshot) ========== -->
+{% with cat3_as_cert=website.content.d2c_config.category_as_certificates_enabled %}
+{% with cert_icons=website.content.d2c_config.category_certificate_icons %}
+<style>
+    /* Tablet Portrait (768px - 1023px): Hide buttons, enable horizontal scroll */
+    @media screen and (min-width: 768px) and (max-width: 1023px) {
+        .cat3-prev-desktop,
+        .cat3-next-desktop {
+            display: none !important;
+        }
+        #cat3-viewport-desktop {
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        #cat3-viewport-desktop::-webkit-scrollbar {
+            display: none;
+        }
+        #cat3-track-desktop {
+            transform: none !important;
+        }
+    }
+</style>
+<section class="py-14 md:py-8" style="background-color: white">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="text-center">
+            <h2 class="text-2xl md:text-4xl capitalize font-medium text-gray-900">{{ website.content.category_section_heading_s3|default:"Best For Your Categories" }}</h2>
+            {% with cat_sub=website.content.category_section_subheading_s3|default:"Mauris quis nisl elit curabitor sodales libero ac interdum finibus" %}
+            {% if cat_sub %}
+            <p class="mt-2 text-sm text-gray-500 max-w-sm sm:max-w-xl mx-auto font-normal">{{ cat_sub }}</p>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="mt-10">
+            <!-- Desktop/Tablet: Side buttons layout (buttons hidden on tablet portrait via CSS) -->
+            <div class="hidden sm:flex items-center relative">
+                <!-- Left Button (Desktop only - hidden on tablet portrait) -->
+                <button type="button"
+                        class="cat3-prev-desktop flex-none h-11 w-11 flex items-center justify-center rounded-full bg-white/80 hover:bg-white shadow ring-1 ring-black/10 backdrop-blur focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 mr-4" style="margin-bottom: 42px;"
+                        aria-label="Previous category">
+                    <svg class="h-5 w-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+
+                <!-- Categories Viewport (Desktop/Tablet - scrollable on tablet portrait) -->
+                <div id="cat3-viewport-desktop" class="flex-1 overflow-hidden">
+                    <div id="cat3-track-desktop" class="flex transition-transform duration-500 ease-out will-change-transform">
+                        {% if cat3_as_cert == 'on' and cert_icons %}
+                        {% for icon in cert_icons %}
+                        <div class="cat3-slide-desktop group flex-none px-3 text-center" style="box-sizing: border-box;">
+                            <div class="mx-auto relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                {% if icon.image %}
+                                <img src="{{ icon.image }}" alt="{{ icon.name|default:'Trusted icon' }}" class="absolute inset-0 w-full h-full object-contain p-3" data-no-srcset="true" />
+                                {% else %}
+                                <div class="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                                    <span class="text-gray-500 text-xl font-semibold">{{ icon.name|default:'T'|slice:":1"|upper }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">{{ icon.name|default:'Trusted icon' }}</div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        {% for category in cats %}
+                        {% if category.slug != 'recently-lauched' %}
+                        <a href="{{ website_base }}category/{{ category.slug }}/"
+                           class="cat3-slide-desktop group flex-none px-3 text-center"
+                           style="box-sizing: border-box;{% if cat3_as_cert == 'on' %} pointer-events: none; cursor: default;{% endif %}">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                {% if category.image %}
+                                <img src="{{ category.image.url }}" {% media_attrs website category.image.url category.name %} class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-no-srcset="true" />
+                                {% else %}
+                                <div class="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                                    <span class="text-gray-500 text-xl font-semibold">{{ category.name|slice:":1"|upper }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">{{ category.name }}</div>
+                            {% if cat3_as_cert != 'on' %}
+                            <div class="mt-1 text-xs text-gray-500">{{ category.products.count|default:0 }} Products</div>
+                            {% endif %}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Right Button (Desktop only - hidden on tablet portrait) -->
+                <button type="button"
+                        class="cat3-next-desktop flex-none h-11 w-11 flex items-center justify-center rounded-full bg-white/80 hover:bg-white shadow ring-1 ring-black/10 backdrop-blur focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ml-4" style="margin-bottom: 42px;"
+                        aria-label="Next category">
+                    <svg class="h-5 w-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Mobile: Horizontal scrollable categories (3 visible, centered) -->
+            <div class="sm:hidden">
+                {% if cat3_as_cert == 'on' and cert_icons %}
+                {% with cat_count=cert_icons|length %}
+                <div id="cat3-viewport-mobile" class="overflow-x-auto overflow-y-hidden no-scrollbar scroll-smooth">
+                    <div id="cat3-track-mobile" class="flex {% if cat_count <= 3 %}justify-center{% endif %}" style="{% if cat_count > 3 %}width: calc({{ cat_count }} * 33.33%); padding-left: calc((100% - 100%) / 2);{% endif %}">
+                        {% for icon in cert_icons %}
+                        <div class="cat3-slide-mobile group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline: 1px solid rgb(217, 217, 217); outline-offset: 6px;">
+                                {% if icon.image %}
+                                <img src="{{ icon.image }}" alt="{{ icon.name|default:'Trusted icon' }}" class="absolute inset-0 w-full h-full object-contain p-3" data-no-srcset="true" />
+                                {% else %}
+                                <div class="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                                    <span class="text-gray-500 text-lg font-semibold">{{ icon.name|default:'T'|slice:":1"|upper }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">{{ icon.name|default:'Trusted icon' }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endwith %}
+                {% else %}
+                {% with cat_count=cats|length %}
+                <div id="cat3-viewport-mobile" class="overflow-x-auto overflow-y-hidden no-scrollbar scroll-smooth">
+                    <div id="cat3-track-mobile" class="flex {% if cat_count <= 3 %}justify-center{% endif %}" style="{% if cat_count > 3 %}width: calc({{ cat_count }} * 33.33%); padding-left: calc((100% - 100%) / 2);{% endif %}">
+                        {% for category in cats %}
+                        {% if category.slug != 'recently-lauched' %}
+                        <a href="{{ website_base }}category/{{ category.slug }}/"
+                           class="cat3-slide-mobile group flex-none text-center"
+                           style="width: calc(100vw / 3);{% if cat3_as_cert == 'on' %} pointer-events: none; cursor: default;{% endif %}">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline: 1px solid rgb(217, 217, 217); outline-offset: 6px;">
+                                {% if category.image %}
+                                <img src="{{ category.image.url }}" {% media_attrs website category.image.url category.name %} class="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110" data-no-srcset="true" />
+                                {% else %}
+                                <div class="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                                    <span class="text-gray-500 text-lg font-semibold">{{ category.name|slice:":1"|upper }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">{{ category.name }}</div>
+                            {% if cat3_as_cert != 'on' %}
+                            <div class="mt-0.5 text-[10px] text-gray-500">{{ category.products.count|default:0 }} Products</div>
+                            {% endif %}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endwith %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endwith %}
+{% endwith %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Desktop slider only (mobile uses native horizontal scrolling)
+    var viewportD = document.getElementById('cat3-viewport-desktop');
+    var trackD = document.getElementById('cat3-track-desktop');
+    var slidesD = trackD ? trackD.querySelectorAll('.cat3-slide-desktop') : [];
+    var prevBtnD = document.querySelector('.cat3-prev-desktop');
+    var nextBtnD = document.querySelector('.cat3-next-desktop');
+    var indexD = 0;
+
+    function visibleCountD() {
+        var w = window.innerWidth || 0;
+        if (w >= 1024) return 6;
+        if (w >= 768) return 4;
+        return 3;
+    }
+
+    function updateDesktop() {
+        if (!viewportD || !trackD || slidesD.length === 0) return;
+        var viewportWidth = viewportD.offsetWidth;
+        var vis = visibleCountD();
+        var slideW = viewportWidth / vis;
+        slidesD.forEach(function(s) { s.style.width = slideW + 'px'; });
+        var maxIdx = Math.max(0, slidesD.length - vis);
+        indexD = Math.max(0, Math.min(indexD, maxIdx));
+        trackD.style.transform = 'translateX(' + (-indexD * slideW) + 'px)';
+        // Button states
+        if (prevBtnD && nextBtnD) {
+            var showBtns = slidesD.length > vis;
+            prevBtnD.style.visibility = showBtns ? 'visible' : 'hidden';
+            nextBtnD.style.visibility = showBtns ? 'visible' : 'hidden';
+            prevBtnD.disabled = indexD <= 0;
+            nextBtnD.disabled = indexD >= maxIdx;
+            prevBtnD.classList.toggle('opacity-40', prevBtnD.disabled);
+            nextBtnD.classList.toggle('opacity-40', nextBtnD.disabled);
+        }
+    }
+
+    if (prevBtnD) prevBtnD.addEventListener('click', function() { indexD = Math.max(0, indexD - 1); updateDesktop(); });
+    if (nextBtnD) nextBtnD.addEventListener('click', function() { indexD = Math.min(Math.max(0, slidesD.length - visibleCountD()), indexD + 1); updateDesktop(); });
+
+    window.addEventListener('resize', updateDesktop);
+    updateDesktop();
+});
+</script>
+
+{% else %}
+<!-- ========== CATEGORY STYLE 1: Card Grid (Default) ========== -->
+<section class="pt-6 pb-0 md:pb-6 bg-white text-gray-900">
+    <div class="container mx-auto px-2 md:px-4">
+        <div class="text-center max-w-4xl mx-auto mb-6">
+            <h2 class="text-lg uppercase tracking-[0.25em] text-gray-800 font-normal">{{ website.content.category_section_heading|default:"Collections" }}</h2>
+        </div>
+
+        {% with cat_count=cats|length %}
+        <div id="cat1-wrapper" class="relative">
+            <!-- Track: on mobile this will allow native horizontal scroll; on desktop we will control transform -->
+            <div id="cat1-track" class="flex gap-3 lg:gap-2 overflow-x-auto lg:overflow-visible no-scrollbar">
+                {% for category in cats %}
+                {% if category.slug != 'recently-lauched' %}
+                <div class="cat1-slide snap-start lg:snap-none flex-shrink-0 min-w-[72%] xs:min-w-[60%] sm:min-w-[45%] md:min-w-[36%] lg:min-w-0">
+                    {% if category.slug %}
+                    <a href="{{ website_base }}category/{{ category.slug }}/" class="group block">
+                        <div class="relative w-full aspect-[517/345] overflow-hidden rounded-t-xl rounded-b-none ring-1 ring-gray-200 bg-white shadow-sm transition-shadow duration-300 group-hover:shadow-md">
+                            {% if category.image %}
+                            <img src="{{ category.image.url }}"
+                                 {% media_attrs website category.image.url category.name %}
+                                 class="absolute inset-0 w-full h-full object-cover object-[center_30%] transform transition-transform duration-500 ease-out group-hover:scale-105"
+                                 data-no-srcset="true" />
+                            {% else %}
+                            <div class="absolute inset-0 flex items-center justify-center bg-gray-100">
+                                <span class="text-[10px] uppercase tracking-[0.25em] text-gray-500 px-3 text-center">{{ category.name }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/10 via-black/0 to-transparent opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                        </div>
+                        <div class="mt-2 text-center">
+                            <h3 class="text-sm md:text-base font-medium tracking-wide text-gray-900 uppercase">{{ category.name }}</h3>
+                        </div>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Navigation buttons moved to footer (see below) -->
+        </div>
+        {% if cat_count > 4 %}
+        <div class="mt-6 text-center">
+            <div class="inline-flex items-center justify-center gap-4">
+                <!-- Prev button -->
+                <button type="button" id="cat1-prev" class="hidden md:inline-flex z-30 items-center justify-center px-2 py-2 bg-white/95 hover:bg-white text-gray-800 border border-gray-200 rounded-full shadow-[0_0_5px_rgba(0,0,0,0.1)]"
+                        aria-label="Previous categories">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+
+                <!-- Next button -->
+                <button type="button" id="cat1-next" class="hidden md:inline-flex z-30 items-center justify-center px-2 py-2 bg-white/95 hover:bg-white text-gray-800 border border-gray-200 rounded-full shadow-[0_0_5px_rgba(0,0,0,0.1)]"
+                        aria-label="Next categories">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+</section>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var wrapper = document.getElementById('cat1-wrapper');
+    var track = document.getElementById('cat1-track');
+    var prevBtn = document.getElementById('cat1-prev');
+    var nextBtn = document.getElementById('cat1-next');
+    if (!wrapper || !track) return;
+
+    var slides = Array.prototype.slice.call(track.querySelectorAll('.cat1-slide'));
+    var total = slides.length;
+    if (total === 0) return;
+
+    function isMobile() {
+        return window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+    }
+
+    function getVisibleCount() {
+        var w = window.innerWidth || 0;
+        if (w >= 1024) return Math.min(5, total); // Desktop: up to 5 visible
+        if (w >= 768) return Math.min(4, total);  // Tablet: up to 4 visible
+        return null; // Mobile: use native scrolling
+    }
+
+    var index = 0;
+
+    function updateWidthsAndPosition() {
+        var visible = getVisibleCount();
+        // Mobile: let CSS/native scrolling handle layout
+        if (!visible) {
+            track.style.transform = 'none';
+            track.style.transition = '';
+            slides.forEach(function(s) { s.style.width = ''; });
+            wrapper.style.overflowX = 'auto';
+            if (prevBtn) prevBtn.style.display = 'none';
+            if (nextBtn) nextBtn.style.display = 'none';
+            return;
+        }
+
+        wrapper.style.overflowX = 'hidden';
+        if (prevBtn) prevBtn.style.display = '';
+        if (nextBtn) nextBtn.style.display = '';
+
+        var wrapperWidth = wrapper.clientWidth || wrapper.getBoundingClientRect().width;
+        var slideW = Math.floor(wrapperWidth / visible);
+        slides.forEach(function(s) { s.style.width = slideW + 'px'; });
+
+        // Clamp index
+        var maxIndex = Math.max(0, total - visible);
+        if (index > maxIndex) index = maxIndex;
+        if (index < 0) index = 0;
+
+        var offset = -(index * slideW);
+        track.style.transition = 'transform 300ms cubic-bezier(.2,.8,.2,1)';
+        track.style.transform = 'translateX(' + offset + 'px)';
+
+        // Button states
+        if (prevBtn) prevBtn.disabled = index <= 0;
+        if (nextBtn) nextBtn.disabled = index >= maxIndex;
+    }
+
+    function next() {
+        var visible = getVisibleCount();
+        if (!visible) return;
+        var maxIndex = Math.max(0, total - visible);
+        index = Math.min(index + 1, maxIndex);
+        updateWidthsAndPosition();
+    }
+
+    function prev() {
+        var visible = getVisibleCount();
+        if (!visible) return;
+        index = Math.max(index - 1, 0);
+        updateWidthsAndPosition();
+    }
+
+    if (nextBtn) nextBtn.addEventListener('click', function(e){ e.preventDefault(); next(); });
+    if (prevBtn) prevBtn.addEventListener('click', function(e){ e.preventDefault(); prev(); });
+
+    // Keyboard navigation for desktop/tablet
+    document.addEventListener('keydown', function(e) {
+        if (isMobile()) return;
+        if (e.key === 'ArrowRight') next();
+        if (e.key === 'ArrowLeft') prev();
+    });
+
+    // Recompute on resize
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(updateWidthsAndPosition, 120);
+    });
+
+    // Initialize
+    updateWidthsAndPosition();
+});
+</script>
+{% endif %}
+
+{% endwith %}
+{% else %}
+{% with cat3_as_cert_demo=website.content.d2c_config.category_as_certificates_enabled %}
+{% if cat3_as_cert_demo != 'on' %}
+<!-- ========== CATEGORY STYLE 3 DEMO: Empty state for new stores ========== -->
+<style>
+    @media screen and (min-width: 768px) and (max-width: 1023px) {
+        .cat3demo-prev-desktop,
+        .cat3demo-next-desktop { display: none !important; }
+        #cat3demo-viewport-desktop {
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        #cat3demo-viewport-desktop::-webkit-scrollbar { display: none; }
+        #cat3demo-track-desktop { transform: none !important; }
+    }
+</style>
+<section class="py-14 md:py-8" style="background-color: white">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="text-center">
+            <h2 class="text-2xl md:text-4xl capitalize font-medium text-gray-900">{{ website.content.category_section_heading_s3|default:"Best For Your Categories" }}</h2>
+            {% with cat_sub=website.content.category_section_subheading_s3|default:"Mauris quis nisl elit curabitor sodales libero ac interdum finibus" %}
+            {% if cat_sub %}
+            <p class="mt-2 text-sm text-gray-500 max-w-sm sm:max-w-xl mx-auto font-normal">{{ cat_sub }}</p>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="mt-10">
+            <!-- Desktop/Tablet: Side buttons layout (buttons hidden on tablet portrait via CSS) -->
+            <div class="hidden sm:flex items-center relative">
+                <button type="button"
+                        class="cat3demo-prev-desktop flex-none h-11 w-11 flex items-center justify-center rounded-full bg-white/80 hover:bg-white shadow ring-1 ring-black/10 backdrop-blur focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 mr-4"
+                        style="margin-bottom: 42px;"
+                        aria-label="Previous category">
+                    <svg class="h-5 w-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+
+                <div id="cat3demo-viewport-desktop" class="flex-1 overflow-hidden">
+                    <div id="cat3demo-track-desktop" class="flex transition-transform duration-500 ease-out will-change-transform">
+                        <div class="cat3demo-slide-desktop group flex-none px-3 text-center" style="box-sizing:border-box;">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Electronics" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">Electronics</div>
+                            <div class="mt-1 text-xs text-gray-500">0 Products</div>
+                        </div>
+                        <div class="cat3demo-slide-desktop group flex-none px-3 text-center" style="box-sizing:border-box;">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Fashion" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">Fashion</div>
+                            <div class="mt-1 text-xs text-gray-500">0 Products</div>
+                        </div>
+                        <div class="cat3demo-slide-desktop group flex-none px-3 text-center" style="box-sizing:border-box;">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Home Decor" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">Home Decor</div>
+                            <div class="mt-1 text-xs text-gray-500">0 Products</div>
+                        </div>
+                        <div class="cat3demo-slide-desktop group flex-none px-3 text-center" style="box-sizing:border-box;">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Beauty" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">Beauty</div>
+                            <div class="mt-1 text-xs text-gray-500">0 Products</div>
+                        </div>
+                        <div class="cat3demo-slide-desktop group flex-none px-3 text-center" style="box-sizing:border-box;">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Sports" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">Sports</div>
+                            <div class="mt-1 text-xs text-gray-500">0 Products</div>
+                        </div>
+                        <div class="cat3demo-slide-desktop group flex-none px-3 text-center" style="box-sizing:border-box;">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Grocery" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">Grocery</div>
+                            <div class="mt-1 text-xs text-gray-500">0 Products</div>
+                        </div>
+                        <div class="cat3demo-slide-desktop group flex-none px-3 text-center" style="box-sizing:border-box;">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Books" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">Books</div>
+                            <div class="mt-1 text-xs text-gray-500">0 Products</div>
+                        </div>
+                        <div class="cat3demo-slide-desktop group flex-none px-3 text-center" style="box-sizing:border-box;">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Toys" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">Toys</div>
+                            <div class="mt-1 text-xs text-gray-500">0 Products</div>
+                        </div>
+                        <div class="cat3demo-slide-desktop group flex-none px-3 text-center" style="box-sizing:border-box;">
+                            <div class="mx-auto relative w-[5rem] h-[5rem] sm:w-[6rem] sm:h-[6rem] rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-black/10">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Furniture" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-3 text-sm font-medium text-gray-900">Furniture</div>
+                            <div class="mt-1 text-xs text-gray-500">0 Products</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button"
+                        class="cat3demo-next-desktop flex-none h-11 w-11 flex items-center justify-center rounded-full bg-white/80 hover:bg-white shadow ring-1 ring-black/10 backdrop-blur focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ml-4"
+                        style="margin-bottom: 42px;"
+                        aria-label="Next category">
+                    <svg class="h-5 w-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Mobile: Horizontal scrollable (3 visible, native scroll) -->
+            <div class="sm:hidden">
+                <div class="overflow-x-auto overflow-y-hidden no-scrollbar scroll-smooth">
+                    <div class="flex" style="width: calc(9 * 33.333vw);">
+                        <div class="group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline:1px solid rgb(217,217,217);outline-offset:6px;">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Electronics" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">Electronics</div>
+                            <div class="mt-0.5 text-[10px] text-gray-500">0 Products</div>
+                        </div>
+                        <div class="group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline:1px solid rgb(217,217,217);outline-offset:6px;">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Fashion" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">Fashion</div>
+                            <div class="mt-0.5 text-[10px] text-gray-500">0 Products</div>
+                        </div>
+                        <div class="group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline:1px solid rgb(217,217,217);outline-offset:6px;">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Home Decor" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">Home Decor</div>
+                            <div class="mt-0.5 text-[10px] text-gray-500">0 Products</div>
+                        </div>
+                        <div class="group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline:1px solid rgb(217,217,217);outline-offset:6px;">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Beauty" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">Beauty</div>
+                            <div class="mt-0.5 text-[10px] text-gray-500">0 Products</div>
+                        </div>
+                        <div class="group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline:1px solid rgb(217,217,217);outline-offset:6px;">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Sports" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">Sports</div>
+                            <div class="mt-0.5 text-[10px] text-gray-500">0 Products</div>
+                        </div>
+                        <div class="group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline:1px solid rgb(217,217,217);outline-offset:6px;">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Grocery" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">Grocery</div>
+                            <div class="mt-0.5 text-[10px] text-gray-500">0 Products</div>
+                        </div>
+                        <div class="group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline:1px solid rgb(217,217,217);outline-offset:6px;">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Books" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">Books</div>
+                            <div class="mt-0.5 text-[10px] text-gray-500">0 Products</div>
+                        </div>
+                        <div class="group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline:1px solid rgb(217,217,217);outline-offset:6px;">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Toys" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">Toys</div>
+                            <div class="mt-0.5 text-[10px] text-gray-500">0 Products</div>
+                        </div>
+                        <div class="group flex-none text-center" style="width: calc(100vw / 3);">
+                            <div class="mx-auto my-2 relative w-24 h-24 rounded-full overflow-hidden bg-white shadow-sm" style="outline:1px solid rgb(217,217,217);outline-offset:6px;">
+                                <img src="{% static 'storefront/category_placeholder.png' %}" alt="Furniture" class="absolute inset-0 w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                            </div>
+                            <div class="mt-2 text-sm font-medium text-gray-900 truncate px-1">Furniture</div>
+                            <div class="mt-0.5 text-[10px] text-gray-500">0 Products</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var viewportD = document.getElementById('cat3demo-viewport-desktop');
+    var trackD    = document.getElementById('cat3demo-track-desktop');
+    var slidesD   = trackD ? trackD.querySelectorAll('.cat3demo-slide-desktop') : [];
+    var prevBtnD  = document.querySelector('.cat3demo-prev-desktop');
+    var nextBtnD  = document.querySelector('.cat3demo-next-desktop');
+    var indexD = 0;
+
+    function visibleCountD() {
+        var w = window.innerWidth || 0;
+        if (w >= 1024) return 6;
+        if (w >= 768)  return 4;
+        return 3;
+    }
+
+    function updateDesktop() {
+        if (!viewportD || !trackD || slidesD.length === 0) return;
+        var vis    = visibleCountD();
+        var slideW = viewportD.offsetWidth / vis;
+        slidesD.forEach(function(s) { s.style.width = slideW + 'px'; });
+        var maxIdx = Math.max(0, slidesD.length - vis);
+        indexD = Math.max(0, Math.min(indexD, maxIdx));
+        trackD.style.transform = 'translateX(' + (-indexD * slideW) + 'px)';
+        if (prevBtnD && nextBtnD) {
+            var showBtns = slidesD.length > vis;
+            prevBtnD.style.visibility = showBtns ? 'visible' : 'hidden';
+            nextBtnD.style.visibility = showBtns ? 'visible' : 'hidden';
+            prevBtnD.disabled = (indexD <= 0);
+            nextBtnD.disabled = (indexD >= maxIdx);
+            prevBtnD.classList.toggle('opacity-40', prevBtnD.disabled);
+            nextBtnD.classList.toggle('opacity-40', nextBtnD.disabled);
+        }
+    }
+
+    if (prevBtnD) prevBtnD.addEventListener('click', function() {
+        indexD = Math.max(0, indexD - 1);
+        updateDesktop();
+    });
+    if (nextBtnD) nextBtnD.addEventListener('click', function() {
+        indexD = Math.min(Math.max(0, slidesD.length - visibleCountD()), indexD + 1);
+        updateDesktop();
+    });
+
+    window.addEventListener('resize', updateDesktop);
+    updateDesktop();
+});
+</script>
+{% endif %}
+{% endwith %}
+{% endif %}
+{% endwith %}
+
+
+
+<!-- Featured Products Section (Below Category Collections) -->
+<style>
+    .product-image-link{
+        width: 100%;
+        height: 100%;
+    }
+    .best-seller-d2c-actions{
+        display: grid;
+        grid-template-columns: minmax(0, 4fr) minmax(0, 1fr);
+        gap: 0.5rem;
+        width: 100%;
+        align-items: stretch;
+    }
+    .product_card{
+        margin: 1.5rem;
+    }
+    @media (max-width: 767px) {
+        .product-image-link{
+            width: 100%;
+            height: 100%;
+        }
+        .best-seller-d2c-actions{
+            grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+        }
+        .products-grid-lg{
+            gap: 0rem;
+        }
+        .product_card{
+            margin: 0.75rem !important;
+        }
+        .best-seller-d2c-content{
+            width: 40vw;
+            max-width: 100%;
+            margin-left: 4px;
+            margin-right: 4px;
+            overflow: hidden;
+        }
+        .best-seller-d2c-title{
+            font-size: 12px;
+            line-clamp: 2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    }
+    @media (min-width: 1024px) {
+        .products-grid-lg {
+            max-width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    }
+</style>
+<section class="py-8 md:py-8 bg-white">
+    <div class="container mx-auto px-4">
+        <div class="text-center max-w-4xl mx-auto mb-8 md:mb-6">
+            <h2 class="text-lg uppercase tracking-[0.25em] text-gray-800 font-normal">Best Sellers</h2>
+            {% with bs_sub=website.content.best_sellers_subtitle %}
+            {% if bs_sub %}
+            <p class="mt-2 text-sm text-gray-500">{{ bs_sub }}</p>
+            {% else %}
+            <p class="mt-2 text-sm text-gray-500">Our best-selling products are a testament to our commitment to quality and customer satisfaction.</p>
+            {% endif %}
+            {% endwith %}
+        </div>
+        {% if latest_products %}
+        {% with product_list=latest_products %}
+            {% if product_list %}
+            <div class="grid grid-cols-2 sm:mx-auto lg:grid-cols-4 gap-2 sm:gap-3 md:gap-8 lg:max-w-[90%] products-grid-lg">
+                {% for product in product_list|slice:":8" %}
+                {% if product.is_active %}
+                <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] md:m-[1rem] lg:m-4 product_card" style="border-radius: 8px;">
+                    <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
+                        {% if product.image1 %}
+                        <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                           class="group relative flex items-center justify-center flex-shrink-0 product-image-link">
+                          <span class="relative w-full h-full flex items-center justify-center">
+                            {% if website.content.enable_product_hover_swap and product.image2 %}
+                            <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="block w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0" data-no-srcset="true"/>
+                            <img src="{{ product.image2.url }}" {% media_attrs website product.image2.url product.title %} class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100" data-no-srcset="true"/>
+                            {% else %}
+                            <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="block w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" data-no-srcset="true"/>
+                            {% endif %}
+                          </span>
+                        </a>
+                        {% else %}
+                        <div class="absolute inset-0 flex items-center justify-center bg-gray-100">
+                        </div>
+                        {% endif %}
+
+                        {% comment %} Badges: NEW for recently featured; Discount from specifications if provided {% endcomment %}        {% if product.specifications %}
+                        <div class="absolute top-2 right-2 flex flex-col items-end space-y-1.5 pointer-events-none">
+                            {% with specs=product.specifications %}
+                                {% if specs %}
+                                    {% if specs.discount %}
+                                        <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount }}%</span>
+                                    {% elif specs.discount_percentage %}
+                                        <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount_percentage }}%</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="px-2 sm:px-3 md:px-4 py-4 {% if is_d2c or website.template.is_D2C %}text-left best-seller-d2c-content{% else %}text-center{% endif %}">
+                        {% if is_d2c or website.template.is_D2C %}
+                        <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                           class="block sm:text-[13px] font-normal uppercase leading-tight text-gray-900 hover:text-black transition-colors break-words best-seller-d2c-title">
+                            {{ product.title }}
+                        </a>
+                        {% if show_price_in_lists %}
+                        <div class="mt-1 text-gray-700">
+                            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                               class="inline-flex items-baseline justify-start gap-1.5 hover:text-black transition-colors max-w-full">
+                                {% with specs=product.specifications %}
+                                    <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words best-seller-d2c-price">₹{{ product.price }}</span>
+                                    {% if specs and specs.mrp %}
+                                        <span class="text-[15px] text-gray-400 line-through break-words">₹{{ specs.mrp }}</span>
+                                    {% elif specs and specs.original_price %}
+                                        <span class="text-[15px] text-gray-400 line-through break-words">₹{{ specs.original_price }}</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% comment %} Add to Cart and Wishlist Buttons {% endcomment %}
+                        <div class="mt-1.5 best-seller-d2c-actions">
+                            <a href="{{ website_base }}cart/add/{{ product.product_id }}/?qty=1"
+                               class="inline-flex items-center justify-center gap-1 w-full h-7 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
+                               style="border: 1px solid #888888;"
+                               aria-label="Add {{ product.title }} to cart">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7">
+                                    <circle cx="9" cy="20" r="1.6"></circle>
+                                    <circle cx="18" cy="20" r="1.6"></circle>
+                                    <path d="M3 4h2l2.1 10.2a1 1 0 0 0 1 .8h9.9a1 1 0 0 0 1-.8L21 8H7.2"></path>
+                                </svg>
+                                <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Add To Cart</span>
+                            </a>
+                            <button type="button"
+                                    class="w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-gray-700 bg-white hover:bg-gray-50 transition js-best-seller-wishlist"
+                                    style="border: 1px solid #888888;"
+                                    data-wishlist-url="{% url 'public_wishlist_add' product_id=product.product_id|default:'0' %}"
+                                    aria-label="Add {{ product.title }} to wishlist">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 md:w-3 md:h-3" fill="none" stroke="currentColor" stroke-width="1.7">
+                                    <path d="M12 21s-6.7-4.35-9.2-8.07C.87 10.13 1.5 6.7 4.4 5.2a5 5 0 0 1 5.6.77L12 7.7l2-1.73a5 5 0 0 1 5.6-.77c2.9 1.5 3.53 4.93 1.6 7.73C18.7 16.65 12 21 12 21z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        {% else %}
+                        <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                           class="inline-block text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-gray-800 hover:text-black transition-colors">
+                            {{ product.title }}
+                        </a>
+                        {% if show_price_in_lists %}
+                        <div class="mt-0 sm:mt-1 text-gray-700">
+                            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+                               class="inline-flex items-baseline justify-center gap-2 hover:text-black transition-colors">
+                                {% with specs=product.specifications %}
+                                    {% if specs and specs.mrp %}
+                                        <span class="text-gray-400 line-through text-[11px]">₹{{ specs.mrp }}</span>
+                                        <span class="text-xs">₹{{ product.price }}</span>
+                                    {% elif specs and specs.original_price %}
+                                        <span class="text-gray-400 line-through text-[11px]">₹{{ specs.original_price }}</span>
+                                        <span class="text-xs">₹{{ product.price }}</span>
+                                    {% else %}
+                                        <span class="text-xs">₹{{ product.price }}</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% if product_list|length > 8 %}
+            <div class="mt-8 md:mt-10 text-center">
+                <a href="{% url 'public_all_products' %}"
+                   class="inline-flex items-center justify-center px-8 py-3 text-xs md:text-sm uppercase tracking-[0.25em] bg-black text-white hover:bg-gray-900 transition rounded-none">
+                    View All
+                </a>
+            </div>
+            {% endif %}
+            {% endif %}
+        {% endwith %}
+        {% else %}
+            <div class="grid grid-cols-2 sm:mx-auto lg:grid-cols-4 gap-2 sm:gap-3 md:gap-8 lg:max-w-[90%] products-grid-lg">
+                {% for i in '1234'|make_list %}
+                <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] md:m-[1rem] lg:m-4 product_card" style="border-radius: 8px;">
+                    <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
+                        <img src="{% static 'storefront/product_placeholder.jpg' %}" alt="Demo product" class="block w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+                    </div>
+                    <div class="px-2 sm:px-3 md:px-4 py-4 text-left best-seller-d2c-content">
+                        <span class="block sm:text-[13px] font-normal uppercase leading-tight text-gray-900 best-seller-d2c-title">Demo Product {{ forloop.counter }}</span>
+                        <div class="mt-1 text-gray-700">
+                            <span class="inline-flex items-baseline justify-start gap-1.5 max-w-full">
+                                <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words best-seller-d2c-price">₹ 0</span>
+                            </span>
+                        </div>
+                        <div class="mt-1.5 best-seller-d2c-actions">
+                            <button type="button"
+                               class="inline-flex items-center justify-center gap-1 w-full h-7 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white px-1 min-w-0 text-[9px] sm:text-xs cursor-default opacity-70"
+                               style="border: 1px solid #888888;"
+                               disabled>
+                                <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Add To Cart</span>
+                            </button>
+                            <button type="button"
+                                    class="w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-gray-700 bg-white cursor-default opacity-70"
+                                    style="border: 1px solid #888888;"
+                                    disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 md:w-3 md:h-3" fill="none" stroke="currentColor" stroke-width="1.7">
+                                    <path d="M12 21s-6.7-4.35-9.2-8.07C.87 10.13 1.5 6.7 4.4 5.2a5 5 0 0 1 5.6.77L12 7.7l2-1.73a5 5 0 0 1 5.6-.77c2.9 1.5 3.53 4.93 1.6 7.73C18.7 16.65 12 21 12 21z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const wishlistButtons = document.querySelectorAll('.js-best-seller-wishlist');
+    if (!wishlistButtons.length) return;
+
+    wishlistButtons.forEach(function (button) {
+        button.addEventListener('click', async function () {
+            const url = button.getAttribute('data-wishlist-url');
+            if (!url || button.disabled) return;
+            button.disabled = true;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+                if (response.status === 401 && data && data.login_required) {
+                    window.location.href = '{{ website_base }}account/';
+                    return;
+                }
+                if (response.ok && data && data.success) {
+                    button.classList.add('text-red-500', 'border-red-200', 'bg-red-50');
+                }
+            } catch (e) {
+                // Fail silently to keep the product grid stable.
+            } finally {
+                button.disabled = false;
+            }
+        });
+    });
+});
+</script>
+
+{% with video_pos=website.content.video_section.position|default:'bottom' %}
+{% if video_pos == 'below_best_sellers' %}
+    {% include 'storefront/shared/video_section.html' %}
+{% endif %}
+{% endwith %}
+
+{% if page.content.about_title or website.content.about_section_title or page.content.about_content or website.content.about_section_content or website.content.about_image or website.content.about_video_url or website.content.about_youtube_embed %}
+<style>
+    .about-media { position: relative; width: 100%; aspect-ratio: 16 / 10; min-height: 240px; }
+    .about-media-abs { position: absolute; inset: 0; width: 100%; height: 100%; }
+    @supports not (aspect-ratio: 1 / 1) {
+        .about-media { position: relative; width: 100%; }
+        .about-media::before { content: ''; display: block; padding-top: 62.5%; }
+        .about-media-abs { position: absolute; inset: 0; width: 100%; height: 100%; }
+    }
+    /* ensures media controls/overlay stack correctly */
+    .about-media .video-thumb { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    /* Fix for zoom-related rendering glitches */
+    .about-media {
+        isolation: isolate;
+    }
+    .about-media-abs > img,
+    .video-thumb > img {
+        transform: scale(1.001); /* Subtly nudge the renderer */
+    }
+</style>
+
+<!-- About Section (Tailwind-only, content left, image right) -->
+<section id="about" class="py-12 md:py-20 bg-white">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <!-- Content Left -->
+            <div class="order-1">
+                {% if page.content.about_title or website.content.about_section_title %}
+                <h2 class="mt-4 text-2xl text-center md:text-left uppercase sm:text-3xl lg:text-4xl xl:text-[2.7rem] leading-[1.2] font-semibold tracking-tight text-gray-900">
+                    {% if page.content.about_title %}
+                        {{ page.content.about_title }}
+                    {% else %}
+                        {{ website.content.about_section_title }}
+                    {% endif %}
+                </h2>
+                {% endif %}
+                {% if page.content.about_content or website.content.about_section_content %}
+                <p class="mt-4 text-sm text-center md:text-left sm:text-base px-4 md:px-0 text-gray-600 leading-relaxed">
+                    {% if page.content.about_content %}
+                        {{ page.content.about_content|linebreaksbr }}
+                    {% else %}
+                        {{ website.content.about_section_content|linebreaksbr }}
+                    {% endif %}
+                </p>
+                {% endif %}
+
+                {% with ab=website.content.about_button %}
+                {% if ab and ab.url and ab.label %}
+                <div class="mt-6 flex flex-wrap items-center justify-center md:justify-start">
+                    <a href="{{ ab.url|public_href:website_base }}" class="inline-flex items-center justify-center bg-gray-900 text-white px-5 py-2.5 text-sm font-medium shadow-sm hover:bg-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 uppercase tracking-[0.25em]">
+                        {{ ab.label }}
+                    </a>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Media Right (Image or Video) -->
+            <div class="order-2">
+                <div class="relative w-full overflow-hidden px-4 sm:px-0">
+                    <div class="about-media">
+                        <div class="about-media-abs">
+                            {% with mt=website.content.about_media_type|default:'image' %}
+                                {% if mt == 'youtube' and website.content.about_youtube_embed and website.content.about_video_thumbnail and 'img.youtube.com/vi/' not in website.content.about_video_thumbnail %}
+                                    {% media_meta website website.content.about_video_thumbnail as about_thumb_meta %}
+                                    <button type="button"
+                                            class="video-thumb group"
+                                            data-media-type="youtube"
+                                            data-src="{{ website.content.about_youtube_embed }}"
+                                            data-poster="{{ website.content.about_video_thumbnail }}">
+                                        <img 
+                                            src="{{ website.content.about_video_thumbnail }}"
+                                            alt="{{ about_thumb_meta.alt_text|default:'About video thumbnail' }}"
+                                            title="{{ about_thumb_meta.title|default:'' }}"
+                                            data-description="{{ about_thumb_meta.description|default:'' }}"
+                                            class="absolute inset-0 w-full h-full object-cover"
+                                            srcset="{{ website.content.about_video_thumbnail }}"
+                                        />
+                                        <span class="absolute inset-0 flex items-center justify-center">
+                                            <span class="inline-flex items-center justify-center rounded-full bg-black/60 group-hover:bg-black/70 text-white p-4 md:p-5 transition">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-8 w-8 md:h-10 md:w-10">
+                                                    <path d="M8 5v14l11-7z" />
+                                                </svg>
+                                            </span>
+                                        </span>
+                                    </button>
+                                {% elif mt == 'video' and website.content.about_video_url and website.content.about_video_thumbnail and 'img.youtube.com/vi/' not in website.content.about_video_thumbnail %}
+                                    {% media_meta website website.content.about_video_thumbnail as about_thumb_meta %}
+                                    <button type="button"
+                                            class="video-thumb group"
+                                            data-media-type="video"
+                                            data-src="{{ website.content.about_video_url }}"
+                                            data-poster="{{ website.content.about_video_thumbnail }}">
+                                        <img 
+                                            src="{{ website.content.about_video_thumbnail }}"
+                                            alt="{{ about_thumb_meta.alt_text|default:'About video thumbnail' }}"
+                                            title="{{ about_thumb_meta.title|default:'' }}"
+                                            data-description="{{ about_thumb_meta.description|default:'' }}"
+                                            class="absolute inset-0 w-full h-full object-cover"
+                                            srcset="{{ website.content.about_video_thumbnail }}"
+                                        />
+                                        <span class="absolute inset-0 flex items-center justify-center">
+                                            <span class="inline-flex items-center justify-center rounded-full bg-black/60 group-hover:bg-black/70 text-white p-4 md:p-5 transition">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-8 w-8 md:h-10 md:w-10">
+                                                    <path d="M8 5v14l11-7z" />
+                                                </svg>
+                                            </span>
+                                        </span>
+                                    </button>
+                                {% else %}
+                                    {% with raw=website.content.about_image %}
+                                        {% if raw %}
+                                        {% media_meta website raw as about_img_meta %}
+                                        <img 
+                                            src="{{ raw|absolute_media_url }}"
+                                            alt="{{ about_img_meta.alt_text|default:'About image' }}"
+                                            title="{{ about_img_meta.title|default:'' }}"
+                                            data-description="{{ about_img_meta.description|default:'' }}"
+                                            class="absolute inset-0 w-full h-full object-cover object-center block"
+                                            srcset="{{ raw|absolute_media_url }}"
+                                        />
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Blog Section (placed above Weekly Selection) -->
+{% with blog_list=blogs %}
+{% if blog_list %}
+<section id="blog" class="py-12 md:py-16 bg-white mx-4 sm:mx-6 md:mx-10 lg:mx-16 xl:mx-24">
+    <div class="container mx-auto px-4">
+        <div class="text-center max-w-4xl mx-auto mb-8">
+            <h2 class="text-lg uppercase tracking-[0.25em] text-gray-800 font-normal">Blog</h2>
+        </div>
+
+        {% if blog_list %}
+        <div class="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 overflow-x-auto md:overflow-visible no-scrollbar scroll-smooth snap-x md:snap-none snap-mandatory">
+            {% for blog in blog_list|slice:":4" %}
+            <article class="group flex-shrink-0 snap-start basis-[85%] sm:basis-[62%] md:basis-auto">
+                {% if blog.slug %}
+                <a href="{% url 'public_blog_detail' blog_slug=blog.slug|default:'_' %}" class="relative block">
+                {% else %}
+                <a href="{% url 'public_blogs' %}" class="relative block">
+                {% endif %}
+                    <div class="relative w-full aspect-[4/5] overflow-hidden bg-gray-100">
+                        {% if blog.image %}
+                        <img src="{{ blog.image.url }}" alt="{{ blog.title }}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" data-no-srcset="true" />
+                        {% else %}
+                        <div class="absolute inset-0 flex items-center justify-center bg-gray-100"></div>
+                        {% endif %}
+                    </div>
+                    <div class="absolute inset-x-5 sm:inset-x-6 bottom-5 sm:bottom-6">
+                        <div class="bg-white p-5 sm:p-6 shadow-md ring-1 ring-black/5">
+                            <p class="text-[10px] uppercase tracking-[0.3em] text-gray-500">{{ blog.category|default:"BLOG" }}</p>
+                            <h3 class="mt-2 text-base sm:text-lg md:text-xl font-medium text-gray-900 leading-snug">{{ blog.title }}</h3>
+                            <p class="mt-2 text-xs sm:text-sm text-gray-500">
+                                {% firstof blog.author_name blog.author "" %}
+                            </p>
+                        </div>
+                    </div>
+                </a>
+            </article>
+            {% endfor %}
+        </div>
+        <div class="mt-8 md:mt-10 text-center">
+            <a href="{% url 'public_blogs' %}"
+               class="inline-flex items-center justify-center px-8 py-3 text-xs md:text-sm uppercase tracking-[0.25em] bg-black text-white hover:bg-gray-900 transition rounded-none">
+                View All
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+{% endwith %}
+
+<!-- Why Businesses Choose Us (below Blog) -->
+{% if website.content.why_choose_us %}
+<section id="why-choose-us" class="py-14 md:py-20 bg-white mx-6 sm:mx-14 md:mx-24 lg:mx-40 xl:mx-48">
+    <div class="container mx-auto px-4">
+        <!-- Heading -->
+        <div class="text-center max-w-3xl mx-auto">
+            <h2 class="text-4xl md:text-5xl uppercase font-normal tracking-tight text-gray-900">Why Choose Us</h2>
+            {% if website.content.why_choose_us_subtitle %}
+            <p class="mt-4 text-base md:text-lg font-normal leading-relaxed text-gray-600">
+                {{ website.content.why_choose_us_subtitle }}
+            </p>
+            {% endif %}
+        </div>
+
+        {% if website.content.why_choose_us %}
+        <div class="mt-10 md:mt-14 grid grid-cols-2 gap-5 sm:gap-4 md:gap-6 items-stretch">
+            {% for item in website.content.why_choose_us|slice:":4" %}
+            <div class="relative h-full min-h-[92px] sm:min_h-[104px] flex flex-col md:flex-row gap-3 sm:gap-4 p-4 sm:p-6 bg-white rounded-2xl shadow-[0_0px_5px_rgba(0,0,0,0.1)] ring-1 ring-gray-100 mb-2 sm:mb-0">
+                <div class="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gray-50 ring-1 ring-gray-200">
+                    {% with icon=item.icon|default:''|lower %}
+                        {% if "truck" in icon or "ship" in icon or "delivery" in icon %}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-6 w-6 text-gray-800"><path d="M3 7h11v8H3z"/><path d="M14 10h3l3 3v2h-6V10z"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+                        {% elif "shield" in icon or "secure" in icon or "warranty" in icon %}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-6 w-6 text-gray-800"><path d="M12 3l7 3v6c0 4.418-3.582 7-7 9-3.418-2-7-4.582-7-9V6l7-3z"></path><path d="M9 12l2 2 4-4"></path></svg>
+                        {% elif "bolt" in icon or "fast" in icon or "speed" in icon %}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-6 w-6 text-gray-800"><path d="M13 3L6 14h5l-1 7 7-11h-5l1-7z" stroke-linejoin="round"></path></svg>
+                        {% elif "box" in icon or "package" in icon or "cube" in icon %}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-6 w-6 text-gray-800"><path d="M3 7l9-4 9 4-9 4-9-4z"></path><path d="M3 7v10l9 4 9-4V7"></path><path d="M12 11v10"></path></svg>
+                        {% else %}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-6 w-6 text-gray-800"><circle cx="12" cy="12" r="7"></circle><path d="M9 12l2 2 4-4"></path></svg>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-sm sm:text-base md:text-lg uppercase font-semibold text-gray-900 leading-snug">{{ item.title }}</h3>
+                    <p class="mt-1 text-xs sm:text-sm md:text-[15px] text-gray-600">{{ item.text }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Testimonials Intro (below Why Choose Us) -->
+{% if website.content.testimonials %}
+<section id="testimonials-intro" class="py-14 md:py-20 bg-white mx-6 sm:mx-14 md:mx-24 lg:mx-40 xl:mx-48">
+	<div class="container mx-auto px-4">
+		<!-- Heading & Copy -->
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-start">
+			<div>
+				<span class="inline-flex items-center gap-2 text-[11px] md:text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 ring-1 ring-gray-200">Testimonials</span>
+				{% if website.content.testimonials_title %}
+				<h2 class="mt-4 text-3xl sm:text-4xl lg:text-5xl leading-[1.1] font-semibold tracking-tight text-gray-900">{{ website.content.testimonials_title }}</h2>
+				{% endif %}
+			</div>
+		</div>
+
+		<!-- Testimonials Cards -->
+		<div class="mt-8 md:mt-12">
+			{# Mobile: smooth horizontal scrolling with snap #}
+			<div class="md:hidden -mx-4 px-4">
+				<div class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4">
+					{% for t in website.content.testimonials %}
+						<figure class="min-w-[85%] snap-center bg-white rounded-2xl p-6 shadow ring-1 ring-gray-100">
+							<blockquote class="text-gray-700 leading-relaxed">
+								<span class="block text-2xl text-gray-300 mb-2">“</span>
+								<p>{{ t.content }}</p>
+								<span class="block text-2xl text-gray-300 mt-2">”</span>
+							</blockquote>
+							<div class="mt-4 flex items-center justify-between">
+								<div class="flex items-center gap-3">
+									{% if t.avatar %}
+										<img src="{{ t.avatar }}" alt="{{ t.name }}" class="h-10 w-10 rounded-full object-cover ring-2 ring-gray-200">
+									{% else %}
+										<div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center ring-2 ring-gray-200">
+											{% if t.name %}
+											<span class="text-sm font-semibold text-gray-600">{{ t.name|slice:":1"|upper }}</span>
+											{% endif %}
+										</div>
+									{% endif %}
+									<div>
+										{% if t.name %}<figcaption class="text-sm font-semibold text-gray-900">{{ t.name }}</figcaption>{% endif %}
+										{% if t.position %}<p class="text-xs text-gray-500">{{ t.position }}</p>{% endif %}
+									</div>
+								</div>
+								{# Star rating #}
+								{% if t.rating %}
+								<div class="ml-3 flex items-center gap-0.5">
+									{% with r_int=t.rating|add:0 %}
+										{% for _ in "12345" %}
+											<svg viewBox="0 0 20 20" class="h-4 w-4 {% if forloop.counter <= r_int %}text-amber-500{% else %}text-gray-300{% endif %}" fill="currentColor" aria-hidden="true">
+											<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.802 2.036a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.802-2.036a1 1 0 00-1.175 0l-2.802 2.036c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.88 8.72c-.783-.57-.38-1.81.588-1.81H6.93a1 1 0 00.95-.69l1.169-3.292z"/>
+											</svg>
+										{% endfor %}
+									{% endwith %}
+								</div>
+								{% endif %}
+							</div>
+						</figure>
+					{% empty %}
+						{# no output when empty #}
+					{% endfor %}
+				</div>
+			</div>
+
+			{# Desktop / Tablet: horizontal slider (3 visible, slides by 1) #}
+			<div id="testimonials-slider" class="hidden md:block relative">
+				<button type="button" class="hidden absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Previous" data-testimonials-nav="prev" onclick="testimonialsPrev()">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M15 19l-7-7 7-7"/></svg>
+				</button>
+				<button type="button" class="hidden absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Next" data-testimonials-nav="next" onclick="testimonialsNext()">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M9 5l7 7-7 7"/></svg>
+				</button>
+				<div id="testimonials-viewport" class="overflow-hidden">
+					<div id="testimonials-track" class="flex transition-transform duration-500 ease-out will-change-transform">
+						{% for t in website.content.testimonials %}
+							<div class="testimonial-slide box-border flex-none basis-1/3 px-3">
+								<figure class="bg-white rounded-2xl p-6 shadow ring-1 ring-gray-100 h-full">
+									<blockquote class="text-gray-700 leading-relaxed">
+										<span class="block text-2xl text-gray-300 mb-2">“</span>
+										<p>{{ t.content }}</p>
+										<span class="block text-2xl text-gray-300 mt-2">”</span>
+									</blockquote>
+									<div class="mt-4 flex items-center justify-between">
+										<div class="flex items-center gap-3">
+											{% if t.avatar %}
+												<img src="{{ t.avatar }}" alt="{{ t.name }}" class="h-10 w-10 rounded-full object-cover ring-2 ring-gray-200">
+											{% else %}
+												<div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center ring-2 ring-gray-200">
+													{% if t.name %}
+													<span class="text-sm font-semibold text-gray-600">{{ t.name|slice:":1"|upper }}</span>
+													{% endif %}
+												</div>
+											{% endif %}
+											<div>
+												{% if t.name %}<figcaption class="text-sm font-semibold text-gray-900">{{ t.name }}</figcaption>{% endif %}
+												{% if t.position %}<p class="text-xs text-gray-500">{{ t.position }}</p>{% endif %}
+											</div>
+										</div>
+										{% if t.rating %}
+										<div class="ml-3 flex items-center gap-0.5">
+											{% with r_int=t.rating|add:0 %}
+												{% for _ in "12345" %}
+													<svg viewBox="0 0 20 20" class="h-4 w-4 {% if forloop.counter <= r_int %}text-amber-500{% else %}text-gray-300{% endif %}" fill="currentColor" aria-hidden="true"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.802 2.036a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.802-2.036a1 1 0 00-1.175 0l-2.802 2.036c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.88 8.72c-.783-.57-.38-1.81.588-1.81H6.93a1 1 0 00.95-.69l1.169-3.292z"/></svg>
+												{% endfor %}
+											{% endwith %}
+										</div>
+										{% endif %}
+									</div>
+								</figure>
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+				<div class="mt-6 flex items-center justify-center gap-3" id="testimonials-controls">
+					<button type="button" class="hidden bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Previous" data-testimonials-nav="prev" onclick="testimonialsPrev()">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M15 19l-7-7 7-7"/></svg>
+					</button>
+					<button type="button" class="hidden bg-white/90 hover:bg-white shadow ring-1 ring-gray-200 rounded-full p-2" aria-label="Next" data-testimonials-nav="next" onclick="testimonialsNext()">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M9 5l7 7-7 7"/></svg>
+					</button>
+				</div>
+			</div>
+			<script>
+			(function() {
+				'use strict';
+				
+				function initTestimonialsSlider() {
+					var slider = document.getElementById('testimonials-slider');
+					var track = document.getElementById('testimonials-track');
+					if (!slider || !track) return;
+					
+					var slides = track.querySelectorAll('.testimonial-slide');
+					var prevBtns = slider.querySelectorAll('[data-testimonials-nav="prev"]');
+					var nextBtns = slider.querySelectorAll('[data-testimonials-nav="next"]');
+					
+					var index = 0;
+					
+					function setButtonsVisible(visible) {
+						prevBtns.forEach(function(b){ b.classList.toggle('hidden', !visible); });
+						nextBtns.forEach(function(b){ b.classList.toggle('hidden', !visible); });
+					}
+					
+					function getSlideWidth() {
+						var first = track.querySelector('.testimonial-slide');
+						var w = first ? first.getBoundingClientRect().width : 0;
+						// Fallback: if layout isn't ready yet, retry on next frame
+						return w || 0;
+					}
+					
+					function getMaxIndex() {
+						return Math.max(0, slides.length - 3);
+					}
+					
+					function update() {
+						var w = getSlideWidth();
+						var max = getMaxIndex();
+						index = Math.max(0, Math.min(index, max));
+						track.style.transform = 'translateX(' + (-index * w) + 'px)';
+						
+						// Toggle button visibility + disabled states
+						var showNav = slides.length > 3;
+						setButtonsVisible(showNav);
+						prevBtns.forEach(function(b){ b.disabled = !showNav || index <= 0; b.classList.toggle('opacity-40', b.disabled); });
+						nextBtns.forEach(function(b){ b.disabled = !showNav || index >= max; b.classList.toggle('opacity-40', b.disabled); });
+					}
+					
+					// Expose functions for existing inline onclick handlers
+					window.testimonialsNext = function() { index = Math.min(index + 1, getMaxIndex()); update(); };
+					window.testimonialsPrev = function() { index = Math.max(index - 1, 0); update(); };
+					
+					// Also wire click listeners (more robust than inline handlers)
+					prevBtns.forEach(function(b){
+						b.addEventListener('click', function(e){ e.preventDefault(); window.testimonialsPrev(); });
+					});
+					nextBtns.forEach(function(b){
+						b.addEventListener('click', function(e){ e.preventDefault(); window.testimonialsNext(); });
+					});
+					
+					window.addEventListener('resize', function() { requestAnimationFrame(update); });
+					requestAnimationFrame(update);
+				}
+				
+				if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initTestimonialsSlider);
+				else initTestimonialsSlider();
+			})();
+			</script>
+			{# Desktop / Tablet: grid layout #}
+		</div>
+	</div>
+</section>
+{% endif %}
+
+{% include 'storefront/template2/components/faq.html' %}
+
+{% with video_pos=website.content.video_section.position|default:'bottom' %}
+{% if video_pos != 'below_best_sellers' %}
+    {% include 'storefront/shared/video_section.html' %}
+{% endif %}
+{% endwith %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updateDropdownLabel(button, menu) {
+        if (!button || !menu) return;
+        const label = button.querySelector('.dropdown-label');
+        const placeholder = button.getAttribute('data-placeholder') || 'Select';
+        const checks = menu.querySelectorAll('input[type="checkbox"]:checked');
+        if (checks.length === 0) {
+            label.textContent = placeholder;
+        } else if (checks.length === 1) {
+            label.textContent = checks[0].closest('label').querySelector('span').textContent;
+        } else {
+            label.textContent = checks.length + ' selected';
+        }
+    }
+
+    function initDropdown(button, menu, onChange) {
+        if (!button || !menu) return;
+
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isHidden = menu.classList.contains('hidden');
+            document.querySelectorAll('[id^="dd-"]').forEach(el => el.classList.add('hidden'));
+            if (isHidden) menu.classList.remove('hidden');
+            else menu.classList.add('hidden');
+        });
+
+        // Keyboard accessibility: open via keys without causing click toggle race
+        button.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                menu.classList.remove('hidden');
+            }
+        });
+
+        menu.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (e.target && e.target.matches('input[type="checkbox"]')) {
+                updateDropdownLabel(button, menu);
+                if (typeof onChange === 'function') onChange();
+            }
+        });
+
+        document.addEventListener('click', function() {
+            menu.classList.add('hidden');
+        });
+
+        updateDropdownLabel(button, menu);
+    }
+
+    const catButton = document.querySelector('[data-dropdown-toggle="dd-categories"]');
+    const catMenu = document.getElementById('dd-categories');
+    const prodButton = document.querySelector('[data-dropdown-toggle="dd-products"]');
+    const prodMenu = document.getElementById('dd-products');
+
+    function filterProductsByCategories() {
+        const selected = Array.from(catMenu.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        const selectedSet = new Set(selected);
+        const labels = prodMenu.querySelectorAll('label');
+        labels.forEach(l => {
+            const cat = l.getAttribute('data-category-id') || '';
+            const checkbox = l.querySelector('input[type="checkbox"]');
+            const show = selectedSet.size === 0 || selectedSet.has(cat);
+            if (!show && checkbox && checkbox.checked) {
+                checkbox.checked = false;
+            }
+            l.classList.toggle('hidden', !show);
+        });
+        updateDropdownLabel(prodButton, prodMenu);
+    }
+
+    initDropdown(catButton, catMenu, filterProductsByCategories);
+    initDropdown(prodButton, prodMenu);
+
+    // AJAX submit (no page reload)
+    const form = document.querySelector('#discuss-needs form');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fd = new FormData(form);
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd
+                });
+                const data = await res.json();
+                const box = document.getElementById('enquiry-msg');
+                if (res.ok && data.status === 'success') {
+                    if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-black text-white ring-1 ring-green-200'; box.textContent = data.message; box.style.display='block'; }
+                    // Reset minimal fields
+                    form.querySelector('input[name="quantity"]').value = '';
+                    form.querySelector('input[name="mobile"]').value = '';
+                    // Uncheck all checkboxes
+                    form.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    updateDropdownLabel(catButton, catMenu);
+                    filterProductsByCategories();
+                } else {
+                    const errText = (data && data.errors) ? data.errors.join(' ') : 'Something went wrong.';
+                    if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = errText; box.style.display='block'; }
+                }
+            } catch (err) {
+                const box = document.getElementById('enquiry-msg');
+                if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = 'Network error. Please try again.'; box.style.display='block'; }
+            }
+        });
+    }
+});
+</script>
+<!-- Lightweight modal for About media (lazy loads video/iframe on open) -->
+<div id="aboutMediaModal" class="fixed inset-0 z-[10000] hidden" role="dialog" aria-modal="true" aria-label="Video preview">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative w-full h-full flex items-center justify-center p-4 sm:p-8">
+        <div class="relative w-full max-w-5xl bg-black rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+            <button type="button" aria-label="Close"
+                    class="absolute top-3 right-3 z-10 rounded-full bg-white/95 hover:bg-white text-gray-900 p-2 shadow close-about-modal focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            </button>
+            <div class="w-full aspect-video bg-black" id="aboutMediaContainer"></div>
+        </div>
+    </div>
+    
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modal = document.getElementById('aboutMediaModal');
+    var container = document.getElementById('aboutMediaContainer');
+    if (!modal || !container) return;
+
+    function openAboutModal(type, src, poster) {
+        // Clean previous
+        container.innerHTML = '';
+        var el;
+        if (type === 'youtube') {
+            try {
+                var url = src || '';
+                url += (url.indexOf('?') === -1 ? '?autoplay=1&rel=0&modestbranding=1&playsinline=1' : '&autoplay=1&rel=0&modestbranding=1&playsinline=1');
+                el = document.createElement('iframe');
+                el.src = url;
+                el.title = 'About video';
+                el.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+                el.allowFullscreen = true;
+                el.style.width = '100%';
+                el.style.height = '100%';
+                el.frameBorder = '0';
+            } catch (e) {}
+        } else {
+            el = document.createElement('video');
+            el.src = src || '';
+            el.controls = true;
+            el.autoplay = true;
+            el.playsInline = true;
+            el.style.width = '100%';
+            el.style.height = '100%';
+            if (poster) el.poster = poster;
+        }
+        if (el) container.appendChild(el);
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeAboutModal() {
+        modal.classList.add('hidden');
+        container.innerHTML = '';
+        document.body.style.overflow = '';
+    }
+
+    // Open handlers
+    document.querySelectorAll('.video-thumb').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var type = btn.getAttribute('data-media-type');
+            var src = btn.getAttribute('data-src');
+            var poster = btn.getAttribute('data-poster') || '';
+            openAboutModal(type, src, poster);
+        });
+    });
+
+    // Close handlers
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal || e.target.classList.contains('bg-black/70')) {
+            closeAboutModal();
+        }
+    });
+    var closeBtn = modal.querySelector('.close-about-modal');
+    if (closeBtn) closeBtn.addEventListener('click', closeAboutModal);
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeAboutModal(); });
+});
+</script>
+{% include "storefront/shared/faq_section.html" %}
+{% endblock %}

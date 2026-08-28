@@ -230,6 +230,47 @@
 .pal-specs__value { font-family: var(--pal-font-display); font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
 .pal-specs__label { margin-top: 0.25rem; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
 
+/* Desktop: compress the hero so it fits above the fold — from the marker down
+   to the spec datasheet is visible on landing, no scroll. Two-column layout
+   only (>= 64rem); mobile/tablet keep the larger, roomier scale above. */
+@media (min-width: 64.0625rem) {
+  .pal-hero { padding-block: clamp(4.5rem, 2.5rem + 4vw, 7rem) clamp(2.5rem, 1.5rem + 3vw, 4.5rem); }
+  /* Stretch both columns to the same row height (the taller left copy defines it),
+     so the store preview's bottom lines up with the metrics row at any desktop
+     width — not vertically centered, not a guessed pixel height. */
+  .pal-hero__grid { align-items: stretch; }
+  .pal-hero__display { font-size: clamp(2.75rem, 1.6rem + 2.4vw, 3.75rem); margin-top: 0.9rem; }
+  .pal-hero__lead { font-size: clamp(1rem, 0.95rem + 0.28vw, 1.12rem); line-height: 1.45; margin-top: 1rem; max-width: 44ch; }
+  .pal-hero__actions { margin-top: 1.35rem; }
+  .pal-hero .pal-note.pal-mt-6 { margin-top: 0.9rem; }
+  .pal-hero .pal-specs { margin-top: 1.35rem; }
+  .pal-hero .pal-specs__item { padding-top: 0.75rem; }
+  .pal-hero .pal-specs__value { font-size: 1.25rem; }
+
+  /* Right column fills the stretched cell; the store panel fills it top-to-bottom
+     with the product grid absorbing the slack, so it ends level with the specs. */
+  .pal-hero .pal-viewport { display: flex; flex-direction: column; height: 100%; }
+  .pal-hero .pal-frame { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .pal-hero .pal-store { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .pal-hero .pal-store__hero { flex: none; }
+  .pal-hero .pal-store__hero img { height: clamp(5rem, 7vw, 6.5rem); }
+  .pal-hero .pal-store__grid { flex: 1; min-height: 0; }
+  .pal-hero .pal-store__cell { display: flex; flex-direction: column; padding: 0.55rem; min-height: 0; }
+  .pal-hero .pal-store__cell img { flex: 1 1 0; min-height: 0; height: auto; aspect-ratio: auto; }
+  .pal-hero .pal-store__cell-name { margin-top: 0.4rem; }
+}
+
+/* Mobile (<= 40rem): make the home hero's store preview shorter so the viewport
+   takes less vertical space on phones. On mobile the viewport has no fixed
+   height — it's sized by its imagery — so we trim the store hero banner and the
+   product thumbnails rather than capping the box, which would crop content.
+   Scoped to .pal-hero so other .pal-viewport uses are untouched. */
+@media (max-width: 40rem) {
+  .pal-hero .pal-store__hero img { height: clamp(6rem, 20vw, 8.5rem); }
+  .pal-hero .pal-store__cell img { aspect-ratio: 1 / 1; }
+  .pal-hero .pal-store__cell { padding: 0.55rem; }
+}
+
 /* 7. Rendered storefront ================================================== */
 
 .pal-viewport { position: relative; }

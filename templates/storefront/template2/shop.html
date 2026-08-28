@@ -1,0 +1,69 @@
+{% extends "storefront/template2/base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block title %}Shop - {{ website.name }}{% endblock %}
+
+{% block content %}
+<div class="bg-white">
+    <div class="max-w-7xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:px-8">
+        <div class="sm:flex sm:items-baseline sm:justify-between">
+            <h1 class="text-4xl font-extrabold tracking-tight text-gray-900">Shop</h1>
+            <!-- Add sorting options here if needed in the future -->
+        </div>
+
+        <section aria-labelledby="products-heading" class="mt-8">
+            <h2 id="products-heading" class="sr-only">Products</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-x-8 gap-y-10">
+                <!-- Filters -->
+                <div class="hidden lg:block">
+                    <h3 class="sr-only">Categories</h3>
+                    <ul role="list" class="text-sm font-medium text-gray-900 space-y-4 pb-6 border-b border-gray-200">
+                        {% for category in categories %}
+                        <li>
+                            <a href="#"> <!-- Link to category page in the future -->
+                                {{ category.name }}
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li>No categories yet.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Product grid -->
+                <div class="lg:col-span-3">
+                    {% if products %}
+                    <div class="grid grid-cols-1 gap-y-10 sm:grid-cols-2 gap-x-6 lg:grid-cols-3 xl:grid-cols-3 xl:gap-x-8">
+                        {% for product in products %}
+                        <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}" class="group block">
+                            <div class="relative w-full aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                                {% if product.image1 %}
+                                    {% if website.content.enable_product_hover_swap and product.image2 %}
+                                    <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0">
+                                    <img src="{{ product.image2.url }}" {% media_attrs website product.image2.url product.title %} class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100">
+                                    {% else %}
+                                    <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]">
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <h3 class="mt-4 text-sm text-gray-700">{{ product.title }}</h3>
+                            {% if show_price_in_lists %}
+                            <p class="mt-1 text-lg font-medium text-gray-900">₹{{ product.price }}</p>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-24">
+                        <h2 class="text-lg font-medium text-gray-900">No products found</h2>
+                        <p class="mt-1 text-sm text-gray-500">The shop owner has not added any products yet. Please check back later.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %} 

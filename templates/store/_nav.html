@@ -1,0 +1,26 @@
+{% comment %}
+Store-scoped sidebar navigation. Rendered from `nav_groups` (built by
+`commerce.context.visible_groups`), which already hides areas that don't apply
+to this store's business model — reviews and collaborations are D2C-only.
+`nav_active` marks the current page.
+{% endcomment %}
+<nav class="app-nav" aria-label="Store">
+  <div class="app-nav__group">
+    <a href="{% url 'ud:dashboard' %}" class="app-nav__link app-nav__link--back">
+      <span class="app-nav__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></span>
+      All stores
+    </a>
+  </div>
+
+  {% for group in nav_groups %}
+    <div class="app-nav__group">
+      <p class="app-nav__label">{{ group.label }}</p>
+      {% for item in group.items %}
+        <a href="{% url item.url_name site.id %}" class="app-nav__link"{% if nav_active == item.key %} aria-current="page"{% endif %}>
+          <span class="app-nav__ico" aria-hidden="true">{% include "store/_icons.html" with icon=item.icon %}</span>
+          {{ item.label }}
+        </a>
+      {% endfor %}
+    </div>
+  {% endfor %}
+</nav>

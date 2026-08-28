@@ -1,0 +1,52 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Reviews{% endblock %}
+{% block crumb %}Reviews{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Reputation</p>
+    <h1 class="app-head__title pal-mt-4">Reviews</h1>
+    <p class="app-head__lead">Approve, hide or remove customer reviews. Only approved reviews show on your storefront.</p>
+  </div></div>
+
+  <div class="app-block">
+    <div class="app-tabs" role="tablist">
+      <a class="app-tab" href="?" {% if not active_state %}aria-current="true"{% endif %}>All</a>
+      <a class="app-tab" href="?state=pending" {% if active_state == 'pending' %}aria-current="true"{% endif %}>Pending</a>
+      <a class="app-tab" href="?state=approved" {% if active_state == 'approved' %}aria-current="true"{% endif %}>Approved</a>
+      <a class="app-tab" href="?state=reported" {% if active_state == 'reported' %}aria-current="true"{% endif %}>Reported</a>
+    </div>
+
+    {% if reviews %}
+      <div class="app-reviews" style="margin-top:1rem;">
+        {% for r in reviews %}
+          <article class="app-review">
+            <div class="app-review__top">
+              <div>
+                <span class="app-stars" aria-label="{{ r.rating }} out of 5">{% for i in "12345" %}<span class="{% if forloop.counter <= r.rating %}on{% endif %}">★</span>{% endfor %}</span>
+                <span class="app-review__by">{{ r.name|default:"Anonymous" }} · {{ r.product.title }}</span>
+              </div>
+              <div class="app-review__state">
+                {% if r.reported %}<span class="app-badge app-badge--danger">Reported</span>{% endif %}
+                {% if r.approved %}<span class="app-badge app-badge--ok">Approved</span>{% else %}<span class="app-badge app-badge--muted">Pending</span>{% endif %}
+              </div>
+            </div>
+            {% if r.title %}<p class="app-review__title">{{ r.title }}</p>{% endif %}
+            <p class="app-review__body">{{ r.comment }}</p>
+            <div class="app-review__actions">
+              <form method="post" action="{% url 'store:review_moderate' site.id r.id %}">{% csrf_token %}
+                {% if not r.approved %}<button name="action" value="approve" class="app-iconbtn">Approve</button>{% else %}<button name="action" value="hide" class="app-iconbtn">Hide</button>{% endif %}
+                <button name="action" value="delete" class="app-iconbtn app-iconbtn--danger" onclick="return confirm('Delete this review?');">Delete</button>
+              </form>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+      {% include "store/_pagination.html" with page=reviews %}
+    {% else %}
+      <div class="app-empty"><h2 class="app-empty__title">No reviews</h2><p class="app-empty__text">Customer reviews land here for you to moderate.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

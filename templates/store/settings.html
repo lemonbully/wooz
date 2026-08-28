@@ -1,0 +1,37 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Settings{% endblock %}
+{% block crumb %}Settings{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Store</p>
+    <h1 class="app-head__title pal-mt-4">Settings</h1>
+    <p class="app-head__lead">Your store’s identity, currency and store-wide controls.</p>
+  </div></div>
+
+  <div class="app-block">
+    <form method="post" class="app-form app-card" style="padding:1.5rem;">
+      {% csrf_token %}
+      {% include "store/_form.html" %}
+      <div class="app-form__foot">
+        <button class="pal-btn" type="submit">Save settings</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Store details</h2></div>
+      <div class="app-card__body">
+        <div class="app-kv">
+          <div><dt>Subdomain</dt><dd>{{ site.slug }}.onewooz.site</dd></div>
+          <div><dt>Business model</dt><dd>{{ site.get_business_model_display }}</dd></div>
+          <div><dt>Status</dt><dd>{{ site.get_status_display }}</dd></div>
+          <div><dt>Created</dt><dd>{{ site.created_at|date:"d M Y" }}</dd></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

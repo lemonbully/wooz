@@ -1,0 +1,75 @@
+{% extends "store/_shell.html" %}
+{% load store_extras %}
+{% block title %}{{ site.name }} · Orders{% endblock %}
+{% block crumb %}Orders{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Fulfilment</p>
+      <h1 class="app-head__title pal-mt-4">Orders</h1>
+      <p class="app-head__lead">Every order across your store — filter by status, search, and open one to update it.</p>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-tabs" role="tablist">
+      <a class="app-tab" href="?" {% if not active_status %}aria-current="true"{% endif %}>All</a>
+      {% for st in status_choices %}
+        <a class="app-tab" href="?status={{ st.value }}" {% if active_status == st.value %}aria-current="true"{% endif %}>{{ st.label }} <span class="app-tab__count">{{ counts|dictkey:st.value|default:0 }}</span></a>
+      {% endfor %}
+    </div>
+
+    <form method="get" class="app-toolbar" style="margin-top:1rem;">
+      {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
+      <div class="app-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" name="q" value="{{ q }}" placeholder="Search name, email, phone, tracking…">
+      </div>
+      {% if show_channel %}
+        <select name="channel" class="pal-select">
+          <option value="">All channels</option>
+          <option value="d2c" {% if active_channel == 'd2c' %}selected{% endif %}>Consumer</option>
+          <option value="b2b" {% if active_channel == 'b2b' %}selected{% endif %}>Business</option>
+        </select>
+      {% endif %}
+      <button class="pal-btn pal-btn--ghost" type="submit">Apply</button>
+    </form>
+
+    {% if orders %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th>Order</th><th>Customer</th>{% if show_channel %}<th>Channel</th>{% endif %}
+              <th>Placed</th><th>Status</th><th class="app-table__num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in orders %}
+              <tr>
+                <td class="app-table__id"><a href="{% url 'store:order_detail' site.id order.id %}">#{{ order.number }}</a></td>
+                <td>
+                  <span class="app-table__strong">{{ order.customer_name|default:"—" }}</span>
+                  {% if order.customer_email %}<div class="app-sub">{{ order.customer_email }}</div>{% endif %}
+                </td>
+                {% if show_channel %}<td>{{ order.get_channel_display }}</td>{% endif %}
+                <td>{{ order.created_at|date:"d M Y" }}</td>
+                <td><span class="app-badge app-badge--{{ order.status }}">{{ order.get_status_display }}</span></td>
+                <td class="app-table__num">{{ site.currency }} {{ order.total }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "store/_pagination.html" with page=orders %}
+    {% else %}
+      <div class="app-empty">
+        <h2 class="app-empty__title">No orders here</h2>
+        <p class="app-empty__text">Nothing matches this filter yet. Orders appear as customers check out on your storefront.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Payments{% endblock %}
+{% block crumb %}Payments{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">Money</p>
+    <h1 class="app-head__title pal-mt-4">Payments</h1>
+    <p class="app-head__lead">Connect a gateway to take online payments, and set COD, partial payment and invoice details. Keys are encrypted at rest.</p>
+  </div></div>
+
+  <div class="app-block">
+    <form method="post" enctype="multipart/form-data" class="app-form app-card" style="padding:1.5rem;">
+      {% csrf_token %}
+      {% include "store/_form.html" with wide_fields="address" %}
+      <div class="app-form__foot">
+        <button class="pal-btn" type="submit">Save payment settings</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

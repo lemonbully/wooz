@@ -1,0 +1,224 @@
+{% extends "storefront/template2/base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block title %}Categories{% endblock %}
+
+{% block page_content %}
+{% website_base_path website request as website_base %}
+<section class="bg-white">
+    <!-- Hero Banner -->
+    <div class="relative w-full overflow-hidden flex items-center">
+        <div class="relative w-full flex flex-col items-center aspect-[1536/500] md:aspect-[1536/160] lg:aspect-[1536/160] bg-[rgb(241,241,241,1)]">
+            <div class="absolute inset-0">
+                <div class="container mx-auto h-full px-4 my-[1rem] md:py-0 md:px-4 flex items-center">
+                    <div class="text-gray-900">
+                        <nav aria-label="Breadcrumb" class="text-gray-600 text-[9px] md:text-xs uppercase tracking-[0.2em]">
+                            <ol class="flex items-center gap-2">
+                                <li><a href="{{ website_base }}" class="hover:text-gray-900">Home</a></li>
+                                <li class="opacity-60">/</li>
+                                <li><a href="{{ website_base }}categories/" class="hover:text-gray-900">Categories</a></li>
+                            </ol>
+                        </nav>
+                        <h1 class="mt-0.5 text-2xl md:text-3xl font-light tracking-tight">Categories</h1>
+                        <p class="mt-0 text-gray-500 text-xs">{{ paginator.count }} items</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="border-y border-gray-100 bg-white/80 backdrop-blur-sm">
+        <div class="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between gap-3">
+            <p class="text-xs md:text-sm text-gray-600">
+                {% if paginator.count %}
+                Showing <span class="font-medium text-gray-900">{{ page_obj.start_index }}–{{ page_obj.end_index }}</span> of <span class="font-medium text-gray-900">{{ paginator.count }}</span> items
+                {% else %}
+                Showing <span class="font-medium text-gray-900">0</span> items
+                {% endif %}
+            </p>
+            <form method="get" class="flex items-center gap-2">
+                <label class="text-xs md:text-sm text-gray-600">Sort</label>
+                <select name="sort" class="h-10 md:h-11 rounded-md border border-gray-300 px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" onchange="this.form.submit()">
+                    <option value="newest" {% if sort == 'newest' or not sort %}selected{% endif %}>Newest</option>
+                    <option value="name_asc" {% if sort == 'name_asc' %}selected{% endif %}>Name: A to Z</option>
+                    <option value="name_desc" {% if sort == 'name_desc' %}selected{% endif %}>Name: Z to A</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Grid -->
+    <div class="py-8 md:py-6">
+        <div class="container mx-auto px-4">
+            {% if categories %}
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-4 md:gap-6">
+                {% for category in categories %}
+                {% if category.slug %}
+                <a href="{{ website_base }}category/{{ category.slug }}/" class="group block bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] rounded-[10px]">
+                    <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
+                        {% if category.image %}
+                        <img src="{{ category.image.url }}" {% media_attrs website category.image.url category.name %} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"/>
+                        {% else %}
+                        <img src="https://source.unsplash.com/random/800x800/?{{ category.name|urlencode }}" alt="{{ category.name }}" class="w-full h-full object-cover"/>
+                        {% endif %}
+                    </div>
+                    <div class="px-1 sm:px-2 md:px-4 pt-4 pb-3 sm:pb-5 text-left">
+                        <h3 class="text-[13px] sm:text-base font-normal uppercase leading-tight text-gray-900 break-words" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ category.name }}</h3>
+                    </div>
+                </a>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% if is_paginated %}
+            <div class="mt-6 flex items-center justify-center">
+                <nav class="inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if sort %}&sort={{ sort }}{% endif %}" class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-300 bg-white text-gray-700 text-xs md:text-sm hover:bg-gray-50">Previous</a>
+                    {% else %}
+                    <span class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-200 bg-gray-100 text-gray-400 text-xs md:text-sm">Previous</span>
+                    {% endif %}
+
+                    {% for i in paginator.page_range %}
+                        {% if i == page_obj.number %}
+                        <span class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-300 bg-black text-white text-xs md:text-sm">{{ i }}</span>
+                        {% else %}
+                        <a href="?page={{ i }}{% if sort %}&sort={{ sort }}{% endif %}" class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-300 bg-white text-gray-700 text-xs md:text-sm hover:bg-gray-50">{{ i }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if sort %}&sort={{ sort }}{% endif %}" class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-300 bg-white text-gray-700 text-xs md:text-sm hover:bg-gray-50">Next</a>
+                    {% else %}
+                    <span class="relative inline-flex items-center px-3 py-2 ring-1 ring-inset ring-gray-200 bg-gray-100 text-gray-400 text-xs md:text-sm">Next</span>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="container mx-auto">
+                <div class="mx-auto max-w-xl text-center py-12">
+                    <div class="mx-auto mb-3 h-10 w-10 rounded-full bg-gray-100 ring-1 ring-gray-200 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-500"><path d="M3 7h18v10H3z"/><path d="M8 7l2-3h4l2 3"/></svg>
+                    </div>
+                    <p class="text-gray-600">No categories available yet.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updateDropdownLabel(button, menu) {
+        if (!button || !menu) return;
+        const label = button.querySelector('.dropdown-label');
+        const placeholder = button.getAttribute('data-placeholder') || 'Select';
+        const checks = menu.querySelectorAll('input[type="checkbox"]:checked');
+        if (checks.length === 0) {
+            label.textContent = placeholder;
+        } else if (checks.length === 1) {
+            label.textContent = checks[0].closest('label').querySelector('span').textContent;
+        } else {
+            label.textContent = checks.length + ' selected';
+        }
+    }
+
+    function initDropdown(button, menu, onChange) {
+        if (!button || !menu) return;
+
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isHidden = menu.classList.contains('hidden');
+            document.querySelectorAll('[id^="dd-"]').forEach(el => el.classList.add('hidden'));
+            if (isHidden) menu.classList.remove('hidden');
+            else menu.classList.add('hidden');
+        });
+
+        // Keyboard accessibility: open via keys without causing click toggle race
+        button.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                menu.classList.remove('hidden');
+            }
+        });
+
+        menu.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (e.target && e.target.matches('input[type="checkbox"]')) {
+                updateDropdownLabel(button, menu);
+                if (typeof onChange === 'function') onChange();
+            }
+        });
+
+        document.addEventListener('click', function() {
+            menu.classList.add('hidden');
+        });
+
+        updateDropdownLabel(button, menu);
+    }
+
+    const catButton = document.querySelector('[data-dropdown-toggle="dd-categories"]');
+    const catMenu = document.getElementById('dd-categories');
+    const prodButton = document.querySelector('[data-dropdown-toggle="dd-products"]');
+    const prodMenu = document.getElementById('dd-products');
+
+    function filterProductsByCategories() {
+        const selected = Array.from(catMenu.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        const selectedSet = new Set(selected);
+        const labels = prodMenu.querySelectorAll('label');
+        labels.forEach(l => {
+            const cat = l.getAttribute('data-category-id') || '';
+            const checkbox = l.querySelector('input[type="checkbox"]');
+            const show = selectedSet.size === 0 || selectedSet.has(cat);
+            if (!show && checkbox && checkbox.checked) {
+                checkbox.checked = false;
+            }
+            l.classList.toggle('hidden', !show);
+        });
+        updateDropdownLabel(prodButton, prodMenu);
+    }
+
+    initDropdown(catButton, catMenu, filterProductsByCategories);
+    initDropdown(prodButton, prodMenu);
+
+    // AJAX submit (no page reload)
+    const form = document.querySelector('#discuss-needs form');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fd = new FormData(form);
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd
+                });
+                const data = await res.json();
+                const box = document.getElementById('enquiry-msg');
+                if (res.ok && data.status === 'success') {
+                    if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-black text-white ring-1 ring-green-200'; box.textContent = data.message; box.style.display='block'; }
+                    // Reset minimal fields
+                    form.querySelector('input[name="quantity"]').value = '';
+                    form.querySelector('input[name="mobile"]').value = '';
+                    // Uncheck all checkboxes
+                    form.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    updateDropdownLabel(catButton, catMenu);
+                    filterProductsByCategories();
+                } else {
+                    const errText = (data && data.errors) ? data.errors.join(' ') : 'Something went wrong.';
+                    if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = errText; box.style.display='block'; }
+                }
+            } catch (err) {
+                const box = document.getElementById('enquiry-msg');
+                if (box) { box.className = 'mb-3 rounded-md px-4 py-3 text-sm bg-red-50 text-red-700 ring-1 ring-red-200'; box.textContent = 'Network error. Please try again.'; box.style.display='block'; }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+
+

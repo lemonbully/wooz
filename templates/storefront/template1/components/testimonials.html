@@ -1,0 +1,92 @@
+<section class="bg-gradient-to-b from-gray-50 to-white py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" x-data="{
+        rating: 0,
+        hoverRating: 0,
+        getStarColor(star) {
+            return star <= (this.hoverRating || this.rating) ? 'text-yellow-400' : 'text-gray-300';
+        }
+    }">
+        <div class="text-center mb-16">
+            <span class="text-blue-600 font-semibold tracking-wider uppercase text-sm">Testimonials</span>
+            <h2 class="mt-3 text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight" x-text="content.testimonials_title || 'What Our Customers Say'"></h2>
+            <p class="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">Real stories from our valued clients who have experienced excellence.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <template x-for="(testimonial, index) in content.testimonials" :key="index">
+                <div class="bg-white rounded-3xl shadow-xl hover:shadow-2xl p-8 transform hover:-translate-y-2 transition-all duration-300 border border-gray-100">
+                    <div class="flex items-center mb-6">
+                        <template x-if="testimonial.avatar">
+                            <img :src="testimonial.avatar" alt="Avatar" class="w-16 h-16 rounded-full ring-4 ring-blue-50 mr-4">
+                        </template>
+                        <template x-if="!testimonial.avatar">
+                            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-4">
+                                <span class="text-white font-bold text-xl" x-text="testimonial.name.charAt(0)"></span>
+                            </div>
+                        </template>
+                        <div>
+                            <p class="font-bold text-lg text-gray-900" x-text="testimonial.name"></p>
+                            <p class="text-blue-600 font-medium" x-text="testimonial.position"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center mb-6">
+                        <template x-for="star in 5">
+                            <svg class="w-6 h-6" :class="star <= testimonial.rating ? 'text-yellow-400' : 'text-gray-200'" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 7.02l6.56-.955L10 0l2.828 6.065 6.56.955-4.756 4.425 1.123 6.545z"/>
+                            </svg>
+                        </template>
+                    </div>
+                    <p class="text-gray-700 text-lg leading-relaxed italic">" <span x-text="testimonial.content"></span> "</p>
+                </div>
+            </template>
+        </div>
+
+        <!-- Add a Review -->
+        <div class="mt-20 max-w-3xl mx-auto">
+            <div class="bg-white rounded-3xl shadow-2xl p-10 backdrop-blur-lg bg-opacity-90">
+                <h3 class="text-3xl font-bold text-gray-900 mb-2">Share Your Experience</h3>
+                <p class="text-gray-600 mb-8">Your feedback helps us improve and serve you better.</p>
+                
+                <form action="#" method="POST" class="space-y-8">
+                    <div class="grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-8">
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                            <input type="text" name="name" id="name" required 
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition duration-200 outline-gray-200">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <input type="email" name="email" id="email" required 
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition duration-200 outline-gray-200">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Your Rating</label>
+                            <div class="flex items-center space-x-2">
+                                <template x-for="star in 5" :key="star">
+                                    <button type="button" @click="rating = star" @mouseover="hoverRating = star" @mouseleave="hoverRating = 0" 
+                                        class="focus:outline-none transform hover:scale-110 transition duration-200">
+                                        <svg class="w-10 h-10" :class="getStarColor(star)" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M10 15l-5.878 3.09 1.123-6.545L.489 7.02l6.56-.955L10 0l2.828 6.065 6.56.955-4.756 4.425 1.123 6.545z"/>
+                                        </svg>
+                                    </button>
+                                </template>
+                                <input type="hidden" name="rating" x-model="rating">
+                            </div>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="review" class="block text-sm font-medium text-gray-700 mb-2">Your Review</label>
+                            <textarea id="review" name="review" rows="5" required 
+                                class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition duration-200 outline-gray-200"></textarea>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit" 
+                            class="w-full inline-flex items-center justify-center px-8 py-4 border border-transparent rounded-xl text-base font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:-translate-y-1 transition-all duration-200 shadow-lg hover:shadow-xl">
+                            Submit Your Review
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>

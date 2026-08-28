@@ -1,0 +1,43 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Categories{% endblock %}
+{% block crumb %}Categories{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Catalogue</p>
+      <h1 class="app-head__title pal-mt-4">Categories</h1>
+      <p class="app-head__lead">Group products so shoppers can browse. Up to five can be featured on the storefront home.</p>
+    </div>
+    <div class="app-head__actions"><a href="{% url 'store:category_new' site.id %}" class="pal-btn">Add category <span class="pal-btn__arrow" aria-hidden="true">→</span></a></div>
+  </div>
+
+  <div class="app-block">
+    {% if categories %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Name</th><th>Parent</th><th class="app-table__num">Order</th><th>Home</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for c in categories %}
+              <tr>
+                <td><a href="{% url 'store:category_edit' site.id c.id %}" class="app-table__strong">{{ c.name }}</a></td>
+                <td>{{ c.parent.name|default:"—" }}</td>
+                <td class="app-table__num">{{ c.order }}</td>
+                <td>{% if c.show_on_homepage %}<span class="app-badge app-badge--accent">Featured</span>{% else %}—{% endif %}</td>
+                <td>{% if c.is_active %}<span class="app-badge app-badge--ok">Active</span>{% else %}<span class="app-badge app-badge--muted">Hidden</span>{% endif %}</td>
+                <td class="app-table__actions">
+                  <a href="{% url 'store:category_edit' site.id c.id %}" class="app-iconbtn">Edit</a>
+                  <form method="post" action="{% url 'store:category_delete' site.id c.id %}" onsubmit="return confirm('Remove this category?');">{% csrf_token %}<button class="app-iconbtn app-iconbtn--danger" type="submit">Delete</button></form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="app-empty"><h2 class="app-empty__title">No categories yet</h2><p class="app-empty__text">Create categories to organise your catalogue and power storefront navigation.</p><div class="app-empty__actions"><a href="{% url 'store:category_new' site.id %}" class="pal-btn">Add category</a></div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

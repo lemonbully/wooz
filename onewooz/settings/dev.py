@@ -125,7 +125,41 @@ CSRF_COOKIE_SECURE = False
 # Convenience
 # --------------------------------------------------------------------------
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Email — send real sign-in / sign-up messages (OTP, magic links, verification)
+# when SMTP credentials are provided, otherwise print to the console so the app
+# runs with no setup. Same variables as production, in the same priority order:
+#   1. Hostinger / generic SMTP — ONEWOOZ_SMTP_USER + ONEWOOZ_SMTP_PASSWORD
+#      (+ optional ONEWOOZ_SMTP_HOST/PORT/SSL/TLS/FROM_EMAIL).
+#   2. Gmail — ONEWOOZ_GMAIL_USER + ONEWOOZ_GMAIL_APP_PASSWORD.
+#   3. Console backend (default).
+_SMTP_USER = env.get("ONEWOOZ_SMTP_USER", "")
+_SMTP_PASSWORD = env.get("ONEWOOZ_SMTP_PASSWORD", "")
+_GMAIL_USER = env.get("ONEWOOZ_GMAIL_USER", "")
+_GMAIL_APP_PASSWORD = env.get("ONEWOOZ_GMAIL_APP_PASSWORD", "")
+
+if _SMTP_USER and _SMTP_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = env.get("ONEWOOZ_SMTP_HOST", "smtp.hostinger.com")
+    EMAIL_PORT = env.get_int("ONEWOOZ_SMTP_PORT", 587)
+    EMAIL_HOST_USER = _SMTP_USER
+    EMAIL_HOST_PASSWORD = _SMTP_PASSWORD
+    EMAIL_USE_SSL = env.get_bool("ONEWOOZ_SMTP_SSL", False)
+    EMAIL_USE_TLS = False if EMAIL_USE_SSL else env.get_bool("ONEWOOZ_SMTP_TLS", True)
+    EMAIL_TIMEOUT = env.get_int("ONEWOOZ_SMTP_TIMEOUT", 20)
+    DEFAULT_FROM_EMAIL = env.get("ONEWOOZ_FROM_EMAIL", _SMTP_USER)
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+elif _GMAIL_USER and _GMAIL_APP_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = "smtp.gmail.com"
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = _GMAIL_USER
+    EMAIL_HOST_PASSWORD = _GMAIL_APP_PASSWORD
+    EMAIL_TIMEOUT = 15
+    DEFAULT_FROM_EMAIL = env.get("ONEWOOZ_FROM_EMAIL", "OneWooz <%s>" % _GMAIL_USER)
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Password hashing is deliberately slow. Keep Argon2 in dev so behaviour
 # matches production, but with the cheapest parameters the hasher allows.
@@ -135,6 +169,15 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
+
+# Let WhiteNoise serve static files straight from the source dirs (no
+# collectstatic), re-checking the filesystem on every request and telling the
+# browser to revalidate each time. An edited CSS/JS file is picked up on a plain
+# reload — no Ctrl+Shift+R. Prod keeps hashed filenames via the manifest storage,
+# where far-future caching is correct because the URL changes when the file does.
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = True
+WHITENOISE_MAX_AGE = 0
 
 # Celery runs inline; no broker needed locally.
 CELERY_TASK_ALWAYS_EAGER = True

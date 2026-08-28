@@ -46,12 +46,27 @@
     </div>
   </div>
 
-  {# ---- Stores ---- #}
+  {% if active_site %}
+  <div class="app-block">
+    <div class="app-resume">
+      <div class="app-resume__text">
+        <p class="pal-mono pal-mono--accent">Resume where you left off</p>
+        <p class="app-resume__name">You were working on <strong>{{ active_site.name }}</strong></p>
+      </div>
+      <a href="{% url 'store:overview' active_site.id %}" class="pal-btn">Continue <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ---- Stores (each is a separate, isolated profile) ---- #}
   <div class="app-block">
     <div class="app-block__head">
-      <p class="pal-mono">Your stores</p>
-      {% if sites %}<a href="{% url 'ud:create_site' %}" class="pal-link">Add another</a>{% endif %}
+      <p class="pal-mono">Your store profiles</p>
+      {% if sites %}<a href="{% url 'ud:create_site' %}" class="pal-link">Create another store</a>{% endif %}
     </div>
+    {% if sites %}
+      <p class="app-block__note">Each store is its own profile with its own products, orders and content — they never mix. Open one to work on it, and switch profiles anytime from the store header.</p>
+    {% endif %}
 
     {% if sites %}
       <div class="app-stores">
@@ -60,18 +75,23 @@
             <div class="app-store__top">
               <div>
                 <h2 class="app-store__name">{{ site.name }}</h2>
-                <p class="app-store__host">{{ site.host }}</p>
+                <p class="app-store__host">{{ site.slug }}.onewooz.site</p>
               </div>
-              <span class="app-pill app-pill--live">Live</span>
+              {% if site.is_live %}
+                <span class="app-pill app-pill--live">Live</span>
+              {% else %}
+                <span class="app-pill">{{ site.get_status_display }}</span>
+              {% endif %}
             </div>
             <div class="app-store__mini">
-              <div><div class="app-store__mini-v">{{ site.orders_count|default:"0" }}</div><div class="app-store__mini-l">Orders</div></div>
-              <div><div class="app-store__mini-v">{{ site.products_count|default:"0" }}</div><div class="app-store__mini-l">Products</div></div>
-              <div><div class="app-store__mini-v">{{ site.sessions_count|default:"0" }}</div><div class="app-store__mini-l">Sessions</div></div>
+              <div><div class="app-store__mini-v">{{ site.orders_count }}</div><div class="app-store__mini-l">Orders</div></div>
+              <div><div class="app-store__mini-v">{{ site.products_count }}</div><div class="app-store__mini-l">Products</div></div>
+              <div><div class="app-store__mini-v">{{ site.get_business_model_display }}</div><div class="app-store__mini-l">Type</div></div>
             </div>
             <div class="app-store__foot">
-              <a href="{{ site.manage_url }}" class="pal-btn pal-btn--ghost">Manage</a>
-              <a href="{{ site.public_url }}" class="pal-btn pal-btn--ghost">Visit</a>
+              <a href="{% url 'store:overview' site.id %}" class="pal-btn pal-btn--ghost">Manage</a>
+              <a href="{% url 'store:editor' site.id %}" class="pal-btn pal-btn--ghost">Edit content</a>
+              <a href="{{ site.preview_url }}" target="_blank" rel="noopener" class="pal-link">View storefront ↗</a>
             </div>
           </article>
         {% endfor %}
