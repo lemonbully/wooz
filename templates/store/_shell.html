@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static onewooz %}
 
 {% comment %}
-Store-management shell. Same Palantir app chrome as the owner dashboard
+Store-management shell. Same  app chrome as the owner dashboard
 (`ud/_shell.html`), but the sidebar is scoped to one store and every route is
 per-store. A page sets `nav_active` (its sidebar key) and `crumb` (its title).
 {% endcomment %}
@@ -14,16 +14,17 @@ per-store. A page sets `nav_active` (its sidebar key) and `crumb` (its title).
 {% endblock %}
 
 {% block body %}
-<div class="pal">
+<div class="pal{% if request.impersonation %} pal--impersonating{% endif %}">
+{% include "_impersonation_banner.html" %}
 <a href="#main" class="sr-only">Skip to content</a>
 
 <div class="app">
 
   <aside class="app-side">
-    <a href="{% url 'store:overview' site.id %}" class="app-side__brand" aria-label="{{ site.name }} — overview">
-      <img class="app-side__brand-img" src="{% static 'img/Icon_main.png' %}" alt="" width="24" height="24">
+    <a href="{% url 'ud:dashboard' %}" class="app-side__brand" aria-label="OneWooz  dashboard home">
+      <img class="app-side__brand-img" src="{% brand_logo_url %}" alt="" width="24" height="24">
     </a>
-    <div class="ow-scroller is-vertical app-side__scroller" data-scroller>
+    <div class="ow-scroller is-vertical app-side__scroller" data-scroller data-scroller-key="store-sidebar">
       <div class="ow-scroller__area" data-scroller-area>
         {% include "store/_nav.html" %}
       </div>
@@ -72,11 +73,22 @@ per-store. A page sets `nav_active` (its sidebar key) and `crumb` (its title).
 
   </div>
 </div>
+
+{% comment %}
+Universal media modal  one instance for the whole store surface. Every page
+that uploads or picks media (the library, product galleries, category images,
+banners, sections) opens this same dialog.
+{% endcomment %}
+{% include "store/_media_modal.html" %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{% static 'js/app/scroll-hint.js' %}" defer></script>
+<script src="{% static 'js/app/popup.js' %}" defer></script>
+<script src="{% static 'js/app/media-library.js' %}" defer></script>
+<script src="{% static 'js/app/custom-select.js' %}" defer></script>
+<script src="{% static 'js/app/edit-lock.js' %}" defer></script>
 <script nonce="{{ csp_nonce }}">
   (function () {
     "use strict";
@@ -95,4 +107,5 @@ per-store. A page sets `nav_active` (its sidebar key) and `crumb` (its title).
     }
   })();
 </script>
+{% include "ud/_session_heartbeat.html" %}
 {% endblock %}

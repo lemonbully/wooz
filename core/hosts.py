@@ -1,8 +1,8 @@
 """Host resolution: turning a Host header into a surface.
 
 This is the first decision made about every request and the one that keeps the
-four surfaces apart. It is deliberately cheap — string operations and, for
-custom domains, a single Redis set-membership test — because it runs before
+four surfaces apart. It is deliberately cheap  string operations and, for
+custom domains, a single Redis set-membership test  because it runs before
 anything else on every request including static asset misses.
 """
 
@@ -27,21 +27,30 @@ class Surface(StrEnum):
     APP = "app"
     ADMIN = "admin"
     STOREFRONT = "storefront"
+    #: The UGC referral *apex* (``myugcstore.com``)  the collaborator portal
+    #: (login + dashboard). Distinct from the referral *subdomains*
+    #: (``<sub>.myugcstore.com``), which are STOREFRONT with ``referral=True``.
+    REFERRAL = "referral"
     UNKNOWN = "unknown"
 
 
 class Resolution(NamedTuple):
     surface: Surface
-    #: Subdomain label for a storefront on the platform apex, else "".
+    #: Subdomain label for a storefront on the platform apex (or the referral
+    #: apex, when ``referral`` is set), else "".
     slug: str
     #: True when the storefront was reached through the owner's own domain.
     is_custom_domain: bool
     #: The normalised host the decision was made from.
     host: str
+    #: True when the storefront is a UGC collaboration store reached on
+    #: ``<subdomain>.<REFERRAL_ROOT_DOMAIN>``  the resolver maps ``slug`` to a
+    #: verified Collaboration rather than to a Site slug.
+    referral: bool = False
 
 
 #: Hosts a developer reaches the runserver on directly. In production these
-#: never resolve to a surface — Caddy already refuses TLS for a bare IP — but
+#: never resolve to a surface  Caddy already refuses TLS for a bare IP  but
 #: locally, refusing them means ``runserver`` appears broken to anyone who
 #: types the address the startup banner just printed.
 LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "0.0.0.0", "[::1]", "::1"})
@@ -91,7 +100,7 @@ def resolve_dev_path(path: str) -> PathResolution:
 
     candidates = [
         (surface, dev_prefix_for(surface))
-        for surface in (Surface.ADMIN, Surface.APP, Surface.STOREFRONT)
+        for surface in (Surface.ADMIN, Surface.APP, Surface.STOREFRONT, Surface.REFERRAL)
     ]
     # Longest prefix first, so a nested prefix can never be shadowed by a
     # shorter one that happens to be a prefix of it.
@@ -121,7 +130,7 @@ def resolve_dev_path(path: str) -> PathResolution:
 
 
 # The domains app registers a checker at startup. Until it does, no host is
-# treated as a verified custom domain — failing closed, so an unverified or
+# treated as a verified custom domain  failing closed, so an unverified or
 # unknown host can never be served as somebody's storefront.
 _custom_domain_checker: Callable[[str], bool] = lambda host: False
 
@@ -185,8 +194,27 @@ def resolve(raw_host: str | None) -> Resolution:
     if host == apex:
         return Resolution(Surface.UNKNOWN, "", False, host)
 
+    # UGC collaboration storefront: <subdomain>.myugcstore.com. One label under
+    # the referral root maps to a verified Collaboration (resolved in the
+    # storefront app), never to a Site slug. The bare referral apex (and www) is
+    # not a collaboration store  reserved for a separate marketing site.
+    referral_root = getattr(settings, "REFERRAL_ROOT_DOMAIN", "")
+    if referral_root:
+        rsuffix = f".{referral_root}"
+        if host.endswith(rsuffix):
+            rslug = host[: -len(rsuffix)]
+            # www is the apex portal, not a collaborator storefront.
+            if rslug == "www":
+                return Resolution(Surface.REFERRAL, "", False, host)
+            if rslug and "." not in rslug:
+                return Resolution(Surface.STOREFRONT, rslug, False, host, referral=True)
+            return Resolution(Surface.UNKNOWN, "", False, host)
+        # The bare referral apex hosts the collaborator portal (login + dashboard).
+        if host == referral_root:
+            return Resolution(Surface.REFERRAL, "", False, host)
+
     # Local development on a bare loopback host. The surface comes from the
-    # path instead — see resolve_dev_path — so the middleware handles it
+    # path instead  see resolve_dev_path  so the middleware handles it
     # rather than this function. Gated on DEBUG so a production node reachable
     # by IP never serves a surface this way.
     if settings.DEBUG and host in LOOPBACK_HOSTS:

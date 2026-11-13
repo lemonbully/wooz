@@ -308,6 +308,7 @@
         object-fit: cover;
     }
     
+    .cp-hero-placeholder.hidden, #cp-hero-img.hidden { display: none !important; }
     .cp-hero-placeholder {
         width: 100%;
         height: 100%;
@@ -559,10 +560,10 @@
                         {{ sp.title }}
                     </a>
                     
-                    {% if sp.nested_subpages.all %}
+                    {% if sp.children %}
                     <div class="cp-nav-nested" data-nested-for="{{ sp.slug }}">
-                        {% for n in sp.nested_subpages.all %}
-                        {% if n.is_active %}
+                        {% for n in sp.children %}
+                        {% if n.slug %}
                         <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/"
                            class="cp-nav-link"
                            data-nav="nested"
@@ -597,10 +598,10 @@
                         {% for sp in subpages %}
                         <li>
                             <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/">{{ sp.title }}</a>
-                            {% if sp.nested_subpages.all %}
+                            {% if sp.children %}
                             <ul>
-                                {% for n in sp.nested_subpages.all %}
-                                {% if n.is_active %}
+                                {% for n in sp.children %}
+                                {% if n.slug %}
                                 <li><a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/">{{ n.title }}</a></li>
                                 {% endif %}
                                 {% endfor %}
@@ -650,16 +651,15 @@
                     <p class="cp-subtitle {% if not core_page.subtitle %}hidden{% endif %}" id="cp-subtitle">{{ core_page.subtitle|default:'' }}</p>
                     
                     <div class="cp-hero-image" id="cp-hero-wrap">
-                        {% if core_page.image %}
-                        <img src="{{ core_page.image }}" alt="{{ core_page.title }}" id="cp-hero-img">
-                        {% else %}
-                        <div class="cp-hero-placeholder" id="cp-hero-placeholder">
+                        {% comment %}Both are always rendered: the script swaps between them as
+                        the shopper moves between the page and its subpages, so a
+                        subpage shows its own image (or the placeholder), never the page's.{% endcomment %}
+                        <div class="cp-hero-placeholder{% if core_page.image %} hidden{% endif %}" id="cp-hero-placeholder">
                             <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                             </svg>
                         </div>
-                        <img src="" alt="" id="cp-hero-img" class="hidden">
-                        {% endif %}
+                        <img src="{{ core_page.image|default:'' }}" alt="{{ core_page.title }}" id="cp-hero-img"{% if not core_page.image %} class="hidden"{% endif %}>
                     </div>
                 </header>
                 
@@ -711,10 +711,10 @@
          data-subtitle="{{ subpage.subtitle|default:'' }}"
          data-image="{{ subpage.image|default:'' }}">
         <div class="cp-data-html">{{ subpage.content|safe }}</div>
-        {% if subpage.nested_subpages.all %}
+        {% if subpage.children %}
         <div class="cp-data-nested">
-            {% for n in subpage.nested_subpages.all %}
-            {% if n.is_active %}
+            {% for n in subpage.children %}
+            {% if n.slug %}
             <div class="cp-nested-item"
                  data-slug="{{ n.slug }}"
                  data-title="{{ n.title }}"
@@ -809,13 +809,14 @@
             subtitleEl.textContent = subtitle || '';
             subtitleEl.classList.toggle('hidden', !subtitle);
         }
-        if (heroImg && heroPlaceholder) {
+        if (heroImg) {
             if (image) {
                 heroImg.src = image;
                 heroImg.alt = title || '';
                 heroImg.classList.remove('hidden');
                 heroPlaceholder?.classList.add('hidden');
             } else {
+                heroImg.removeAttribute('src');
                 heroImg.classList.add('hidden');
                 heroPlaceholder?.classList.remove('hidden');
             }

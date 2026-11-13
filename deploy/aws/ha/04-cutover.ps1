@@ -1,4 +1,4 @@
-# OneWooz HA — Phase 4: cut onewooz.com over to the ALB, then delete the old
+# OneWooz HA  Phase 4: cut onewooz.com over to the ALB, then delete the old
 # single-host stack. Run only after the new web targets are healthy.
 
 $ErrorActionPreference = "Stop"

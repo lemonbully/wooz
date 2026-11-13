@@ -1,0 +1,17 @@
+{% extends "email/base.html" %}
+{% comment %}Generic store→customer notice. Params in context: brand (store name),
+title, message (plain text, may be multi-line), link (optional), link_label,
+reply_to (bool), powered_by (bool).{% endcomment %}
+{% block preheader %}{{ title }}{% endblock %}
+{% block kicker %}{{ kicker|default:"Notice" }}{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text=brand %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:22px; letter-spacing:-0.02em; line-height:1.18; color:#0a0a0b; margin:0 0 16px 0;">{{ title }}</h1>
+  <div style="margin:0 0 4px 0; color:#26262a;">{{ message|linebreaksbr }}</div>
+  {% if link %}{% include "email/_button.html" with url=link label=link_label|default:"View details" %}{% endif %}
+{% endblock %}
+{% block footer %}
+  <div style="color:#66666b;">{{ brand }}</div>
+  {% if powered_by %}<div style="color:#9a9aa0;">Powered by OneWooz</div>{% endif %}
+{% endblock %}
+{% block sub_footer %}{% if reply_to %}Reply to this email to reach {{ brand }}.{% else %}This is an automated message from {{ brand }}.{% endif %}{% endblock %}

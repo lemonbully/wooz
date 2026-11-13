@@ -3,7 +3,7 @@
 Credentials use ``core.fields.EncryptedTextField`` (HKDF-derived key, ``v1:``
 version prefix, raises on failure). The reference stored these as plain
 ``TextField``s populated by an ad-hoc ``encrypt_value`` helper that returned the
-ciphertext on a decrypt error — so a rotated key silently produced garbage. The
+ciphertext on a decrypt error  so a rotated key silently produced garbage. The
 encrypted field type makes that impossible.
 """
 
@@ -64,10 +64,9 @@ class PaymentGatewayConfig(TenantScopedModel):
                 raise ValidationError(
                     {"partial_payment_enabled": "Enable the payment gateway first."}
                 )
-            if not self.cod_enabled:
-                raise ValidationError(
-                    {"partial_payment_enabled": "Enable COD first — the balance is collected as COD."}
-                )
+            # COD needn't be enabled: the balance of a partial order is always
+            # collected on delivery (sent to the courier as COD), even when full
+            # COD isn't offered at checkout.
             if self.partial_payment_value is None or self.partial_payment_value <= 0:
                 raise ValidationError(
                     {"partial_payment_value": "Enter a value greater than zero."}
@@ -84,7 +83,7 @@ class PaymentGatewayConfig(TenantScopedModel):
 class TrackingConfig(TenantScopedModel):
     """Storefront marketing tags: analytics and ad pixels (Tracking & Ads).
 
-    IDs, not secrets — these render into the public storefront's head — so they
+    IDs, not secrets  these render into the public storefront's head  so they
     are plain fields. The conversions API token, which is a secret, is
     encrypted.
     """

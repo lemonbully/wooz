@@ -1,0 +1,33 @@
+{% extends "store/_shell.html" %}
+
+{% comment %}
+Shown to a staff member who opens a page or action they were not granted.
+Rendered by commerce.middleware.StaffAccessGateMiddleware, so the sidebar (their
+own permitted pages) stays in place and they can navigate to something allowed.
+{% endcomment %}
+
+{% block title %}No access · OneWooz{% endblock %}
+{% block crumb %}No access{% endblock %}
+
+{% block main %}
+<div class="app-locked">
+  <div class="app-locked__card">
+    <span class="app-locked__ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+        <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+      </svg>
+    </span>
+    <p class="pal-mono pal-mono--accent">Restricted</p>
+    <h1 class="app-locked__title">You don’t have access to this</h1>
+    <p class="app-locked__text">
+      Your access to this store is limited to the pages and actions its owner
+      granted you. Use the menu to open a page you can work on, or ask the store
+      owner to adjust your permissions.
+    </p>
+    <div class="app-locked__actions">
+      <a href="{% url 'ud:dashboard' %}" class="pal-link">Back to dashboard</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

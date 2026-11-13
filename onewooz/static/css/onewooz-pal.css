@@ -1,17 +1,17 @@
 /* ==========================================================================
-   OneWooz — marketing design system  ·  "Palantir" direction
+   OneWooz  marketing design system  ·  "" direction
    --------------------------------------------------------------------------
    A full, stark, engineered treatment for the entire public site, inspired by
-   palantir.com: near-white paper and near-black ink, hairline rules on
+   .com: near-white paper and near-black ink, hairline rules on
    everything, monospace metadata, section numbering, corner-bracket framing,
    oversized grotesque type, and squared geometry. No glass, no gradients, no
-   glow — depth is structural, from rules and type, not from effects.
+   glow  depth is structural, from rules and type, not from effects.
 
    Scope: every rule is under `.pal`, which wraps the marketing <body> in
    web/_shell.html. The app dashboard, admin and auth chrome keep onewooz.css
    untouched and are unaffected.
 
-   Type (Google Fonts — already in the CSP allowlist):
+   Type (Google Fonts  already in the CSP allowlist):
      - Display / headings : Space Grotesk
      - Metadata / labels  : JetBrains Mono
      - Body               : Inter  (neutral workhorse)
@@ -32,7 +32,7 @@
   --pal-line-soft:  rgb(10 10 11 / 0.07);
   --pal-line-ink:   rgb(244 244 242 / 0.16);
 
-  /* The one surviving accent, used sparingly — a tick, an active word, a link. */
+  /* The one surviving accent, used sparingly  a tick, an active word, a link. */
   --pal-accent:     #4b2bf5;
   --pal-accent-2:   #6a44fb;
 
@@ -53,7 +53,7 @@
   text-rendering: optimizeLegibility;
 }
 
-.pal ::selection { background: var(--pal-ink); color: var(--pal-paper); }
+.pal ::selection { background: var(--pal-accent); color: var(--pal-paper); }
 .pal :focus-visible { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
 
 /* 1. Type ================================================================= */
@@ -83,7 +83,7 @@
 .pal a.pal-link { color: var(--pal-accent); text-decoration: none; border-bottom: 1px solid currentColor; }
 .pal a.pal-link:hover { color: var(--pal-ink); }
 
-/* Monospace metadata — the signature. */
+/* Monospace metadata  the signature. */
 .pal-mono {
   font-family: var(--pal-font-mono);
   font-size: 0.75rem;
@@ -95,7 +95,7 @@
 }
 .pal-mono--accent { color: var(--pal-accent); }
 
-/* Section marker: "02 — CAPABILITIES", a ruled label. */
+/* Section marker: "02  CAPABILITIES", a ruled label. */
 .pal-marker {
   display: flex;
   align-items: center;
@@ -111,7 +111,7 @@
 .pal-section--ink .pal-marker { color: rgb(244 244 242 / 0.6); }
 .pal-section--ink .pal-marker::after { background: var(--pal-line-ink); }
 
-/* The single accent word — a precise underline, not a highlight. */
+/* The single accent word  a precise underline, not a highlight. */
 .pal-accent-word { position: relative; white-space: nowrap; }
 .pal-accent-word::after {
   content: "";
@@ -126,6 +126,10 @@
 
 .pal-section { padding-block: clamp(4rem, 2rem + 7vw, 8rem); position: relative; }
 .pal-section--tight { padding-block: clamp(2.5rem, 1.5rem + 3vw, 4rem); }
+/* Tighten just one edge where two sections should read as a continuation
+   (e.g. Commerce core → Email marketing) without shrinking the rest. */
+.pal-section--tight-top { padding-top: clamp(2.5rem, 1.5rem + 3vw, 4rem); }
+.pal-section--tight-bottom { padding-bottom: clamp(2.5rem, 1.5rem + 3vw, 4rem); }
 .pal-section--ink { background: var(--pal-ink); color: var(--pal-paper); }
 .pal-section--ink .pal-lead { color: rgb(244 244 242 / 0.72); }
 .pal-section--ink .pal-mono { color: rgb(244 244 242 / 0.6); }
@@ -133,7 +137,7 @@
 .pal-ruled { border-top: 1px solid var(--pal-line); }
 .pal-section--ink.pal-ruled { border-top-color: var(--pal-line-ink); }
 
-/* Faint vertical gutter grid behind a section — the blueprint feel. */
+/* Faint vertical gutter grid behind a section  the blueprint feel. */
 .pal-blueprint { position: relative; }
 .pal-blueprint::before {
   content: "";
@@ -156,10 +160,10 @@
 
 .pal-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  padding: 0.8125rem 1.375rem;
+  padding: 0.7125rem 1.375rem;
   font-family: var(--pal-font-mono);
   font-size: 0.72rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
-  border: 1px solid var(--pal-ink); background: var(--pal-ink); color: var(--pal-paper);
+  border: 1px solid var(--pal-ink); background: var(--pal-accent); color: var(--pal-paper);
   border-radius: 0; cursor: pointer;
   transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
 }
@@ -193,13 +197,16 @@
 .pal-nav__inner { display: flex; align-items: center; justify-content: space-between; gap: 2rem; height: 4rem; }
 .pal-brand { display: inline-flex; align-items: center; gap: 0.625rem; font-family: var(--pal-font-display); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.02em; }
 .pal-brand__mark { width: 1.5rem; height: 1.5rem; display: grid; place-items: center; background: var(--pal-ink); color: var(--pal-paper); font-family: var(--pal-font-mono); font-size: 0.8125rem; font-weight: 700; }
-.pal-brand__img { height: 1.2rem; width: auto; display: block; flex: none; }
+.pal-brand__img { height: 1.6rem; width: auto; display: block; flex: none; }
 .pal-nav__links { display: flex; gap: 1.75rem; font-family: var(--pal-font-mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; }
 .pal-nav__links a { color: var(--pal-muted); transition: color 160ms ease; }
 .pal-nav__links a:hover, .pal-nav__links a[aria-current="page"] { color: var(--pal-ink); }
 .pal-nav__actions { display: flex; align-items: center; gap: 0.75rem; }
+/* The primary CTA becomes "Sign in" once the nav collapses to the toggle menu.
+   Vertical padding + font-size mirror the Menu summary so both stand the same height. */
+.pal-nav__signin { display: none; padding-block: 0.55rem; font-size: 0.68rem; }
 
-/* Mobile disclosure menu — no JS, CSP-safe. */
+/* Mobile disclosure menu  no JS, CSP-safe. */
 .pal-menu { display: none; }
 .pal-menu > summary { list-style: none; cursor: pointer; padding: 0.55rem 0.8rem; border: 1px solid var(--pal-line); font-family: var(--pal-font-mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; }
 .pal-menu > summary::-webkit-details-marker { display: none; }
@@ -211,6 +218,8 @@
 @media (max-width: 62rem) {
   .pal-nav__links { display: none; }
   .pal-nav__actions .pal-btn--ghost { display: none; }
+  .pal-nav__deploy { display: none; }
+  .pal-nav__signin { display: inline-flex; }
   .pal-menu { display: block; }
 }
 
@@ -230,14 +239,14 @@
 .pal-specs__value { font-family: var(--pal-font-display); font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
 .pal-specs__label { margin-top: 0.25rem; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
 
-/* Desktop: compress the hero so it fits above the fold — from the marker down
+/* Desktop: compress the hero so it fits above the fold  from the marker down
    to the spec datasheet is visible on landing, no scroll. Two-column layout
    only (>= 64rem); mobile/tablet keep the larger, roomier scale above. */
 @media (min-width: 64.0625rem) {
   .pal-hero { padding-block: clamp(4.5rem, 2.5rem + 4vw, 7rem) clamp(2.5rem, 1.5rem + 3vw, 4.5rem); }
   /* Stretch both columns to the same row height (the taller left copy defines it),
      so the store preview's bottom lines up with the metrics row at any desktop
-     width — not vertically centered, not a guessed pixel height. */
+     width  not vertically centered, not a guessed pixel height. */
   .pal-hero__grid { align-items: stretch; }
   .pal-hero__display { font-size: clamp(2.75rem, 1.6rem + 2.4vw, 3.75rem); margin-top: 0.9rem; }
   .pal-hero__lead { font-size: clamp(1rem, 0.95rem + 0.28vw, 1.12rem); line-height: 1.45; margin-top: 1rem; max-width: 44ch; }
@@ -260,15 +269,21 @@
   .pal-hero .pal-store__cell-name { margin-top: 0.4rem; }
 }
 
-/* Mobile (<= 40rem): make the home hero's store preview shorter so the viewport
-   takes less vertical space on phones. On mobile the viewport has no fixed
-   height — it's sized by its imagery — so we trim the store hero banner and the
-   product thumbnails rather than capping the box, which would crop content.
+/* Below the desktop two-column breakpoint (<= 64rem) the hero collapses to a
+   single column and the store preview spans the full width. The viewport has no
+   fixed height here  it's sized entirely by its imagery, so these two values
+   are what set the preview's height (the markup's width/height attributes do
+   not; CSS height:auto + aspect-ratio override them).
+
+   The banner height is the strong lever: the thumbnails sit three-across in a
+   ~334px panel, so each is only ~95px wide and changing their ratio moves the
+   total by a handful of pixels. Adjust the banner first, the ratio second.
    Scoped to .pal-hero so other .pal-viewport uses are untouched. */
-@media (max-width: 40rem) {
-  .pal-hero .pal-store__hero img { height: clamp(6rem, 20vw, 8.5rem); }
-  .pal-hero .pal-store__cell img { aspect-ratio: 1 / 1; }
-  .pal-hero .pal-store__cell { padding: 0.55rem; }
+@media (max-width: 64rem) {
+  .pal-hero .pal-store__hero img { height: clamp(13rem, 42vw, 16rem); }
+  .pal-hero .pal-store__cell img { aspect-ratio: 2 / 3; }
+  .pal-hero .pal-store__cell { padding: 0.45rem; }
+  .pal-hero .pal-store__cell-name { margin-top: 0.35rem; font-size: 0.68rem; }
 }
 
 /* 7. Rendered storefront ================================================== */
@@ -289,7 +304,10 @@
 .pal-store__grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--pal-line); }
 .pal-store__cell { border-right: 1px solid var(--pal-line); padding: 0.75rem; }
 .pal-store__cell:last-child { border-right: 0; }
-.pal-store__cell img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; filter: grayscale(1) contrast(1.04); transition: filter 220ms ease; }
+/* height:auto is load-bearing: the markup carries height="500" on these images,
+   and that presentation hint keeps the height definite, which makes the browser
+   ignore aspect-ratio entirely. Without it every ratio below is a no-op. */
+.pal-store__cell img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; filter: grayscale(1) contrast(1.04); transition: filter 220ms ease; }
 .pal-store__cell:hover img { filter: grayscale(0) contrast(1); }
 .pal-store__cell-name { margin-top: 0.5rem; font-size: 0.72rem; font-weight: 500; }
 .pal-store__cell-price { font-family: var(--pal-font-mono); font-size: 0.64rem; color: var(--pal-muted); letter-spacing: 0.04em; }
@@ -315,9 +333,90 @@
 .pal-matrix__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.1rem; letter-spacing: -0.01em; }
 .pal-matrix__desc { color: var(--pal-muted); font-size: 0.95rem; }
 
+/* 9b. Capability ledger ================================================= */
+/* Deliberately NOT a card grid (the Modules section owns that pattern). A
+   two-column ledger: a heading rail on the left that stays put while a column
+   of full-width, hairline-ruled rows scrolls beside it. Each row is one big
+   mono index, the capability, a one-line spec, and a category tag. The whole
+   row is a single hover target  an accent rule wipes down the left edge, the
+   index turns accent, and the row nudges right. It collapses to a single stack
+   on tablet and phone, where the rail sits above the rows. */
+.pal-ledger { display: grid; grid-template-columns: minmax(16rem, 24rem) 1fr;
+  gap: clamp(2rem, 1rem + 4vw, 5rem); align-items: start; }
+.pal-ledger__head { position: sticky; top: 5.5rem; }
+.pal-ledger__intro { color: var(--pal-muted); font-size: 0.95rem; line-height: 1.6; max-width: 30ch; }
+
+/* The rows. Shared top/bottom hairlines so the stack reads as one set block. */
+.pal-ledger__list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--pal-line); }
+.pal-ledger__row { position: relative; display: grid;
+  grid-template-columns: auto 1fr auto; align-items: baseline;
+  column-gap: clamp(1rem, 0.5rem + 2vw, 2.5rem);
+  padding: clamp(1.4rem, 1rem + 1.4vw, 2.1rem) 0;
+  border-bottom: 1px solid var(--pal-line);
+  transition: padding-left 260ms cubic-bezier(.16,1,.3,1), background 180ms ease; }
+/* The accent rule that wipes down the left edge on hover. */
+.pal-ledger__row::before { content: ""; position: absolute; left: 0; top: -1px; bottom: -1px;
+  width: 2px; background: var(--pal-accent); transform: scaleY(0); transform-origin: top;
+  transition: transform 300ms cubic-bezier(.16,1,.3,1); }
+.pal-ledger__row:hover { padding-left: clamp(0.75rem, 0.4rem + 1vw, 1.5rem); background: var(--pal-paper-2); }
+.pal-ledger__row:hover::before { transform: scaleY(1); }
+
+.pal-ledger__num { font-family: var(--pal-font-display); font-weight: 500;
+  font-size: clamp(1.6rem, 1rem + 2.2vw, 2.6rem); line-height: 1; letter-spacing: -0.03em;
+  color: var(--pal-faint); font-variant-numeric: tabular-nums; transition: color 200ms ease; }
+.pal-ledger__row:hover .pal-ledger__num { color: var(--pal-accent); }
+.pal-ledger__title { font-family: var(--pal-font-display); font-weight: 500;
+  font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.3rem); letter-spacing: -0.01em; }
+.pal-ledger__desc { margin-top: 0.4rem; color: var(--pal-muted); font-size: 0.9rem; line-height: 1.55; max-width: 52ch; }
+.pal-ledger__tag { align-self: center; font-family: var(--pal-font-mono); font-size: 0.62rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--pal-faint);
+  border: 1px solid var(--pal-line); padding: 0.3rem 0.6rem; white-space: nowrap; }
+
+@media (max-width: 60rem) {
+  .pal-ledger { grid-template-columns: 1fr; gap: clamp(1.75rem, 1rem + 3vw, 2.75rem); }
+  .pal-ledger__head { position: static; }
+  .pal-ledger__intro { max-width: none; }
+}
+@media (max-width: 40rem) {
+  /* Two rows: [number | tag] on top, the body spanning full width beneath, so
+     the spec text keeps the full column width. Explicit placement keeps the
+     order stable regardless of source order. */
+  .pal-ledger__row { grid-template-columns: auto 1fr; row-gap: 0.6rem; }
+  .pal-ledger__num { grid-row: 1; grid-column: 1; }
+  .pal-ledger__tag { grid-row: 1; grid-column: 2; justify-self: end; align-self: center; }
+  .pal-ledger__body { grid-row: 2; grid-column: 1 / -1; }
+}
+
 /* 10. Feature / spec cell (generic bordered grid item) ==================== */
 
 .pal-cell { padding: clamp(1.5rem, 1rem + 1.5vw, 2.25rem); }
+
+/* Testimonial marquee (Customers page): cards drift slowly left → right in an
+   endless loop. The track holds two identical groups and slides by exactly one
+   group's width (--marquee-distance, measured in JS), so the loop is seamless.
+   Hover pauses (desktop); .is-paused (tap, touch screens) pauses too. */
+.pal-marquee { --marquee-gap: 1rem; position: relative; overflow: hidden; padding: 0.25rem 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+.pal-marquee__track { display: flex; width: max-content; }
+.pal-marquee__group { display: flex; flex: none; gap: var(--marquee-gap); padding-right: var(--marquee-gap); }
+.pal-marquee__card { flex: none; width: clamp(16.5rem, 72vw, 23rem); margin: 0; display: flex; flex-direction: column;
+  padding: clamp(1.4rem, 1rem + 1.2vw, 2rem); background: var(--pal-paper); border: 1px solid var(--pal-line);
+  transition: border-color 160ms ease; }
+.pal-marquee__card:hover { border-color: var(--pal-accent); }
+.pal-marquee__text { margin: 1rem 0 0; font-size: 1.05rem; line-height: 1.55; color: var(--pal-ink-2); }
+.pal-marquee__card .pal-quote__by { margin-top: auto; padding-top: 1.75rem; }
+.pal-marquee.is-ready .pal-marquee__track { animation: pal-marquee-drift linear infinite; will-change: transform; }
+@keyframes pal-marquee-drift {
+  from { transform: translateX(calc(-1 * var(--marquee-distance, 0px))); }
+  to   { transform: translateX(0); }
+}
+@media (hover: hover) { .pal-marquee:hover .pal-marquee__track { animation-play-state: paused; } }
+.pal-marquee.is-paused .pal-marquee__track { animation-play-state: paused; }
+/* Before JS (or with reduced motion): a plain swipeable row. */
+.pal-marquee:not(.is-ready), .pal-marquee.is-static { overflow-x: auto; -webkit-mask-image: none; mask-image: none;
+  padding-left: clamp(1rem, 0.5rem + 2vw, 2rem); padding-right: clamp(1rem, 0.5rem + 2vw, 2rem); }
+@media (prefers-reduced-motion: reduce) { .pal-marquee__track { animation: none !important; } }
 .pal-cell__idx { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.1em; color: var(--pal-accent); }
 .pal-cell__title { margin-top: 1rem; font-family: var(--pal-font-display); font-weight: 500; font-size: 1.2rem; letter-spacing: -0.01em; }
 .pal-cell__desc { margin-top: 0.625rem; color: var(--pal-muted); font-size: 0.95rem; }
@@ -354,7 +453,12 @@
 
 /* 14. Pricing ============================================================= */
 
-.pal-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--pal-line); border: 1px solid var(--pal-line); }
+/* The frame is drawn with 1px padding (not a border): the line-coloured
+   background shows through the padding on all four sides and through the 1px
+   gaps between cells. A border can be covered by the last cell when 1fr tracks
+   round up a sub-pixel  which is why the right edge vanished at 100% but
+   reappeared zoomed out; padding keeps the cells inset so the frame always shows. */
+.pal-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--pal-line); padding: 1px; }
 @media (max-width: 60rem) { .pal-plans { grid-template-columns: 1fr; } }
 .pal-plan { background: var(--pal-paper); padding: clamp(1.75rem, 1rem + 2vw, 2.5rem); display: flex; flex-direction: column; }
 .pal-plan--featured { background: var(--pal-ink); color: var(--pal-paper); }
@@ -365,9 +469,45 @@
 .pal-plan--featured .pal-plan__price span { color: rgb(244 244 242 / 0.6); }
 .pal-plan__desc { margin-top: 1rem; font-size: 0.9rem; color: var(--pal-muted); }
 .pal-plan--featured .pal-plan__desc { color: rgb(244 244 242 / 0.72); }
-.pal-plan__list { margin-top: 1.5rem; display: grid; gap: 0.75rem; font-size: 0.9rem; }
+.pal-plan__list { margin-top: 1.5rem; display: grid; gap: 0.75rem; font-size: 0.82rem; }
 .pal-plan__list li { display: flex; gap: 0.625rem; align-items: baseline; }
-.pal-plan__list li::before { content: "→"; color: var(--pal-accent); font-family: var(--pal-font-mono); }
+.pal-plan__list li::before { content: "→"; color: var(--pal-accent); font-family: var(--pal-font-mono); flex: 0 0 auto; }
+/* A feature's optional value is pushed to the right edge of the row, so the
+   labels read down the left and their values line up down the right. */
+.pal-plan__fval { margin-left: auto; padding-left: 1rem; text-align: right; white-space: nowrap; }
+
+/* Compact commerce-fee + penalty disclosure on a plan card (partials/_plan_fee).
+   A native <details>: one mono line when collapsed, the bands/penalties when
+   open  so the fees and penalties are surfaced without a tall text block. */
+.pal-plan__fee { margin-top: 1.1rem; border-top: 1px solid var(--pal-line-soft); padding-top: 0.85rem; }
+.pal-plan--featured .pal-plan__fee { border-color: rgb(244 244 242 / 0.16); }
+.pal-plan__fee > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 0.5rem;
+  font-family: var(--pal-font-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
+.pal-plan__fee > summary::-webkit-details-marker { display: none; }
+.pal-plan__fee > summary:hover { color: var(--pal-ink); }
+.pal-plan--featured .pal-plan__fee > summary { color: rgb(244 244 242 / 0.6); }
+.pal-plan--featured .pal-plan__fee > summary:hover { color: var(--pal-paper); }
+.pal-plan__fee-val { margin-left: auto; text-transform: none; letter-spacing: 0; color: var(--pal-ink); }
+.pal-plan--featured .pal-plan__fee-val { color: var(--pal-paper); }
+.pal-plan__fee-caret { flex: 0 0 auto; transition: transform 0.16s ease; }
+.pal-plan__fee[open] .pal-plan__fee-caret { transform: rotate(180deg); }
+.pal-plan__fee-body { margin-top: 0.65rem; display: grid; gap: 0.4rem; }
+.pal-plan__fee-row { display: flex; justify-content: space-between; gap: 0.75rem;
+  font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.03em; line-height: 1.5; color: var(--pal-muted); }
+.pal-plan__fee-row > span:last-child { color: var(--pal-ink-2); white-space: nowrap; }
+.pal-plan--featured .pal-plan__fee-row { color: rgb(244 244 242 / 0.55); }
+.pal-plan--featured .pal-plan__fee-row > span:last-child { color: rgb(244 244 242 / 0.85); }
+.pal-plan__fee-row--pen > span:first-child { color: var(--pal-accent); }
+.pal-plan--featured .pal-plan__fee-row--pen > span:first-child { color: var(--pal-accent-2); }
+.pal-plan__fee-note { margin-top: 0.3rem; font-family: var(--pal-font-mono); font-size: 0.54rem; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--pal-faint); }
+/* Shown instead of penalties when a plan has no order minimum. */
+.pal-plan__nomin { margin-top: 0.85rem; display: flex; align-items: center; gap: 0.45rem;
+  font-family: var(--pal-font-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #1f8a4c; }
+.pal-plan__fee + .pal-plan__nomin { margin-top: 0.6rem; }
+.pal-plan__nomin-ico { display: inline-grid; place-items: center; width: 1rem; height: 1rem; border: 1px solid currentColor; font-size: 0.6rem; line-height: 1; }
+.pal-plan--featured .pal-plan__nomin { color: #7fdca6; }
+
 .pal-plan__cta { margin-top: auto; padding-top: 1.75rem; }
 
 /* 15. Prose (legal / long-form) + legacy-class overrides =================
@@ -384,6 +524,23 @@
 .pal-prose a:hover { color: var(--pal-ink); }
 .pal-prose strong { color: var(--pal-ink); font-weight: 600; }
 .pal-prose ul { display: grid; gap: 0.75rem; padding-left: 0; }
+
+/* Rich text authored in the admin (TinyMCE)  legal policies. Raw tags carry
+   no classes, so give lists their markers back and style the rest. */
+.pal-rte > * + * { margin-top: 1.25rem; }
+.pal-rte h1 { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.4rem, 1.05rem + 1.2vw, 1.9rem); letter-spacing: -0.02em; color: var(--pal-ink); margin-top: 2.5rem; }
+.pal-rte h4, .pal-rte h5, .pal-rte h6 { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.05rem; color: var(--pal-ink); margin-top: 1.75rem; }
+.pal-rte ul, .pal-rte ol { display: block; padding-left: 1.4rem; }
+.pal-rte ul { list-style: disc; }
+.pal-rte ol { list-style: decimal; }
+.pal-rte li + li { margin-top: 0.5rem; }
+.pal-rte li > ul, .pal-rte li > ol { margin-top: 0.5rem; }
+.pal-rte blockquote { border-left: 2px solid var(--pal-accent); padding-left: 1rem; color: var(--pal-ink); }
+.pal-rte hr { border: 0; border-top: 1px solid var(--pal-line); }
+.pal-rte img { max-width: 100%; height: auto; }
+.pal-rte table { width: 100%; border-collapse: collapse; font-size: 0.95rem; display: block; overflow-x: auto; }
+.pal-rte th, .pal-rte td { border: 1px solid var(--pal-line); padding: 0.55rem 0.75rem; text-align: left; vertical-align: top; }
+.pal-rte th { color: var(--pal-ink); font-weight: 600; }
 
 /* Legacy class remaps under .pal */
 .pal .eyebrow { font-family: var(--pal-font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pal-accent); }
@@ -413,7 +570,7 @@
 
 .pal-field { display: block; margin-top: 1.25rem; }
 .pal-field__label { display: block; font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 0.5rem; }
-.pal-input, .pal-textarea { width: 100%; padding: 0.75rem 0.875rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.95rem; }
+.pal-input, .pal-textarea { width: 100%; padding: 0.4rem 0.8rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.8rem; font-weight: 350; }
 .pal-input:focus, .pal-textarea:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
 .pal-textarea { min-height: 8rem; resize: vertical; }
 
@@ -433,27 +590,27 @@
 .pal-footer__col a:hover { color: var(--pal-ink); }
 .pal-footer__base { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--pal-line); display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-faint); }
 
-/* 19. Motion — entrance system ==========================================
+/* 19. Motion  entrance system ==========================================
    Scroll/enter reveals with a per-section cascade and staggered groups, in the
-   Palantir register: fade + rise on content, a mask-wipe on big headings, a
+    register: fade + rise on content, a mask-wipe on big headings, a
    scale settle on framed media, and a drawn rule under section markers.
    Everything settles once; nothing loops.
 
    Initial hidden states are gated on `.pal-anim`, a class set on <html> before
-   first paint (in web/_shell.html) only when motion is allowed — so there is no
+   first paint (in web/_shell.html) only when motion is allowed  so there is no
    flash of hidden content, and no-JS / reduced-motion users get the page fully
    rendered and still. Per-element stagger delays are set inline by the script.
    ===================================================================== */
 
 .pal {
-  --rv-dur: 1050ms;                               /* slow, unhurried — Palantir tempo */
+  --rv-dur: 1050ms;                               /* slow, unhurried   tempo */
   --rv-ease: cubic-bezier(0.16, 1, 0.3, 1);       /* expo-out: heavy settle */
   --rv-shift: 26px;
-  --rv-blur: 12px;                                /* focus-in — the Palantir signature */
+  --rv-blur: 12px;                                /* focus-in  the  signature */
 }
 
 /* Neutralise onewooz.css's global [data-reveal] hide inside the marketing
-   surface — this system drives animation from classes, not that attribute, so
+   surface  this system drives animation from classes, not that attribute, so
    the legacy attribute must never leave content stuck hidden. Placed first so
    the .pal-anim hidden states below (equal specificity, later) still win. */
 .pal [data-reveal] { opacity: 1; transform: none; }
@@ -481,7 +638,7 @@
   will-change: opacity, transform, filter;
 }
 
-/* Reveal — generic settle (opacity, position and focus). */
+/* Reveal  generic settle (opacity, position and focus). */
 .pal-anim .is-visible { opacity: 1 !important; transform: none !important; filter: none !important; }
 
 /* Big headings, unsplit fallback: an upward mask-wipe (used only if the line
@@ -493,7 +650,7 @@
 .pal-anim .pal-h2.is-visible,
 .pal-anim .pal-pagehead__title.is-visible { clip-path: inset(-14% 0 -14% 0); }
 
-/* --- Line-by-line heading reveal (the Palantir text entrance) -----------
+/* --- Line-by-line heading reveal (the  text entrance) -----------
    The script wraps each <br>-delimited line in a clipping mask; the inner
    slides up from below, comes into focus and fades in, one line after the
    next. This overrides the clip fallback above. */
@@ -574,17 +731,17 @@
    Technical SVG illustration that dramatises what the platform actually does:
    self-drawing line art, a live order feed, an animated commerce pipeline, an
    operations-dashboard mock, a logistics map, and annotation "doodles" drawn in
-   the same engineered register (no cartoon scribble — these read as schematic
+   the same engineered register (no cartoon scribble  these read as schematic
    markup). All loops stop under prefers-reduced-motion.
    ========================================================================== */
 
-/* 20.1 Stroke draw-in — SVG line art draws itself when revealed.
+/* 20.1 Stroke draw-in  SVG line art draws itself when revealed.
    The script measures each stroke and sets its exact dash; a large fallback
    here hides strokes before the script runs so nothing flashes. */
 .pal-anim .pal-draw :is(path, line, polyline) { stroke-dasharray: 1200; stroke-dashoffset: 1200; }
 .pal-draw :is(path, line, polyline) { transition: stroke-dashoffset 1300ms var(--rv-ease); }
 
-/* 20.2 Live order ticker — a terminal feed of shop events. */
+/* 20.2 Live order ticker  a terminal feed of shop events. */
 .pal-ticker { border-block: 1px solid var(--pal-line); overflow: hidden; background: var(--pal-panel); }
 .pal-ticker__track { display: flex; width: max-content; animation: pal-ticker 48s linear infinite; }
 .pal-ticker:hover .pal-ticker__track { animation-play-state: paused; }
@@ -594,9 +751,9 @@
 .pal-ticker__dot--ok { background: var(--positive, #0f7a53); }
 .pal-ticker__k { color: var(--pal-ink); }
 
-/* 20.3 Modules grid — the management system, part by part. */
+/* 20.3 Modules grid  the management system, part by part. */
 .pal-module { padding: clamp(1.5rem, 1rem + 1.5vw, 2rem); position: relative; min-width: 0; }
-/* Block wrapper with a fixed box — an inline <span> ignores width/height, which
+/* Block wrapper with a fixed box  an inline <span> ignores width/height, which
    let the SVG balloon to a default size and shove the labels out of the cell. */
 .pal-module__ico { display: block; width: 2.5rem; height: 2.5rem; color: var(--pal-ink); transition: color 160ms var(--rv-ease); }
 .pal-module__ico svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -605,7 +762,7 @@
 .pal-module__desc { margin-top: 0.5rem; font-size: 0.9rem; line-height: 1.5; color: var(--pal-muted); }
 .pal-module__tag { position: absolute; top: 1.25rem; right: 1.25rem; font-family: var(--pal-font-mono); font-size: 0.56rem; letter-spacing: 0.1em; color: var(--pal-faint); }
 
-/* 20.4 Commerce pipeline — click to doorstep, with a packet in transit. */
+/* 20.4 Commerce pipeline  click to doorstep, with a packet in transit. */
 .pal-pipeline svg { width: 100%; height: auto; overflow: visible; }
 .pal-pipeline .track { stroke: var(--pal-line); stroke-width: 1.5; fill: none; }
 .pal-pipeline .flow { stroke: var(--pal-accent); stroke-width: 1.5; fill: none; stroke-dasharray: 5 11; animation: pal-flow 1.3s linear infinite; }
@@ -616,7 +773,7 @@
 .pal-pipeline .sub { fill: var(--pal-muted); font-family: var(--pal-font-mono); font-size: 9px; }
 .pal-pipeline .packet { fill: var(--pal-accent); }
 
-/* Mobile alternative — the horizontal SVG shrinks nodes and labels too far on a
+/* Mobile alternative  the horizontal SVG shrinks nodes and labels too far on a
    phone, so below 40rem we hide it and show a vertical list at full type size.
    The desktop diagram is unchanged. */
 .pal-pipe-m { display: none; position: relative; }
@@ -633,7 +790,7 @@
 .pal-pipe-m__flow { position: absolute; left: 0.95rem; top: 0; width: 7px; height: 7px; margin-left: -3px; background: var(--pal-accent); animation: pal-pipe-down 5s linear infinite; }
 @keyframes pal-pipe-down { from { top: 0; } to { top: 100%; } }
 
-/* 20.5 Operations dashboard mock — the control room. */
+/* 20.5 Operations dashboard mock  the control room. */
 .pal-dash { border: 1px solid var(--pal-ink); background: var(--pal-panel); box-shadow: 16px 16px 0 -1px rgb(10 10 11 / 0.06); }
 .pal-dash__top { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; border-bottom: 1px solid var(--pal-line); font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
 .pal-dash__top .live { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--pal-ink); }
@@ -698,7 +855,7 @@
 }
 
 /* ==========================================================================
-   21. Authentication — the split "commerce OS" console
+   21. Authentication  the split "commerce OS" console
    --------------------------------------------------------------------------
    A drastic transform of every auth screen: a dark technical brand panel on
    the left (blueprint grid, mono system status) and the form on paper on the
@@ -749,14 +906,35 @@
 .pal .auth__footer { margin-top: 1.75rem; font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-muted); }
 .pal .auth__footer a { color: var(--pal-accent); }
 .pal .field { display: block; }
+.pal .field[hidden] { display: none; }
 .pal .field + .field { margin-top: 1.1rem; }
 .pal .label { display: block; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 0.5rem; }
 .pal .label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem; }
 .pal .label-row .label { margin-bottom: 0; }
-.pal .input { width: 100%; padding: 0.8rem 0.9rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.95rem; transition: border-color 160ms var(--rv-ease), box-shadow 160ms var(--rv-ease); }
+.pal .input { width: 100%; padding: 0.4rem 0.8rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.8rem; font-weight: 350; transition: border-color 160ms var(--rv-ease), box-shadow 160ms var(--rv-ease); }
 .pal .input::placeholder { color: var(--pal-faint); }
 .pal .input:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
 .pal .input--code { text-align: center; font-family: var(--pal-font-mono); font-size: 1.4rem; letter-spacing: 0.5em; text-indent: 0.5em; padding-block: 0.9rem; }
+
+/* --- Segmented one-time-code entry: square boxes, one digit each, paste
+   blocked. Wired by static/js/otp-boxes.js; see templates/accounts/_otp_field.html. */
+.pal .otp { display: block; }
+.pal .otp__boxes { display: flex; gap: 0.5rem; }
+.pal .otp__box {
+  flex: 1 1 0; min-width: 0; aspect-ratio: 1 / 1;
+  text-align: center; padding: 0;
+  font-family: var(--pal-font-mono); font-size: clamp(1.2rem, 0.9rem + 1.6vw, 1.6rem); font-weight: 500;
+  color: var(--pal-ink); background: var(--pal-panel);
+  border: 1px solid var(--pal-line); border-radius: 0;
+  transition: border-color 160ms var(--rv-ease), box-shadow 160ms var(--rv-ease);
+  -moz-appearance: textfield;
+}
+.pal .otp__box::-webkit-outer-spin-button,
+.pal .otp__box::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pal .otp__box:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+.pal .otp__box--filled { border-color: var(--pal-accent); }
+.pal .otp__warn { margin-top: 0.75rem; }
+
 .pal .hint { margin-top: 0.55rem; font-size: 0.8rem; color: var(--pal-muted); line-height: 1.5; }
 .pal .checkbox-row { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.85rem; color: var(--pal-ink-2); }
 .pal .checkbox-row input { accent-color: var(--pal-accent); margin-top: 0.2rem; flex: none; }
@@ -788,7 +966,7 @@
 @media (max-width: 40rem) { .pal-form-grid { grid-template-columns: 1fr; } }
 .pal-form-grid .pal-field { margin-top: 0; }
 .pal-field--full { grid-column: 1 / -1; }
-.pal-select { width: 100%; padding: 0.8rem 0.9rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.95rem; appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--pal-muted) 50%), linear-gradient(135deg, var(--pal-muted) 50%, transparent 50%); background-position: calc(100% - 20px) center, calc(100% - 14px) center; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; }
+.pal-select { width: 100%; padding: 0.4rem 0.9rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.8rem; font-weight: 350; appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--pal-muted) 50%), linear-gradient(135deg, var(--pal-muted) 50%, transparent 50%); background-position: calc(100% - 20px) center, calc(100% - 14px) center; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; }
 .pal-select:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
 
 /* Selectable category chips (radios). */
@@ -837,3 +1015,32 @@
 .pal-map .origin { fill: var(--pal-accent); }
 .pal-map .origin-ring { fill: none; stroke: var(--pal-accent); stroke-width: 1.2; opacity: 0.45; }
 .pal-map .origin-label { fill: var(--pal-ink); font-weight: 600; }
+
+/* ── Email marketing section (home + platform) ────────────────────────────
+   Editorial and structured: a moderate heading with the intro beside it
+   (bottom-aligned, so no floating gaps), then the four steps on one ink rule. */
+.ow-emhead { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(1.5rem, 1rem + 3vw, 4.5rem);
+  align-items: end; margin-top: 1.75rem; }
+.ow-emhead__title { margin: 0; max-width: 17ch; font-family: var(--pal-font-display); font-weight: 500; letter-spacing: -0.025em;
+  line-height: 1.12; font-size: clamp(1.65rem, 1.2rem + 1.6vw, 2.6rem); color: var(--pal-ink); }
+.ow-emhead__lead { margin: 0; max-width: 34rem; font-size: 1rem; line-height: 1.7; color: var(--pal-muted); }
+.ow-emhead__cta { margin-top: 1.4rem; }
+
+.ow-emflow { list-style: none; margin: clamp(2.5rem, 1.75rem + 2.5vw, 3.75rem) 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--pal-ink); }
+.ow-emflow__step { position: relative; min-width: 0; padding: 1.75rem clamp(1rem, 0.5rem + 1.2vw, 1.75rem) 0; }
+.ow-emflow__step:first-child { padding-left: 0; }
+.ow-emflow__step + .ow-emflow__step { border-left: 1px solid var(--pal-line); }
+.ow-emflow__node { position: absolute; top: -5px; left: -5px; width: 9px; height: 9px; background: var(--pal-paper); border: 1px solid var(--pal-ink); }
+.ow-emflow__step:first-child .ow-emflow__node { left: 0; background: var(--pal-accent); border-color: var(--pal-accent); }
+.ow-emflow__num { display: block; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.12em; color: var(--pal-accent); }
+.ow-emflow__title { margin: 0.6rem 0 0; font-family: var(--pal-font-display); font-weight: 500; font-size: 1.05rem; letter-spacing: -0.01em; color: var(--pal-ink); }
+.ow-emflow__desc { margin: 0.55rem 0 0; font-size: 0.9rem; line-height: 1.6; color: var(--pal-muted); }
+@media (max-width: 56rem) {
+  .ow-emhead { grid-template-columns: 1fr; align-items: start; }
+  .ow-emflow { grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 0; row-gap: 2.25rem; column-gap: 1.75rem; }
+  .ow-emflow__step, .ow-emflow__step:first-child { padding: 1.4rem 0 0; border-top: 1px solid var(--pal-ink); }
+  .ow-emflow__step + .ow-emflow__step { border-left: 0; }
+  .ow-emflow__node, .ow-emflow__step:first-child .ow-emflow__node { left: 0; }
+}
+@media (max-width: 34rem) { .ow-emflow { grid-template-columns: 1fr; row-gap: 1.75rem; } }

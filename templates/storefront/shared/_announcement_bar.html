@@ -1,0 +1,43 @@
+{% load website_filters %}{% comment %}
+  Announcement bar (both themes' navigation). Content comes from the Brand tab
+  of the content editor via storefront/announcement.py:
+  * static  one statement, centred, wraps on small screens like before;
+  * dynamic a marquee looping up to 4 statements left to right, with a gap
+    between them. It pauses while hovered or focused so a link can be clicked.
+  A statement's linked word opens its page in a new tab. Only the first copy of
+  each statement is announced and focusable; marquee repeats are aria-hidden.
+  Each item is written on one line so no stray spaces land around the link.
+{% endcomment %}{% announcement_bar website as ann %}
+<style>
+    /* The linked word keeps the bar's own typography (font, size, case, colour,
+       no underline); only a slightly heavier weight marks it as clickable. */
+    .nav-top-banner .ow-ann__link { color: inherit; font: inherit; font-weight: 500; letter-spacing: inherit; text-transform: inherit; text-decoration: none; cursor: pointer; }
+    .nav-top-banner .ow-ann__link:hover { opacity: 0.75; text-decoration: none; }
+    .ow-ann__link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+    .nav-top-banner.ow-ann--dynamic { padding-left: 0; padding-right: 0; overflow: hidden; }
+    .ow-ann__viewport {
+        overflow: hidden; width: 100%;
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+        mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+    }
+    .ow-ann__track { display: flex; width: max-content; animation: ow-ann-ltr 30s linear infinite; will-change: transform; }
+    .ow-ann__group { display: flex; flex: none; gap: 3.5rem; padding-right: 3.5rem; }
+    .nav-top-banner .ow-ann__item { white-space: nowrap; flex: none; overflow-wrap: normal; word-break: normal; }
+    .ow-ann--dynamic:hover .ow-ann__track,
+    .ow-ann--dynamic:focus-within .ow-ann__track { animation-play-state: paused; }
+    @keyframes ow-ann-ltr { from { transform: translate3d(-50%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+    @media (prefers-reduced-motion: reduce) {
+        .ow-ann__track { animation: none; }
+    }
+</style>
+{% if ann.mode == "dynamic" %}
+<div class="nav-top-banner ow-ann ow-ann--dynamic" role="region" aria-label="Announcements">
+    <div class="ow-ann__viewport">
+        <div class="ow-ann__track" style="animation-duration: {{ ann.duration }}s;">
+            {% for group in ann.groups %}<div class="ow-ann__group"{% if not forloop.first %} aria-hidden="true"{% endif %}>{% for it in group %}<span class="ow-ann__item"{% if not it.primary %} aria-hidden="true"{% endif %}>{{ it.before }}{% if it.word %}<a class="ow-ann__link" href="{{ it.href }}" target="_blank" rel="noopener noreferrer"{% if not it.primary %} tabindex="-1"{% endif %}>{{ it.word }}</a>{% endif %}{{ it.after }}</span>{% endfor %}</div>{% endfor %}
+        </div>
+    </div>
+</div>
+{% else %}
+{% with it=ann.items.0 %}<div class="nav-top-banner ow-ann ow-ann--static">{{ it.before }}{% if it.word %}<a class="ow-ann__link" href="{{ it.href }}" target="_blank" rel="noopener noreferrer">{{ it.word }}</a>{% endif %}{{ it.after }}</div>{% endwith %}
+{% endif %}

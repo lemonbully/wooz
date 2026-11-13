@@ -1,7 +1,7 @@
-{% extends "storefront/theme_base.html" %}
+{% extends store_base|default:"storefront/theme_base.html" %}
 {% load static %}
 
-{% block content %}
+{% block page_content %}
 <section class="min-h-[60vh] flex items-center justify-center px-4 py-20">
   <div class="max-w-lg text-center">
     <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">

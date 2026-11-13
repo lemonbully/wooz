@@ -1,0 +1,91 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Media library{% endblock %}
+{% block crumb %}Media library{% endblock %}
+
+{% comment %}
+The store's media library. A 4-column × 5-row grid (20 per page) of every image
+and video uploaded for THIS store, then the pager. A plain click opens the cell's
+Edit panel (deletion lives in the Edit panel and bulk-manage mode). The
+"Upload" button opens the universal modal (mounted in the shell). Cells share the
+exact `.app-medcell` contract the modal's JS builds, so the same handlers work on
+this page and inside the modal without duplicated code.
+{% endcomment %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Storefront</p>
+      <h1 class="app-head__title pal-mt-4">Media library</h1>
+    </div>
+  </div>
+
+  {# Action bar: Bulk delete pinned left, Upload media pinned right. #}
+  <div class="app-medactionbar">
+    {% include "store/_media_bulkbar.html" %}
+    <button type="button" class="pal-btn" data-ow-media-open data-ow-title="Media library">
+      Upload media <span class="pal-btn__arrow" aria-hidden="true">→</span>
+    </button>
+  </div>
+
+  <div style="margin-top: 1rem;">
+    <form method="get" class="app-toolbar">
+      {% if active_kind %}<input type="hidden" name="kind" value="{{ active_kind }}">{% endif %}
+      <div class="app-search">
+        {% include "store/_icons.html" with icon="search" %}
+        <input type="search" name="q" value="{{ q }}" placeholder="Search by name or alt text…">
+      </div>
+      <div class="app-medkinds" role="group" aria-label="Filter by type">
+        <a class="app-medkind {% if not active_kind %}is-active{% endif %}" href="?{% if q %}q={{ q|urlencode }}{% endif %}">All</a>
+        <a class="app-medkind {% if active_kind == 'image' %}is-active{% endif %}" href="?kind=image{% if q %}&q={{ q|urlencode }}{% endif %}">Images</a>
+        <a class="app-medkind {% if active_kind == 'video' %}is-active{% endif %}" href="?kind=video{% if q %}&q={{ q|urlencode }}{% endif %}">Videos</a>
+      </div>
+      <button class="pal-btn pal-btn--ghost app-toolbar__search" type="submit">Search</button>
+    </form>
+
+    {% if assets %}
+      <div class="app-medlibbar">
+        <p class="app-mono" data-medlib-count>{{ total }} item{{ total|pluralize }}</p>
+      </div>
+      <div class="app-medgrid app-medgrid--page" data-medlib-grid role="list">
+        {% for a in assets %}
+          <figure class="app-medcell"
+                  data-id="{{ a.id }}" data-kind="{{ a.kind }}" data-url="{{ a.url }}"
+                  data-name="{{ a.display_name }}" data-alt="{{ a.alt_text }}"
+                  data-description="{{ a.description }}" data-placeholder="{{ a.placeholder }}"
+                  role="listitem">
+            <div class="app-medcell__thumb">
+              {% if a.is_video %}
+                <video class="app-medcell__media" src="{{ a.url }}" muted playsinline preload="metadata"></video>
+                <span class="app-medcell__vbadge">VIDEO</span>
+              {% else %}
+                <img class="app-medcell__media" src="{{ a.url }}" alt="{{ a.alt_text|default:a.display_name }}" loading="lazy">
+              {% endif %}
+              <span class="app-medcell__mcheck" data-med-mcheck aria-hidden="true"></span>
+              <div class="app-medcell__acts">
+                <button type="button" class="app-medcell__act" data-med-edit="{{ a.id }}" aria-label="Edit" title="Edit">Edit</button>
+              </div>
+            </div>
+            <figcaption class="app-medcell__cap">
+              <span class="app-medcell__name">{{ a.display_name }}</span>
+              <span class="app-medcell__meta">{{ a.kind|capfirst }}</span>
+            </figcaption>
+          </figure>
+        {% endfor %}
+      </div>
+      {% include "store/_pagination.html" with page=assets %}
+    {% else %}
+      <div class="app-empty" data-medlib-empty>
+        <span class="app-empty__ico" aria-hidden="true">{% include "store/_icons.html" with icon="image" %}</span>
+        <h2 class="app-empty__title">No media yet</h2>
+        <p class="app-empty__text">Upload images and videos here, then pick them anywhere you add a product photo, category image or banner  without re-uploading.</p>
+        <div class="app-empty__actions">
+          <button type="button" class="pal-btn" data-ow-media-open data-ow-title="Media library">Upload media <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+        </div>
+      </div>
+      {# Hidden grid so newly-uploaded items have somewhere to land without a reload. #}
+      <div class="app-medgrid app-medgrid--page" data-medlib-grid role="list" hidden></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

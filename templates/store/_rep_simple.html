@@ -1,17 +1,24 @@
+{% load store_extras %}
 {% comment %}
 Generic repeatable single-value list. Include with `name`, `label`,
-`placeholder`, and `rows` (existing string values). The view reads
-request.POST.getlist(name).
+`placeholder`, and `rows` (existing string values). Optional `min_rows` opens
+the list with at least that many inputs (blank ones post empty and are dropped
+by the view). Optional `tip` names the field's admin-written tooltip (defaults
+to `name`). The view reads request.POST.getlist(name).
 {% endcomment %}
-<div class="app-rep app-f--full" data-rep>
-  <span class="pal-field__label">{{ label }}</span>
+<div class="app-rep app-f--full" data-rep{% if min_rows %} data-min-rows="{{ min_rows }}"{% endif %}>
+  <span class="pal-field__label">{{ label }}{% field_tip tip|default:name %}</span>
   <div class="app-rep__rows">
-    {% for v in rows %}
+    {% comment %} A filter *argument* must exist (Django raises on a missing one),
+       so resolve the optional min_rows to a plain value first. {% endcomment %}
+    {% with min_count=min_rows|default:0 %}
+    {% for v in rows|pad_rows:min_count %}
       <div class="app-rep__row">
         <input type="text" name="{{ name }}" value="{{ v }}" placeholder="{{ placeholder }}" class="app-rep__in">
         <button type="button" class="app-rep__del" aria-label="Remove">&times;</button>
       </div>
     {% endfor %}
+    {% endwith %}
   </div>
   <template class="app-rep__tmpl"><div class="app-rep__row"><input type="text" name="{{ name }}" placeholder="{{ placeholder }}" class="app-rep__in"><button type="button" class="app-rep__del" aria-label="Remove">&times;</button></div></template>
   <button type="button" class="app-rep__add pal-btn pal-btn--ghost">+ Add</button>

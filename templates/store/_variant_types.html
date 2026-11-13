@@ -1,0 +1,20 @@
+{% load store_extras %}
+{% comment %}
+Variant-type editor. Each row is a variation TYPE (preset or custom NAME) plus its VALUES entered as
+tag chips. Names post as `variant_type_name`, values as a comma-joined
+`variant_type_values` hidden input (the view zips the two lists into `variants`).
+When a combinations matrix is present (D2C variations tab), it regenerates
+automatically as rows change  see initVariantEditor in product_form.html.
+Include with `rows` = prefill.variants ([{a: name, b: "S, M, L"}, …]).
+{% endcomment %}
+<div class="app-vt app-f--full" data-vt>
+  <span class="pal-field__label">Variant types{% field_tip "variant_types" %}</span>
+  <p class="app-field-hint">Add a variation, pick its type (<strong>Size</strong>, <strong>Color</strong>, <strong>Material</strong>, <strong>Pack of</strong>…) or choose <strong>Custom…</strong> to name your own, then type each value and press Enter or comma to add it as a tag. Combinations below update automatically.</p>
+  <div class="app-vt__rows" data-vt-rows>
+    {% for r in rows %}
+      {% include "store/_variant_row.html" with name=r.a values=r.b %}
+    {% endfor %}
+  </div>
+  <template data-vt-tmpl>{% include "store/_variant_row.html" with name="" values="" %}</template>
+  <button type="button" class="app-vt__add pal-btn pal-btn--ghost" data-vt-add>+ Add variation</button>
+</div>

@@ -1,0 +1,16 @@
+{% comment %}KPI tile row with period-over-period deltas. Expects `kpis`.{% endcomment %}
+<div class="an-kpis">
+  {% for k in kpis %}
+  <div class="an-kpi">
+    <span class="an-kpi__label">{{ k.label }}</span>
+    <span class="an-kpi__value">{{ k.value }}</span>
+    <span class="an-kpi__sub">{{ k.sub }}</span>
+    {% if k.delta %}
+    <span class="an-kpi__delta an-kpi__delta--{{ k.delta.dir }}">
+      <span class="an-kpi__arw" aria-hidden="true">{% if k.delta.dir == "up" %}▲{% elif k.delta.dir == "down" %}▼{% else %}{% endif %}</span>
+      {{ k.delta.label }}
+    </span>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

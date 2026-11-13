@@ -33,15 +33,16 @@ _URLCONF_FOR_SURFACE = {
     host_utils.Surface.APP: "onewooz.urls.app",
     host_utils.Surface.ADMIN: "onewooz.urls.admin",
     host_utils.Surface.STOREFRONT: "onewooz.urls.storefront",
+    host_utils.Surface.REFERRAL: "onewooz.urls.referral",
 }
 
 
 class RequestIDMiddleware:
     """Attach a correlation id to the request, the logs, and the response.
 
-    Accepts an inbound ``X-Request-ID`` only from our own edge — an arbitrary
+    Accepts an inbound ``X-Request-ID`` only from our own edge  an arbitrary
     client-supplied value would let a caller poison log correlation or inject
-    control characters into log lines — so the header is validated as a UUID
+    control characters into log lines  so the header is validated as a UUID
     before it is trusted.
     """
 
@@ -64,6 +65,71 @@ class RequestIDMiddleware:
 
         response["X-Request-ID"] = request_id
         return response
+
+
+class EdgeDeliveryMiddleware:
+    """Make every response safe and fast behind CloudFront.
+
+    Two jobs, both response-side:
+
+    * **Never let a shared cache store a per-visitor response.** CloudFront
+      ignores ``Vary: Cookie`` and will happily cache a ``public`` response that
+      carries ``Set-Cookie``  serving one visitor's session, CSRF or analytics
+      cookie to everyone behind that edge. A response that sets a cookie or
+      varies on Cookie therefore has ``public`` / ``s-maxage`` stripped and is
+      marked ``private``. Responses that are genuinely shared (robots.txt, the
+      favicon redirect, price-history JSON for a cookieless request) keep their
+      headers and are cached at the edge, keyed by Host.
+    * **Preconnect to the CDN.** HTML responses carry a ``Link: rel=preconnect``
+      for each origin in ``settings.CDN_PRECONNECT_ORIGINS`` (cdn.onewooz.com in
+      production), so the browser opens the TLS connection for CSS/JS/fonts
+      while it is still parsing the page. One header covers every surface and
+      every storefront theme without touching a template.
+
+    Sits directly under ``RequestIDMiddleware`` so it sees the final response,
+    including cookies set by the session, CSRF and analytics layers.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        origins = getattr(settings, "CDN_PRECONNECT_ORIGINS", ()) or ()
+        links = []
+        for origin in origins:
+            # Two connections: CSS/JS load in no-cors mode, fonts in cors mode,
+            # and the browser keeps those pools separate.
+            links.append(f"<{origin}>; rel=preconnect")
+            links.append(f"<{origin}>; rel=preconnect; crossorigin")
+        self.preconnect = ", ".join(links)
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        self._guard_shared_cache(response)
+        if self.preconnect and response.get("Content-Type", "").startswith("text/html"):
+            existing = response.get("Link", "")
+            response["Link"] = f"{existing}, {self.preconnect}" if existing else self.preconnect
+        return response
+
+    @staticmethod
+    def _guard_shared_cache(response):
+        from django.utils.cache import has_vary_header
+
+        if not (response.cookies or has_vary_header(response, "Cookie")):
+            return
+        current = response.get("Cache-Control", "")
+        directives = [d.strip() for d in current.split(",") if d.strip()]
+        if not directives:
+            if response.cookies:
+                response["Cache-Control"] = "private"
+            return
+        kept = [
+            d for d in directives
+            if d.lower() != "public" and not d.lower().startswith("s-maxage")
+        ]
+        if len(kept) == len(directives):
+            return
+        if not any(d.lower() == "private" for d in kept):
+            kept.insert(0, "private")
+        response["Cache-Control"] = ", ".join(kept)
 
 
 class HealthProbeMiddleware:
@@ -93,7 +159,7 @@ class CaddyAskMiddleware:
     in a compose stack) to decide whether to obtain a TLS certificate for the
     hostname a visitor just requested. Like a health probe it arrives with a
     Host header that matches no surface, so it must be handled *before*
-    :class:`HostRoutingMiddleware` — otherwise it 404s in production and Caddy
+    :class:`HostRoutingMiddleware`  otherwise it 404s in production and Caddy
     can never issue a certificate for a storefront or a custom domain.
 
     A 200 authorises issuance; anything else denies it, which is what stops
@@ -105,7 +171,7 @@ class CaddyAskMiddleware:
 
     * the platform hosts (marketing / app / admin),
     * any label under the storefront apex (``<slug>.onewooz.site``),
-    * a custom domain present in the verified-domain set in Redis — empty until
+    * a custom domain present in the verified-domain set in Redis  empty until
       the ``domains`` app (Phase 6) populates it, so unknown domains are denied
       by default.
     """
@@ -131,10 +197,18 @@ class CaddyAskMiddleware:
         domain = (request.GET.get("domain") or "").strip().lower().rstrip(".")
         if not domain or len(domain) > 253:
             return HttpResponseForbidden("bad domain")
-        if domain.startswith("www."):
-            domain = domain[4:]
+        # www.<domain> is served as its bare domain (and a store connected as
+        # www.<domain> also answers on the bare one), so either twin of a
+        # verified domain gets a certificate.
+        bare = domain[4:] if domain.startswith("www.") else domain
 
-        if self._is_platform(domain) or self._is_apex(domain) or self._is_verified(domain):
+        if (
+            self._is_platform(bare)
+            or self._is_apex(bare)
+            or self._is_referral(bare)
+            or self._is_verified(bare)
+            or self._is_verified(f"www.{bare}")
+        ):
             return HttpResponse("ok", content_type="text/plain")
         return HttpResponseForbidden("not authorised")
 
@@ -151,6 +225,13 @@ class CaddyAskMiddleware:
     def _is_apex(domain):
         apex = (getattr(settings, "STOREFRONT_APEX", "") or "").lower()
         return bool(apex) and (domain == apex or domain.endswith("." + apex))
+
+    @staticmethod
+    def _is_referral(domain):
+        # Any label under the referral root gets an on-demand cert, so every
+        # collaborator's <subdomain>.myugcstore.com loads over HTTPS.
+        root = (getattr(settings, "REFERRAL_ROOT_DOMAIN", "") or "").lower()
+        return bool(root) and (domain == root or domain.endswith("." + root))
 
     @staticmethod
     def _is_verified(domain):
@@ -193,6 +274,10 @@ class HostRoutingMiddleware:
         # Populated by the storefront app once tenancy exists.
         request.site = None
         request.dev_path_mode = False
+        # Set for UGC collaboration (referral) storefronts; the storefront app
+        # resolves the collaboration and attaches it.
+        request.is_referral = False
+        request.collaboration = None
 
         if settings.DEBUG and host_utils.is_loopback(host):
             return self._route_by_path(request)
@@ -207,6 +292,7 @@ class HostRoutingMiddleware:
         request.surface = resolution.surface
         request.site_slug = resolution.slug
         request.is_custom_domain = resolution.is_custom_domain
+        request.is_referral = resolution.referral
 
         if resolution.surface is host_utils.Surface.UNKNOWN:
             # An unrecognised host is not ours to serve. In production this is
@@ -218,15 +304,39 @@ class HostRoutingMiddleware:
                 return self._unknown_host_help(resolution.host)
             return HttpResponseNotFound("Not found")
 
-        request.urlconf = _URLCONF_FOR_SURFACE[resolution.surface]
+        # A UGC collaborator storefront (<sub>.myugcstore.com) is a STOREFRONT
+        # surface, but it must serve the *referral* storefront  every page inside
+        # the collaborator's own card shell, never the owner's theme. Give it its
+        # own urlconf so no path can fall through to the owner storefront views.
+        if resolution.referral:
+            request.urlconf = "onewooz.urls.referral_storefront"
+        else:
+            request.urlconf = _URLCONF_FOR_SURFACE[resolution.surface]
 
-        # Storefronts POST to their own host, which is not in the static
-        # CSRF_TRUSTED_ORIGINS list. Rather than exempting those views from
-        # CSRF entirely — the reference platform exempted 33 of them — trust
-        # the origin of the already-verified host, for this request only.
-        if resolution.surface is host_utils.Surface.STOREFRONT:
-            scheme = "https" if request.is_secure() else "http"
-            request.csrf_trusted_origins_override = [f"{scheme}://{resolution.host}"]
+        # A verified custom domain reaches us only through the HTTPS edge
+        # (Caddy), which then proxies to the ALB over plain HTTP  so the ALB
+        # rewrites X-Forwarded-Proto to "http" and Django would treat the
+        # request as insecure. That builds an http:// origin for the CSRF
+        # same-origin check while the browser sent an https Origin, so every
+        # POST from a custom domain (contact form, newsletter, cart, checkout…)
+        # is rejected 403. Restore the true scheme for these already-verified
+        # hosts  they are, by construction, served over HTTPS. This also keeps
+        # secure cookies and HSTS correct on custom domains.
+        #
+        # Storefront subdomains (<slug>.onewooz.site) hit the ALB directly over
+        # HTTPS, so their X-Forwarded-Proto is already "https" and the CSRF
+        # same-origin check passes without help.
+        # Custom domains and UGC referral subdomains reach us through the Caddy
+        # HTTPS edge, which proxies to the ALB over plain HTTP  so restore the
+        # true scheme, or every storefront POST (cart, checkout…) fails the CSRF
+        # same-origin check. Storefront apex subdomains hit the ALB directly over
+        # HTTPS and need no help.
+        if (
+            resolution.is_custom_domain
+            or resolution.referral
+            or resolution.surface is host_utils.Surface.REFERRAL
+        ):
+            request.META["HTTP_X_FORWARDED_PROTO"] = "https"
 
         return self.get_response(request)
 
@@ -325,7 +435,7 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
     """Per-request CSP nonce and the headers Django does not set itself."""
 
     def process_request(self, request):
-        # 16 bytes of entropy, base64 — comfortably above the 128 bits the CSP
+        # 16 bytes of entropy, base64  comfortably above the 128 bits the CSP
         # specification requires of a nonce.
         request.csp_nonce = secrets.token_urlsafe(16)
 
@@ -360,10 +470,18 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         style_src = list(settings.CSP_STYLE_SRC)
         font_src = list(settings.CSP_FONT_SRC)
         connect_src = list(settings.CSP_CONNECT_SRC)
+        frame_src = list(getattr(settings, "CSP_FRAME_SRC", ("'self'",)))
+        form_action = list(settings.CSP_FORM_ACTION)
+        media_src = list(getattr(settings, "CSP_MEDIA_SRC", ("'self'", "data:", "blob:")))
 
         surface = getattr(request, "surface", None)
         is_storefront = surface is host_utils.Surface.STOREFRONT
         if is_storefront:
+            # Payment gateway checkout frames + their XHR endpoints.
+            frame_src += list(getattr(settings, "CSP_STOREFRONT_FRAME_EXTRA", ()))
+            connect_src += list(getattr(settings, "CSP_STOREFRONT_CONNECT_EXTRA", ()))
+            # ...and the form posts those SDKs use to open hosted checkout.
+            form_action += list(getattr(settings, "CSP_STOREFRONT_FORM_EXTRA", ()))
             # The ported storefront designs use inline styles and a few inline
             # scripts. Admit them for this surface only. A nonce and
             # 'unsafe-inline' are mutually exclusive for scripts (a browser that
@@ -374,19 +492,39 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             )
             style_src += list(getattr(settings, "CSP_STOREFRONT_STYLE_EXTRA", ()))
             font_src += list(getattr(settings, "CSP_STOREFRONT_FONT_EXTRA", ()))
+            # Storefronts embed video (product reels / short-video strip). Admit
+            # the allow-listed video hosts for this surface only; media-src
+            # otherwise falls back to the strict default-src 'self'.
+            media_src += list(getattr(settings, "CSP_STOREFRONT_MEDIA_EXTRA", ()))
         else:
             # Dashboard, admin and marketing allow inline styles: our own scoped
             # <style nonce> blocks plus the content editor's rich-text editor,
             # which injects its own styles. These surfaces are cross-origin
             # isolated from tenant storefronts, so this never touches a store.
             style_src.append("'unsafe-inline'")
-            if surface is host_utils.Surface.APP:
-                # The content editor loads the free TinyMCE build (script, skin
-                # CSS and icon fonts) from jsDelivr; its image uploads post back
-                # to our own origin ('self', already in connect-src).
+            # Platform analytics (Microsoft Clarity + Google Analytics) load from
+            # base.html on the MARKETING surface only  the owner dashboard and
+            # admin carry data that must not reach a third party. So admit the
+            # analytics tag hosts + beacon endpoints for marketing alone; the app
+            # and admin surfaces never get them (and the snippet isn't rendered
+            # there either  see base.html).
+            if surface is host_utils.Surface.MARKETING:
+                script_src.extend(getattr(settings, "CSP_ANALYTICS_SCRIPT_HOSTS", ()))
+                connect_src.extend(getattr(settings, "CSP_ANALYTICS_CONNECT_HOSTS", ()))
+            if surface in (host_utils.Surface.APP, host_utils.Surface.ADMIN):
+                # The content editor (owner dashboard) and the Django model admin
+                # (marketing core pages + blog) both load the free TinyMCE build
+                # (script, skin CSS and icon fonts) from jsDelivr; image data
+                # rides inline (data:) so no extra connect host is needed.
                 editor_hosts = list(getattr(settings, "CSP_EDITOR_HOSTS", ()))
                 for source_list in (script_src, style_src, font_src, connect_src):
                     source_list.extend(editor_hosts)
+            if surface is host_utils.Surface.APP:
+                # The content editor previews the owner's Google Maps embed
+                # under the Contact tab's map field.
+                frame_src.extend(getattr(settings, "CSP_MAP_FRAME_HOSTS", ()))
+                # Business Hub posts may embed a YouTube / Vimeo video.
+                frame_src.extend(getattr(settings, "CSP_HUB_VIDEO_FRAME_HOSTS", ()))
 
         # A storefront whose owner has opted into custom tracking scripts needs
         # the tracking hosts admitted too. That relaxation applies to that
@@ -396,6 +534,19 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             if "'unsafe-inline'" not in script_src:
                 script_src.append("'unsafe-inline'")
             script_src.extend(getattr(settings, "CSP_TENANT_SCRIPT_HOSTS", ()))
+            # The tags' XHR/beacon endpoints (GA4 collect, Meta, TikTok, Bing …).
+            connect_src.extend(getattr(settings, "CSP_TENANT_CONNECT_HOSTS", ()))
+
+        # The marketing subscription checkout's hand-off page (billing.views.start)
+        # loads the Cashfree JS SDK to open hosted checkout. It opts in per-request
+        # with request.csp_payment, admitting the gateway's SDK/frames/endpoints to
+        # that one response while every other marketing page stays nonce-only. The
+        # nonce still covers our own inline init script.
+        if getattr(request, "csp_payment", False):
+            script_src.extend(getattr(settings, "CSP_PAYMENT_SCRIPT_EXTRA", ()))
+            frame_src.extend(getattr(settings, "CSP_PAYMENT_FRAME_EXTRA", ()))
+            connect_src.extend(getattr(settings, "CSP_PAYMENT_CONNECT_EXTRA", ()))
+            form_action.extend(getattr(settings, "CSP_PAYMENT_FORM_EXTRA", ()))
 
         directives = {
             "default-src": settings.CSP_DEFAULT_SRC,
@@ -404,9 +555,11 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             "font-src": tuple(font_src),
             "img-src": settings.CSP_IMG_SRC,
             "connect-src": tuple(connect_src),
+            "frame-src": tuple(frame_src),
+            "media-src": tuple(media_src),
             "frame-ancestors": settings.CSP_FRAME_ANCESTORS,
             "base-uri": settings.CSP_BASE_URI,
-            "form-action": settings.CSP_FORM_ACTION,
+            "form-action": tuple(form_action),
             "object-src": settings.CSP_OBJECT_SRC,
         }
         return "; ".join(f"{name} {' '.join(values)}" for name, values in directives.items())

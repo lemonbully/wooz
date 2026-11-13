@@ -1,7 +1,6 @@
 {% extends "web/_shell.html" %}
 {% load onewooz %}
 
-{% block title %}Support · OneWooz{% endblock %}
 
 {% block main %}
 
@@ -11,7 +10,7 @@
     <h1 class="pal-pagehead__title">Raise a ticket.</h1>
     <p class="pal-lead pal-pagehead__lead">
       Tell us what's happening and we'll pick it up. Signed-in merchants get
-      their store and recent orders attached automatically — so we can see the
+      their store and recent orders attached automatically  so we can see the
       problem without a dozen questions.
     </p>
   </div>
@@ -26,7 +25,7 @@
         <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>Your request</span></div>
         <h2 class="pal-h2 pal-mt-6" style="max-width:16ch;" data-reveal>One desk for everything.</h2>
         <p class="pal-lead pal-mt-6" data-reveal>
-          Orders, payouts, domains, storefront or account — it all comes here.
+          Orders, payouts, domains, storefront or account  it all comes here.
           Add a reference if you have one and we'll be faster.
         </p>
 
@@ -49,7 +48,7 @@
           <div class="pal-alert pal-alert--ok">
             <div class="pal-alert__title">Ticket raised</div>
             We've logged it and emailed you a copy. You'll get a reply within one
-            working day — sooner if it's urgent.
+            working day  sooner if it's urgent.
             <div class="pal-alert__ref">Ticket: {{ ref }}</div>
           </div>
           <div class="pal-btn-row pal-mt-8"><a href="{% url 'web:support' %}" class="pal-btn pal-btn--ghost">Raise another</a></div>
@@ -80,10 +79,10 @@
               <div class="pal-field pal-field--full">
                 <label class="pal-field__label" for="s-priority">How urgent is it?</label>
                 <select class="pal-select" name="priority" id="s-priority">
-                  <option value="normal">Normal — I can wait a day</option>
-                  <option value="high">High — it's affecting sales</option>
-                  <option value="urgent">Urgent — my store is down</option>
-                  <option value="low">Low — just a question</option>
+                  <option value="normal">Normal  I can wait a day</option>
+                  <option value="high">High  it's affecting sales</option>
+                  <option value="urgent">Urgent  my store is down</option>
+                  <option value="low">Low  just a question</option>
                 </select>
               </div>
               <div class="pal-field pal-field--full">
@@ -110,13 +109,13 @@
       <div class="pal-cell">
         <div class="pal-cell__idx">FAQS</div>
         <div class="pal-cell__title">Common answers</div>
-        <div class="pal-cell__desc">Billing, migration, payouts and more — many questions are answered on the contact page.</div>
+        <div class="pal-cell__desc">Billing, migration, payouts and more  many questions are answered on the contact page.</div>
         <div class="pal-btn-row pal-mt-8"><a href="{% url 'web:contact' %}" class="pal-btn pal-btn--ghost">Read FAQs <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a></div>
       </div>
       <div class="pal-cell">
         <div class="pal-cell__idx">PLATFORM</div>
         <div class="pal-cell__title">How things work</div>
-        <div class="pal-cell__desc">See exactly what the platform handles — orders, shipping, domains and payouts.</div>
+        <div class="pal-cell__desc">See exactly what the platform handles  orders, shipping, domains and payouts.</div>
         <div class="pal-btn-row pal-mt-8"><a href="{% url 'web:platform' %}" class="pal-btn pal-btn--ghost">Platform <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a></div>
       </div>
       <div class="pal-cell">

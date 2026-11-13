@@ -1,6 +1,6 @@
 # Local production-parity stack: the real prod image and settings, with MySQL,
 # Redis and a Redis-backed Celery broker standing in for RDS / ElastiCache /
-# SQS. This is a smoke test of the container topology on your machine — not the
+# SQS. This is a smoke test of the container topology on your machine  not the
 # dev workflow (that stays `manage.py runserver` with dev settings).
 #
 #   docker compose up --build          bring the whole stack up

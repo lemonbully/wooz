@@ -1,0 +1,95 @@
+/* One-page marketing core-page tree editor (Django admin).
+ *
+ * Neutral, hairline-ruled accordions that sit comfortably inside the admin
+ * chrome. Three nesting levels (page -> subpage -> child) are set apart by a
+ * left rule and a faint background step, so depth reads at a glance. */
+
+#mkt-tree { max-width: 60rem; margin: 0 auto; }
+
+.mkt-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+}
+.mkt-top__hint { margin: 0; max-width: 52ch; color: #555; font-size: 0.85rem; line-height: 1.55; }
+.mkt-top__right { display: flex; align-items: center; gap: 1rem; white-space: nowrap; }
+
+.mkt-save { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.75rem; color: #666; }
+.mkt-save__dot { width: 8px; height: 8px; border-radius: 50%; background: #2e7d32; flex: none; }
+.mkt-save[data-state="saving"] .mkt-save__dot { background: #b8860b; }
+.mkt-save[data-state="error"]  .mkt-save__dot { background: #c62828; }
+.mkt-rawlink { font-size: 0.8rem; }
+
+/* Accordions */
+.mkt-acc { border: 1px solid #d9d9d9; border-radius: 4px; background: #fff; overflow: hidden; }
+.mkt-acc:empty { display: none; }
+.mkt-item + .mkt-item { border-top: 1px solid #e6e6e6; }
+
+.mkt-item__hdr { display: flex; align-items: stretch; }
+.mkt-item__toggle {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.7rem 0.85rem; border: 0; background: #fbfbfb; cursor: pointer;
+  text-align: left; font: inherit; color: #222;
+}
+.mkt-item__toggle:hover { background: #f2f4ff; }
+.mkt-item.is-open > .mkt-item__hdr > .mkt-item__toggle { background: #eef0ff; }
+.mkt-item__chev {
+  width: 8px; height: 8px; flex: none; border-right: 2px solid #888; border-bottom: 2px solid #888;
+  transform: rotate(-45deg); transition: transform 150ms ease;
+}
+.mkt-item.is-open > .mkt-item__hdr > .mkt-item__toggle .mkt-item__chev { transform: rotate(45deg); }
+.mkt-item__flag { width: 9px; height: 9px; border-radius: 50%; background: #2e7d32; flex: none; }
+.mkt-item__flag[data-on="false"] { background: #bbb; }
+.mkt-item__title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mkt-item__title[data-empty="true"] { color: #999; font-weight: 500; font-style: italic; }
+.mkt-item__path { color: #9a9a9a; font-size: 0.74rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mkt-item__del {
+  flex: none; border: 0; border-left: 1px solid #e6e6e6; background: #fbfbfb; cursor: pointer;
+  color: #b0b0b0; padding: 0 0.85rem; font-size: 1.05rem; line-height: 1;
+}
+.mkt-item__del:hover { background: #fdecec; color: #c62828; }
+
+.mkt-item__body { display: none; padding: 1rem 0.95rem 1.1rem; border-top: 1px solid #eee; }
+.mkt-item.is-open > .mkt-item__body { display: block; }
+
+/* Fields */
+.mkt-fields { display: flex; flex-direction: column; gap: 0.85rem; }
+.mkt-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.mkt-field__label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #777; }
+.mkt-field input[type="text"], .mkt-field textarea {
+  width: 100%; box-sizing: border-box; font: inherit; font-size: 0.9rem; color: #222;
+  padding: 0.5rem 0.6rem; border: 1px solid #ccc; border-radius: 3px; background: #fff;
+}
+.mkt-field input[type="text"]:focus, .mkt-field textarea:focus { outline: none; border-color: #4b2bf5; box-shadow: 0 0 0 2px rgba(75,43,245,0.15); }
+.mkt-field__help { font-size: 0.72rem; color: #999; }
+
+.mkt-checks { display: flex; flex-wrap: wrap; gap: 1.25rem; }
+.mkt-check { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; color: #333; cursor: pointer; }
+.mkt-check input { width: 1rem; height: 1rem; accent-color: #4b2bf5; }
+
+/* Nested wrapper (subpages / children) */
+.mkt-nested { margin-top: 1.15rem; padding-top: 0.95rem; border-top: 1px dashed #e0e0e0; }
+.mkt-nested__label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #4b2bf5; margin: 0 0 0.6rem; }
+.mkt-nested > .mkt-acc { border-left: 3px solid #e7e3ff; }
+
+/* Depth backgrounds so nesting reads clearly */
+.mkt-item[data-level="page"]  > .mkt-item__body { background: #fff; }
+.mkt-item[data-level="sub"]   > .mkt-item__hdr > .mkt-item__toggle,
+.mkt-item[data-level="sub"]   > .mkt-item__del { background: #f7f7f7; }
+.mkt-item[data-level="child"] > .mkt-item__hdr > .mkt-item__toggle,
+.mkt-item[data-level="child"] > .mkt-item__del { background: #f2f2f2; }
+
+/* Add buttons */
+.mkt-add {
+  display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;
+  border: 1px dashed #b9b0ff; background: #f6f5ff; color: #4b2bf5; border-radius: 4px;
+  padding: 0.55rem 0.9rem; font: inherit; font-size: 0.82rem; font-weight: 600;
+}
+.mkt-add:hover { border-color: #4b2bf5; background: #efedff; }
+.mkt-add--top { margin-top: 1rem; }
+.mkt-add--nested { margin-top: 0.75rem; }
+.mkt-add span[aria-hidden] { font-size: 1.05rem; line-height: 1; }
+
+.mkt-empty { margin-top: 1rem; color: #999; font-style: italic; }
+
+/* TinyMCE frames sit flush with the field styling */
+.mkt-field .tox-tinymce { border: 1px solid #ccc !important; border-radius: 3px !important; }

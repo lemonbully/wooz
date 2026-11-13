@@ -1,0 +1,161 @@
+{% load website_filters %}{% comment %}
+  The product's trust badges row on the store's product page. A partial so a
+  picked variation's own badges can be rendered too
+  (storefront/_variant_profiles.html).
+{% endcomment %}
+        {% with rb=product|return_policy_badge %}
+        {% if product.trusted_icons or rb %}
+        {% url 'public_refund' as refund_url %}
+        <div class="mt-6 md:mt-5 flex flex-wrap gap-[1.5rem] md:gap-5">
+          <style>
+            /* Phones: four badges per row in equal columns that shrink with the
+               screen (circle, icon and label scale via clamp), so the row never
+               scrolls sideways and no icon is cut off. A 5th+ badge starts a
+               new row of four. Typical phones keep the original sizes. */
+            @media (max-width: 639.98px) {
+              div.trusted-row-mobile {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                column-gap: clamp(0.375rem, 2.5vw, 1rem);
+                row-gap: 0.9rem;
+                align-items: start;
+                overflow: visible;
+              }
+              div.trusted-row-mobile > .trusted-badge { min-width: 0; width: 100%; }
+              div.trusted-row-mobile .trusted-badge__ico {
+                width: clamp(2.25rem, 11.5vw, 3rem);
+                height: clamp(2.25rem, 11.5vw, 3rem);
+                flex: 0 0 auto;
+              }
+              div.trusted-row-mobile .trusted-badge__ico svg,
+              div.trusted-row-mobile .trusted-badge__ico img {
+                width: clamp(1rem, 5.6vw, 1.5rem);
+                height: clamp(1rem, 5.6vw, 1.5rem);
+              }
+              div.trusted-row-mobile .trusted-badge__ico > span { font-size: clamp(0.875rem, 4.4vw, 1.125rem); }
+              div.trusted-row-mobile .trusted-badge__label {
+                max-width: 100%;
+                font-size: clamp(9px, 2.7vw, 11px);
+                line-height: 1.25;
+                overflow-wrap: anywhere;
+                hyphens: auto;
+              }
+            }
+            /* Return / replacement badges link to the refund policy. */
+            a.trusted-badge { text-decoration: none; color: inherit; cursor: pointer; }
+            a.trusted-badge:hover .trusted-badge__ico,
+            a.trusted-badge:focus-visible .trusted-badge__ico { background-color: #e5e7eb; }
+            a.trusted-badge:hover .trusted-badge__label,
+            a.trusted-badge:focus-visible .trusted-badge__label { text-decoration: underline; text-underline-offset: 2px; }
+            a.trusted-badge:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; border-radius: 0.5rem; }
+          </style>
+          {% trust_badges_map as tb_map %}
+          {% trust_badge_icons website as tb_icons %}
+          <div class="py-2 sm:py-0 w-full flex trusted-row-mobile gap-[2rem] sm:gap-6 items-center">
+          {% if rb %}
+          {% if refund_url %}<a href="{{ refund_url }}" class="trusted-badge flex flex-col items-center" title="{{ rb.title }}" data-return-badge="{{ rb.kind }}">{% else %}<div class="trusted-badge flex flex-col items-center" title="{{ rb.title }}" data-return-badge="{{ rb.kind }}">{% endif %}
+            <span class="trusted-badge__ico inline-flex h-12 w-12 sm:h-11 sm:w-11 items-center justify-center gap-3 rounded-full bg-gray-100 text-gray-700 ring-1 ring-gray-400" aria-hidden="true">
+              {% if rb.kind == 'replacement' %}
+                <!-- Swap arrows icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M7 7h11l-3-3" stroke-linecap="round" stroke-linejoin="round"></path>
+                  <path d="M17 17H6l3 3" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              {% else %}
+                <!-- Rotate/return arrow icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M16 8a6 6 0 10.2 8.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  <path d="M16 4v4h-4" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              {% endif %}
+            </span>
+            <span class="trusted-badge__label mt-1.5 text-[11px] text-gray-700 text-center">
+              {% with words=rb.label|split:" " %}{{ words.0 }}<br>{% for word in words|slice:"1:" %}{{ word }}{% if not forloop.last %} {% endif %}{% endfor %}{% endwith %}
+            </span>
+          {% if refund_url %}</a>{% else %}</div>{% endif %}
+          {% endif %}
+          {% for badge in product.trusted_icons %}
+          {% if refund_url and badge|is_return_badge %}<a href="{{ refund_url }}" class="trusted-badge flex flex-col items-center" title="{{ badge|trust_badge_label }}. Read the return and refund policy.">{% else %}<div class="trusted-badge flex flex-col items-center">{% endif %}
+            <span class="trusted-badge__ico inline-flex h-12 w-12 sm:h-11 sm:w-11 items-center justify-center gap-3 rounded-full bg-gray-100 text-gray-700 ring-1 ring-gray-400" title="{{ badge|trust_badge_label }}" aria-label="{{ badge|trust_badge_label }}">
+              {% with bimg=tb_map|dict_get:badge bsvg=tb_icons|dict_get:badge %}
+              {% if bimg %}
+                <img src="{{ bimg }}" alt="{{ badge|trust_badge_label }}" class="w-6 h-6 sm:w-5 sm:h-5 object-contain">
+              {% elif bsvg %}
+                {# A store-made badge: its icon from the built-in set (commerce.trust_icons). #}
+                {{ bsvg }}
+              {% else %}
+              {% if 'Delivery' in badge or 'Shipping' in badge %}
+                <!-- Truck icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <rect x="2" y="9" width="10" height="6" rx="1"></rect>
+                  <path d="M12 10h4l3 3v2h-3.5"></path>
+                  <circle cx="6" cy="17" r="1.5" fill="currentColor"></circle>
+                  <circle cx="16" cy="17" r="1.5" fill="currentColor"></circle>
+                </svg>
+              {% elif 'warranty' in badge|lower %}
+                <!-- Shield check icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M12 3l7 3v6c0 4.418-3.582 7-7 9-3.418-2-7-4.582-7-9V6l7-3z"></path>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+              {% elif badge|trust_badge_label == 'Non-Returnable' %}
+                <!-- Prohibited icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <circle cx="12" cy="12" r="7"></circle>
+                  <path d="M8.5 8.5l7 7"></path>
+                </svg>
+              {% elif badge == 'Cash On Delivery' %}
+                <!-- Rupee symbol -->
+                <span class="text-lg font-semibold leading-none">₹</span>
+              {% elif badge == 'Secure Payment' %}
+                <!-- Lock icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <rect x="6" y="10" width="12" height="9" rx="2"></rect>
+                  <path d="M8 10V8a4 4 0 118 0v2"></path>
+                </svg>
+              {% elif 'Return' in badge %}
+                <!-- Rotate/return arrow icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M16 8a6 6 0 10.2 8.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  <path d="M16 4v4h-4" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              {% elif badge == 'Fast Delivery' %}
+                <!-- Bolt icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M13 3L6 14h5l-1 7 7-11h-5l1-7z" stroke-linejoin="round"></path>
+                </svg>
+              {% elif badge == 'Secure Packaging' %}
+                <!-- Box/cube icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <path d="M3 7l9-4 9 4-9 4-9-4z"></path>
+                  <path d="M3 7v10l9 4 9-4V7"></path>
+                  <path d="M12 11v10"></path>
+                </svg>
+              {% else %}
+                <!-- Generic check circle -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
+                  <circle cx="12" cy="12" r="7"></circle>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+              {% endif %}
+              {% endif %}
+              {% endwith %}
+            </span>
+            <span class="trusted-badge__label mt-1.5 text-[11px] text-gray-700 text-center">
+              {% with words=badge|trust_badge_label|split:" " %}
+                {% if words|length > 1 %}
+                  {{ words.0 }}<br>
+                  {% for word in words|slice:"1:" %}
+                    {{ word }}{% if not forloop.last %} {% endif %}
+                  {% endfor %}
+                {% else %}
+                  {{ badge|trust_badge_label }}
+                {% endif %}
+              {% endwith %}
+            </span>
+          {% if refund_url and badge|is_return_badge %}</a>{% else %}</div>{% endif %}
+          {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% endwith %}

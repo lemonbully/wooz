@@ -1,0 +1,60 @@
+{% comment %}
+One variant-type row: a variation TYPE plus its VALUES as comma-separated tag
+chips. The type is picked from common presets (Size, Color, Material, …) or,
+via "Custom…", typed freely. Either way the name posts as `variant_type_name`
+(the text input; the picker itself has no name and only drives it), and values
+post as `variant_type_values` (a comma-joined hidden input the tag widget keeps
+in sync). The picker is wired by initVariantTypePicker in product_form.html.
+Include with `name` and `values`.
+{% endcomment %}
+<div class="app-vt__row" data-vt-row>
+  <select class="app-vt__type" data-vt-type data-no-enhance aria-label="Variation type">
+    <option value="">Select type…</option>
+    <optgroup label="Common">
+      <option value="Size" data-eg="S, M, L, XL">Size</option>
+      <option value="Color" data-eg="Black, White, Navy">Color</option>
+      <option value="Material" data-eg="Cotton, Linen, Polyester">Material</option>
+      <option value="Style" data-eg="Regular, Slim, Oversized">Style</option>
+      <option value="Pack of" data-eg="1, 2, 3, 6">Pack of</option>
+      <option value="Quantity" data-eg="1 pc, 2 pcs, 5 pcs">Quantity</option>
+    </optgroup>
+    <optgroup label="Fashion">
+      <option value="Fit" data-eg="Regular, Slim, Relaxed">Fit</option>
+      <option value="Pattern" data-eg="Solid, Striped, Checked">Pattern</option>
+      <option value="Sleeve length" data-eg="Short, Long, Sleeveless">Sleeve length</option>
+      <option value="Shoe size" data-eg="UK 6, UK 7, UK 8">Shoe size</option>
+    </optgroup>
+    <optgroup label="Measures">
+      <option value="Weight" data-eg="250 g, 500 g, 1 kg">Weight</option>
+      <option value="Volume" data-eg="100 ml, 250 ml, 1 L">Volume</option>
+      <option value="Length" data-eg="1 m, 2 m, 5 m">Length</option>
+      <option value="Dimensions" data-eg="30x40 cm, 50x70 cm">Dimensions</option>
+      <option value="Capacity" data-eg="500 ml, 1 L, 2 L">Capacity</option>
+    </optgroup>
+    <optgroup label="Beauty & food">
+      <option value="Flavour" data-eg="Chocolate, Vanilla, Mango">Flavour</option>
+      <option value="Fragrance" data-eg="Lavender, Rose, Unscented">Fragrance</option>
+      <option value="Shade" data-eg="Nude, Coral, Berry">Shade</option>
+      <option value="Skin type" data-eg="Oily, Dry, Combination">Skin type</option>
+    </optgroup>
+    <optgroup label="Electronics & home">
+      <option value="Storage" data-eg="64 GB, 128 GB, 256 GB">Storage</option>
+      <option value="RAM" data-eg="4 GB, 8 GB, 16 GB">RAM</option>
+      <option value="Finish" data-eg="Matte, Glossy">Finish</option>
+      <option value="Model" data-eg="Basic, Pro, Max">Model</option>
+    </optgroup>
+    <optgroup label="Other">
+      <option value="Age group" data-eg="0-2 yrs, 3-5 yrs, 6-8 yrs">Age group</option>
+      <option value="__custom__">Custom…</option>
+    </optgroup>
+  </select>
+  <input type="text" name="variant_type_name" value="{{ name }}" placeholder="Custom variation name" class="app-vt__name" data-vt-name>
+  <div class="app-tags app-vt__values" data-tagchips>
+    <input type="hidden" name="variant_type_values" value="{{ values }}" data-tags-store>
+    <div class="app-tags__box">
+      <span class="app-tags__list" data-tags-list></span>
+      <input type="text" class="app-tags__input" data-tags-input placeholder="Add value, Enter or comma (S, M, L)">
+    </div>
+  </div>
+  <button type="button" class="app-vt__del" aria-label="Remove variation" data-vt-del>&times;</button>
+</div>

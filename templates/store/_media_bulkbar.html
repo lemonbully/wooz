@@ -1,0 +1,21 @@
+{% comment %}
+Media bulk-delete control. Shared by the library page (header) and the modal
+footer, so both drive one selection.
+
+Default state shows a single outlined "Bulk delete" toggle. Clicking it enters
+manage mode (`body.ow-managing`); CSS then hides the toggle and reveals the
+Cancel + Delete buttons in its place. Delete removes every ticked item at once.
+The `data-med-*` hooks are read by `static/js/app/media-library.js`.
+{% endcomment %}
+<div class="app-medbulk" data-med-bulk>
+  <button type="button" class="app-medact app-medact--danger app-medmanage" data-med-manage aria-pressed="false">
+    {% include "store/_icons.html" with icon="trash" %}
+    <span data-med-manage-label>Bulk delete</span>
+  </button>
+  <span class="app-medbulk__count" data-med-bulk-countwrap hidden><strong data-med-bulk-count>0</strong> selected</span>
+  <button type="button" class="app-medact" data-med-bulk-cancel hidden>Cancel</button>
+  <button type="button" class="app-medact app-medact--danger" data-med-bulk-delete hidden>
+    {% include "store/_icons.html" with icon="trash" %}
+    <span>Delete</span>
+  </button>
+</div>

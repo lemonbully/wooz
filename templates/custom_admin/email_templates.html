@@ -1,0 +1,67 @@
+{% extends "custom_admin/_shell.html" %}
+
+{% block crumbs %} &rsaquo; Email templates{% endblock %}
+
+{% block content %}
+<div class="owa-head">
+  <div>
+    <p class="owa-kicker">Outreach</p>
+    <h1 class="owa-page-title">Email templates</h1>
+    <p class="owa-head__lead">Reusable marketing emails stores pick when composing a campaign. Draft templates stay hidden from stores until you publish them.</p>
+  </div>
+  <a href="{% url 'custom_admin:email_template_new' %}" class="owa-btn owa-btn--accent">New template <span class="owa-btn__arw" aria-hidden="true">→</span></a>
+</div>
+
+<div class="owa-panel">
+  {% if templates %}
+    <div class="owa-tablewrap">
+      <table class="owa-table">
+        <thead><tr><th>Name</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+        <tbody>
+          {% for t in templates %}
+            <tr>
+              <td>
+                <a href="{% url 'custom_admin:email_template_edit' t.id %}" class="owa-strong">{{ t.name }}</a>
+                {% if t.description %}<div class="owa-sub">{{ t.description }}</div>{% endif %}
+              </td>
+              <td>
+                {% if t.status == 'published' %}<span class="owa-badge owa-badge--ok">Published</span>
+                {% elif t.status == 'archived' %}<span class="owa-badge">Archived</span>
+                {% else %}<span class="owa-badge">Draft</span>{% endif %}
+              </td>
+              <td class="owa-mono">{{ t.updated_at|date:"d M Y, H:i" }}</td>
+              <td>
+                <div class="owa-actions">
+                  <a class="owa-link" href="{% url 'custom_admin:email_template_edit' t.id %}">Edit</a>
+                  <a class="owa-link" href="{% url 'custom_admin:email_template_preview' t.id %}" target="_blank" rel="noopener" title="Preview in a new page" aria-label="Preview">
+                    <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </a>
+                  <form method="post" action="{% url 'custom_admin:email_template_delete' t.id %}" class="owa-inline-form" data-confirm="Delete this template?">
+                    {% csrf_token %}
+                    <button class="owa-link owa-link--danger" type="submit">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="owa-empty">
+      <p class="owa-empty__title">No templates yet</p>
+      <p class="owa-empty__text">Create your first template with the AI chat builder.</p>
+      <a href="{% url 'custom_admin:email_template_new' %}" class="owa-btn owa-btn--accent">New template</a>
+    </div>
+  {% endif %}
+</div>
+
+<script nonce="{{ csp_nonce }}">
+  // Confirm before deleting (replaces an inline onsubmit, which the CSP blocks).
+  document.querySelectorAll("form[data-confirm]").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      if (!window.confirm(f.getAttribute("data-confirm"))) e.preventDefault();
+    });
+  });
+</script>
+{% endblock %}

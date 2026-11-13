@@ -1,0 +1,15 @@
+{% extends "web/pages/_page.html" %}
+
+{% comment %}
+An admin-authored legal policy (web.LegalPolicy). Same shell as the built-in
+Privacy / Terms pages: ruled page head, then the prose measure. The body is the
+TinyMCE HTML authored in the admin, wrapped in .pal-rte so raw lists, tables,
+quotes and images read like the rest of the site.
+{% endcomment %}
+
+{% block page_eyebrow %}Legal{% endblock %}
+
+{% block page_body %}
+  <p><strong>Last updated:</strong> {{ policy.updated_at|date:"j F Y" }}</p>
+  <div class="pal-rte">{{ policy.content|safe }}</div>
+{% endblock %}

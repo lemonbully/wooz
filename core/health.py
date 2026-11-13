@@ -48,7 +48,7 @@ def ready(request):
     except Exception as exc:
         checks["cache"] = f"error: {exc.__class__.__name__}"
 
-    # A degraded cache is survivable — every cache read here has a database
-    # fallback — so it does not fail readiness. A missing database does.
+    # A degraded cache is survivable  every cache read here has a database
+    # fallback  so it does not fail readiness. A missing database does.
     return JsonResponse({"status": "ok" if healthy else "unhealthy", "checks": checks},
                         status=200 if healthy else 503)

@@ -2,7 +2,7 @@
 
 The platform this replaces had none on any storefront endpoint. Its OTP send
 endpoint, in particular, would mail a six-digit code to any address supplied by
-any caller, unlimited times — a free email-bombing primitive attached to a
+any caller, unlimited times  a free email-bombing primitive attached to a
 customer's brand.
 
 Implementation is a fixed-window counter in the cache. Fixed windows allow a

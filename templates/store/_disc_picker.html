@@ -1,0 +1,41 @@
+{% comment %}
+Searchable multi-select for the discount editor.
+Params: field (input name), kind (product|category|customer), items (list of
+dicts with string ids), selected (list of selected string ids), label (plural
+noun for the empty/placeholder copy).
+{% endcomment %}
+<details class="disc-picker">
+  <summary>
+    <span>Browse {{ label }}</span>
+    <span class="disc-count" data-picker-count></span>
+  </summary>
+  <div class="disc-picker__panel">
+    {% if items %}
+      <input type="text" class="disc-picker__search" placeholder="Search {{ label }}…" spellcheck="false" aria-label="Search {{ label }}">
+      <div class="disc-picker__list">
+        {% for item in items %}
+          {% if kind == 'product' %}
+            <label class="disc-pick" data-label="{{ item.title|lower }} {{ item.sku|lower }}">
+              <input type="checkbox" name="{{ field }}" value="{{ item.id }}" {% if item.id in selected %}checked{% endif %}>
+              <span>{{ item.title }}</span>
+              <span class="disc-pick__meta">{% if item.sku %}{{ item.sku }} · {% endif %}{{ currency }}{{ item.price }}</span>
+            </label>
+          {% elif kind == 'customer' %}
+            <label class="disc-pick" data-label="{{ item.name|lower }} {{ item.email|lower }}">
+              <input type="checkbox" name="{{ field }}" value="{{ item.id }}" {% if item.id in selected %}checked{% endif %}>
+              <span>{{ item.email }}</span>
+              {% if item.name %}<span class="disc-pick__meta">{{ item.name }}</span>{% endif %}
+            </label>
+          {% else %}
+            <label class="disc-pick" data-label="{{ item.name|lower }}">
+              <input type="checkbox" name="{{ field }}" value="{{ item.id }}" {% if item.id in selected %}checked{% endif %}>
+              <span>{{ item.name }}</span>
+            </label>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="disc-picker__empty">No {{ label }} yet. Add some first, then come back to scope this discount.</p>
+    {% endif %}
+  </div>
+</details>

@@ -9,6 +9,7 @@ every credential-stuffing campaign.
 
 from __future__ import annotations
 
+import hashlib
 from typing import NamedTuple
 
 from django.conf import settings
@@ -51,7 +52,7 @@ def sign_in_url(request=None) -> str:
     """The sign-in page for the surface this request is on.
 
     The sign-out view is mounted on both the app and the admin URLconfs, and
-    each has its own sign-in route — the admin one accepts passkeys only. A
+    each has its own sign-in route  the admin one accepts passkeys only. A
     single hardcoded path would send a signed-out administrator to a page that
     does not exist on their surface.
     """
@@ -87,7 +88,7 @@ class _CodeResult(NamedTuple):
 def _email_code_and_park(request, *, flow: str, email: str, purpose: str, data: dict) -> _CodeResult:
     """Issue an emailed code, send it, and park the pending flow in the session.
 
-    Returns a non-``ok`` result — having parked nothing — when the address or
+    Returns a non-``ok`` result  having parked nothing  when the address or
     this connection has hit its send limit, or when the mail could not be
     delivered (e.g. the provider refused it). ``purpose`` namespaces the code in
     :mod:`accounts.otp` so a sign-up code and a sign-in code for the same address
@@ -282,10 +283,31 @@ def sign_in(request):
 
     ratelimit.reset("login.identifier", email)
 
-    # Every sign-in is confirmed with a one-time code emailed to the address on
-    # the account — an emailed factor layered on the password, applied uniformly
-    # whether or not a TOTP/passkey factor is also enrolled. Any enrolled second
-    # factor is still challenged afterwards, in the email-code view. The password
+    next_url = services.safe_next_url(request, "")
+
+    # When the account has an authenticator app enrolled, that is its second
+    # factor: after the password we ask for the app's rotating code directly and
+    # send no email at all. Only accounts *without* an authenticator fall back to
+    # the emailed one-time code below. A browser the user has chosen to trust
+    # still short-circuits the challenge, exactly as it did before.
+    if user.has_totp:
+        services.record_attempt(
+            request,
+            method=LoginActivity.Method.PASSWORD,
+            outcome=LoginActivity.Outcome.MFA_REQUIRED,
+            user=user,
+        )
+        if services.needs_second_factor(request, user):
+            services.begin_pending_login(
+                request, user, method=LoginActivity.Method.PASSWORD
+            )
+            return redirect(f"{reverse('accounts:mfa_challenge')}?next={next_url}")
+        # Trusted browser  the authenticator step was already cleared here.
+        services.complete_login(request, user, method=LoginActivity.Method.PASSWORD)
+        return redirect(next_url or dashboard_url())
+
+    # No authenticator: confirm with a one-time code emailed to the address on
+    # the account  an emailed factor layered on the password. The password
     # having matched, this send only ever goes to the account's own address.
     services.record_attempt(
         request,
@@ -298,7 +320,7 @@ def sign_in(request):
         flow="login",
         email=user.email,
         purpose="login",
-        data={"user": str(user.pk), "next": services.safe_next_url(request, "")},
+        data={"user": str(user.pk), "next": next_url},
     )
     if not sent.ok:
         return render(
@@ -401,14 +423,14 @@ def magic_link_request(request):
                 email, url, minutes=tokens.ttl_for("auth.magic_link") // 60
             )
 
-    # Identical response either way — sent, not sent, rate limited. The caller
+    # Identical response either way  sent, not sent, rate limited. The caller
     # learns nothing about whether the address is registered.
     return render(request, "accounts/magic_link_sent.html", {"email": email})
 
 
 #: Both a sign-in link and an address-verification link land here. They are
-#: separate purposes with separate lifetimes — a verification link is valid for
-#: a day, a sign-in link for fifteen minutes — so each is tried against its own
+#: separate purposes with separate lifetimes  a verification link is valid for
+#: a day, a sign-in link for fifteen minutes  so each is tried against its own
 #: signer rather than being collapsed into one long-lived token.
 _SIGN_IN_LINK_PURPOSES = ("auth.magic_link", "auth.email_verify")
 
@@ -449,6 +471,141 @@ def magic_link_consume(request):
 
     services.complete_login(request, user, method=LoginActivity.Method.MAGIC_LINK)
     return redirect(dashboard_url())
+
+
+# --------------------------------------------------------------------------
+# Password reset ("forgot password")
+# --------------------------------------------------------------------------
+#
+# Two steps. First the visitor gives an email and we mail a reset link to it;
+# the response is identical whether or not that address has an account, so the
+# endpoint never becomes an account-enumeration oracle. Following the link opens
+# a form to choose a new password.
+#
+# The link carries a purpose-bound signed token (``auth.password_reset``, a
+# short lifetime in settings.TOKEN_TTL). No reset state is stored server-side;
+# single use is achieved by binding a fingerprint of the current password hash
+# into the token  once the password is changed the fingerprint no longer
+# matches, so a used (or stale) link stops working.
+
+_PASSWORD_RESET_PURPOSE = "auth.password_reset"
+
+
+def _reset_fingerprint(user) -> str:
+    """A short, opaque fingerprint of the account's current password secret.
+
+    Embedded in a reset token and re-checked on confirmation. Because
+    :meth:`User.set_password` changes the stored hash, completing one reset (or
+    any later password change) alters this value and invalidates every
+    outstanding link  the token becomes effectively single-use without any
+    server-side reset record.
+    """
+    basis = f"{user.pk}:{user.password}".encode()
+    return hashlib.sha256(basis).hexdigest()[:16]
+
+
+@ensure_csrf_cookie
+@require_http_methods(["GET", "POST"])
+def password_reset_request(request):
+    """Step 1  collect the email and send a reset link to it."""
+    if request.user.is_authenticated:
+        return redirect(dashboard_url())
+
+    if request.method == "GET":
+        return render(request, "accounts/password_reset_request.html")
+
+    email = (request.POST.get("email") or "").strip().lower()
+    client_ip = ratelimit.client_identity(request)
+
+    # Per-address and per-IP limits, as elsewhere: the first stops one mailbox
+    # being flooded with reset mail, the second stops one caller spraying many.
+    address_ok = ratelimit.consume("password_reset.send", email).allowed if email else False
+    ip_ok = ratelimit.consume("otp.send.ip", client_ip).allowed
+
+    if address_ok and ip_ok:
+        user = User.objects.filter(email=email, is_active=True).first()
+        # Only a real, password-capable account is mailed a link. A passwordless
+        # account (magic-link only) has nothing to reset; it is treated exactly
+        # like a non-existent one, so the response still discloses nothing.
+        if user is not None and user.has_usable_password():
+            token = tokens.sign(
+                _PASSWORD_RESET_PURPOSE,
+                {"u": str(user.pk), "fp": _reset_fingerprint(user)},
+            )
+            url = request.build_absolute_uri(
+                reverse("accounts:password_reset_confirm") + f"?t={token}"
+            )
+            emails.send_password_reset(
+                email, url, minutes=tokens.ttl_for(_PASSWORD_RESET_PURPOSE) // 60
+            )
+
+    # Identical response either way  sent, not sent, rate limited.
+    return render(request, "accounts/password_reset_sent.html", {"email": email})
+
+
+def _resolve_reset_token(raw: str):
+    """Return the account a valid reset token names, or ``None``."""
+    if not raw:
+        return None
+    try:
+        payload = tokens.unsign(_PASSWORD_RESET_PURPOSE, raw)
+    except tokens.TokenError:
+        return None
+    user = User.objects.filter(pk=payload.get("u"), is_active=True).first()
+    if user is None or not user.has_usable_password():
+        return None
+    if payload.get("fp") != _reset_fingerprint(user):
+        return None
+    return user
+
+
+@ensure_csrf_cookie
+@require_http_methods(["GET", "POST"])
+def password_reset_confirm(request):
+    """Step 2  validate the link and set the new password."""
+    raw = request.GET.get("t") or request.POST.get("t") or ""
+    user = _resolve_reset_token(raw)
+    if user is None:
+        return render(request, "accounts/password_reset_invalid.html", status=400)
+
+    if request.method == "GET":
+        return render(request, "accounts/password_reset_confirm.html", {"token": raw})
+
+    new = request.POST.get("new_password") or ""
+    confirm = request.POST.get("confirm_password") or ""
+
+    errors = []
+    if new != confirm:
+        errors.append("The two passwords don't match.")
+    try:
+        validate_password(new, user=user)
+    except ValidationError as exc:
+        errors.extend(exc.messages)
+    if errors:
+        return render(
+            request,
+            "accounts/password_reset_confirm.html",
+            {"token": raw, "errors": errors},
+            status=400,
+        )
+
+    user.set_password(new)
+    user.save(update_fields=["password", "password_changed_at", "updated_at"])
+    audit.record("account.password.reset", request=request, actor=user, actor_kind="user")
+
+    from . import notifications
+
+    notifications.send_security_alert(
+        user,
+        subject="Your OneWooz password was reset",
+        headline="Your account password was just reset.",
+        detail="If you didn't reset it, contact us immediately  someone else may "
+               "have access to your inbox.",
+    )
+    # The auth pages don't render the Django messages framework, so signal the
+    # outcome with a query flag the sign-in page reads, rather than leaving an
+    # unshown message to surface on a later page.
+    return redirect(f"{reverse('accounts:sign_in')}?reset=done")
 
 
 # --------------------------------------------------------------------------
@@ -584,8 +741,8 @@ def passkey_auth_finish(request):
     if getattr(request, "surface", None) == Surface.ADMIN and not user.is_staff:
         return JsonResponse({"ok": False, "error": "Not permitted."}, status=403)
 
-    # A passkey is already two factors — the authenticator plus the gesture
-    # that unlocked it — so no further challenge is raised.
+    # A passkey is already two factors  the authenticator plus the gesture
+    # that unlocked it  so no further challenge is raised.
     services.complete_login(request, user, method=LoginActivity.Method.PASSKEY)
     request.session[admin_middleware.SESSION_PASSKEY_FLAG] = True
 
@@ -682,6 +839,101 @@ def totp_enrol(request):
 
 
 # --------------------------------------------------------------------------
+# Authenticator enrolment from the security page (modal, JSON)
+# --------------------------------------------------------------------------
+#
+# The signed-in owner sets up an authenticator without leaving the security
+# page: a modal shows the QR code (with a "show secret key" fallback), and these
+# two JSON endpoints back it. They complement the full-page ``totp_enrol`` above,
+# which stays for the mid-sign-in case (a user who *must* enrol before they can
+# finish signing in). Both require an authenticated session.
+
+
+@login_required
+@require_POST
+def totp_setup_begin(request):
+    """Start (or resume) authenticator enrolment for the signed-in user.
+
+    Mints an unconfirmed device  or reuses a pending one so reopening the modal
+    doesn't pile up secrets  and returns the shared secret, the ``otpauth`` URI
+    and an inline QR image. The device is not usable until a code confirms it via
+    :func:`totp_setup_verify`.
+    """
+    if request.user.has_totp:
+        return JsonResponse(
+            {"ok": False, "error": "An authenticator app is already set up."}, status=400
+        )
+
+    device = request.user.totp_devices.filter(confirmed_at__isnull=True).first()
+    if device is None:
+        device = TOTPDevice.objects.create(user=request.user, secret=totp.new_secret())
+
+    uri = totp.provisioning_uri(device.secret, request.user.email)
+    return JsonResponse(
+        {"ok": True, "secret": device.secret, "uri": uri, "qr": totp.qr_data_uri(uri)}
+    )
+
+
+@login_required
+@require_POST
+def totp_setup_verify(request):
+    """Confirm an authenticator enrolment with a code from the app."""
+    if not ratelimit.consume("otp.verify", str(request.user.pk)).allowed:
+        return JsonResponse(
+            {"ok": False, "error": "Too many attempts. Please wait a moment and try again."},
+            status=429,
+        )
+
+    device = request.user.totp_devices.filter(confirmed_at__isnull=True).first()
+    if device is None:
+        return JsonResponse(
+            {"ok": False, "error": "Start the setup again  the session expired."}, status=400
+        )
+
+    if not totp.verify(device, request.POST.get("code", "")).ok:
+        return JsonResponse(
+            {"ok": False, "error": "That code is not right. Make sure you entered the current one."},
+            status=400,
+        )
+
+    ratelimit.reset("otp.verify", str(request.user.pk))
+    audit.record(
+        "auth.totp.enrol",
+        request=request,
+        actor=request.user,
+        severity=audit.AuditEvent.Severity.NOTICE,
+    )
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@require_POST
+def two_factor_use_email(request):
+    """Switch two-step verification back to emailed one-time codes.
+
+    Removes every authenticator device (confirmed or a half-finished setup), so
+    the account's second factor becomes the emailed code again. This is the
+    explicit counterpart to setting up an authenticator: a method is active only
+    when it is fully turned on, never because setup was merely started.
+    """
+    removed = request.user.totp_devices.all().delete()[0]
+    if removed:
+        audit.record(
+            "auth.totp.removed",
+            request=request,
+            actor=request.user,
+            severity=audit.AuditEvent.Severity.NOTICE,
+        )
+        messages.success(
+            request,
+            "Two-step verification now uses an emailed code. Your authenticator app was removed.",
+        )
+    else:
+        messages.info(request, "You’re already using emailed codes for two-step verification.")
+    return redirect(f"{reverse('accounts:security')}#methods")
+
+
+# --------------------------------------------------------------------------
 # Account security page
 # --------------------------------------------------------------------------
 
@@ -689,6 +941,39 @@ def totp_enrol(request):
 @login_required
 @require_GET
 def security(request):
+    from . import geo, sessions as session_registry, useragent
+
+    # Sign-in history, each row decorated with a friendly device + location so
+    # the template shows "Chrome on Windows · Mumbai, India" rather than a raw
+    # user-agent string and a bare IP.
+    activity = list(request.user.login_activity.all()[:30])
+    for entry in activity:
+        entry.device_friendly = useragent.friendly(entry.user_agent)
+        entry.location = geo.describe(entry.ip_address or "", entry.country_code)
+
+    live = session_registry.list_for_user(
+        request.user, request.session.session_key or ""
+    )
+    # Never print a raw session key into the page. Each endable session carries a
+    # short-lived, purpose-bound, owner-bound token instead; the terminate
+    # endpoint unsigns it (and still verifies ownership before deleting).
+    live_sessions = [
+        {
+            "device": s.device,
+            "location": s.location,
+            "ip": s.ip,
+            "is_current": s.is_current,
+            "signed_in_at": s.signed_in_at,
+            "last_seen_at": s.last_seen_at,
+            "token": ""
+            if s.is_current
+            else tokens.sign(
+                _SESSION_END_PURPOSE, {"key": s.session_key, "u": str(request.user.pk)}
+            ),
+        }
+        for s in live
+    ]
+
     return render(
         request,
         "accounts/security.html",
@@ -698,9 +983,306 @@ def security(request):
             "trusted_devices": request.user.trusted_devices.filter(
                 expires_at__gt=timezone.now()
             ),
-            "recent_activity": request.user.login_activity.all()[:20],
+            "recent_activity": activity,
+            "live_sessions": live_sessions,
+            "live_session_count": len(live_sessions),
+            "other_session_count": sum(1 for s in live if not s.is_current),
         },
     )
+
+
+#: Purpose salt for the DOM-facing session-end token (see the security view).
+_SESSION_END_PURPOSE = "accounts.session_end"
+
+
+# --------------------------------------------------------------------------
+# Live sessions  list on the security page, end any one instantly
+# --------------------------------------------------------------------------
+
+
+@login_required
+@require_GET
+def session_ping(request):
+    """Heartbeat the dashboard polls so a *remotely ended* session logs out fast.
+
+    Returns ``{"authenticated": true}`` while the caller's session is valid. When
+    the owner ends this device's session from another one, its row is deleted, so
+    the next ping arrives anonymous and this returns ``{"authenticated": false}``
+     the page then redirects itself to sign-in within one poll interval.
+
+    It is intentionally *not* ``login_required``: an ended session must get a
+    clean negative answer, not a redirect to the sign-in page.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"authenticated": False}, status=200)
+    services.touch_session_device(request)
+    return JsonResponse({"authenticated": True}, status=200)
+
+
+@login_required
+@require_POST
+def session_terminate(request):
+    """End one of the owner's live sessions (block / sign out that device).
+
+    The device is named by a signed, owner-bound token minted on the security
+    page  never a raw session key from the browser. Ownership is still
+    re-verified against the decoded key before anything is deleted.
+    """
+    from . import sessions as session_registry
+
+    try:
+        payload = tokens.unsign(_SESSION_END_PURPOSE, request.POST.get("token") or "")
+    except tokens.TokenError:
+        return JsonResponse(
+            {"ok": False, "error": "This action expired. Reload the page and try again."},
+            status=400,
+        )
+    if str(payload.get("u") or "") != str(request.user.pk):
+        return JsonResponse({"ok": False, "error": "Not permitted."}, status=403)
+
+    key = payload.get("key") or ""
+    is_current = key == (request.session.session_key or "")
+    ended = session_registry.end_session(request.user, key)
+    if not ended:
+        return JsonResponse(
+            {"ok": False, "error": "That session is no longer active."}, status=404
+        )
+
+    audit.record(
+        "auth.session.ended",
+        request=request,
+        actor=request.user,
+        actor_kind="user",
+        context={"self": is_current},
+    )
+    # Ending your own current session is just a sign-out  send the caller on.
+    if is_current:
+        return JsonResponse({"ok": True, "redirect": sign_in_url(request)})
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@require_POST
+def sessions_terminate_others(request):
+    """End every other session  "sign out everywhere else" in one action."""
+    from . import sessions as session_registry
+
+    count = session_registry.end_others(request.user, request.session.session_key or "")
+    if count:
+        audit.record(
+            "auth.session.ended_others",
+            request=request,
+            actor=request.user,
+            actor_kind="user",
+            context={"count": count},
+        )
+    return JsonResponse({"ok": True, "count": count})
+
+
+@login_required
+@require_POST
+def trusted_device_remove(request, device_id):
+    """Revoke a trusted browser so it faces the second factor again."""
+    device = request.user.trusted_devices.filter(pk=device_id).first()
+    if device is None:
+        return JsonResponse({"ok": False}, status=404)
+    device.delete()
+    audit.record(
+        "auth.trusted_device.removed",
+        request=request,
+        actor=request.user,
+        actor_kind="user",
+    )
+    return JsonResponse({"ok": True})
+
+
+# Common IANA zones offered in the profile timezone picker. Kept short and
+# India-first (OneWooz's primary market) rather than an exhaustive list.
+_TIMEZONES = [
+    "Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Asia/Tokyo",
+    "Europe/London", "Europe/Berlin", "America/New_York", "America/Los_Angeles",
+    "Australia/Sydney", "UTC",
+]
+
+
+def _profile_snapshot(user) -> dict:
+    """Read-only account overview shown alongside the editable profile."""
+    from tenancy.models import Site
+
+    last_success = (
+        user.login_activity.filter(outcome=LoginActivity.Outcome.SUCCESS)
+        .order_by("-created_at")
+        .first()
+    )
+    return {
+        "member_since": user.created_at,
+        "email_verified": user.is_email_verified,
+        "has_passkey": user.has_passkey,
+        "has_totp": user.has_totp,
+        "has_second_factor": user.has_second_factor,
+        "passkey_count": user.passkeys.count(),
+        "trusted_count": user.trusted_devices.filter(expires_at__gt=timezone.now()).count(),
+        "store_count": Site.objects.filter(owner=user, is_deleted=False).count(),
+        "has_password": user.has_usable_password(),
+        "last_login_at": getattr(last_success, "created_at", None),
+        "last_login_ip": getattr(last_success, "ip_address", None),
+    }
+
+
+def _subscription_overview(user) -> dict:
+    """The owner's plan standing and how each store sits under it.
+
+    A OneWooz subscription is held at the *account* level (keyed on the owner's
+    email  see ``billing.subscriptions`` / ``commerce.features``), so every store
+    the owner runs operates under the one plan. This assembles exactly that for
+    the profile page: the current plan, and the list of stores it covers, so the
+    owner can see which store is running on which subscription basis.
+    """
+    from billing.subscriptions import current_for_owner
+    from commerce.context import NAV_GROUPS
+    from commerce.features import allowed_features_for_owner
+    from tenancy.models import Site
+
+    sub = current_for_owner(user)
+
+    sites = list(
+        Site.objects.filter(owner=user, is_deleted=False).order_by("-created_at")
+    )
+
+    # For a gated free plan, the dashboard areas that are locked (shown so the
+    # owner sees exactly what upgrading unlocks). ``None`` = nothing gated.
+    allowed = allowed_features_for_owner(user)
+    locked_labels = []
+    if allowed is not None:
+        for group in NAV_GROUPS:
+            for item in group.items:
+                if item.key not in allowed:
+                    locked_labels.append(item.label)
+
+    # The subscription bill (latest paid order), for the "View bill" dialog.
+    # On localhost (DEBUG) an account without a paid order still gets a sample
+    # bill behind a "Preview bill" button, so the layout and the PDF download can
+    # be checked without making a purchase. Never offered in production.
+    from django.conf import settings as dj_settings
+
+    from billing.bill import build_bill, build_sample_bill
+
+    # The bill is for the very order the card above describes (sub.order), so
+    # the two always agree; any settled order qualifies, ₹0 grants included.
+    bill = build_bill(user, order=sub.order)
+    bill_preview = build_sample_bill(user) if (bill is None and dj_settings.DEBUG) else None
+
+    return {
+        "subscription": sub,
+        "subscription_stores": sites,
+        "stores_used": len(sites),
+        "stores_allowed": sub.number_of_stores,
+        "locked_feature_labels": locked_labels,
+        "subscription_bill": bill,
+        "subscription_bill_preview": bill_preview,
+    }
+
+
+def _save_profile(request, user):
+    user.full_name = (request.POST.get("full_name") or "").strip()[:150]
+    user.phone = (request.POST.get("phone") or "").strip()[:20]
+    tz = (request.POST.get("timezone") or "").strip()
+    if tz in _TIMEZONES:
+        user.timezone = tz
+    user.save(update_fields=["full_name", "phone", "timezone", "updated_at"])
+    messages.success(request, "Profile updated.")
+
+
+def _save_notifications(request, user):
+    from django.core.validators import validate_email
+
+    raw = (request.POST.get("notification_email") or "").strip().lower()
+    if raw:
+        try:
+            validate_email(raw)
+        except ValidationError:
+            messages.error(request, "Enter a valid notification email, or leave it blank to use your sign-in email.")
+            return
+    user.notification_email = raw
+    digest = request.POST.get("notification_digest")
+    if digest in User.Digest.values:
+        user.notification_digest = digest
+    user.notify_security = bool(request.POST.get("notify_security"))
+    user.notify_orders = bool(request.POST.get("notify_orders"))
+    user.notify_store_activity = bool(request.POST.get("notify_store_activity"))
+    user.notify_billing = bool(request.POST.get("notify_billing"))
+    user.notify_product_news = bool(request.POST.get("notify_product_news"))
+    user.save(update_fields=[
+        "notification_email", "notification_digest", "notify_security",
+        "notify_orders", "notify_store_activity", "notify_billing",
+        "notify_product_news", "updated_at",
+    ])
+    messages.success(request, f"Notification preferences saved. Alerts go to {user.effective_notification_email}.")
+
+
+def _change_password(request, user):
+    from django.contrib.auth import update_session_auth_hash
+
+    has_pw = user.has_usable_password()
+    current = request.POST.get("current_password") or ""
+    new = request.POST.get("new_password") or ""
+    confirm = request.POST.get("confirm_password") or ""
+
+    if has_pw and not user.check_password(current):
+        messages.error(request, "Your current password isn't right.")
+        return
+    if new != confirm:
+        messages.error(request, "The new passwords don't match.")
+        return
+    try:
+        validate_password(new, user=user)
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+        return
+
+    user.set_password(new)
+    user.save(update_fields=["password", "password_changed_at", "updated_at"])
+    update_session_auth_hash(request, user)  # keep the current session signed in
+    audit.record("account.password.changed", request=request, actor=user, actor_kind="user")
+    from . import notifications
+
+    notifications.send_security_alert(
+        user,
+        subject="Your OneWooz password was changed",
+        headline="Your account password was just changed.",
+        detail="If you made this change you can ignore this message.",
+    )
+    messages.success(request, "Password updated." if has_pw else "Password set  you can now sign in with it.")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def profile(request):
+    user = request.user
+    if request.method == "POST":
+        intent = request.POST.get("intent")
+        if intent == "profile":
+            _save_profile(request, user)
+        elif intent == "notifications":
+            _save_notifications(request, user)
+        elif intent == "password":
+            _change_password(request, user)
+        elif intent == "test_notification":
+            from . import notifications
+
+            if notifications.send_test(user):
+                messages.success(request, f"Test notification sent to {user.effective_notification_email}.")
+            else:
+                messages.error(request, "Couldn't send the test notification. Check the address and try again.")
+        return redirect("accounts:profile")
+
+    context = {
+        "snapshot": _profile_snapshot(user),
+        "timezones": _TIMEZONES,
+        "digest_choices": User.Digest.choices,
+        **_subscription_overview(user),
+    }
+    return render(request, "accounts/profile.html", context)
 
 
 # --------------------------------------------------------------------------
@@ -708,9 +1290,30 @@ def security(request):
 # --------------------------------------------------------------------------
 
 
+def sign_up(request):
+    """Self-service sign-up is currently DISABLED.
+
+    OneWooz is not accepting new self-service accounts right now, so there is no
+    way to sign up. This route keeps its name (``accounts:sign_up``) so existing
+    links and ``{% url %}`` references  including the "/sign-up/" call-to-action
+    buttons across the marketing site  still resolve; it simply redirects to
+    the sign-in page instead of showing a sign-up form.
+
+    The full original implementation is preserved below as
+    :func:`_sign_up_disabled` (not wired to any URL). To turn sign-up back on,
+    point the ``sign-up/`` route in ``accounts/urls.py`` at it again.
+    """
+    return redirect("accounts:sign_in")
+
+
+# ---------------------------------------------------------------------------
+# Original self-service sign-up  RETAINED but NOT routed while sign-up is off.
+# Kept intact (rather than deleted) so re-enabling is a one-line URL change; see
+# :func:`sign_up` above. Nothing reaches this view in the current wiring.
+# ---------------------------------------------------------------------------
 @ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
-def sign_up(request):
+def _sign_up_disabled(request):
     """Self-service sign-up, limited to allowlisted test users during the beta.
 
     An approved address does not get an account on submit: it gets an emailed
@@ -739,7 +1342,7 @@ def sign_up(request):
 
     # Private beta: only approved test addresses may register. Everyone else is
     # turned away with a plain message. (This intentionally does reveal that the
-    # address is not on the list — that is the requested behaviour, and it says
+    # address is not on the list  that is the requested behaviour, and it says
     # nothing about whether any account exists.)
     if not services.is_signup_allowed(email):
         services.record_attempt(

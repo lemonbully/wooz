@@ -4,7 +4,7 @@ Why passkeys are the primary recommendation rather than TOTP: the browser
 signs a challenge together with the origin it is talking to. A convincing
 lookalike domain cannot obtain a usable signature, because the signature it
 would receive is bound to the wrong origin. A TOTP code, by contrast, is six
-digits that work anywhere for thirty seconds — a real-time relay page collects
+digits that work anywhere for thirty seconds  a real-time relay page collects
 one and replays it.
 
 Challenges live in the cache keyed by session, never in a hidden form field: a

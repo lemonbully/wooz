@@ -3,7 +3,7 @@
 # On-demand TLS mints a certificate the first time a hostname is requested
 # (storefront subdomains and verified custom domains). Across an autoscaling
 # fleet every instance must read and write the SAME certificate store, or each
-# would re-issue and hit Let's Encrypt rate limits — so certificates live in
+# would re-issue and hit Let's Encrypt rate limits  so certificates live in
 # ElastiCache Redis via the storage-redis module, not on local disk.
 
 # Caddy base pinned to 2.11 to match the redis storage plugin's requirement

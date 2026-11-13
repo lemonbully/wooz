@@ -20,7 +20,7 @@ import pyotp
 from django.conf import settings
 from django.utils import timezone
 
-__all__ = ["new_secret", "provisioning_uri", "verify", "TOTPResult"]
+__all__ = ["new_secret", "provisioning_uri", "qr_data_uri", "verify", "TOTPResult"]
 
 #: Steps of tolerance either side of now, for clock drift between the phone
 #: and the server. One step (30s) is the usual recommendation: enough for real
@@ -44,6 +44,33 @@ def provisioning_uri(secret: str, account_email: str) -> str:
     """The ``otpauth://`` URI an authenticator app scans."""
     issuer = quote(getattr(settings, "WEBAUTHN_RP_NAME", "OneWooz"))
     return pyotp.TOTP(secret).provisioning_uri(name=account_email, issuer_name=issuer)
+
+
+def qr_data_uri(uri: str, *, box_size: int = 8, border: int = 4) -> str:
+    """A scannable QR of ``uri`` as a ``data:image/png;base64,…`` URI.
+
+    Rendered server-side and embedded straight into the page, so it needs no
+    external request  the strict nonce-only CSP allows ``data:`` images but no
+    third-party image host, and an inline data URI keeps the secret off any
+    other origin. Used by the authenticator-setup modal on the security page.
+    """
+    import base64
+    import io
+
+    import qrcode
+
+    qr = qrcode.QRCode(
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=box_size,
+        border=border,
+    )
+    qr.add_data(uri)
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="black", back_color="white")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
 
 
 def _current_step(at: float | None = None) -> int:

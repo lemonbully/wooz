@@ -2,7 +2,7 @@
 
 Public sign-up is currently disabled (see ``accounts.views.sign_up``), so this
 is the supported way to add an account. It asks for a name, an email and a
-password — prompting interactively for anything not supplied as a flag — and
+password  prompting interactively for anything not supplied as a flag  and
 creates a normal (non-staff) user through the same ``UserManager`` the app
 uses, so email normalisation and Argon2id hashing happen exactly as they do
 in production.

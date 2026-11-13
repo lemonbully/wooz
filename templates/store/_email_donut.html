@@ -1,0 +1,26 @@
+{% comment %}
+SVG donut chart. Expects `donut` = {circ, total, segments:[{label,value,pct,color,dash,offset}]}
+and `center_label` (a short caption under the total). CSP-safe: stroke-dasharray/
+stroke-dashoffset are plain SVG attributes, colours are inline on <circle>/<span>.
+{% endcomment %}
+<div class="emax-donut">
+  <svg class="emax-donut__svg" viewBox="0 0 120 120" role="img" aria-label="{{ center_label }} breakdown">
+    <circle cx="60" cy="60" r="54" fill="none" stroke="var(--pal-line-soft)" stroke-width="12"/>
+    {% for s in donut.segments %}{% if s.value %}
+    <circle cx="60" cy="60" r="54" fill="none" stroke="{{ s.color }}" stroke-width="12"
+            stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}"
+            transform="rotate(-90 60 60)" stroke-linecap="butt"/>
+    {% endif %}{% endfor %}
+    <text x="60" y="57" text-anchor="middle" class="emax-donut__total">{{ donut.total }}</text>
+    <text x="60" y="70" text-anchor="middle" class="emax-donut__cap">{{ center_label }}</text>
+  </svg>
+  <div class="emax-donut__legend">
+    {% for s in donut.segments %}
+    <div class="emax-donut__row">
+      <span class="emax-donut__dot" style="background:{{ s.color }}"></span>
+      <span class="emax-donut__label">{{ s.label }}</span>
+      <span class="emax-donut__val">{{ s.value }} · {{ s.pct }}%</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>

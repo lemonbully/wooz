@@ -1,0 +1,706 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · {% if is_edit %}Edit campaign{% else %}New campaign{% endif %}{% endblock %}
+{% block crumb %}Email marketing{% endblock %}
+
+{% block main %}
+<div class="app-page emx" id="emc"
+     data-kind="{{ campaign.kind|default:'broadcast' }}">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Email marketing</p>
+      <h1 class="app-head__title pal-mt-4">{% if is_edit %}Edit campaign{% else %}New campaign{% endif %}</h1>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:email_marketing' site.id %}" class="pal-btn pal-btn--ghost">Back</a>
+    </div>
+  </div>
+
+  <form method="post" action="{% if is_edit %}{% url 'store:email_campaign_edit' site.id campaign.id %}{% else %}{% url 'store:email_campaign_new' site.id %}{% endif %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="emc-action" value="save">
+
+    <div class="emx-layout">
+      <div class="emx-main">
+
+        <div class="emx-card">
+          <div class="emx-card__head">
+            <div class="emx-card__titles"><h2 class="emx-card__title">Basics</h2></div>
+          </div>
+          <div class="emx-card__body">
+            <div class="emx-fields">
+              <div class="emx-field">
+                <label class="emx-label" for="f-name">Campaign name</label>
+                <input class="emx-input" id="f-name" name="name" value="{{ campaign.name|default:'' }}" placeholder="Spring sale announcement" required>
+                <p class="emx-help">Internal only  your customers never see this.</p>
+              </div>
+              <div class="emx-field">
+                <span class="emx-label">Type</span>
+                <div class="emx-seg" role="group">
+                  <label class="emx-seg__opt">
+                    <input type="radio" name="kind" value="broadcast" {% if campaign.kind != 'drip' %}checked{% endif %} data-kind-radio>
+                    <span class="emx-seg__box"><strong>Broadcast</strong><em>One email, sent once.</em></span>
+                  </label>
+                  <label class="emx-seg__opt">
+                    <input type="radio" name="kind" value="drip" {% if campaign.kind == 'drip' %}checked{% endif %} data-kind-radio>
+                    <span class="emx-seg__box"><strong>Drip sequence</strong><em>A day-by-day series.</em></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ---------- Products (fills the design's {{products}} grid) ---------- #}
+        <div class="emx-card" id="emc-products">
+          <div class="emx-card__head">
+            <div class="emx-card__titles">
+              <h2 class="emx-card__title">Email type</h2>
+              <p class="emx-card__hint">Pick the kind of email  it decides which designs you can choose and what fills the product grid.</p>
+            </div>
+          </div>
+          <div class="emx-card__body">
+            <div class="emx-fields">
+              <div class="emx-field">
+                <span class="emx-label">Type</span>
+                <div class="emx-seg emx-seg--3" role="group">
+                  <label class="emx-seg__opt">
+                    <input type="radio" name="product_mode" value="single" {% if product_mode == 'single' %}checked{% endif %} data-pmode>
+                    <span class="emx-seg__box"><strong>Single product</strong><em>Spotlight one product.</em></span>
+                  </label>
+                  <label class="emx-seg__opt">
+                    <input type="radio" name="product_mode" value="multi" {% if product_mode == 'multi' %}checked{% endif %} data-pmode>
+                    <span class="emx-seg__box"><strong>Multiple products</strong><em>Up to four products.</em></span>
+                  </label>
+                  <label class="emx-seg__opt">
+                    <input type="radio" name="product_mode" value="promotional" {% if product_mode == 'promotional' %}checked{% endif %} data-pmode>
+                    <span class="emx-seg__box"><strong>Promotional</strong><em>A sale / offer / launch.</em></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="emx-field">
+                <label class="emx-label">Choose products <span class="emx-pick__count" id="emc-pick-count"></span></label>
+                {% if products %}
+                <input type="hidden" name="product_ids" id="emc-product-ids" value="">
+                <div class="emx-pick" id="emc-pick">
+                  <button type="button" class="emx-pick__btn" id="emc-pick-btn" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="emx-pick__label" id="emc-pick-label">Choose products…</span>
+                    <span class="emx-pick__caret" aria-hidden="true">▾</span>
+                  </button>
+                  <div class="emx-pick__panel" id="emc-pick-panel" role="listbox" aria-multiselectable="true" hidden>
+                    {% for p in products %}
+                    <button type="button" class="emx-pick__opt" role="option" aria-selected="false" data-id="{{ p.id }}" data-name="{{ p.title }}">
+                      <span class="emx-pick__check" aria-hidden="true"></span>
+                      <span class="emx-pick__name">{{ p.title }}</span>
+                      <span class="emx-pick__price">₹{{ p.price }}</span>
+                    </button>
+                    {% endfor %}
+                  </div>
+                </div>
+                <div class="emx-pick__chips" id="emc-pick-chips"></div>
+                <p class="emx-help">Leave empty to use your latest products automatically.</p>
+                {{ selected_product_ids|json_script:"emc-pick-initial" }}
+                {% else %}
+                <p class="emx-help">No products yet  add products to your store to feature them here. Until then the email uses your latest products automatically.</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ---------- Broadcast content ---------- #}
+        <div class="emx-card" data-when="broadcast">
+          <div class="emx-card__head">
+            <div class="emx-card__titles"><h2 class="emx-card__title">Email content</h2></div>
+          </div>
+          <div class="emx-card__body">
+            <div class="emx-fields">
+
+              <div class="emx-field">
+                <label class="emx-label" for="f-subject">Subject line</label>
+                <input class="emx-input" id="f-subject" name="subject" value="{{ campaign.subject|default:'' }}" placeholder="Your subject line">
+              </div>
+              <div class="emx-field">
+                <label class="emx-label" for="f-preheader">Preview text</label>
+                <input class="emx-input" id="f-preheader" name="preheader" value="{{ campaign.preheader|default:'' }}" placeholder="The grey line shown after the subject in most inboxes">
+              </div>
+
+              <div class="emx-field emx-field--6">
+                <label class="emx-label" for="f-from">From name</label>
+                <input class="emx-input" id="f-from" name="from_name" value="{{ campaign.from_name|default:'' }}" placeholder="{{ site.name }}">
+                <p class="emx-help">Sent from {{ site.customer_from_header|default:site.name }}.</p>
+              </div>
+              <div class="emx-field emx-field--6">
+                <label class="emx-label" for="f-reply">Reply-to</label>
+                <input class="emx-input" id="f-reply" name="reply_to" type="email" value="{{ campaign.reply_to|default:'' }}" placeholder="you@yourbrand.com">
+              </div>
+
+              {# ---------- Email design (built-in designs + any published templates) ---------- #}
+              <div class="emx-field">
+                <label class="emx-label">Email design</label>
+                <div class="emx-tpl-list" id="emc-tpl-list" role="radiogroup" aria-label="Email design">
+                  <div class="emx-tpl" data-ptype="any">
+                    <label class="emx-tpl__pick">
+                      <input type="radio" class="emx-tpl__radio" name="template_choice" value="builtin:promo" data-builtin="promo"
+                             {% if selected_template_id == 'builtin:promo' %}checked{% endif %}>
+                      <span class="emx-tpl__box">
+                        <span class="emx-tpl__tick" aria-hidden="true"></span>
+                        <span class="emx-tpl__name">{{ promo_name }}</span>
+                        <span class="emx-tpl__desc">{{ promo_description }}</span>
+                      </span>
+                    </label>
+                    <a class="emx-tpl__eye" href="{% url 'store:email_design_preview' site.id %}" target="_blank" rel="noopener" title="Preview in a new page" aria-label="Preview {{ promo_name }}">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </a>
+                  </div>
+                  {% for t in templates %}
+                  <div class="emx-tpl" data-ptype="{{ t.product_type }}">
+                    <label class="emx-tpl__pick">
+                      <input type="radio" class="emx-tpl__radio" name="template_choice" value="{{ t.id }}"
+                             data-json="{% url 'store:email_template_json' site.id t.id %}"
+                             {% if selected_template_id == t.id|stringformat:'s' %}checked{% endif %}>
+                      <span class="emx-tpl__box">
+                        <span class="emx-tpl__tick" aria-hidden="true"></span>
+                        <span class="emx-tpl__name">{{ t.name }}</span>
+                      </span>
+                    </label>
+                    <a class="emx-tpl__eye" href="{% url 'store:email_template_preview' site.id t.id %}" target="_blank" rel="noopener" title="Preview in a new page" aria-label="Preview {{ t.name }}">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </a>
+                  </div>
+                  {% endfor %}
+                </div>
+                <p class="emx-help" id="emc-tpl-none" hidden>No designs match this product layout yet. Switch the layout above.</p>
+                <p class="emx-help">Choose a design, then fill in its content below. The eye opens a full preview in a new page.</p>
+              </div>
+
+              {# The chosen published design's HTML is submitted here; content is never hand-authored. #}
+              <input type="hidden" name="html" id="f-html" value="{{ campaign.html|default:'' }}">
+              <input type="hidden" name="builder" value="html">
+
+              <div class="emx-field emx-field--6" data-generic-cta>
+                <label class="emx-label" for="f-cta-label">Button label</label>
+                <input class="emx-input" id="f-cta-label" name="cta_label" value="{{ campaign.cta_label|default:'' }}" placeholder="Shop now">
+              </div>
+              <div class="emx-field emx-field--6" data-generic-cta>
+                <label class="emx-label" for="f-cta-url">Button links to</label>
+                <input class="emx-input" id="f-cta-url" name="cta_url" type="url" value="{{ campaign.cta_url|default:'' }}" placeholder="https://…  (defaults to your storefront)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ---------- Promo design content (one input per slot of the design) ---------- #}
+        <div class="emx-card" id="emc-promo" data-when="broadcast" data-promo-card hidden
+             data-preview-url="{% url 'store:email_design_preview' site.id %}">
+          <div class="emx-card__head">
+            <div class="emx-card__titles">
+              <h2 class="emx-card__title">Design content</h2>
+              <p class="emx-card__hint">Each field fills its own place in the {{ promo_name }} design. Leave a field empty to hide that part. Links default to your storefront.</p>
+            </div>
+          </div>
+          <div class="emx-card__body">
+            <div class="emx-promo">
+              <div class="emx-promo__fields">
+
+                <p class="emx-promo__sec">1 · Hero</p>
+                <div class="emx-fields">
+                  <div class="emx-field">
+                    <label class="emx-label" for="pd-hero">Hero image</label>
+                    <div class="emx-promo__img">
+                      <span class="emx-promo__thumb" id="pd-hero-thumb"></span>
+                      <input class="emx-input" id="pd-hero" name="pd_hero_image" value="{{ promo.hero_image }}" placeholder="https://…  or choose from your media">
+                      <button type="button" class="pal-btn pal-btn--ghost" id="pd-hero-pick">Choose image</button>
+                    </div>
+                    <p class="emx-help">A tall portrait photo works best (about 1200 × 1400). Shown behind the brand badge.</p>
+                  </div>
+                  <div class="emx-field">
+                    <label class="emx-label" for="pd-badge">Brand badge</label>
+                    <input class="emx-input" id="pd-badge" name="pd_badge_text" value="{{ promo.badge_text }}" maxlength="40" placeholder="{{ site.name }}">
+                    <p class="emx-help">The frosted pill over the photo.</p>
+                  </div>
+                </div>
+
+                <p class="emx-promo__sec">2 · Headline</p>
+                <div class="emx-fields">
+                  <div class="emx-field">
+                    <label class="emx-label" for="pd-headline">Headline</label>
+                    <input class="emx-input" id="pd-headline" name="pd_headline" value="{{ promo.headline }}" maxlength="120">
+                  </div>
+                  <div class="emx-field">
+                    <label class="emx-label" for="pd-intro">Intro text</label>
+                    <textarea class="emx-input emx-textarea" id="pd-intro" name="pd_intro_text" rows="3">{{ promo.intro_text }}</textarea>
+                  </div>
+                  <div class="emx-field emx-field--6">
+                    <label class="emx-label" for="pd-hero-btn">Button label</label>
+                    <input class="emx-input" id="pd-hero-btn" name="pd_hero_button_label" value="{{ promo.hero_button_label }}" maxlength="40">
+                  </div>
+                  <div class="emx-field emx-field--6">
+                    <label class="emx-label" for="pd-hero-url">Button links to</label>
+                    <input class="emx-input" id="pd-hero-url" name="pd_hero_button_url" type="url" value="{{ promo.hero_button_url }}" placeholder="{{ store_url }}">
+                  </div>
+                </div>
+
+                <p class="emx-promo__sec">3 · Countdown</p>
+                <div class="emx-fields">
+                  <div class="emx-field emx-field--6">
+                    <label class="emx-label" for="pd-count-label">Label</label>
+                    <input class="emx-input" id="pd-count-label" name="pd_countdown_label" value="{{ promo.countdown_label }}" maxlength="60">
+                  </div>
+                  <div class="emx-field emx-field--6">
+                    <label class="emx-label" for="pd-count-end">Counts down to</label>
+                    <input class="emx-input" id="pd-count-end" name="pd_countdown_end" type="datetime-local" value="{{ promo.countdown_end }}">
+                  </div>
+                  <div class="emx-field">
+                    <p class="emx-help">Shows days : hours : minutes : seconds left at the moment the email is sent. Leave the date empty to hide the countdown.</p>
+                  </div>
+                </div>
+
+                <p class="emx-promo__sec">4 · Products</p>
+                <p class="emx-help emx-promo__note">The grid shows up to {{ promo_max_products }} products (three per row) with name, price and the struck-through MRP. Pick them under <a class="emx-link" href="#emc-products">Choose products</a>; leave it empty to use your newest products.</p>
+
+                <p class="emx-promo__sec">5 · Offer</p>
+                <div class="emx-fields">
+                  <div class="emx-field">
+                    <label class="emx-label" for="pd-offer-title">Offer headline</label>
+                    <input class="emx-input" id="pd-offer-title" name="pd_offer_title" value="{{ promo.offer_title }}" maxlength="80">
+                  </div>
+                  <div class="emx-field">
+                    <label class="emx-label" for="pd-offer-text">Offer text</label>
+                    <input class="emx-input" id="pd-offer-text" name="pd_offer_text" value="{{ promo.offer_text }}" maxlength="200">
+                  </div>
+                  <div class="emx-field emx-field--6">
+                    <label class="emx-label" for="pd-offer-code">Promo code</label>
+                    <input class="emx-input" id="pd-offer-code" name="pd_offer_code" value="{{ promo.offer_code }}" maxlength="40">
+                    <p class="emx-help">Use a code from Discounts so it works at checkout.</p>
+                  </div>
+                  <div class="emx-field emx-field--6">
+                    <label class="emx-label" for="pd-offer-btn">Button label</label>
+                    <input class="emx-input" id="pd-offer-btn" name="pd_offer_button_label" value="{{ promo.offer_button_label }}" maxlength="40">
+                  </div>
+                  <div class="emx-field">
+                    <label class="emx-label" for="pd-offer-url">Button links to</label>
+                    <input class="emx-input" id="pd-offer-url" name="pd_offer_button_url" type="url" value="{{ promo.offer_button_url }}" placeholder="{{ store_url }}">
+                  </div>
+                </div>
+
+                <p class="emx-promo__sec">6 · Closing band</p>
+                <div class="emx-fields">
+                  <div class="emx-field">
+                    <label class="emx-label" for="pd-wait-text">Text</label>
+                    <textarea class="emx-input emx-textarea" id="pd-wait-text" name="pd_waitlist_text" rows="3">{{ promo.waitlist_text }}</textarea>
+                  </div>
+                  <div class="emx-field emx-field--6">
+                    <label class="emx-label" for="pd-wait-btn">Button label</label>
+                    <input class="emx-input" id="pd-wait-btn" name="pd_waitlist_button_label" value="{{ promo.waitlist_button_label }}" maxlength="40">
+                  </div>
+                  <div class="emx-field emx-field--6">
+                    <label class="emx-label" for="pd-wait-url">Button links to</label>
+                    <input class="emx-input" id="pd-wait-url" name="pd_waitlist_button_url" type="url" value="{{ promo.waitlist_button_url }}" placeholder="{{ store_url }}">
+                  </div>
+                </div>
+
+                <p class="emx-promo__sec">7 · Highlights</p>
+                <div class="emx-promo__hls">
+                  {% for hl in promo_highlights %}
+                  <div class="emx-promo__hl">
+                    <span class="emx-label">Highlight {{ hl.n }}</span>
+                    <div class="emx-promo__icons" role="radiogroup" aria-label="Highlight {{ hl.n }} icon">
+                      {% for ic in promo_icon_choices %}
+                      <label class="emx-promo__icon" title="{{ ic.label }}">
+                        <input type="radio" name="pd_hl{{ hl.n }}_icon" value="{{ ic.key }}" {% if hl.icon == ic.key %}checked{% endif %}>
+                        <img src="{{ ic.src }}" width="20" height="20" alt="{{ ic.label }}">
+                      </label>
+                      {% endfor %}
+                    </div>
+                    <input class="emx-input" name="pd_hl{{ hl.n }}_label" value="{{ hl.label }}" maxlength="30" placeholder="Label" aria-label="Highlight {{ hl.n }} label">
+                    <input class="emx-input" name="pd_hl{{ hl.n }}_url" type="url" value="{{ hl.url }}" placeholder="Link (optional)" aria-label="Highlight {{ hl.n }} link">
+                  </div>
+                  {% endfor %}
+                </div>
+
+                <p class="emx-promo__sec">8 · Footer</p>
+                <div class="emx-fields">
+                  <div class="emx-field">
+                    <label class="emx-label" for="pd-address">Address line</label>
+                    <input class="emx-input" id="pd-address" name="pd_footer_address" value="{{ promo.footer_address }}" maxlength="200" placeholder="Street, city, PIN">
+                    <p class="emx-help">Printed after ©{{ site.name }}. The unsubscribe link is always included.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="emx-promo__preview">
+                <div class="emx-promo__bar">
+                  <span class="emx-label emx-promo__bar-label">Live preview</span>
+                  <div class="emx-promo__toggle" role="group" aria-label="Preview width">
+                    <button type="button" class="is-on" data-pv-width="600">Desktop</button>
+                    <button type="button" data-pv-width="375">Mobile</button>
+                  </div>
+                </div>
+                <div class="emx-promo__frame" id="pd-frame-wrap">
+                  <iframe name="emc-preview-frame" id="pd-frame" title="Email preview" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ---------- Drip content ---------- #}
+        <div class="emx-card" data-when="drip" hidden>
+          <div class="emx-card__head">
+            <div class="emx-card__titles"><h2 class="emx-card__title">Sequence</h2></div>
+          </div>
+          <div class="emx-card__body">
+            <div class="emx-fields">
+              {% if sequences %}
+              <div class="emx-field">
+                <label class="emx-label" for="f-drip">Drip sequence</label>
+                <select class="emx-select" id="f-drip" name="drip">
+                  <option value=""> choose a sequence </option>
+                  {% for s in sequences %}
+                    <option value="{{ s.id }}" {% if campaign.drip_id == s.id %}selected{% endif %}>{{ s.name }} ({{ s.steps|length }} step{{ s.steps|length|pluralize }})</option>
+                  {% endfor %}
+                </select>
+                <p class="emx-help">Day 1 is the campaign’s start day; each subscriber moves through the steps one day at a time. <a class="emx-link" href="{% url 'store:email_sequences' site.id %}">Manage sequences →</a></p>
+              </div>
+              {% else %}
+              <p class="emx-help">You don’t have any drip sequences yet. <a class="emx-link" href="{% url 'store:email_sequence_new' site.id %}">Create one →</a></p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ---------- Side: audience + schedule + actions ---------- #}
+      <aside class="emx-side">
+        <div class="emx-card">
+          <div class="emx-card__head">
+            <div class="emx-card__titles"><h2 class="emx-card__title">Audience</h2></div>
+          </div>
+          <div class="emx-card__body">
+            <label class="emx-check">
+              <input type="checkbox" name="send_to_all_customers" {% if campaign.send_to_all_customers %}checked{% endif %}>
+              <span class="emx-check__label">All store customers</span>
+            </label>
+            {% if lists %}
+            <p class="emx-label" style="margin-top:0.9rem;">Or pick lists</p>
+            <div class="emx-checklist">
+              {% for l in lists %}
+              <label class="emx-check">
+                <input type="checkbox" name="audience_lists" value="{{ l.id }}" {% if l.id|stringformat:'s' in selected_list_ids %}checked{% endif %}>
+                <span class="emx-check__label">{{ l.name }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="emx-help">No lists yet  <a class="emx-link" href="{% url 'store:email_audiences' site.id %}">build one</a> or send to all customers.</p>
+            {% endif %}
+            {% if limits.max_recipients_per_campaign %}
+            <p class="emx-help">Your plan sends up to {{ limits.max_recipients_per_campaign }} recipients per campaign.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="emx-card">
+          <div class="emx-card__head">
+            <div class="emx-card__titles"><h2 class="emx-card__title">Schedule</h2></div>
+          </div>
+          <div class="emx-card__body">
+            <div class="emx-fields">
+              <div class="emx-field">
+                <label class="emx-label" for="f-start">{% if limits.scheduling == 'simple' %}Start date{% else %}Start date &amp; time{% endif %}</label>
+                <input class="emx-input" id="f-start" name="start_at"
+                       type="{% if limits.scheduling == 'simple' %}date{% else %}datetime-local{% endif %}"
+                       value="{% if campaign.start_at %}{% if limits.scheduling == 'simple' %}{{ campaign.start_at|date:'Y-m-d' }}{% else %}{{ campaign.start_at|date:'Y-m-d\TH:i' }}{% endif %}{% endif %}">
+                <p class="emx-help">Leave empty to send immediately when you press Send.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="emx-card">
+          <div class="emx-card__body">
+            <div class="emx-actions emx-actions--stack">
+              <button type="submit" class="pal-btn" id="emc-send">Send / schedule <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+              <button type="submit" class="pal-btn pal-btn--ghost" id="emc-save">Save draft</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </form>
+</div>
+
+{% include "store/_email_styles.html" %}
+
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var root = document.getElementById("emc");
+    if (!root) return;
+
+    var form = root.querySelector("form");
+    var promoCard = document.getElementById("emc-promo");
+    var schedulePreview = function () {};
+    var onProductsChanged = function () {};
+    var refit = function () {};
+
+    function isPromo() {
+      var r = root.querySelector('input[name="template_choice"]:checked');
+      return !!(r && r.getAttribute("data-builtin") === "promo");
+    }
+    function currentKind() {
+      return (root.querySelector('input[name="kind"]:checked') || {}).value || "broadcast";
+    }
+    // The built-in design brings its own fields (and buttons), so the generic
+    // button fields only apply to the published designs.
+    function syncDesign() {
+      var promo = isPromo();
+      if (promoCard) promoCard.hidden = !(promo && currentKind() === "broadcast");
+      root.querySelectorAll("[data-generic-cta]").forEach(function (el) { el.hidden = promo; });
+      if (promo && promoCard && !promoCard.hidden) { refit(); schedulePreview(true); }
+    }
+    function syncKind() {
+      var kind = currentKind();
+      root.querySelectorAll("[data-when]").forEach(function (el) {
+        el.hidden = el.getAttribute("data-when") !== kind;
+      });
+      syncDesign();
+    }
+    root.querySelectorAll("[data-kind-radio]").forEach(function (r) { r.addEventListener("change", syncKind); });
+    syncKind();
+
+    var actionField = document.getElementById("emc-action");
+    var saveBtn = document.getElementById("emc-save");
+    var sendBtn = document.getElementById("emc-send");
+    if (saveBtn) saveBtn.addEventListener("click", function () { actionField.value = "save"; });
+    if (sendBtn) sendBtn.addEventListener("click", function () { actionField.value = "send"; });
+
+    // Email-design picker: selecting a template fills the hidden html field with
+    // that design's markup (fetched from the template's JSON endpoint).
+    var htmlField = document.getElementById("f-html");
+    Array.prototype.forEach.call(root.querySelectorAll(".emx-tpl__radio"), function (radio) {
+      radio.addEventListener("change", function () {
+        if (!radio.checked) return;
+        syncDesign();
+        onProductsChanged();
+        if (radio.getAttribute("data-builtin")) return;
+        var url = radio.getAttribute("data-json");
+        if (!url || !htmlField) return;
+        var row = radio.closest(".emx-tpl");
+        if (row) row.classList.add("is-busy");
+        fetch(url, { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (row) row.classList.remove("is-busy");
+            if (data && data.ok) { htmlField.value = data.html || ""; }
+          })
+          .catch(function () { if (row) row.classList.remove("is-busy"); });
+      });
+    });
+
+    // Show only email designs built for the chosen product layout. A design is
+    // "single", "multi", or "any" (shown for both). Switching the layout hides
+    // the mismatched designs and clears a now-hidden selection.
+    var tplList = document.getElementById("emc-tpl-list");
+    var tplNone = document.getElementById("emc-tpl-none");
+    function currentProductMode() {
+      var r = root.querySelector('input[name="product_mode"]:checked');
+      return (r && r.value) || "multi";
+    }
+    function filterTemplates(clearHidden) {
+      if (!tplList) return;
+      var mode = currentProductMode();
+      var visible = 0;
+      Array.prototype.forEach.call(tplList.querySelectorAll(".emx-tpl"), function (row) {
+        var pt = row.getAttribute("data-ptype") || "any";
+        var ok = (pt === "any" || pt === mode);
+        row.hidden = !ok;
+        if (ok) { visible++; }
+        else if (clearHidden) {
+          var radio = row.querySelector(".emx-tpl__radio");
+          if (radio && radio.checked) { radio.checked = false; if (htmlField) htmlField.value = ""; }
+        }
+      });
+      if (tplNone) tplNone.hidden = visible !== 0;
+    }
+    root.querySelectorAll('input[name="product_mode"]').forEach(function (r) {
+      r.addEventListener("change", function () { filterTemplates(true); });
+    });
+    filterTemplates(false);
+
+    // Product picker  a custom dropdown (matching the store's dropdown UI) that
+    // works as single-select or multi-select (up to four) depending on the mode.
+    var pick = document.getElementById("emc-pick");
+    if (pick) {
+      var pbtn = document.getElementById("emc-pick-btn");
+      var ppanel = document.getElementById("emc-pick-panel");
+      var plabel = document.getElementById("emc-pick-label");
+      var pchips = document.getElementById("emc-pick-chips");
+      var pcount = document.getElementById("emc-pick-count");
+      var pidsField = document.getElementById("emc-product-ids");
+      var opts = Array.prototype.slice.call(ppanel.querySelectorAll(".emx-pick__opt"));
+      var nameById = {};
+      opts.forEach(function (o) { nameById[o.getAttribute("data-id")] = o.getAttribute("data-name") || "Product"; });
+
+      var selected = [];
+      try { selected = JSON.parse(document.getElementById("emc-pick-initial").textContent || "[]") || []; } catch (e) { selected = []; }
+      selected = selected.filter(function (id) { return nameById.hasOwnProperty(id); });
+
+      function mode() {
+        var r = root.querySelector('input[name="product_mode"]:checked');
+        return (r && r.value) === "single" ? "single" : "multi";
+      }
+      function maxN() { return mode() === "single" ? 1 : (isPromo() ? {{ promo_max_products }} : 4); }
+
+      function render() {
+        // Hidden field (submitted), option ticks, chips, label and count.
+        pidsField.value = JSON.stringify(selected);
+        opts.forEach(function (o) {
+          var on = selected.indexOf(o.getAttribute("data-id")) !== -1;
+          o.classList.toggle("is-selected", on);
+          o.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        pchips.innerHTML = "";
+        selected.forEach(function (id) {
+          var chip = document.createElement("span");
+          chip.className = "emx-pick__chip";
+          var t = document.createElement("span"); t.textContent = nameById[id] || "Product";
+          var x = document.createElement("button");
+          x.type = "button"; x.className = "emx-pick__chip-x"; x.setAttribute("aria-label", "Remove"); x.textContent = "×";
+          x.addEventListener("click", function () { toggle(id, true); });
+          chip.appendChild(t); chip.appendChild(x);
+          pchips.appendChild(chip);
+        });
+        plabel.textContent = selected.length
+          ? (mode() === "single" ? (nameById[selected[0]] || "1 product") : (selected.length + " selected"))
+          : "Choose products…";
+        if (pcount) pcount.textContent = mode() === "single" ? "" : (selected.length + " / " + maxN());
+        schedulePreview();
+      }
+
+      function toggle(id, forceOff) {
+        var i = selected.indexOf(id);
+        if (mode() === "single") {
+          selected = (i !== -1 && forceOff) ? [] : [id];
+          render(); closePanel();
+          return;
+        }
+        if (i !== -1) { selected.splice(i, 1); }
+        else if (selected.length < maxN()) { selected.push(id); }
+        render();
+      }
+
+      function openPanel() { ppanel.hidden = false; pbtn.setAttribute("aria-expanded", "true"); }
+      function closePanel() { ppanel.hidden = true; pbtn.setAttribute("aria-expanded", "false"); }
+      pbtn.addEventListener("click", function () { if (ppanel.hidden) openPanel(); else closePanel(); });
+      document.addEventListener("click", function (e) { if (!pick.contains(e.target)) closePanel(); });
+      opts.forEach(function (o) {
+        o.addEventListener("click", function () { toggle(o.getAttribute("data-id"), false); });
+      });
+
+      // Switching mode trims the selection to fit (single keeps the first).
+      root.querySelectorAll("[data-pmode]").forEach(function (r) {
+        r.addEventListener("change", function () {
+          if (selected.length > maxN()) selected = selected.slice(0, maxN());
+          render();
+        });
+      });
+
+      // Switching design changes the cap (the promo grid holds six).
+      onProductsChanged = function () {
+        if (selected.length > maxN()) selected = selected.slice(0, maxN());
+        render();
+      };
+
+      render();
+    }
+
+    // ── Built-in promo design: hero image picker + live preview ──────────
+    if (promoCard) {
+      var previewUrl = promoCard.getAttribute("data-preview-url");
+      var frame = document.getElementById("pd-frame");
+      var wrap = document.getElementById("pd-frame-wrap");
+      var heroInput = document.getElementById("pd-hero");
+      var heroThumb = document.getElementById("pd-hero-thumb");
+      var heroPick = document.getElementById("pd-hero-pick");
+      var width = 600;
+      var FRAME_H = 1100;
+      var timer = null;
+
+      function fit() {
+        var avail = wrap.clientWidth || width;
+        var k = Math.min(1, avail / width);
+        frame.style.width = width + "px";
+        frame.style.height = FRAME_H + "px";
+        frame.style.transform = "scale(" + k + ")";
+        wrap.style.height = Math.round(FRAME_H * k) + "px";
+      }
+      function submitPreview() {
+        if (!form || promoCard.hidden) return;
+        wrap.classList.add("is-loading");
+        // Post the composer form into the preview frame, then restore it.
+        var oldAction = form.getAttribute("action");
+        form.setAttribute("action", previewUrl);
+        form.setAttribute("target", "emc-preview-frame");
+        form.submit();
+        form.setAttribute("action", oldAction);
+        form.removeAttribute("target");
+      }
+      schedulePreview = function (now) {
+        if (promoCard.hidden) return;
+        clearTimeout(timer);
+        timer = setTimeout(submitPreview, now ? 0 : 450);
+      };
+      frame.addEventListener("load", function () { wrap.classList.remove("is-loading"); });
+
+      function syncThumb() {
+        var v = (heroInput.value || "").trim();
+        heroThumb.style.backgroundImage = v ? 'url("' + v.replace(/["\\()]/g, "") + '")' : "";
+      }
+      heroInput.addEventListener("input", syncThumb);
+      syncThumb();
+      if (heroPick) {
+        heroPick.addEventListener("click", function () {
+          if (!window.OneWoozMedia) return;
+          window.OneWoozMedia.open({
+            kind: "image",
+            multiple: false,
+            noWebp: true, // keep JPEG/PNG: some mail apps cannot show WebP
+            title: "Choose a hero image",
+            onSelect: function (asset) {
+              var a = Array.isArray(asset) ? asset[0] : asset;
+              if (!a || !a.url) return;
+              heroInput.value = a.url;
+              syncThumb();
+              schedulePreview(true);
+            },
+          });
+        });
+      }
+
+      promoCard.addEventListener("input", function () { schedulePreview(); });
+      promoCard.addEventListener("change", function () { schedulePreview(); });
+      ["f-preheader"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener("input", function () { schedulePreview(); });
+      });
+      root.querySelectorAll('input[name="product_mode"]').forEach(function (r) {
+        r.addEventListener("change", function () { schedulePreview(); });
+      });
+
+      promoCard.querySelectorAll("[data-pv-width]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          width = parseInt(btn.getAttribute("data-pv-width"), 10) || 600;
+          promoCard.querySelectorAll("[data-pv-width]").forEach(function (b) { b.classList.toggle("is-on", b === btn); });
+          fit();
+        });
+      });
+      window.addEventListener("resize", fit);
+      refit = fit;
+      fit();
+      syncDesign();
+    }
+  })();
+</script>
+{% endblock %}

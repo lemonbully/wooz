@@ -1,10 +1,12 @@
+{% load store_extras %}
 {% comment %}
 Repeatable two-input rows (FAQs, specs, extras, variant types). Include with:
-`label`, `name_a`/`ph_a`, `name_b`/`ph_b`, and `rows` — a list of {a, b} dicts
-for prefill. The view zips getlist(name_a) with getlist(name_b).
+`label`, `name_a`/`ph_a`, `name_b`/`ph_b`, and `rows`  a list of {a, b} dicts
+for prefill. Optional `tip` names the field's admin-written tooltip (defaults
+to `name_a`). The view zips getlist(name_a) with getlist(name_b).
 {% endcomment %}
 <div class="app-rep app-f--full" data-rep>
-  <span class="pal-field__label">{{ label }}</span>
+  <span class="pal-field__label">{{ label }}{% field_tip tip|default:name_a %}</span>
   <div class="app-rep__rows">
     {% for r in rows %}
       <div class="app-rep__row app-rep__row--pair">

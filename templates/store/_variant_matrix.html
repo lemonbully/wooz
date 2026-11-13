@@ -1,0 +1,24 @@
+{% load store_extras %}
+{% comment %}
+Variations step body, shared by the D2C and B2B product forms: the
+variant-type editor plus the auto-generated combinations (SKU, MRP, selling
+price, stock, colour swatch, five image boxes each). Shown when
+"Has variations?" (store/_has_variations.html) is Yes.
+{% endcomment %}
+{# Shown only when "Has variations?" is Yes. #}
+<div class="app-vc-empty" id="vc-empty" hidden>
+  <p class="app-field-hint">This product has no variations. Set <strong>Has variations?</strong> to <strong>Yes</strong> on the first step to add sizes, colours, etc.</p>
+</div>
+<div class="app-formgrid" id="vc-body" data-vc>
+  {% include "store/_variant_types.html" with rows=prefill.variants %}
+  <div class="app-f--full">
+    <div class="app-vc__head">
+      <span class="pal-field__label">Variant combinations{% field_tip "variant_combinations" %}</span>
+    </div>
+    <p class="app-field-hint">Every combination (each variant value × the others) is generated automatically as you add variations  each gets its own SKU, price, MRP and stock. When variations are set, the single SKU/price/stock on the Pricing step are ignored.</p>
+    <p class="app-field-hint">Every SKU must be unique. Leave a variation's SKU blank to use the suggested one (the product SKU plus its values).</p>
+    <p class="app-vc__skuerr" id="vc-sku-err" role="alert" hidden></p>
+    <div id="vc-rows" class="app-vc__rows"></div>
+    <input type="hidden" name="variant_combinations" id="variant_combinations" value="{{ prefill.variant_combinations_json }}">
+  </div>
+</div>

@@ -1,0 +1,36 @@
+{% extends "ud/_shell.html" %}
+
+{% comment %}
+Shown instead of the create-store wizard when the owner has already built every
+store their subscription allows (ud.views.create_site gates on
+billing.subscriptions.store_limit_reached). No questions are asked; the owner is
+offered "Add more plan" (this page's wording only; the plans page it links to
+is unchanged). Also refuses a direct POST, so the cap holds server-side.
+{% endcomment %}
+
+{% block title %}Create a store · Store limit reached · OneWooz{% endblock %}
+{% block crumb %}Create a store{% endblock %}
+
+{% block main %}
+<div class="app-locked">
+  <div class="app-locked__card">
+    <span class="app-locked__ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+        <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+      </svg>
+    </span>
+    <p class="pal-mono pal-mono--accent">Store limit reached</p>
+    <h1 class="app-locked__title">You&rsquo;ve reached your store limit</h1>
+    <p class="app-locked__text">
+      Your plan includes {{ store_limit }} store{{ store_limit|pluralize }}, and
+      you&rsquo;ve used {% if store_limit == 1 %}it{% else %}all {{ store_limit }}{% endif %}.
+      Add more plan to create another store.
+    </p>
+    <div class="app-locked__actions">
+      <a href="{% url 'ud:upgrade' %}" class="pal-btn">Add more plan <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      <a href="{% url 'ud:dashboard' %}" class="pal-link">Back to dashboard</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

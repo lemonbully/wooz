@@ -1,4 +1,7 @@
-{% with faqs=website.content.faqs %}
+{% load website_filters %}
+{% comment %} {# A page may pass `faqs` explicitly (product page); those show as given. With no
+   `faqs` (home) we top up the store's content FAQs to 8  home stays the same. #} {% endcomment %}
+{% if not faqs %}{% padded_items website.content.faqs 'faq' 8 as faqs %}{% endif %}
 {% if faqs|length > 0 %}
 <section id="faqs-section" class="py-16 md:py-20 bg-[rgb(238,238,238,1)]">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -11,7 +14,7 @@
                 </span>
             </h2>
             <p class="mt-4 font-medium text-sm md:text-base text-gray-600 max-w-2xl mx-auto">
-                {{ website.content.faqs_subtitle }}
+                {{ faqs_subtitle|default:website.content.faqs_subtitle }}
             </p>
         </div>
 
@@ -190,4 +193,3 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
     
 {% endif %}
-{% endwith %}

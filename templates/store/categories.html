@@ -1,43 +1,115 @@
 {% extends "store/_shell.html" %}
+{% load static %}
 {% block title %}{{ site.name }} · Categories{% endblock %}
 {% block crumb %}Categories{% endblock %}
 
 {% block main %}
-<div class="app-page">
+<div class="app-page" data-store-id="{{ site.id }}">
+  {# ── Trusted-icons banner ──────────────────────────────────────────────── #}
+  <div class="cat-banner">
+    <span>Want to update your trusted icons? <button type="button" id="manageIconsBtn" class="cat-banner__link">Manage Icons</button></span>
+    <span class="cat-banner__status" id="trustedIconsStatus" data-on="{{ trusted_icons_enabled|yesno:'1,0' }}">
+      <span class="inv-dot {% if trusted_icons_enabled %}inv-dot--ok{% endif %}"></span>Trusted icons mode {{ trusted_icons_enabled|yesno:"ON,OFF" }}
+    </span>
+  </div>
+
   <div class="app-head">
-    <div>
-      <p class="pal-mono pal-mono--accent">Catalogue</p>
-      <h1 class="app-head__title pal-mt-4">Categories</h1>
-      <p class="app-head__lead">Group products so shoppers can browse. Up to five can be featured on the storefront home.</p>
+    <div class="cat-head">
+      <h1 class="app-head__title">Categories <span class="prd-count">({{ categories_count }})</span></h1>
+      <div class="cat-megamenu">
+        <span class="cat-megamenu__label">Categories menu</span>
+        <label class="ow-switch">
+          <input type="checkbox" id="megaMenuToggle" data-url="{% url 'store:categories_mega_menu' site.id %}" {% if mega_menu_enabled %}checked{% endif %}>
+          <span class="ow-switch__track"></span>
+        </label>
+        <span class="cat-megamenu__state" id="megaMenuState">{{ mega_menu_enabled|yesno:"MEGA,Simple" }}</span>
+      </div>
     </div>
-    <div class="app-head__actions"><a href="{% url 'store:category_new' site.id %}" class="pal-btn">Add category <span class="pal-btn__arrow" aria-hidden="true">→</span></a></div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:category_new' site.id %}" class="pal-btn">+ Add Category</a>
+    </div>
   </div>
 
   <div class="app-block">
     {% if categories %}
-      <div class="app-tablewrap">
-        <table class="app-table">
-          <thead><tr><th>Name</th><th>Parent</th><th class="app-table__num">Order</th><th>Home</th><th>Status</th><th></th></tr></thead>
-          <tbody>
-            {% for c in categories %}
-              <tr>
-                <td><a href="{% url 'store:category_edit' site.id c.id %}" class="app-table__strong">{{ c.name }}</a></td>
-                <td>{{ c.parent.name|default:"—" }}</td>
-                <td class="app-table__num">{{ c.order }}</td>
-                <td>{% if c.show_on_homepage %}<span class="app-badge app-badge--accent">Featured</span>{% else %}—{% endif %}</td>
-                <td>{% if c.is_active %}<span class="app-badge app-badge--ok">Active</span>{% else %}<span class="app-badge app-badge--muted">Hidden</span>{% endif %}</td>
-                <td class="app-table__actions">
-                  <a href="{% url 'store:category_edit' site.id c.id %}" class="app-iconbtn">Edit</a>
-                  <form method="post" action="{% url 'store:category_delete' site.id c.id %}" onsubmit="return confirm('Remove this category?');">{% csrf_token %}<button class="app-iconbtn app-iconbtn--danger" type="submit">Delete</button></form>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="cat-grid">
+        {% for c in categories %}
+          <div class="cat-card" data-category-id="{{ c.id }}">
+            <div class="cat-card__body">
+              <div class="cat-card__name">{{ c.name }}</div>
+              {% if c.description %}<div class="cat-card__desc">{{ c.description }}</div>{% endif %}
+            </div>
+            <div class="cat-card__acts">
+              <a href="{% url 'store:category_edit' site.id c.id %}" class="cat-iconbtn" title="Edit" aria-label="Edit">{% include "store/_icons.html" with icon="pencil" %}</a>
+              <button type="button" class="cat-star{% if highlight_category_id == c.id|stringformat:'s' %} is-on{% endif %}"
+                      data-highlight data-url="{% url 'store:category_highlight' site.id c.id %}"
+                      title="Set as Mega Highlight" aria-label="Highlight">★</button>
+              <form method="post" action="{% url 'store:category_delete' site.id c.id %}" class="ord-inline" data-confirm="Delete this category?">
+                {% csrf_token %}
+                <button type="submit" class="cat-iconbtn cat-iconbtn--danger" title="Delete" aria-label="Delete">{% include "store/_icons.html" with icon="trash" %}</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
       </div>
     {% else %}
-      <div class="app-empty"><h2 class="app-empty__title">No categories yet</h2><p class="app-empty__text">Create categories to organise your catalogue and power storefront navigation.</p><div class="app-empty__actions"><a href="{% url 'store:category_new' site.id %}" class="pal-btn">Add category</a></div></div>
+      <div class="app-empty">
+        <h2 class="app-empty__title">No categories yet</h2>
+        <p class="app-empty__text">Create categories to organise your catalogue and power storefront navigation.</p>
+        <div class="app-empty__actions"><a href="{% url 'store:category_new' site.id %}" class="pal-btn">+ Add Category</a></div>
+      </div>
     {% endif %}
   </div>
 </div>
+
+{# ── Trusted icons manager ─────────────────────────────────────────────── #}
+<div class="app-dlg" id="iconsModal" hidden>
+  <div class="app-dlg__backdrop" data-icons-close></div>
+  <div class="app-dlg__panel">
+    <header class="app-dlg__head">
+      <div>
+        <h3 class="app-dlg__title">Trusted icons</h3>
+        <p class="app-dlg__sub">Small badges shown across category pages.</p>
+      </div>
+      <button type="button" class="app-dlg__x" data-icons-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+    </header>
+    <div class="app-dlg__body">
+      <div class="prd-setting" style="border:0;padding:0;">
+        <div class="prd-setting__copy">
+          <div class="prd-setting__title">Trusted icons mode</div>
+          <p class="prd-setting__lead">When on, your trusted icons appear on storefront category pages.</p>
+        </div>
+        <div class="prd-setting__ctrl">
+          <label class="ow-switch">
+            <input type="checkbox" id="trustedIconsToggle" data-url="{% url 'store:trusted_icons_toggle' site.id %}" {% if trusted_icons_enabled %}checked{% endif %}>
+            <span class="ow-switch__track"></span>
+          </label>
+        </div>
+      </div>
+      <div class="app-dlg__section">
+        <p class="app-dlg__subhead">Icons</p>
+        <div id="iconRows" class="cat-iconrows">
+          {% for icon in trusted_icons %}
+            <div class="cat-iconrow" data-icon-row>
+              <input type="text" class="pal-input pal-input--sm" data-icon-image value="{{ icon.image }}" placeholder="Image URL">
+              <input type="text" class="pal-input pal-input--sm" data-icon-label value="{{ icon.label }}" placeholder="Label (optional)">
+              <button type="button" class="ord-actbtn ord-actbtn--danger" data-icon-remove aria-label="Remove">{% include "store/_icons.html" with icon="trash" %}</button>
+            </div>
+          {% endfor %}
+        </div>
+        <p id="iconsEmpty" class="app-dlg__hint" {% if trusted_icons %}hidden{% endif %}>No trusted icons yet. Add your first below.</p>
+        <button type="button" id="addIconRow" class="pal-btn pal-btn--ghost pal-btn--sm" style="margin-top:0.6rem;">+ Add icon</button>
+      </div>
+    </div>
+    <footer class="app-dlg__foot">
+      <button type="button" class="pal-btn pal-btn--ghost" data-icons-close>Cancel</button>
+      <button type="button" class="pal-btn" id="saveIcons" data-url="{% url 'store:trusted_icons_save' site.id %}">Save icons</button>
+    </footer>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/app/categories.js' %}" defer></script>
 {% endblock %}

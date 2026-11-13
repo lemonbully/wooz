@@ -1,0 +1,242 @@
+{% load website_filters %}
+{% comment %}
+Newsletter popup (storefront.newsletter_popup), included once by theme_base.html
+so every theme page gets it. Configured on Edit Content → Newsletter. It appears
+`delay_ms` after load, at most once per visitor until they dismiss it (then not
+again for a few days) or subscribe (then never, unless the owner changes the
+offer). Signups post to subscribe_newsletter with source=popup, so they land on
+the owner's Subscribers page tagged "Subscribed from newsletter"; an attached
+offer's code is revealed only after a successful signup.
+
+Styled to match the D2C/B2B themes: the theme's font (inherited), white card,
+rounded inputs, black pill button like the product page CTAs. Scoped under
+#ow-nl so nothing leaks into or out of the theme's precompiled Tailwind.
+{% endcomment %}
+{% newsletter_popup_config website as nl %}
+{% if nl and website %}
+<div id="ow-nl" class="ow-nl{% if nl.image %} ow-nl--media{% endif %}{% if nl.mobile_image %} ow-nl--mmedia{% endif %}" role="dialog" aria-modal="true" aria-labelledby="ow-nl-title" aria-describedby="ow-nl-text" hidden
+     data-delay="{{ nl.delay_ms }}" data-key="ow-nl:{{ website.pk }}" data-version="{{ nl.version }}"
+     data-url="{% url 'subscribe_newsletter' %}" data-csrf="{{ csrf_token }}">
+  <div class="ow-nl__backdrop" data-nl-close></div>
+  <div class="ow-nl__card">
+    <button type="button" class="ow-nl__x" data-nl-close aria-label="Close">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    {% if nl.image or nl.mobile_image %}
+      {% comment %} Desktop banner beside the form (only when there is one:
+         .ow-nl--media); the phone banner is a wide strip above it
+         (.ow-nl--mmedia). Each size shows only the banner it has. {% endcomment %}
+      <div class="ow-nl__media"><picture>
+        {% if nl.image and nl.mobile_image and nl.mobile_image != nl.image %}<source media="(max-width: 640px)" srcset="{{ nl.mobile_image }}">{% endif %}
+        <img src="{{ nl.image|default:nl.mobile_image }}" alt="" loading="lazy" decoding="async">
+      </picture></div>
+    {% endif %}
+    <div class="ow-nl__body">
+      {% if nl.has_offer %}<span class="ow-nl__eyebrow">{{ nl.offer }} for subscribers</span>{% endif %}
+      <h2 class="ow-nl__title" id="ow-nl-title">{{ nl.heading }}</h2>
+      <p class="ow-nl__text" id="ow-nl-text">{{ nl.text }}</p>
+
+      <form class="ow-nl__form" data-nl-form novalidate>
+        <label class="ow-nl__sr" for="ow-nl-email">Email address</label>
+        <input id="ow-nl-email" class="ow-nl__input" type="email" name="email" autocomplete="email" inputmode="email" placeholder="Enter your email" required maxlength="254">
+        <button type="submit" class="ow-nl__btn" data-nl-submit>{{ nl.button }}</button>
+        <p class="ow-nl__err" data-nl-err role="alert" hidden></p>
+      </form>
+
+      <div class="ow-nl__done" data-nl-done hidden>
+        <p class="ow-nl__ok" role="status">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>{{ nl.success }}</span>
+        </p>
+        <div class="ow-nl__code" data-nl-code hidden>
+          <span class="ow-nl__code-label">Your code</span>
+          <div class="ow-nl__code-row">
+            <span class="ow-nl__code-value" data-nl-code-value></span>
+            <button type="button" class="ow-nl__copy" data-nl-copy>Copy</button>
+          </div>
+          <span class="ow-nl__code-hint">Apply it at checkout.</span>
+        </div>
+        <button type="button" class="ow-nl__btn ow-nl__btn--ghost" data-nl-close>Continue shopping</button>
+      </div>
+
+      <button type="button" class="ow-nl__skip" data-nl-close data-nl-skip>No thanks</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  #ow-nl { position: fixed; inset: 0; z-index: 2147483000; display: none; align-items: center; justify-content: center; padding: 1rem; font-family: inherit; color: #111827; }
+  #ow-nl.is-open { display: flex; }
+  #ow-nl *, #ow-nl *::before, #ow-nl *::after { box-sizing: border-box; }
+  #ow-nl .ow-nl__backdrop { position: absolute; inset: 0; background: rgba(17, 24, 39, 0.55); opacity: 0; transition: opacity 220ms ease; }
+  #ow-nl .ow-nl__card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; max-width: 27rem; max-height: calc(100dvh - 2rem);
+    overflow: auto; background: #fff; border-radius: 1rem; box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.35);
+    opacity: 0; transform: translateY(14px) scale(0.98); transition: opacity 240ms ease, transform 280ms cubic-bezier(0.2, 0, 0, 1); }
+  #ow-nl.is-shown .ow-nl__backdrop { opacity: 1; }
+  #ow-nl.is-shown .ow-nl__card { opacity: 1; transform: none; }
+  #ow-nl.ow-nl--media .ow-nl__card { max-width: 47rem; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  #ow-nl .ow-nl__media { position: relative; min-height: 100%; background: #f3f4f6; }
+  #ow-nl:not(.ow-nl--media) .ow-nl__media { display: none; }
+  #ow-nl .ow-nl__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  #ow-nl .ow-nl__body { display: flex; flex-direction: column; justify-content: center; gap: 0.75rem; padding: 2.25rem 1.75rem 1.5rem; text-align: center; min-width: 0; }
+  #ow-nl.ow-nl--media .ow-nl__body { padding: 2.75rem 2rem 1.75rem; }
+  #ow-nl .ow-nl__x { position: absolute; top: 0.6rem; right: 0.6rem; z-index: 2; display: inline-flex; align-items: center; justify-content: center;
+    width: 2.25rem; height: 2.25rem; border-radius: 9999px; border: 0; background: rgba(255, 255, 255, 0.92); color: #111827; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); transition: background 150ms ease; }
+  #ow-nl .ow-nl__x:hover { background: #f3f4f6; }
+  #ow-nl .ow-nl__eyebrow { align-self: center; display: inline-block; padding: 0.3rem 0.75rem; border-radius: 9999px; background: #f3f4f6;
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #374151; }
+  #ow-nl .ow-nl__title { margin: 0; font-size: clamp(1.35rem, 1.1rem + 1.1vw, 1.75rem); line-height: 1.2; font-weight: 600; letter-spacing: -0.01em; color: #111827; overflow-wrap: anywhere; }
+  #ow-nl .ow-nl__text { margin: 0; font-size: 0.92rem; line-height: 1.55; color: #4b5563; overflow-wrap: anywhere; }
+  #ow-nl .ow-nl__form { display: grid; gap: 0.6rem; margin-top: 0.4rem; }
+  #ow-nl .ow-nl__input { width: 100%; height: 2.9rem; padding: 0 1.1rem; border: 1px solid #d1d5db; border-radius: 9999px; background: #fff;
+    font: inherit; font-size: 0.95rem; color: #111827; outline: none; transition: border-color 150ms ease, box-shadow 150ms ease; }
+  #ow-nl .ow-nl__input:focus { border-color: #111827; box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.12); }
+  #ow-nl .ow-nl__input[aria-invalid="true"] { border-color: #dc2626; }
+  #ow-nl .ow-nl__btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 2.9rem; padding: 0 1.25rem;
+    border: 1px solid #000; border-radius: 9999px; background: #000; color: #fff; font: inherit; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: background 150ms ease, opacity 150ms ease; }
+  #ow-nl .ow-nl__btn:hover { background: #1f2937; }
+  #ow-nl .ow-nl__btn:disabled { opacity: 0.6; cursor: progress; }
+  #ow-nl .ow-nl__btn--ghost { background: #fff; color: #111827; border-color: #d1d5db; margin-top: 0.25rem; }
+  #ow-nl .ow-nl__btn--ghost:hover { background: #f9fafb; }
+  #ow-nl .ow-nl__btn:focus-visible, #ow-nl .ow-nl__x:focus-visible, #ow-nl .ow-nl__skip:focus-visible, #ow-nl .ow-nl__copy:focus-visible { outline: 2px solid #111827; outline-offset: 2px; }
+  #ow-nl .ow-nl__err { margin: 0; font-size: 0.8rem; color: #dc2626; text-align: left; padding-left: 1.1rem; }
+  #ow-nl .ow-nl__skip { align-self: center; margin-top: 0.1rem; padding: 0.25rem 0.5rem; border: 0; background: none; font: inherit; font-size: 0.8rem;
+    color: #6b7280; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  #ow-nl .ow-nl__skip:hover { color: #111827; }
+  #ow-nl .ow-nl__done { display: grid; gap: 0.75rem; margin-top: 0.4rem; }
+  #ow-nl .ow-nl__done[hidden], #ow-nl .ow-nl__code[hidden], #ow-nl .ow-nl__err[hidden], #ow-nl [hidden] { display: none !important; }
+  #ow-nl .ow-nl__ok { margin: 0; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; font-size: 0.95rem; font-weight: 500; color: #047857; }
+  #ow-nl .ow-nl__code { display: grid; gap: 0.35rem; padding: 0.9rem; border: 1px dashed #9ca3af; border-radius: 0.75rem; background: #f9fafb; }
+  #ow-nl .ow-nl__code-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6b7280; }
+  #ow-nl .ow-nl__code-row { display: flex; align-items: center; justify-content: center; gap: 0.6rem; flex-wrap: wrap; }
+  #ow-nl .ow-nl__code-value { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.08em; color: #111827; overflow-wrap: anywhere; }
+  #ow-nl .ow-nl__copy { padding: 0.35rem 0.85rem; border: 1px solid #111827; border-radius: 9999px; background: #fff; font: inherit; font-size: 0.75rem; font-weight: 600; color: #111827; cursor: pointer; }
+  #ow-nl .ow-nl__copy:hover { background: #111827; color: #fff; }
+  #ow-nl .ow-nl__code-hint { font-size: 0.75rem; color: #6b7280; }
+  #ow-nl .ow-nl__sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  body.ow-nl-lock { overflow: hidden; }
+
+  /* Phones: one column, the banner on top as a short strip, the card rising
+     from the bottom edge like a sheet so the form sits within thumb reach. */
+  @media (max-width: 640px) {
+    #ow-nl { align-items: flex-end; padding: 0; }
+    #ow-nl .ow-nl__card, #ow-nl.ow-nl--media .ow-nl__card { max-width: none; grid-template-columns: minmax(0, 1fr); border-radius: 1.1rem 1.1rem 0 0;
+      max-height: 92dvh; transform: translateY(100%); }
+    #ow-nl.is-shown .ow-nl__card { transform: none; }
+    #ow-nl .ow-nl__media { min-height: 0; aspect-ratio: 16 / 9; max-height: 32dvh; }
+    #ow-nl.ow-nl--mmedia .ow-nl__media { display: block; }
+    #ow-nl:not(.ow-nl--mmedia) .ow-nl__media { display: none; }
+    #ow-nl .ow-nl__body, #ow-nl.ow-nl--media .ow-nl__body { padding: 1.6rem 1.25rem calc(1.1rem + env(safe-area-inset-bottom)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #ow-nl .ow-nl__backdrop, #ow-nl .ow-nl__card { transition: none; }
+  }
+</style>
+
+<script>
+(function () {
+  var root = document.getElementById("ow-nl");
+  if (!root) return;
+  var KEY = root.getAttribute("data-key");
+  var VERSION = root.getAttribute("data-version") || "";
+  var DISMISS_DAYS = 3;
+  var form = root.querySelector("[data-nl-form]");
+  var input = root.querySelector("#ow-nl-email");
+  var submit = root.querySelector("[data-nl-submit]");
+  var err = root.querySelector("[data-nl-err]");
+  var done = root.querySelector("[data-nl-done]");
+  var skip = root.querySelector("[data-nl-skip]");
+  var lastFocus = null;
+
+  function read() { try { return JSON.parse(localStorage.getItem(KEY) || "null") || {}; } catch (e) { return {}; } }
+  function write(state) { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  // Already subscribed (to this version of the offer), or dismissed recently.
+  var state = read();
+  if (state.subscribed && state.v === VERSION) return;
+  if (state.dismissed && state.v === VERSION && Date.now() - state.dismissed < DISMISS_DAYS * 864e5) return;
+
+  function open() {
+    // Don't interrupt someone typing, or stack over another open dialog.
+    var a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a !== document.body) { setTimeout(open, 4000); return; }
+    lastFocus = a;
+    root.hidden = false;
+    root.classList.add("is-open");
+    document.body.classList.add("ow-nl-lock");
+    requestAnimationFrame(function () { requestAnimationFrame(function () { root.classList.add("is-shown"); }); });
+    setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) {} }, 260);
+  }
+  function close(remember) {
+    if (remember) {
+      var s = read();
+      if (!(s.subscribed && s.v === VERSION)) write({ dismissed: Date.now(), v: VERSION });
+    }
+    root.classList.remove("is-shown");
+    document.body.classList.remove("ow-nl-lock");
+    setTimeout(function () { root.classList.remove("is-open"); root.hidden = true; }, 260);
+    if (lastFocus && lastFocus.focus) { try { lastFocus.focus({ preventScroll: true }); } catch (e) {} }
+  }
+
+  root.addEventListener("click", function (e) {
+    if (e.target.closest("[data-nl-close]")) { e.preventDefault(); close(true); }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && root.classList.contains("is-open")) close(true);
+    // Keep Tab inside the dialog while it is open.
+    if (e.key === "Tab" && root.classList.contains("is-open")) {
+      var f = Array.prototype.filter.call(root.querySelectorAll("button, input, a[href]"), function (n) { return n.offsetParent !== null; });
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  function fail(msg) { err.textContent = msg; err.hidden = false; input.setAttribute("aria-invalid", "true"); input.focus(); }
+  input.addEventListener("input", function () { err.hidden = true; input.removeAttribute("aria-invalid"); });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = input.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fail("Please enter a valid email address."); return; }
+    var label = submit.textContent;
+    submit.disabled = true; submit.textContent = "Subscribing…";
+    var csrf = root.getAttribute("data-csrf") || "";
+    fetch(root.getAttribute("data-url"), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": csrf },
+      body: new URLSearchParams({ email: email, source: "popup", csrfmiddlewaretoken: csrf })
+    }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d || {} }; }); })
+      .then(function (res) {
+        if (!res.ok || res.d.status !== "success") { submit.disabled = false; submit.textContent = label; fail(res.d.message || "Couldn’t subscribe. Please try again."); return; }
+        write({ subscribed: Date.now(), v: VERSION });
+        form.hidden = true; if (skip) skip.hidden = true;
+        if (res.d.code) {
+          root.querySelector("[data-nl-code-value]").textContent = res.d.code;
+          root.querySelector("[data-nl-code]").hidden = false;
+        }
+        done.hidden = false;
+        var cont = done.querySelector("button"); if (cont) cont.focus();
+      })
+      .catch(function () { submit.disabled = false; submit.textContent = label; fail("Network error. Please try again."); });
+  });
+
+  var copy = root.querySelector("[data-nl-copy]");
+  if (copy) copy.addEventListener("click", function () {
+    var code = root.querySelector("[data-nl-code-value]").textContent;
+    function ok() { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1800); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, function () {});
+    else { var t = document.createElement("textarea"); t.value = code; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); ok(); } catch (e) {} t.remove(); }
+  });
+
+  var delay = parseInt(root.getAttribute("data-delay"), 10) || 2000;
+  function schedule() { setTimeout(open, delay); }
+  // Timed from when the page is ready to read, not when every image finishes.
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", schedule); else schedule();
+})();
+</script>
+{% endif %}

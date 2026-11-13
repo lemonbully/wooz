@@ -1,85 +1,71 @@
 {% extends "ud/_shell.html" %}
 {% load static %}
 
-{% block title %}Choose a design · OneWooz{% endblock %}
-{% block crumb %}Choose a design{% endblock %}
+{% comment %}
+Post-creation "store is ready" screen. The storefront design is chosen
+automatically from the store's business model at creation (D2C → the modern
+storefront, B2B → the catalogue storefront), so the owner is never asked to pick
+a template. This page just celebrates the launch and points into the editor.
+{% endcomment %}
+
+{% block title %}Store ready · OneWooz{% endblock %}
+{% block crumb %}Store ready{% endblock %}
 
 {% block main %}
 <div class="app-page">
-
-  <div class="app-head">
-    <div>
-      <p class="pal-mono pal-mono--accent">03 — Choose a design</p>
-      <h1 class="app-head__title pal-mt-4">Pick your storefront design</h1>
-      <p class="app-head__lead">
-        Two designs, each tuned for how you sell. The one that matches
-        <strong>{{ site.name }}</strong> is recommended — but you can pick either,
-        and change it later. Everything is editable afterwards.
+  {# ---- Launch celebration ---- #}
+  <div class="tpl-done" role="dialog" aria-modal="true" aria-labelledby="tpl-done-title">
+    <div class="tpl-done__card">
+      <p class="tpl-done__kicker">
+        <span class="tpl-done__tick" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+        </span>
+        Store live
       </p>
+      <h2 class="tpl-done__title" id="tpl-done-title">{{ site.name }} is ready.</h2>
+      <p class="tpl-done__lead">
+        Your storefront is set up for your business, with real copy, sections and
+        policies. Make it yours in the editor.
+      </p>
+      <div class="tpl-done__actions">
+        <a href="{{ editor_url }}" class="pal-btn tpl-done__btn">Start customising <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+        <a href="{{ storefront_url }}" target="_blank" rel="noopener" class="pal-btn pal-btn--ghost tpl-done__btn">View storefront ↗</a>
+      </div>
     </div>
-  </div>
-
-  <div class="app-block">
-    <div class="tpl-grid">
-      {% for theme in themes %}
-      <form method="post" class="tpl-card {% if theme.recommended %}tpl-card--rec{% endif %}">
-        {% csrf_token %}
-        <input type="hidden" name="theme" value="{{ theme.value }}">
-
-        <div class="tpl-card__preview tpl-card__preview--{{ theme.value }}">
-          <span class="tpl-card__audience">{{ theme.audience }}</span>
-          {% if theme.recommended %}<span class="tpl-card__rec">Recommended</span>{% endif %}
-          <div class="tpl-card__mock" aria-hidden="true">
-            <span class="tpl-card__mock-bar"></span>
-            <span class="tpl-card__mock-hero"></span>
-            <span class="tpl-card__mock-row"><i></i><i></i><i></i></span>
-          </div>
-        </div>
-
-        <div class="tpl-card__body">
-          <h2 class="tpl-card__title">{{ theme.name }}</h2>
-          <p class="tpl-card__desc">{{ theme.description }}</p>
-          <div class="tpl-card__foot">
-            <a href="{{ storefront_url }}" target="_blank" rel="noopener"
-               class="pal-btn pal-btn--ghost pal-btn--sm">Preview</a>
-            <button type="submit" class="pal-btn pal-btn--sm">
-              Use this design <span class="pal-btn__arrow" aria-hidden="true">→</span>
-            </button>
-          </div>
-        </div>
-      </form>
-      {% endfor %}
-    </div>
-
-    <p class="app-wizard__note pal-mt-16">
-      Not sure? Choose the recommended design — you can switch anytime from the editor.
-    </p>
   </div>
 </div>
 
 <style nonce="{{ csp_nonce }}">
-  .tpl-grid{display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
-  .tpl-card{display:flex;flex-direction:column;border:1px solid var(--pal-line,#e5e5e0);
-    border-radius:14px;overflow:hidden;background:var(--pal-surface,#fff);transition:box-shadow .2s,border-color .2s}
-  .tpl-card:hover{box-shadow:0 8px 30px rgba(0,0,0,.08);border-color:var(--pal-accent,#4b2bf5)}
-  .tpl-card--rec{border-color:var(--pal-accent,#4b2bf5)}
-  .tpl-card__preview{position:relative;height:180px;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#eef0ff,#f7f5ff)}
-  .tpl-card__preview--template2{background:linear-gradient(135deg,#eef7f3,#f4f8ff)}
-  .tpl-card__audience{position:absolute;top:12px;left:12px;font:600 11px/1 ui-sans-serif,system-ui;
-    letter-spacing:.08em;text-transform:uppercase;color:#4b2bf5;background:#fff;padding:5px 9px;border-radius:999px}
-  .tpl-card__rec{position:absolute;top:12px;right:12px;font:600 11px/1 ui-sans-serif,system-ui;
-    color:#fff;background:#4b2bf5;padding:5px 9px;border-radius:999px}
-  .tpl-card__mock{width:78%;display:flex;flex-direction:column;gap:8px}
-  .tpl-card__mock-bar{height:10px;border-radius:4px;background:rgba(30,41,59,.18)}
-  .tpl-card__mock-hero{height:64px;border-radius:8px;background:rgba(75,43,245,.22)}
-  .tpl-card__preview--template2 .tpl-card__mock-hero{background:rgba(16,122,90,.22)}
-  .tpl-card__mock-row{display:flex;gap:8px}
-  .tpl-card__mock-row i{flex:1;height:34px;border-radius:6px;background:rgba(30,41,59,.12)}
-  .tpl-card__body{padding:1.1rem 1.2rem 1.3rem;display:flex;flex-direction:column;gap:.5rem;flex:1}
-  .tpl-card__title{font-size:1.05rem;font-weight:700;color:var(--pal-ink,#171714)}
-  .tpl-card__desc{font-size:.9rem;color:var(--pal-muted,#55554d);flex:1}
-  .tpl-card__foot{display:flex;gap:.6rem;margin-top:.6rem}
-  .pal-btn--sm{padding:.45rem .9rem;font-size:.85rem}
+  /* Launch celebration  squared, hairline, hard-offset shadow */
+  .tpl-done{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:1.5rem;
+    overflow:auto;background:rgb(10 10 11 / .55);animation:tpl-done-fade .25s ease}
+  .tpl-done__card{position:relative;width:min(28rem,100%);background:var(--pal-panel,#fff);
+    border:1px solid var(--pal-ink,#0a0a0b);border-radius:0;
+    box-shadow:18px 18px 0 -1px rgb(10 10 11 / .06);
+    padding:clamp(2rem, 1.6rem + 2vw, 2.75rem);text-align:left;
+    animation:tpl-done-rise .45s cubic-bezier(.16,1,.3,1)}
+  /* Slim accent registration strip along the top edge. */
+  .tpl-done__card::before{content:"";position:absolute;top:-1px;left:-1px;right:-1px;height:3px;
+    background:var(--pal-accent,#4b2bf5)}
+  .tpl-done__kicker{display:flex;align-items:center;gap:.55rem;margin:0;
+    font-family:var(--pal-font-mono,ui-monospace);font-size:.68rem;font-weight:500;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--pal-accent,#4b2bf5)}
+  .tpl-done__tick{display:grid;place-items:center;width:1.25rem;height:1.25rem;flex:none;
+    background:var(--pal-accent,#4b2bf5)}
+  .tpl-done__tick svg{width:.85rem;height:.85rem;fill:none;stroke:#fff;stroke-width:2.5;
+    stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:26;stroke-dashoffset:26;
+    animation:tpl-done-draw .55s .3s cubic-bezier(.16,1,.3,1) forwards}
+  .tpl-done__title{margin:1.5rem 0 0;font-family:var(--pal-font-display,inherit);font-weight:500;
+    font-size:clamp(1.6rem, 1.3rem + 1.2vw, 2.1rem);letter-spacing:-.03em;line-height:1.02;
+    color:var(--pal-ink,#0a0a0b);text-wrap:balance}
+  .tpl-done__lead{margin:1.25rem 0 0;color:var(--pal-muted,#66666b);font-size:.95rem;line-height:1.6;max-width:34ch}
+  .tpl-done__actions{margin-top:1.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+  .tpl-done__btn{width:100%;justify-content:center;padding-block:.4375rem}
+  @media (max-width:26rem){.tpl-done__actions{grid-template-columns:1fr}}
+  @keyframes tpl-done-fade{from{opacity:0}to{opacity:1}}
+  @keyframes tpl-done-rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  @keyframes tpl-done-draw{to{stroke-dashoffset:0}}
+  @media (prefers-reduced-motion:reduce){.tpl-done,.tpl-done__card,.tpl-done__tick svg{animation:none}
+    .tpl-done__tick svg{stroke-dashoffset:0}}
 </style>
 {% endblock %}

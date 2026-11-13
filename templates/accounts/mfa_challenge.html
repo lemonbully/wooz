@@ -1,4 +1,5 @@
 {% extends "accounts/_auth_shell.html" %}
+{% load static %}
 
 {% block title %}Verify it's you · OneWooz{% endblock %}
 {% block auth_title %}Verify it's you{% endblock %}
@@ -10,12 +11,7 @@
   <form method="post" class="auth__form">
     {% csrf_token %}
 
-    <div class="field">
-      <label class="sr-only" for="code">Six-digit code</label>
-      <input class="input input--code" type="text" name="code" id="code"
-             inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
-             autocomplete="one-time-code" required autofocus>
-    </div>
+    {% include "accounts/_otp_field.html" %}
 
     <label class="checkbox-row mt-5">
       <input type="checkbox" name="remember_device" value="1">
@@ -31,4 +27,8 @@
     Lost access to your authenticator?
     <a href="mailto:help@onewooz.com">Email us</a> and we'll verify you another way.
   </p>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{% static 'js/otp-boxes.js' %}"></script>
 {% endblock %}

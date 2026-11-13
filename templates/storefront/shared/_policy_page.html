@@ -1,0 +1,239 @@
+{% load website_filters %}
+{% comment %}
+Shared, theme-aware store policy page (privacy / terms / refund / shipping /
+custom). Included by each theme's *-policy.html inside that theme's own page
+wrapper, so header spacing is unchanged. Accent = the theme's --primary-color;
+font is inherited. Owner HTML (from the content editor) gets real typography
+via .pp-prose (the storefront Tailwind build has no typography plugin). When a
+policy is empty, a clean default without placeholders is shown instead of the
+old "please edit your website" notice.
+
+Expects: policy_key ("privacy" | "terms" | "refund" | "shipping" | "custom"),
+policy_title, policy_html. An owner's extra policy (/policies/<slug>/) also
+passes `policy` ({title, slug, content}); every published extra policy gets a
+tab beside the four built-in ones.
+{% endcomment %}
+{% website_base_path website request as website_base %}
+{% with store=global_content.site_name|default:website.name %}
+<style nonce="{{ csp_nonce }}">
+  .pp{--pp-accent:var(--primary-color,#111827);--pp-ink:#111827;--pp-text:#374151;--pp-muted:#6b7280;--pp-line:#e5e7eb;max-width:72rem;margin:0 auto;color:var(--pp-ink)}
+  .pp *{box-sizing:border-box}
+  .pp-head{text-align:center;max-width:46rem;margin:0 auto 1.75rem}
+  .pp-eyebrow{display:inline-flex;align-items:center;gap:.4rem;margin:0;font-size:.75rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pp-accent)}
+  .pp-eyebrow svg{width:.9rem;height:.9rem}
+  .pp-title{margin:.5rem 0 .6rem;font-size:clamp(1.75rem,1.3rem + 1.8vw,2.5rem);font-weight:700;line-height:1.15;letter-spacing:-.015em}
+  .pp-sub{margin:0;font-size:.98rem;line-height:1.6;color:var(--pp-muted)}
+  .pp-tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin:0 auto 2rem;padding:0;list-style:none}
+  .pp-tab{display:inline-flex;align-items:center;padding:.45rem .9rem;border:1px solid var(--pp-line);border-radius:9999px;background:#fff;color:var(--pp-text);font-size:.82rem;font-weight:500;text-decoration:none;transition:border-color .15s ease,color .15s ease,background-color .15s ease}
+  .pp-tab:hover{border-color:var(--pp-accent);color:var(--pp-ink)}
+  .pp-tab[aria-current="page"]{background:var(--pp-accent);border-color:var(--pp-accent);color:#fff}
+  .pp-layout{display:grid;gap:1.5rem;align-items:start}
+  .pp-layout.has-toc{grid-template-columns:minmax(0,1fr)}
+  @media (min-width:62rem){.pp-layout.has-toc{grid-template-columns:15rem minmax(0,1fr)}}
+  .pp-toc{position:sticky;top:7rem;padding:1rem 1.1rem;border:1px solid var(--pp-line);border-radius:1rem;background:#fff;display:none}
+  @media (min-width:62rem){.pp-layout.has-toc .pp-toc{display:block}}
+  .pp-toc p{margin:0 0 .6rem;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--pp-muted)}
+  .pp-toc ol{margin:0;padding:0;list-style:none;display:grid;gap:.15rem}
+  .pp-toc a{display:block;padding:.3rem .5rem;border-left:2px solid transparent;font-size:.84rem;line-height:1.35;color:var(--pp-text);text-decoration:none}
+  .pp-toc a:hover,.pp-toc a.is-active{border-left-color:var(--pp-accent);color:var(--pp-ink);background:#f9fafb}
+  .pp-card{border:1px solid var(--pp-line);border-radius:1rem;background:#fff;padding:clamp(1.25rem,1rem + 1.5vw,2.5rem);box-shadow:0 1px 2px rgba(17,24,39,.04)}
+  .pp-prose{font-size:1rem;line-height:1.75;color:var(--pp-text);overflow-wrap:anywhere}
+  .pp-prose > :first-child{margin-top:0}
+  .pp-prose h1,.pp-prose h2{margin:2.25rem 0 .75rem;font-size:1.25rem;font-weight:700;line-height:1.3;color:var(--pp-ink);scroll-margin-top:7rem}
+  .pp-prose h2{padding-top:1.5rem;border-top:1px solid var(--pp-line)}
+  .pp-prose > h2:first-child{padding-top:0;border-top:0}
+  .pp-prose h3{margin:1.6rem 0 .5rem;font-size:1.05rem;font-weight:600;color:var(--pp-ink);scroll-margin-top:7rem}
+  .pp-prose h4{margin:1.25rem 0 .4rem;font-size:.98rem;font-weight:600;color:var(--pp-ink)}
+  .pp-prose p{margin:0 0 1rem}
+  .pp-prose ul,.pp-prose ol{margin:0 0 1rem;padding-left:1.4rem}
+  .pp-prose ul{list-style:disc}
+  .pp-prose ol{list-style:decimal}
+  .pp-prose li{margin:.3rem 0;padding-left:.2rem}
+  .pp-prose li::marker{color:var(--pp-accent)}
+  .pp-prose a{color:var(--pp-accent);font-weight:500;text-decoration:underline;text-underline-offset:2px}
+  .pp-prose strong,.pp-prose b{color:var(--pp-ink);font-weight:600}
+  .pp-prose blockquote{margin:1.25rem 0;padding:.75rem 1rem;border-left:3px solid var(--pp-accent);background:#f9fafb;color:var(--pp-text)}
+  .pp-prose hr{margin:2rem 0;border:0;border-top:1px solid var(--pp-line)}
+  .pp-prose table{width:100%;margin:1.25rem 0;border-collapse:collapse;font-size:.92rem;display:block;overflow-x:auto}
+  .pp-prose th,.pp-prose td{padding:.6rem .75rem;border:1px solid var(--pp-line);text-align:left;vertical-align:top}
+  .pp-prose th{background:#f9fafb;font-weight:600;color:var(--pp-ink)}
+  .pp-prose img{max-width:100%;height:auto;border-radius:.5rem}
+  .pp-help{margin-top:1.5rem;padding:clamp(1.25rem,1rem + 1vw,2rem);border-radius:1rem;background:#f9fafb;border:1px solid var(--pp-line);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1.25rem}
+  .pp-help h2{margin:0 0 .3rem;font-size:1.05rem;font-weight:600;color:var(--pp-ink)}
+  .pp-help p{margin:0;font-size:.9rem;line-height:1.55;color:var(--pp-muted)}
+  .pp-help p a{color:var(--pp-ink);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+  .pp-actions{display:flex;flex-wrap:wrap;gap:.6rem}
+  .pp-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:2.85rem;padding:.7rem 1.25rem;border-radius:.7rem;font-size:.92rem;font-weight:600;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+  .pp-btn svg{width:1.05rem;height:1.05rem;flex:none}
+  .pp-btn--primary{background:var(--pp-accent);border:1px solid var(--pp-accent);color:#fff;box-shadow:0 8px 18px -10px rgba(17,24,39,.55)}
+  .pp-btn--primary:hover{transform:translateY(-1px);box-shadow:0 12px 22px -10px rgba(17,24,39,.6);color:#fff}
+  .pp-btn--ghost{background:#fff;border:1px solid #d1d5db;color:var(--pp-ink)}
+  .pp-btn--ghost:hover{border-color:var(--pp-accent);color:var(--pp-ink)}
+  .pp-btn:focus-visible,.pp-tab:focus-visible,.pp-toc a:focus-visible{outline:2px solid var(--pp-accent);outline-offset:2px}
+  @media (max-width:40rem){.pp-actions,.pp-btn{width:100%}}
+  @media (prefers-reduced-motion:reduce){.pp-btn,.pp-tab{transition:none}.pp-btn--primary:hover{transform:none}}
+</style>
+
+<div class="pp">
+  <header class="pp-head">
+    <p class="pp-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>{{ store }} policies</p>
+    <h1 class="pp-title">{{ policy_title }}</h1>
+    <p class="pp-sub">
+      {% if policy_key == "privacy" %}How we collect, use and protect your personal information.
+      {% elif policy_key == "terms" %}The terms that apply when you browse and shop with us.
+      {% elif policy_key == "refund" %}How cancellations, returns and refunds work.
+      {% elif policy_key == "shipping" %}How we pack, ship and deliver your order.
+      {% else %}Please read this policy carefully.{% endif %}
+    </p>
+  </header>
+
+  <ul class="pp-tabs" aria-label="Store policies">
+    <li><a class="pp-tab" href="{{ website_base }}privacy-policy/"{% if policy_key == "privacy" %} aria-current="page"{% endif %}>Privacy</a></li>
+    <li><a class="pp-tab" href="{{ website_base }}terms-conditions/"{% if policy_key == "terms" %} aria-current="page"{% endif %}>Terms</a></li>
+    <li><a class="pp-tab" href="{{ website_base }}refund-policy/"{% if policy_key == "refund" %} aria-current="page"{% endif %}>Returns &amp; Refunds</a></li>
+    <li><a class="pp-tab" href="{{ website_base }}shipping-policy/"{% if policy_key == "shipping" %} aria-current="page"{% endif %}>Shipping</a></li>
+    {% for cp in website.get_custom_policy_pages %}
+    <li><a class="pp-tab" href="{{ website_base }}policies/{{ cp.slug }}/"{% if policy_key == "custom" and policy.slug == cp.slug %} aria-current="page"{% endif %}>{{ cp.title }}</a></li>
+    {% endfor %}
+  </ul>
+
+  <div class="pp-layout" data-pp-layout>
+    <nav class="pp-toc" aria-label="On this page" data-pp-toc>
+      <p>On this page</p>
+      <ol data-pp-toc-list></ol>
+    </nav>
+
+    <article class="pp-card">
+      <div class="pp-prose" data-pp-prose>
+        {% if policy_html %}
+          {{ policy_html|safe }}
+        {% elif policy_key == "privacy" %}
+          <p>Your privacy matters to {{ store }}. This policy explains what information we collect when you visit our store or place an order, how we use it, and the choices you have.</p>
+          <h2>Information we collect</h2>
+          <ul>
+            <li><strong>Order details:</strong> your name, email address, phone number, and billing and delivery addresses.</li>
+            <li><strong>Payment details:</strong> payments are handled by secure, certified payment providers. We do not store your full card or bank details.</li>
+            <li><strong>Usage information:</strong> pages viewed, device and browser type, collected to keep the store fast and secure.</li>
+          </ul>
+          <h2>How we use your information</h2>
+          <ul>
+            <li>To process, ship and deliver your orders, and to keep you updated about them.</li>
+            <li>To answer your questions and provide customer support.</li>
+            <li>To send offers or newsletters, only when you have chosen to receive them.</li>
+            <li>To prevent fraud and keep our store secure.</li>
+          </ul>
+          <h2>Sharing your information</h2>
+          <p>We never sell your personal information. We share it only with partners who help us run the store, such as payment providers and courier companies, and only as much as they need to do their job, or when the law requires it.</p>
+          <h2>Cookies</h2>
+          <p>We use cookies to keep your cart and sign-in working and to understand how our store is used. You can control cookies in your browser settings.</p>
+          <h2>Data security</h2>
+          <p>We protect your information with industry-standard safeguards, including encrypted connections. No online service can be completely secure, but we work hard to keep your data safe.</p>
+          <h2>Your choices</h2>
+          <p>You can view and update your details from your account page, unsubscribe from marketing emails at any time, and close your account whenever you like. We keep a record of past orders where the law requires it.</p>
+          <h2>Contact us</h2>
+          <p>Questions about this policy? {% if website.support_email %}Write to us at <a href="mailto:{{ website.support_email }}">{{ website.support_email }}</a>.{% else %}Please reach out through our contact page.{% endif %}</p>
+        {% elif policy_key == "terms" %}
+          <p>Welcome to {{ store }}. By browsing our store or placing an order, you agree to the terms below. Please read them carefully.</p>
+          <h2>Orders</h2>
+          <p>When you place an order, you will receive a confirmation by email. We may decline or cancel an order, for example if a product is out of stock or if there is an error in its price or description. If that happens after you have paid, we will refund you in full.</p>
+          <h2>Prices and payment</h2>
+          <p>All prices are shown in {{ website.currency|default:"INR" }} and include applicable taxes unless stated otherwise. Shipping charges, if any, are shown at checkout before you pay.</p>
+          <h2>Shipping and delivery</h2>
+          <p>Delivery timelines and charges are described in our <a href="{{ website_base }}shipping-policy/">Shipping Policy</a>.</p>
+          <h2>Returns and refunds</h2>
+          <p>Cancellations, returns and refunds are covered by our <a href="{{ website_base }}refund-policy/">Returns &amp; Refunds Policy</a>.</p>
+          <h2>Product information</h2>
+          <p>We take care to describe and photograph our products accurately. Colours and details may vary slightly depending on your screen.</p>
+          <h2>Your account</h2>
+          <p>Please keep your sign-in details private. You are responsible for activity on your account.</p>
+          <h2>Intellectual property</h2>
+          <p>All content on this store, including text, images and logos, belongs to {{ store }} or its licensors and may not be reused without permission.</p>
+          <h2>Limitation of liability</h2>
+          <p>To the extent permitted by law, {{ store }} is not liable for indirect or incidental losses arising from the use of our store or products.</p>
+          <h2>Changes to these terms</h2>
+          <p>We may update these terms from time to time. The version on this page always applies.</p>
+        {% elif policy_key == "refund" %}
+          <p>We want you to love what you ordered from {{ store }}. If something is not right, here is how cancellations, returns and refunds work.</p>
+          <h2>Cancelling an order</h2>
+          <p>You can cancel an order before it ships from your account page, or by contacting us with your order number. Once an order has shipped, it can no longer be cancelled, but you may be able to return it.</p>
+          <h2>Returns</h2>
+          <ul>
+            <li>Items should be unused, in their original condition and packaging, with all tags attached.</li>
+            <li>Some items, such as personal-care or hygiene products, may not be returnable. This is noted on the product page where it applies.</li>
+            <li>To start a return, contact us with your order number and the reason for the return.</li>
+          </ul>
+          <h2>Damaged or incorrect items</h2>
+          <p>If your order arrives damaged, defective or incorrect, contact us as soon as possible after delivery with your order number and photos. We will arrange a replacement or a full refund.</p>
+          <h2>Refunds</h2>
+          <p>Once your return is received and checked, we will let you know and process your refund to the original payment method. For cash on delivery orders, we will refund to a bank account or UPI ID you share with us. Banks may take a few business days to show the amount.</p>
+          <h2>Need help?</h2>
+          <p>{% if website.support_email %}Write to us at <a href="mailto:{{ website.support_email }}">{{ website.support_email }}</a> and we will be glad to help.{% else %}Contact us through our contact page and we will be glad to help.{% endif %}</p>
+        {% elif policy_key == "shipping" %}
+          <p>Here is everything you need to know about how {{ store }} gets your order to you.</p>
+          <h2>Processing time</h2>
+          <p>Orders are packed and handed to our courier partner as quickly as possible, usually within a few business days. Orders placed on weekends or public holidays are processed on the next business day.</p>
+          <h2>Delivery time and charges</h2>
+          <p>Delivery time depends on your location. Any shipping charge is shown at checkout before you pay.</p>
+          <h2>Tracking your order</h2>
+          <p>As soon as your order ships, we will email you its tracking details. You can also follow it from your account page.</p>
+          <h2>Delays</h2>
+          <p>Occasionally, deliveries may be delayed by weather, courier volumes or other events outside our control. We will keep you informed if that happens.</p>
+          <h2>Questions</h2>
+          <p>{% if website.support_email %}Write to us at <a href="mailto:{{ website.support_email }}">{{ website.support_email }}</a> with your order number.{% else %}Contact us through our contact page with your order number.{% endif %}</p>
+        {% else %}
+          <p>This policy will be published here soon. If you have any questions in the meantime, please get in touch with us.</p>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+
+  <section class="pp-help" aria-labelledby="pp-help-h">
+    <div>
+      <h2 id="pp-help-h">Still have a question?</h2>
+      <p>We’re happy to help.{% if website.support_email %} Email <a href="mailto:{{ website.support_email }}">{{ website.support_email }}</a>{% endif %}{% if website.support_phone %}{% if website.support_email %} or call{% else %} Call{% endif %} <a href="tel:{{ website.support_phone|cut:' ' }}">{{ website.support_phone }}</a>{% endif %}{% if website.support_email or website.support_phone %}.{% endif %}</p>
+    </div>
+    <div class="pp-actions">
+      <a class="pp-btn pp-btn--ghost" href="{{ website_base }}contact/">Contact us</a>
+      <a class="pp-btn pp-btn--primary" href="{{ website_base }}shop/">
+        Continue Shopping
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </section>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  // "On this page": built from the policy's own section headings.
+  var prose = document.querySelector('[data-pp-prose]');
+  var layout = document.querySelector('[data-pp-layout]');
+  var list = document.querySelector('[data-pp-toc-list]');
+  if (!prose || !layout || !list) return;
+  var heads = prose.querySelectorAll('h2');
+  if (heads.length < 3) return;
+  var links = [];
+  Array.prototype.forEach.call(heads, function (h, i) {
+    var text = (h.textContent || '').trim();
+    if (!text) return;
+    if (!h.id) h.id = 'pp-' + (i + 1) + '-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = text;
+    li.appendChild(a);
+    list.appendChild(li);
+    links.push({ a: a, h: h });
+  });
+  if (links.length < 3) return;
+  layout.classList.add('has-toc');
+  if (!('IntersectionObserver' in window)) return;
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      links.forEach(function (l) { l.a.classList.toggle('is-active', l.h === en.target); });
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  links.forEach(function (l) { io.observe(l.h); });
+})();
+</script>
+{% endwith %}

@@ -1,0 +1,13 @@
+Your notifications are working
+
+Hi {{ display_name }},
+
+This is a test notification from OneWooz, sent to {{ recipient }}.
+If you're reading this, account and store notifications will arrive here.
+
+Sent: {{ when }}
+
+Manage your notification preferences any time:
+  {{ app_origin }}/profile/
+
+ {{ brand }}

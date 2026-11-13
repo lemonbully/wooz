@@ -15,10 +15,10 @@
     {% if out_of_stock %}
       <div class="app-tablewrap">
         <table class="app-table">
-          <thead><tr><th>Product</th><th>Category</th><th class="app-table__num">Price</th><th></th></tr></thead>
+          <thead><tr><th>Product</th><th>Variation</th><th>Category</th><th class="app-table__num">On hand</th><th></th></tr></thead>
           <tbody>
-            {% for p in out_of_stock %}
-              <tr><td class="app-table__strong">{{ p.title }}</td><td>{{ p.category.name|default:"—" }}</td><td class="app-table__num">{{ site.currency }} {{ p.price }}</td><td class="app-table__actions"><a href="{% url 'store:product_edit' site.id p.id %}" class="app-iconbtn">Restock</a></td></tr>
+            {% for r in out_of_stock %}
+              <tr><td class="app-table__strong">{{ r.product.title }}</td><td>{{ r.variant|default:"" }}</td><td>{{ r.product.category.name|default:"" }}</td><td class="app-table__num"><span class="app-badge app-badge--warn">0</span></td><td class="app-table__actions"><a href="{% url 'store:product_edit' site.id r.product.id %}" class="app-iconbtn">Restock</a></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -33,16 +33,16 @@
     {% if low_stock %}
       <div class="app-tablewrap">
         <table class="app-table">
-          <thead><tr><th>Product</th><th class="app-table__num">On hand</th><th class="app-table__num">Threshold</th><th></th></tr></thead>
+          <thead><tr><th>Product</th><th>Variation</th><th class="app-table__num">On hand</th><th class="app-table__num">Threshold</th><th></th></tr></thead>
           <tbody>
-            {% for p in low_stock %}
-              <tr><td class="app-table__strong">{{ p.title }}</td><td class="app-table__num"><span class="app-badge app-badge--warn">{{ p.stock_on_hand }}</span></td><td class="app-table__num">{{ p.low_stock_threshold }}</td><td class="app-table__actions"><a href="{% url 'store:product_edit' site.id p.id %}" class="app-iconbtn">Restock</a></td></tr>
+            {% for r in low_stock %}
+              <tr><td class="app-table__strong">{{ r.product.title }}</td><td>{{ r.variant|default:"" }}</td><td class="app-table__num"><span class="app-badge app-badge--warn">{{ r.on_hand }}</span></td><td class="app-table__num">{{ r.threshold }}</td><td class="app-table__actions"><a href="{% url 'store:product_edit' site.id r.product.id %}" class="app-iconbtn">Restock</a></td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     {% else %}
-      <div class="app-card__body"><p class="app-note-inline">No products are running low.</p></div>
+      <div class="app-card__body"><p class="app-note-inline">Nothing is running low.</p></div>
     {% endif %}
   </div>
 </div>

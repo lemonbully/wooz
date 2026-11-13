@@ -1,12 +1,12 @@
 {% extends "store/_shell.html" %}
-{% block title %}{{ site.name }} · Order #{{ order.number }}{% endblock %}
-{% block crumb %}Order #{{ order.number }}{% endblock %}
+{% block title %}{{ site.name }} · Order #{{ order.display_number }}{% endblock %}
+{% block crumb %}Order #{{ order.display_number }}{% endblock %}
 
 {% block main %}
 <div class="app-page">
   <div class="app-head">
     <div>
-      <p class="pal-mono pal-mono--accent">Order #{{ order.number }} · {{ order.created_at|date:"d M Y, H:i" }}</p>
+      <p class="pal-mono pal-mono--accent">Order #{{ order.display_number }} · {{ order.created_at|date:"d M Y, H:i" }}</p>
       <h1 class="app-head__title pal-mt-4">{{ order.customer_name|default:"Guest" }}</h1>
       <p class="app-head__lead">
         <span class="app-badge app-badge--{{ order.status }}">{{ order.get_status_display }}</span>
@@ -50,6 +50,7 @@
         <div class="app-meta">
           <div class="app-meta__row"><span class="app-meta__k">Subtotal</span><span class="app-meta__v">{{ site.currency }} {{ order.subtotal }}</span></div>
           <div class="app-meta__row"><span class="app-meta__k">Discount</span><span class="app-meta__v">− {{ site.currency }} {{ order.discount_amount }}</span></div>
+          {% if order.credit_discount_amount %}<div class="app-meta__row"><span class="app-meta__k">Store credit</span><span class="app-meta__v">− {{ site.currency }} {{ order.credit_discount_amount }}</span></div>{% endif %}
           <div class="app-meta__row"><span class="app-meta__k">Tax</span><span class="app-meta__v">{{ site.currency }} {{ order.tax_amount }}</span></div>
           <div class="app-meta__row"><span class="app-meta__k">Shipping</span><span class="app-meta__v">{{ site.currency }} {{ order.shipping_amount }}</span></div>
           <div class="app-meta__row app-meta__row--total"><span class="app-meta__k">Total</span><span class="app-meta__v">{{ site.currency }} {{ order.total }}</span></div>
@@ -60,13 +61,13 @@
         <div class="app-card__head"><h2 class="app-card__title">Customer</h2></div>
         <div class="app-card__body">
           <div class="app-kv">
-            <div><dt>Name</dt><dd>{{ order.customer_name|default:"—" }}</dd></div>
-            <div><dt>Email</dt><dd>{{ order.customer_email|default:"—" }}</dd></div>
-            <div><dt>Phone</dt><dd>{{ order.customer_phone|default:"—" }}</dd></div>
+            <div><dt>Name</dt><dd>{{ order.customer_name|default:"" }}</dd></div>
+            <div><dt>Email</dt><dd>{{ order.customer_email|default:"" }}</dd></div>
+            <div><dt>Phone</dt><dd>{{ order.customer_phone|default:"" }}</dd></div>
             {% if order.gstin %}<div><dt>GSTIN</dt><dd>{{ order.gstin }}</dd></div>{% endif %}
           </div>
           <h3 class="app-subhead">Shipping</h3>
-          <p class="app-address">{{ order.shipping_address|default:"—" }}<br>{{ order.shipping_city }} {{ order.shipping_state }} {{ order.shipping_pincode }}</p>
+          <p class="app-address">{{ order.shipping_address|default:"" }}<br>{{ order.shipping_city }} {{ order.shipping_state }} {{ order.shipping_pincode }}</p>
           {% if order.tracking_id %}<p class="app-sub">Tracking · {{ order.tracking_id }}</p>{% endif %}
         </div>
 
@@ -83,7 +84,7 @@
           <div class="app-card__head"><h2 class="app-card__title">Requests</h2></div>
           <div class="app-card__body">
             {% for r in requests %}
-              <div class="app-feed__item"><p class="app-feed__t">{{ r.get_request_type_display }} · <span class="app-badge app-badge--{{ r.status }}">{{ r.get_status_display }}</span></p><p class="app-feed__b">{{ r.reason|default:r.description|default:"—" }}</p></div>
+              <div class="app-feed__item"><p class="app-feed__t">{{ r.get_request_type_display }} · <span class="app-badge app-badge--{{ r.status }}">{{ r.get_status_display }}</span></p><p class="app-feed__b">{{ r.reason|default:r.description|default:"" }}</p></div>
             {% endfor %}
           </div>
         {% endif %}

@@ -1,0 +1,21 @@
+{% extends "storefront/referral/_page_shell.html" %}
+{% block page_inner %}
+<div class="px-6 pt-4 pb-6">
+	{% if query %}<p class="text-[12px] text-black/60 mb-3">Results for "{{ query }}"</p>{% endif %}
+	<div class="grid grid-cols-2 gap-4">
+		{% for product in products %}
+			<a href="{{ product.url }}" class="block group" aria-label="{{ product.title }}">
+				<article class="cursor-pointer">
+					<div class="overflow-hidden rounded-xl bg-gray-200 aspect-3-4">
+						{% if product.image %}<img src="{{ product.image }}" alt="{{ product.title }}" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform">{% endif %}
+					</div>
+					<h3 class="mt-2 text-[13px] font-medium text-black">{{ product.title }}</h3>
+					<p class="text-[12px] text-black">{{ product.price_display }}</p>
+				</article>
+			</a>
+		{% empty %}
+			<div class="col-span-2 text-center text-black/60 py-10">No products found.</div>
+		{% endfor %}
+	</div>
+</div>
+{% endblock %}

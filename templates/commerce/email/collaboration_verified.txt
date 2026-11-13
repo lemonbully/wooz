@@ -1,0 +1,16 @@
+{% autoescape off %}You have been successfully verified.
+
+{% if collab_name %}Hi {{ collab_name }},
+
+{% endif %}Your collaboration with {{ store_name }} is now active. Your referral store is live, and every order placed through it earns you {{ commission_label }}.
+
+Open your myUGCstore dashboard to track your orders and earnings, customise your store and request payouts:
+{{ dashboard_url }}
+{% if store_url %}
+Your store:
+{{ store_url }}
+{% endif %}
+To sign in, enter {{ email }} on the dashboard and we'll send you a one-time code. No password needed.
+
+{{ store_name }}
+{% endautoescape %}

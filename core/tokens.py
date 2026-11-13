@@ -1,8 +1,8 @@
 """Purpose-bound signed tokens.
 
-Any URL that grants a capability without a session — an invoice download link,
+Any URL that grants a capability without a session  an invoice download link,
 a cart recovery email, a magic sign-in link, an unsubscribe link, an order
-action from a confirmation email — carries one of these instead of a raw
+action from a confirmation email  carries one of these instead of a raw
 identifier.
 
 The property that matters is **purpose binding**. Each purpose gets its own

@@ -6,9 +6,27 @@ Split across focused modules rather than the reference's single 2,900-line
 queryset cannot be evaluated until narrowed with ``.for_site(site)``.
 """
 
-from .catalog import Category, Product, ProductImage, Review
+from .catalog import (
+    Category,
+    Product,
+    ProductImage,
+    ProductFieldTooltip,
+    ProductPriceChange,
+    Review,
+    SlugRedirect,
+    TrustBadge,
+    display_ordered_categories,
+    renamed_slug,
+)
 from .config import PaymentGatewayConfig, TrackingConfig
-from .customers import Customer, CustomerAddress, CustomerCredit, WishlistItem
+from .media import MediaAsset
+from .customers import (
+    Customer,
+    CustomerAddress,
+    CustomerCredit,
+    NewsletterSubscriber,
+    WishlistItem,
+)
 from .sales import (
     Coupon,
     Enquiry,
@@ -18,24 +36,39 @@ from .sales import (
     Payment,
 )
 from .billing import Bill, BillingConfig, OrderCharge
-from .logistics import Shipment, ShippingProvider, Warehouse
+from .logistics import CourierWebhookEvent, Shipment, ShippingProvider, Warehouse
 from .marketing import (
     AnalyticsEvent,
     AnalyticsSession,
     Collaboration,
+    CollaborationMedia,
+    CollaborationPayoutRequest,
+    CollaborationProductImage,
     GoogleMerchantConfig,
+    GoogleMerchantProductStatus,
 )
+from .team import StaffMember
+from .navigation import NavSeen
 
 __all__ = [
+    "NavSeen",
     "Category",
     "Product",
     "ProductImage",
+    "ProductFieldTooltip",
+    "ProductPriceChange",
     "Review",
+    "SlugRedirect",
+    "TrustBadge",
+    "display_ordered_categories",
+    "renamed_slug",
+    "MediaAsset",
     "PaymentGatewayConfig",
     "TrackingConfig",
     "Customer",
     "CustomerAddress",
     "CustomerCredit",
+    "NewsletterSubscriber",
     "WishlistItem",
     "Coupon",
     "Enquiry",
@@ -46,11 +79,17 @@ __all__ = [
     "Bill",
     "BillingConfig",
     "OrderCharge",
+    "CourierWebhookEvent",
     "Shipment",
     "ShippingProvider",
     "Warehouse",
     "AnalyticsEvent",
     "AnalyticsSession",
     "Collaboration",
+    "CollaborationMedia",
+    "CollaborationPayoutRequest",
+    "CollaborationProductImage",
     "GoogleMerchantConfig",
+    "GoogleMerchantProductStatus",
+    "StaffMember",
 ]

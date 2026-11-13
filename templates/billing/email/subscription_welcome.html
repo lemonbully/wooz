@@ -1,0 +1,103 @@
+{% extends "email/base.html" %}
+{% comment %}
+Welcome email for the buyer of a newly settled subscription
+(billing.emails.send_subscription_welcome). Deliberately free of em dashes,
+which is why the footer and sub-footer blocks are overridden too.
+{% endcomment %}
+{% block preheader %}{% if is_returning %}Thank you for staying with us. Your {{ plan_name }} plan is active and ready.{% else %}We are so glad you are here. Your {{ plan_name }} plan is active and your store is waiting.{% endif %}{% endblock %}
+{% block kicker %}{% if is_returning %}Welcome back{% else %}Welcome{% endif %}{% endblock %}
+{% block content %}
+  {% if is_returning %}
+    {% include "email/_marker.html" with text="Welcome back" %}
+  {% else %}
+    {% include "email/_marker.html" with text="Welcome aboard" %}
+  {% endif %}
+
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:25px; letter-spacing:-0.02em; line-height:1.2; color:#0a0a0b; margin:0 0 16px 0;">{% if is_returning %}Thank you for staying with us{% if first_name %}, {{ first_name }}{% endif %}!{% else %}Welcome to OneWooz{% if first_name %}, {{ first_name }}{% endif %}!{% endif %}</h1>
+
+  {% if is_returning %}
+  <p style="margin:0 0 16px 0;">It means a lot to have you with us again. Your <strong style="color:#0a0a0b;">{{ plan_name }}</strong> plan is active, so you can pick up exactly where you left off and keep your store growing.</p>
+  <p style="margin:0 0 20px 0;">Every order you take, every customer you delight, every little win along the way: we are cheering for all of it, and we are right here whenever you need us.</p>
+  {% else %}
+  <p style="margin:0 0 16px 0;">We are truly happy you are here. Your <strong style="color:#0a0a0b;">{{ plan_name }}</strong> plan is active, and everything you need to launch a beautiful online store is ready and waiting for you.</p>
+  <p style="margin:0 0 20px 0;">No developers, no page builders, no late nights wrestling with code. Tell us a little about your brand, click once, and your store goes live with products, checkout, payments and shipping already in place. Starting something new takes courage, and we are honoured you chose to start it with us.</p>
+  {% endif %}
+
+  {# Plan summary #}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d7d7d3; border-collapse:collapse; margin:0 0 24px 0;">
+    <tr>
+      <td style="width:38%; padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">Plan</td>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-size:14px; color:#0a0a0b;">{{ plan_name }} · {{ duration_label }}</td>
+    </tr>
+    {% if period_end %}
+    <tr>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">Active until</td>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-size:14px; color:#0a0a0b;">{{ period_end|date:"j F Y" }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">{% if is_free %}Price{% else %}Amount paid{% endif %}</td>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:14px; color:#0a0a0b;">{% if is_free %}Free, on us{% else %}{{ amount_label }} <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; color:#66666b;">(incl. GST)</span>{% endif %}</td>
+    </tr>
+    <tr>
+      <td style="padding:11px 14px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">Order</td>
+      <td style="padding:11px 14px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:14px; color:#0a0a0b;">{{ order_number }}</td>
+    </tr>
+  </table>
+
+  {# Next steps #}
+  <p style="margin:0 0 12px 0; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#0a0a0b;">{% if is_returning %}Pick up where you left off{% else %}Your first three steps{% endif %}</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px 0;">
+    <tr>
+      <td style="width:38px; vertical-align:top; padding:0 0 14px 0; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; font-weight:700; color:#4b2bf5;">01</td>
+      <td style="vertical-align:top; padding:0 0 14px 0; font-size:14px; line-height:1.55; color:#26262a;">
+        {% if has_account %}
+          <strong style="color:#0a0a0b;">Open your dashboard.</strong> Sign in with your usual email and everything is right where you left it.
+        {% else %}
+          <strong style="color:#0a0a0b;">Set up your account.</strong> Choose a password and add your business details. It takes about a minute.
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td style="width:38px; vertical-align:top; padding:0 0 14px 0; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; font-weight:700; color:#4b2bf5;">02</td>
+      <td style="vertical-align:top; padding:0 0 14px 0; font-size:14px; line-height:1.55; color:#26262a;">
+        {% if is_returning %}
+          <strong style="color:#0a0a0b;">Freshen up your store.</strong> New products, a new banner or a seasonal offer can make your storefront feel brand new.
+        {% else %}
+          <strong style="color:#0a0a0b;">Create your store.</strong> Tell us about your brand, pick a design you love, and we will build the whole store for you.
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td style="width:38px; vertical-align:top; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; font-weight:700; color:#4b2bf5;">03</td>
+      <td style="vertical-align:top; font-size:14px; line-height:1.55; color:#26262a;">
+        {% if is_returning %}
+          <strong style="color:#0a0a0b;">Keep the momentum going.</strong> Share your store link, follow your orders and watch your business grow.
+        {% else %}
+          <strong style="color:#0a0a0b;">Add your products and go live.</strong> Share your store link and get ready to welcome your very first customers.
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  {% if has_account %}
+    {% include "email/_button.html" with url=cta_url label="Open my dashboard" %}
+  {% else %}
+    {% include "email/_button.html" with url=cta_url label="Set up my account" %}
+  {% endif %}
+  <p style="margin:18px 0 0 0; font-size:13px; color:#66666b;">If the button does not work, paste this link into your browser:</p>
+  <p style="margin:6px 0 0 0; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; word-break:break-all; color:#4b2bf5;">{{ cta_url }}</p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0 0;">
+    <tr>
+      <td style="border-left:2px solid #4b2bf5; padding:1px 0 1px 14px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.55; color:#66666b;">Need a hand at any step? Our team would love to help. <a href="{{ contact_url }}" style="color:#4b2bf5;">Get in touch with us</a> and a real person will get back to you.</td>
+    </tr>
+  </table>
+
+  <p style="margin:24px 0 0 0;">Here is to a wonderful journey together.</p>
+  <p style="margin:4px 0 0 0; color:#0a0a0b;"><strong>With warmth,<br>The OneWooz team</strong></p>
+{% endblock %}
+{% block footer %}
+  <div style="color:#66666b;">{{ brand|default:"OneWooz" }} · Your store, live in one click.</div>
+{% endblock %}
+{% block sub_footer %}You are receiving this because you subscribed to OneWooz.{% endblock %}

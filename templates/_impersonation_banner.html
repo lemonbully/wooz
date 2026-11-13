@@ -1,0 +1,21 @@
+{% comment %}
+Admin-impersonation banner. Rendered by the owner-dashboard shells whenever an
+admin is impersonating this owner (request.impersonation is set by
+accounts.impersonation.ImpersonationMiddleware, app surface only). Fixed to the
+top; the shell adds `.pal--impersonating` so the dashboard sits below it. The
+"Stop" button posts to the app-surface exit view, which ends the impersonation
+and returns the admin to the admin surface (via a hand-off page, since the CSP
+forbids a form POST from redirecting cross-origin).
+{% endcomment %}
+{% if request.impersonation %}
+<div class="imp-banner" role="status" aria-live="polite">
+  <div class="imp-banner__msg">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+    <span>Viewing <strong>{{ request.impersonation.target.full_name|default:request.impersonation.target.email }}</strong>&rsquo;s dashboard as an admin ({{ request.impersonation.admin_label }}). Changes you make are made as this owner.</span>
+  </div>
+  <form method="post" action="{% url 'accounts:impersonate_stop' %}" class="imp-banner__form">
+    {% csrf_token %}
+    <button type="submit" class="imp-banner__stop">Stop impersonating</button>
+  </form>
+</div>
+{% endif %}

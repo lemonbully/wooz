@@ -1,0 +1,11 @@
+{
+  "cluster": "onewooz-prod",
+  "serviceName": "edge",
+  "taskDefinition": "onewooz-edge",
+  "desiredCount": 1,
+  "launchType": "EC2",
+  "schedulingStrategy": "REPLICA",
+  "placementConstraints": [
+    { "type": "memberOf", "expression": "ec2InstanceId == i-0bbf9f0e09cec88c2" }
+  ]
+}

@@ -1,0 +1,85 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · {{ campaign.name }}  segments{% endblock %}
+{% block crumb %}Email marketing{% endblock %}
+
+{% block main %}
+<div class="app-page emx">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Audience segments</p>
+      <h1 class="app-head__title pal-mt-4">{{ campaign.name }}</h1>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:email_marketing' site.id %}" class="pal-btn pal-btn--ghost">Back</a>
+      <a href="{% url 'store:email_campaign_segment_export' site.id campaign.id %}?segment={{ segment }}" class="pal-btn">Export to Excel <span class="pal-btn__arrow" aria-hidden="true">↓</span></a>
+    </div>
+  </div>
+
+  <div class="emx-segpills">
+    {% for s in segments %}
+    <a class="emx-segpill{% if s.key == segment %} is-active{% endif %}" href="?segment={{ s.key }}">
+      <span class="emx-segpill__label">{{ s.label }}</span>
+      <span class="emx-segpill__count">{{ s.count }}</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="emx-card">
+    <div class="emx-card__head">
+      <div class="emx-card__titles">
+        <h2 class="emx-card__title">{{ seg_label }}</h2>
+        <p class="emx-card__hint">{{ seg_count }} recipient{{ seg_count|pluralize }}{% if segment == 'non_openers' %} who never opened this campaign{% elif segment == 'not_clicked' %} who opened but never clicked{% endif %}. Export the full list to re-target them.</p>
+      </div>
+    </div>
+    <div class="emx-card__body" style="padding:0;">
+      {% if rows_page.object_list %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Email</th><th>Sent</th>
+              <th class="app-table__num">Opens</th><th>Clicked</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in rows_page.object_list %}
+            <tr>
+              <td class="app-table__strong">{{ r.name }}</td>
+              <td>{{ r.email }}</td>
+              <td class="app-sub">{% if r.sent_at %}{{ r.sent_at|date:"d M Y, g:i A" }}{% else %}{% endif %}</td>
+              <td class="app-table__num">{{ r.opens }}</td>
+              <td>{% if r.clicked %}<span class="app-badge app-badge--ok">Clicked</span>{% elif r.opened %}<span class="app-badge">Opened</span>{% else %}<span class="app-badge app-badge--muted">No open</span>{% endif %}</td>
+              <td>{% if r.unsubscribed %}<span class="app-badge app-badge--muted">Unsubscribed</span>{% else %}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if rows_page.paginator.num_pages > 1 %}
+      <div class="app-pager" style="padding:1rem;">
+        {% if rows_page.has_previous %}<a class="app-pager__link" href="?segment={{ segment }}&page={{ rows_page.previous_page_number }}">← Prev</a>{% else %}<span class="app-pager__link app-pager__link--off">← Prev</span>{% endif %}
+        <span class="app-pager__at">Page {{ rows_page.number }} of {{ rows_page.paginator.num_pages }}</span>
+        {% if rows_page.has_next %}<a class="app-pager__link" href="?segment={{ segment }}&page={{ rows_page.next_page_number }}">Next →</a>{% else %}<span class="app-pager__link app-pager__link--off">Next →</span>{% endif %}
+      </div>
+      {% endif %}
+      {% else %}
+      <p class="emx-help" style="padding:1.2rem;">No recipients in this segment{% if total_recipients == 0 %} yet  this campaign hasn’t been sent{% endif %}.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% include "store/_email_styles.html" %}
+
+<style nonce="{{ csp_nonce }}">
+  .emx-segpills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.15rem; }
+  .emx-segpill { display: inline-flex; align-items: center; gap: 0.55rem; border: 1px solid var(--pal-line);
+    background: var(--pal-panel, #fff); padding: 0.5rem 0.85rem; color: var(--pal-muted); text-decoration: none; }
+  .emx-segpill:hover { border-color: var(--pal-muted); color: var(--pal-ink); }
+  .emx-segpill.is-active { border-color: var(--pal-accent); color: var(--pal-ink); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .emx-segpill__label { font-size: 0.9rem; font-weight: 500; }
+  .emx-segpill__count { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.04em;
+    padding: 0.1rem 0.4rem; border: 1px solid var(--pal-line); color: var(--pal-muted); }
+  .emx-segpill.is-active .emx-segpill__count { border-color: var(--pal-accent); color: var(--pal-accent); }
+</style>
+{% endblock %}

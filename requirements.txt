@@ -1,4 +1,4 @@
-# OneWooz — runtime dependencies
+# OneWooz  runtime dependencies
 #
 # Ranges rather than exact pins so a first install resolves cleanly.
 # Lock to exact versions (pip freeze > requirements.lock.txt) once the
@@ -29,13 +29,19 @@ django-celery-results>=2.5
 whitenoise>=6.8
 django-storages>=1.14
 boto3>=1.35
+rcssmin>=1.1                 # CSS minification at collectstatic (production only)
+rjsmin>=1.2                  # JS minification at collectstatic (production only)
 Pillow>=11.0
+pillow-heif>=0.18            # HEIC/HEIF/AVIF decode, so core.image_webp converts phone-camera photos too
 
 # --- Integrations ----------------------------------------------------------
 razorpay>=1.4
 requests>=2.32
 dnspython>=2.7                   # custom-domain DNS verification
 tldextract>=5.1
+
+# --- Documents -------------------------------------------------------------
+reportlab>=4.0                   # commission invoice / bill PDFs
 
 # --- Utilities -------------------------------------------------------------
 bleach>=6.2                      # sanitising owner-supplied rich text

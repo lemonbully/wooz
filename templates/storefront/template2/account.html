@@ -700,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       const customerBlock = `
         <div>
-          <div class="font-semibold text-gray-900 text-sm">${esc(inv.customer_name||'—')}</div>
+          <div class="font-semibold text-gray-900 text-sm">${esc(inv.customer_name||'')}</div>
           ${inv.customer_email ? `<div class="text-xs text-gray-500 mt-1">${esc(inv.customer_email)}</div>` : ''}
           ${inv.customer_phone ? `<div class="text-xs text-gray-500">${esc(inv.customer_phone)}</div>` : ''}
           ${inv.shipping_address ? `<div class="text-xs text-gray-500 mt-1">${esc(inv.shipping_address)}</div>` : ''}

@@ -2,7 +2,7 @@
 
 In the platform this product replaces, isolation between tenants was entirely a
 matter of every view remembering to write ``.filter(website=website)``. With
-235 view functions in a single module, that is a promise nobody can keep — one
+235 view functions in a single module, that is a promise nobody can keep  one
 omission anywhere exposes one merchant's orders to another.
 
 Here, a queryset over a tenant-scoped model refuses to evaluate unless it has
@@ -15,8 +15,8 @@ Three ways to get a usable queryset::
     site.products.all()                     # related managers are pre-scoped
     Product.objects.across_all_sites()      # deliberate, greppable, rare
 
-``across_all_sites`` exists for the cases that genuinely need it — platform
-admin views, billing runs, sitemap generation for every store — and it reads
+``across_all_sites`` exists for the cases that genuinely need it  platform
+admin views, billing runs, sitemap generation for every store  and it reads
 like the exception it is.
 """
 
@@ -50,7 +50,7 @@ class SiteScopedQuerySet(models.QuerySet):
         return clone
 
     def for_sites(self, sites):
-        """Narrow to several sites — used by owner dashboards spanning stores."""
+        """Narrow to several sites  used by owner dashboards spanning stores."""
         ids = [getattr(s, "pk", s) for s in sites]
         clone = self.filter(**{f"{self.model.SITE_FIELD}_id__in": ids})
         clone._site_scoped = True

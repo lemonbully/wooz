@@ -1,7 +1,6 @@
 {% extends "web/_shell.html" %}
 {% load onewooz %}
 
-{% block title %}Contact · OneWooz{% endblock %}
 
 {% block main %}
 
@@ -30,13 +29,13 @@
       <div class="pal-cell">
         <div class="pal-cell__idx">SALES</div>
         <div class="pal-cell__title">Before you sign up</div>
-        <div class="pal-cell__desc">Not sure OneWooz fits what you sell? Ask first — no pressure.</div>
+        <div class="pal-cell__desc">Not sure OneWooz fits what you sell? Ask first  no pressure.</div>
         <div class="pal-btn-row pal-mt-8"><a href="mailto:hello@onewooz.com" class="pal-btn pal-btn--ghost">hello@onewooz.com</a></div>
       </div>
       <div class="pal-cell">
         <div class="pal-cell__idx">SECURITY</div>
         <div class="pal-cell__title">Report a vulnerability</div>
-        <div class="pal-cell__desc">Found a weakness? Tell us in good faith and we'll act — and protect you.</div>
+        <div class="pal-cell__desc">Found a weakness? Tell us in good faith and we'll act  and protect you.</div>
         <div class="pal-btn-row pal-mt-8"><a href="mailto:security@onewooz.com" class="pal-btn pal-btn--ghost">security@onewooz.com</a></div>
       </div>
     </div>
@@ -55,13 +54,20 @@
           email within one working day.
         </p>
         <p class="pal-mono pal-mt-8" data-reveal>help@onewooz.com · Mon–Sat · 10:00–19:00 IST</p>
+        <div class="pal-marker pal-mt-8" data-reveal><span>Registered office</span></div>
+        <address class="pal-lead pal-mt-6" style="font-style:normal;max-width:26ch;" data-reveal>
+          <strong>The Artless</strong>  the company behind OneWooz<br>
+          H.no. 866, Street no. 11,<br>
+          Mustafabad New, Delhi 110094,<br>
+          India
+        </address>
       </div>
 
       <div class="pal-infocard">
         {% if sent %}
           <div class="pal-alert pal-alert--ok">
             <div class="pal-alert__title">Enquiry received</div>
-            Thanks — a real person will reply within one working day to the email
+            Thanks  a real person will reply within one working day to the email
             you gave us.
             <div class="pal-alert__ref">Reference: {{ ref }}</div>
           </div>
@@ -86,7 +92,7 @@
                 <label class="pal-field__label" for="category">What's this about?</label>
                 <select class="pal-select" name="category" id="category" required>
                   <option value="general">General question</option>
-                  <option value="sales">Sales — before I sign up</option>
+                  <option value="sales">Sales  before I sign up</option>
                   <option value="migration">Migrating an existing store</option>
                   <option value="b2b">B2B / bulk &amp; enquiry catalogue</option>
                   <option value="billing">Billing &amp; plans</option>
@@ -118,14 +124,14 @@
     <div class="pal-faq pal-mt-12" data-reveal>
       <details>
         <summary>How quickly will I hear back? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">Within one working day, every time — usually much sooner. Security reports are acknowledged within one working day too.</div>
+        <div class="pal-faq__a">Within one working day, every time  usually much sooner. Security reports are acknowledged within one working day too.</div>
       </details>
       <details>
         <summary>Can I talk to someone before I sign up? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
         <div class="pal-faq__a">Yes. Email <a href="mailto:hello@onewooz.com">hello@onewooz.com</a> or use the enquiry form above and pick “Sales”. We'll tell you honestly whether OneWooz fits what you sell.</div>
       </details>
       <details>
-        <summary>I already sell somewhere else — can I move my store over? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <summary>I already sell somewhere else  can I move my store over? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
         <div class="pal-faq__a">Usually, yes. Send an enquiry with “Migrating an existing store” and tell us where you're selling now and roughly how many products you have. We'll walk you through moving your catalogue, domain and customers.</div>
       </details>
       <details>
@@ -133,8 +139,8 @@
         <div class="pal-faq__a">No. Your revenue is yours and settles to your own account through your payment provider. We charge for the platform, never a cut of what you sell.</div>
       </details>
       <details>
-        <summary>My live store has a problem right now — where do I go? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">Raise a ticket on the <a href="{% url 'web:support' %}">support desk</a>. Tell us what's broken and, if you can, an order or store reference — it reaches us faster than email.</div>
+        <summary>My live store has a problem right now  where do I go? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">Raise a ticket on the <a href="{% url 'web:support' %}">support desk</a>. Tell us what's broken and, if you can, an order or store reference  it reaches us faster than email.</div>
       </details>
       <details>
         <summary>Do you sell to businesses (B2B), not just shoppers? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
@@ -142,7 +148,7 @@
       </details>
       <details>
         <summary>Which currencies and payment methods do you support? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">India first — rupee pricing with cards, UPI and cash on delivery, plus part-payment. More regions are on the way; ask if you need one that isn't listed.</div>
+        <div class="pal-faq__a">India first  rupee pricing with cards, UPI and cash on delivery, plus part-payment. More regions are on the way; ask if you need one that isn't listed.</div>
       </details>
       <details>
         <summary>How do I report a security issue? <span class="pal-faq__sign" aria-hidden="true"></span></summary>

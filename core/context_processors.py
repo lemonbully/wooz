@@ -11,7 +11,7 @@ def security(request):
 
     Every inline ``<script>`` in this codebase must carry
     ``nonce="{{ csp_nonce }}"``. Anything that forgets is blocked by the
-    browser rather than silently running — which is the point of using a nonce
+    browser rather than silently running  which is the point of using a nonce
     instead of ``'unsafe-inline'``.
 
     The ``*_origin`` values are full origins including scheme and, in

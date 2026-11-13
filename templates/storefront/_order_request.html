@@ -1,0 +1,148 @@
+{% comment %}
+Cancellation / replacement / support request modal for the shopper's account page, shared
+by the owner-theme account (storefront/account.html) and the UGC card account
+(storefront/referral/pages/account.html). Any element with
+data-orq-open data-orq-type="cancel|replace|support" data-orq-url="…" data-orq-order="#"
+opens it. Posts to public_order_request (CSRF header) and reloads on success.
+Scoped CSS (the storefront Tailwind build is precompiled, so new utility classes
+would not exist there).
+{% endcomment %}
+<style>
+  .orq-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+  .orq-status { margin-top: 6px; font-size: 12px; color: #4b5563; }
+  .orq-status b { color: #111827; font-weight: 600; }
+  .orq-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .orq-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; border-radius: 8px; border: 1px solid #d1d5db; background: #fff; color: #111827; font-size: 12.5px; cursor: pointer; }
+  .orq-btn:hover { background: #f9fafb; }
+  .orq-btn--danger { border-color: #fecaca; color: #b91c1c; }
+  .orq-btn--support { border-color: #111827; }
+  .orq-reply { margin-top: 8px; padding: 9px 11px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; font-size: 12.5px; line-height: 1.5; color: #374151; overflow-wrap: anywhere; }
+  .orq-reply__label { display: block; margin-bottom: 3px; font-size: 11px; font-weight: 600; color: #6b7280; }
+  .orq-modal { position: fixed; inset: 0; z-index: 10050; display: none; }
+  .orq-modal.is-open { display: block; }
+  .orq-modal__bg { position: absolute; inset: 0; background: rgba(0,0,0,0.55); }
+  .orq-modal__panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 92%; max-width: 440px; background: #fff; border-radius: 14px; box-shadow: 0 20px 50px rgba(0,0,0,0.25); overflow: hidden; }
+  .orq-modal__head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #f0f0f0; }
+  .orq-modal__title { font-size: 15px; font-weight: 600; color: #111827; margin: 0; }
+  .orq-modal__x { width: 30px; height: 30px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 16px; line-height: 1; }
+  .orq-modal__body { padding: 16px; display: grid; gap: 12px; }
+  .orq-modal__body label { display: grid; gap: 6px; font-size: 13px; color: #374151; }
+  .orq-modal__body select, .orq-modal__body textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 9px 10px; font-size: 13.5px; color: #111827; background: #fff; box-sizing: border-box; }
+  .orq-modal__body textarea { min-height: 84px; resize: vertical; }
+  .orq-modal__hint { font-size: 12px; color: #6b7280; margin: 0; }
+  .orq-modal__msg { font-size: 13px; padding: 9px 11px; border-radius: 8px; display: none; }
+  .orq-modal__msg.is-err { display: block; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .orq-modal__msg.is-ok { display: block; background: #111827; color: #fff; }
+  .orq-modal__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid #f0f0f0; }
+  .orq-modal__submit { padding: 9px 14px; border-radius: 8px; border: 0; background: #111827; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .orq-modal__submit[disabled] { opacity: 0.6; cursor: not-allowed; }
+</style>
+
+<div class="orq-modal" id="orq-modal" role="dialog" aria-modal="true" aria-labelledby="orq-title">
+  <div class="orq-modal__bg" data-orq-close></div>
+  <div class="orq-modal__panel">
+    <div class="orq-modal__head">
+      <h3 class="orq-modal__title" id="orq-title">Request</h3>
+      <button type="button" class="orq-modal__x" data-orq-close aria-label="Close">&times;</button>
+    </div>
+    <form id="orq-form">
+      <div class="orq-modal__body">
+        <p class="orq-modal__hint" id="orq-hint"></p>
+        <label><span id="orq-reason-label">Reason</span>
+          <select name="reason" id="orq-reason" required></select>
+        </label>
+        <label><span id="orq-desc-label">Details (optional)</span>
+          <textarea name="description" id="orq-desc" maxlength="2000" placeholder="Anything the store should know"></textarea>
+        </label>
+        <div class="orq-modal__msg" id="orq-msg" role="status"></div>
+      </div>
+      <div class="orq-modal__foot">
+        <button type="button" class="orq-btn" data-orq-close>Close</button>
+        <button type="submit" class="orq-modal__submit" id="orq-submit">Submit request</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  var modal = document.getElementById('orq-modal');
+  if (!modal) return;
+  var form = document.getElementById('orq-form');
+  var title = document.getElementById('orq-title');
+  var hint = document.getElementById('orq-hint');
+  var reason = document.getElementById('orq-reason');
+  var reasonLabel = document.getElementById('orq-reason-label');
+  var desc = document.getElementById('orq-desc');
+  var descLabel = document.getElementById('orq-desc-label');
+  var msg = document.getElementById('orq-msg');
+  var submit = document.getElementById('orq-submit');
+  var token = '{{ csrf_token }}';
+  var REASONS = {
+    cancel: ['Ordered by mistake', 'Found a better price elsewhere', 'Delivery is taking too long', 'Want to change the address or items', 'Changed my mind', 'Other'],
+    replace: ['Product arrived damaged', 'Received the wrong item', 'Product is defective / not working', 'Parts or accessories missing', 'Wrong size or variant received', 'Other'],
+    support: ['Where is my order?', 'Delivery or tracking issue', 'Payment or refund query', 'Invoice or GST query', 'Problem with the product', 'Change address or contact details', 'Other']
+  };
+  var COPY = {
+    cancel: { title: 'Request cancellation', hint: 'You can cancel until your order ships. The store will confirm the cancellation by email.', reason: 'Reason', desc: 'Details (optional)', ph: 'Anything the store should know', submit: 'Submit request' },
+    replace: { title: 'Request replacement', hint: 'Tell the store what went wrong. Once approved, a replacement is sent for the same order.', reason: 'Reason', desc: 'Details (optional)', ph: 'Anything the store should know', submit: 'Submit request' },
+    support: { title: 'Get help with your order', hint: 'Ask the store anything about this order. They will reply to you by email, and the reply also shows here under the order.', reason: 'What do you need help with?', desc: 'Your message', ph: 'Describe your question or the problem', submit: 'Send to store' }
+  };
+  var state = { url: '', type: '' };
+
+  function setMsg(text, ok) {
+    msg.textContent = text || '';
+    msg.className = 'orq-modal__msg' + (text ? (ok ? ' is-ok' : ' is-err') : '');
+  }
+  function open(btn) {
+    state.url = btn.getAttribute('data-orq-url');
+    state.type = btn.getAttribute('data-orq-type');
+    var num = btn.getAttribute('data-orq-order') || '';
+    var copy = COPY[state.type] || COPY.cancel;
+    title.textContent = copy.title + (num ? ' · Order #' + num : '');
+    hint.textContent = copy.hint;
+    reasonLabel.textContent = copy.reason;
+    descLabel.textContent = copy.desc;
+    desc.placeholder = copy.ph;
+    desc.required = state.type === 'support';
+    submit.textContent = copy.submit;
+    reason.innerHTML = '<option value="">Choose a reason</option>' + (REASONS[state.type] || []).map(function (r) {
+      return '<option>' + r + '</option>';
+    }).join('');
+    form.reset();
+    setMsg('');
+    submit.disabled = false;
+    modal.classList.add('is-open');
+    document.querySelectorAll('[data-order-menu]').forEach(function (m) { m.classList.add('hidden'); });
+  }
+  function close() { modal.classList.remove('is-open'); }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-orq-open]');
+    if (btn) { e.preventDefault(); open(btn); return; }
+    if (e.target.closest && e.target.closest('[data-orq-close]')) { close(); }
+  });
+  window.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!reason.value) { setMsg(state.type === 'support' ? 'Please choose what you need help with.' : 'Please choose a reason.', false); return; }
+    if (state.type === 'support' && desc.value.trim().length < 5) { setMsg('Please describe how the store can help.', false); desc.focus(); return; }
+    var fd = new FormData(form);
+    fd.append('type', state.type);
+    submit.disabled = true;
+    fetch(state.url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': token }, credentials: 'same-origin', body: fd })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        if (res.ok && res.data && res.data.ok) {
+          setMsg(res.data.message || 'Request sent.', true);
+          setTimeout(function () { window.location.reload(); }, 1400);
+        } else {
+          setMsg((res.data && res.data.error) || 'Could not send the request.', false);
+          submit.disabled = false;
+        }
+      })
+      .catch(function () { setMsg('Could not send the request. Please try again.', false); submit.disabled = false; });
+  });
+})();
+</script>

@@ -1,0 +1,34 @@
+{% extends "email/base.html" %}
+{% block preheader %}{% if is_free %}Your OneWooz {{ plan_name }} plan is ready to activate.{% else %}Complete your OneWooz {{ plan_name }} subscription.{% endif %}{% endblock %}
+{% block kicker %}Subscription{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text=plan_name %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:23px; letter-spacing:-0.02em; line-height:1.15; color:#0a0a0b; margin:0 0 16px 0;">{% if is_free %}Your {{ plan_name }} plan is ready{% else %}Complete your {{ plan_name }} subscription{% endif %}</h1>
+
+  {% if is_free %}
+  <p style="margin:0 0 16px 0;">You’ve been given the <strong style="color:#0a0a0b;">{{ plan_name }}</strong> plan ({{ cycle_label }}) on OneWooz  <strong style="color:#0a0a0b;">free of charge</strong>.</p>
+  <p style="margin:0 0 16px 0;">Open the link below to review the agreement, verify your email and activate it. There’s nothing to pay.</p>
+  {% else %}
+  <p style="margin:0 0 16px 0;">You’ve been invited to subscribe to the <strong style="color:#0a0a0b;">{{ plan_name }}</strong> plan ({{ cycle_label }}) on OneWooz.</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d7d7d3; border-collapse:collapse; margin:0 0 18px 0;">
+    <tr>
+      <td style="width:38%; padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">Plan</td>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-size:14px; color:#0a0a0b;">{{ plan_name }} · {{ cycle_label }}</td>
+    </tr>
+    <tr>
+      <td style="padding:11px 14px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">Amount</td>
+      <td style="padding:11px 14px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:14px; color:#0a0a0b;">{{ amount_label }}</td>
+    </tr>
+  </table>
+  <p style="margin:0 0 16px 0;">Open the link below to review the agreement, verify your email and pay securely via Cashfree. We never store your card details.</p>
+  {% endif %}
+
+  {% include "email/_button.html" with url=link label="Review &amp; activate" %}
+  <p style="margin:18px 0 0 0; font-size:13px; color:#66666b;">Or paste this link into your browser:</p>
+  <p style="margin:6px 0 0 0; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; word-break:break-all; color:#4b2bf5;">{{ link }}</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0 0;">
+    <tr>
+      <td style="border-left:2px solid #4b2bf5; padding:1px 0 1px 14px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.55; color:#66666b;">This link is valid for about {{ minutes }} minutes and works once. If it expires, ask us to send a new one. If you weren’t expecting this, you can ignore this email.</td>
+    </tr>
+  </table>
+{% endblock %}

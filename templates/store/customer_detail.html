@@ -26,7 +26,7 @@
           <thead><tr><th>Order</th><th>Placed</th><th>Status</th><th class="app-table__num">Total</th></tr></thead>
           <tbody>
             {% for o in orders %}
-              <tr><td class="app-table__id"><a href="{% url 'store:order_detail' site.id o.id %}">#{{ o.number }}</a></td><td>{{ o.created_at|date:"d M Y" }}</td><td><span class="app-badge app-badge--{{ o.status }}">{{ o.get_status_display }}</span></td><td class="app-table__num">{{ site.currency }} {{ o.total }}</td></tr>
+              <tr><td class="app-table__id"><a href="{% url 'store:order_detail' site.id o.id %}">#{{ o.display_number }}</a></td><td>{{ o.created_at|date:"d M Y" }}</td><td><span class="app-badge app-badge--{{ o.status }}">{{ o.get_status_display }}</span></td><td class="app-table__num">{{ site.currency }} {{ o.total }}</td></tr>
             {% endfor %}
           </tbody>
         </table>

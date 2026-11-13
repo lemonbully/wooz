@@ -1,0 +1,36 @@
+{% comment %}
+Donut chart with a legend. Expects `donut` (from views `_donut`), and optional
+`center_value` / `center_label` for the hole, and `empty` text.
+{% endcomment %}
+{% if donut.segments %}
+<div class="an-donut">
+  <div class="an-donut__chart">
+    <svg viewBox="0 0 140 140" class="an-donut__svg" role="img" aria-label="{{ label|default:'Breakdown' }}">
+      <g transform="rotate(-90 70 70)">
+        <circle cx="70" cy="70" r="{{ donut.r }}" class="an-donut__track"/>
+        {% for s in donut.segments %}
+        <circle cx="70" cy="70" r="{{ donut.r }}" class="an-donut__seg" stroke="{{ s.color }}"
+                stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}"/>
+        {% endfor %}
+      </g>
+    </svg>
+    {% if center_value %}
+    <div class="an-donut__center">
+      <span class="an-donut__cval">{{ center_value }}</span>
+      <span class="an-donut__clabel">{{ center_label }}</span>
+    </div>
+    {% endif %}
+  </div>
+  <ul class="an-donut__legend">
+    {% for s in donut.segments %}
+    <li class="an-donut__item">
+      <span class="an-donut__key" style="background:{{ s.color }}"></span>
+      <span class="an-donut__lbl" title="{{ s.label }}">{{ s.label }}</span>
+      <span class="an-donut__pct">{{ s.value }} · {{ s.pct }}%</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% else %}
+<p class="app-note-inline">{{ empty|default:"No data yet." }}</p>
+{% endif %}

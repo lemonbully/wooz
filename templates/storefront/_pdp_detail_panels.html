@@ -1,0 +1,312 @@
+{% comment %}
+  Product detail tab panels: Description, Item Details, Origin/Manufacturer
+  & Packer, Others. Shared by the store's product page (template2, and
+  template1 which extends it) and the UGC storefront's "View details"
+  modal, so both always show the same details.
+  pfx: id prefix for the panels ("" on the store page, "rd-" in the modal).
+  compact: phone-width layout (the UGC modal), no wide desktop grids.
+{% endcomment %}
+<!-- Description Content -->
+<div id="{{ pfx }}panel-desc">
+  {% if product.description %}
+  <div class="text-justify text-sm md:text-sm max-w-none text-gray-700">
+    {{ product.description|linebreaks }}
+  </div>
+  {% else %}
+  <div class="text-xs text-gray-500">No description available.</div>
+  {% endif %}
+</div>
+<!-- Additional Information (Specifications) Content -->
+<div id="{{ pfx }}panel-addl" class="hidden">
+  {% with d=d2c_details %}
+  {% if d %}
+  <div class="grid {% if compact %}grid-cols-2{% else %}grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4{% endif %} gap-4">
+    {% if d.material %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Material</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.material }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if d.colour %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Colour</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.colour }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if d.recommended_use %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Recommended Use</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.recommended_use }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if d.handling_time %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Handling Time</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.handling_time }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if d.accessories %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Accessories</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">
+          <ul class="list-disc list-inside space-y-1">
+            {% for a in d.accessories %}
+            <li>{{ a }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if d.includes %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Includes</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">
+          <ul class="list-disc list-inside space-y-1">
+            {% for inc in d.includes %}
+            <li>{{ inc }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.product_length and product.product_breadth and product.product_height %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Product Dimensions</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.product_length }} x {{ product.product_breadth }} x {{ product.product_height }} {{ product.product_unit }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.package_length and product.package_breadth and product.package_height %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Package Dimensions</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.package_length }} x {{ product.package_breadth }} x {{ product.package_height }} {{ product.package_unit }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.weight_value %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Product Weight</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.weight_value }} {{ product.weight_unit }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.package_weight_value %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Package Weight</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.package_weight_value }} {{ product.package_weight_unit }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.hsn_code %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">HSN Code</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.hsn_code }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.gst_percentage %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">GST</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.gst_percentage }}%</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.return_policy_label %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Return Type</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.return_policy_label }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.dangerous_good %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Dangerous Good</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.dangerous_good }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if d.warning %}
+    <div class="rounded-xl bg-red-50 ring-1 ring-red-100 shadow-sm hover:bg-red-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-red-600">Warning</h4>
+        </div>
+        <div class="text-red-600 text-[14px] md:text-sm break-words">{{ d.warning }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% comment %} Specifications the owner entered as name/value pairs in the form's Specifications step (stored as a list on product.specifications). Each renders as its own detail card. Guarded by spec.name so a legacy dict-shaped specifications blob (iterating to keys) renders nothing here rather than blank cards. {% endcomment %}
+    {% for spec in product.specifications %}
+    {% if spec.name and spec.value %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">{{ spec.name }}</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ spec.value }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-8"><div class="text-xs text-gray-500">No additional information available.</div></div>
+  {% endif %}
+  {% endwith %}
+</div>
+
+<!-- Origin, Manufacturer & Packer Content: where the product comes from, who
+     made and packed it, its guarantee, and whom to contact for support. -->
+<div id="{{ pfx }}panel-manufacturer" class="hidden">
+  {% with d=d2c_details %}
+  <div class="grid {% if compact %}grid-cols-1{% else %}grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4{% endif %} gap-4">
+    {% if product.country_of_origin %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Country of Origin</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.country_of_origin }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.manufacturer_contact %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Manufacturer Contact</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.manufacturer_contact }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.packer_contact %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Packer Contact</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.packer_contact }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.importer_contact %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Importer Contact</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.importer_contact }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if product.guarantee_warranty %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Guarantee/Warranty</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.guarantee_warranty }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% comment %} The product form saves support contacts as flat keys (support_phone / support_email); older data nested them under support.{phone,email}. Read the flat key first, fall back to the nested one so both render. {% endcomment %}
+    {% if d.support_phone or d.support.phone %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Customer Support Number</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.support_phone|default:d.support.phone }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if d.support_email or d.support.email %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Customer Support Email</h4>
+        </div>
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.support_email|default:d.support.email }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% if not product.country_of_origin and not product.manufacturer_contact and not product.packer_contact and not product.importer_contact and not product.guarantee_warranty and not d.support_phone and not d.support.phone and not d.support_email and not d.support.email %}
+  <div class="text-center py-8">
+    <div class="text-xs text-gray-500">No origin, manufacturer or packer details available.</div>
+  </div>
+  {% endif %}
+  {% endwith %}
+</div>
+
+<!-- Others Content (only extras) -->
+<div id="{{ pfx }}panel-others" class="hidden">
+  {% if d2c_details and d2c_details.extras %}
+  <div class="grid {% if compact %}grid-cols-1{% else %}grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4{% endif %} gap-4">
+    {% for extra in d2c_details.extras %}
+    <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
+      <div class="flex flex-col p-4">
+        <div class="mb-2">
+          <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">{{ extra.name|default:extra.type|capfirst }}</h4>
+        </div>
+        {% comment %} The product form saves each extra as {name, value}; older/reference data used {type, text}. Read value first, fall back to text so both render. {% endcomment %}
+        <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ extra.value|default:extra.text }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-8">
+    <div class="text-xs text-gray-500">No other details available.</div>
+  </div>
+  {% endif %}
+</div>

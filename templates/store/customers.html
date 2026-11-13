@@ -1,44 +1,132 @@
 {% extends "store/_shell.html" %}
+{% load static %}
 {% block title %}{{ site.name }} · Customers{% endblock %}
 {% block crumb %}Customers{% endblock %}
 
+{% comment %}
+Customers directory. Everyone who has ordered on this store (orders are
+reconciled into Customer rows by the view) plus anyone who enquired. Each row
+carries the reference platform's action set  View, Edit, Credits, Notify,
+Delete  driven by `static/js/app/customers.js`. URL templates embed the
+all-zero UUID that the script swaps for a real customer id (the CSP-safe way to
+hand a reversed URL to JS); AJAX actions read the CSRF token rendered here.
+{% endcomment %}
+
 {% block main %}
-<div class="app-page">
-  <div class="app-head"><div>
-    <p class="pal-mono pal-mono--accent">People</p>
-    <h1 class="app-head__title pal-mt-4">Customers</h1>
-    <p class="app-head__lead">Everyone who has ordered or enquired, with how much they’ve spent.</p>
-  </div></div>
+<div class="app-page" data-customers
+     data-json-tmpl="{% url 'store:customer_json' site.id '00000000-0000-0000-0000-000000000000' %}"
+     data-credit-list-tmpl="{% url 'store:customer_credits_list' site.id '00000000-0000-0000-0000-000000000000' %}"
+     data-credit-add-tmpl="{% url 'store:customer_credit_add' site.id '00000000-0000-0000-0000-000000000000' %}"
+     data-notify-tmpl="{% url 'store:customer_notify' site.id '00000000-0000-0000-0000-000000000000' %}"
+     data-edit-tmpl="{% url 'store:customer_edit' site.id '00000000-0000-0000-0000-000000000000' %}"
+     data-notify-all-url="{% url 'store:customer_notify_all' site.id %}"
+     data-credit-bulk-url="{% url 'store:customer_credit_bulk' site.id %}"
+     data-credit-del-tmpl="{% url 'store:customer_credit_delete' site.id '00000000-0000-0000-0000-000000000000' '11111111-1111-1111-1111-111111111111' %}"
+     data-credit-bulk-list-url="{% url 'store:customer_credit_bulk_list' site.id %}"
+     data-credit-bulk-del-url="{% url 'store:customer_credit_bulk_delete' site.id %}"
+     data-currency="{{ site.currency }}">
+  {% csrf_token %}
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">People</p>
+      <h1 class="app-head__title pal-mt-4">Customers</h1>
+      <p class="app-head__lead">Everyone who has ordered on this store, with how much they’ve spent.</p>
+    </div>
+    <div class="app-head__actions">
+      <button type="button" class="pal-btn pal-btn--ghost" data-cust-bulk-credit>Bulk credits</button>
+      <button type="button" class="pal-btn pal-btn--ghost" data-cust-notify-all>Notify all</button>
+    </div>
+  </div>
 
   <div class="app-block">
-    <form method="get" class="app-toolbar">
+    {# Search + filters. Product / Category narrow the list to customers who #}
+    {# bought that product, or anything in that category. Wraps on phones.   #}
+    <form method="get" class="app-toolbar app-custfilters">
       <div class="app-search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" name="q" value="{{ q }}" placeholder="Search name, email or phone…">
+        <input type="search" name="q" value="{{ q }}" placeholder="Search name, email or phone…" aria-label="Search customers">
       </div>
-      <button class="pal-btn pal-btn--ghost" type="submit">Search</button>
+      <select name="product" class="pal-select" aria-label="Filter by product" data-autosubmit>
+        <option value="">All products</option>
+        {% for p in products_all %}<option value="{{ p.id }}"{% if product_filter == p.id|stringformat:"s" %} selected{% endif %}>{{ p.title }}</option>{% endfor %}
+      </select>
+      <select name="category" class="pal-select" aria-label="Filter by category" data-autosubmit>
+        <option value="">All categories</option>
+        {% for cat in categories_all %}<option value="{{ cat.id }}"{% if category_filter == cat.id|stringformat:"s" %} selected{% endif %}>{% if cat.parent_id %}&nbsp;&nbsp;↳ {% endif %}{{ cat.name }}</option>{% endfor %}
+      </select>
+      <div class="app-custfilters__btns">
+        <button class="pal-btn pal-btn--ghost" type="submit">Apply</button>
+        {% if filtered %}<a class="pal-btn pal-btn--ghost" href="{% url 'store:customers' site.id %}">Clear</a>{% endif %}
+      </div>
     </form>
+    {% if filtered %}<p class="app-sub app-custfilters__count">{{ customers.paginator.count }} customer{{ customers.paginator.count|pluralize }} match{{ customers.paginator.count|pluralize:"es," }} these filters.</p>{% endif %}
 
     {% if customers %}
       <div class="app-tablewrap">
         <table class="app-table">
-          <thead><tr><th>Customer</th><th>Phone</th><th class="app-table__num">Orders</th><th class="app-table__num">Spent</th></tr></thead>
+          <thead><tr><th>Customer</th><th>Phone</th><th class="app-table__num">Orders</th><th class="app-table__num">Spent</th><th class="app-table__actions">Action</th></tr></thead>
           <tbody>
             {% for c in customers %}
-              <tr>
-                <td><a href="{% url 'store:customer_detail' site.id c.id %}" class="app-table__strong">{{ c.name|default:c.email }}</a><div class="app-sub">{{ c.email }}</div></td>
-                <td>{{ c.phone|default:"—" }}</td>
+              {% if c.account_deleted_at %}
+              <tr class="app-row--deleted">
+                <td><span class="app-table__strong">{{ c.name|default:"Customer" }}</span> <span class="app-badge app-badge--cancelled">Account deleted</span><div class="app-sub">Deleted their account on {{ c.account_deleted_at|date:"j M Y" }}. Orders are kept.</div></td>
+                <td></td>
                 <td class="app-table__num">{{ c.order_count }}</td>
                 <td class="app-table__num">{{ site.currency }} {{ c.spent|default:"0" }}</td>
+                <td class="app-table__actions"><span class="app-sub">No actions</span></td>
               </tr>
+              {% else %}
+              <tr>
+                <td><a href="{% url 'store:customer_detail' site.id c.id %}" class="app-table__strong">{{ c.name|default:c.email }}</a><div class="app-sub">{{ c.email }}</div></td>
+                <td>{{ c.phone|default:"" }}</td>
+                <td class="app-table__num">{{ c.order_count }}</td>
+                <td class="app-table__num">{{ site.currency }} {{ c.spent|default:"0" }}</td>
+                <td class="app-table__actions">
+                  <div class="app-actbtns">
+                    <button type="button" class="app-actbtn" title="View" aria-label="View"
+                            data-cust-view data-id="{{ c.id }}">
+                      {% include "store/_icons.html" with icon="eye" %}
+                    </button>
+                    <button type="button" class="app-actbtn" title="Edit" aria-label="Edit"
+                            data-cust-edit data-id="{{ c.id }}" data-name="{{ c.name }}" data-email="{{ c.email }}" data-phone="{{ c.phone }}">
+                      {% include "store/_icons.html" with icon="pencil" %}
+                    </button>
+                    <button type="button" class="app-actbtn app-actbtn--ok" title="Credits" aria-label="Credits"
+                            data-cust-credit data-id="{{ c.id }}" data-name="{{ c.name }}" data-email="{{ c.email }}">
+                      {% include "store/_icons.html" with icon="wallet" %}
+                    </button>
+                    <button type="button" class="app-actbtn" title="Notify" aria-label="Notify"
+                            data-cust-notify data-id="{{ c.id }}" data-name="{{ c.name }}" data-email="{{ c.email }}">
+                      {% include "store/_icons.html" with icon="bell" %}
+                    </button>
+                    <form method="post" action="{% url 'store:customer_delete' site.id c.id %}" class="app-actbtns__form" onsubmit="return confirm('Delete this customer? Their orders keep their record.');">{% csrf_token %}
+                      <button type="submit" class="app-actbtn app-actbtn--danger" title="Delete" aria-label="Delete">
+                        {% include "store/_icons.html" with icon="trash" %}
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endif %}
             {% endfor %}
           </tbody>
         </table>
       </div>
       {% include "store/_pagination.html" with page=customers %}
     {% else %}
-      <div class="app-empty"><h2 class="app-empty__title">No customers yet</h2><p class="app-empty__text">Customers appear here after their first order or enquiry.</p></div>
+      {% if filtered %}
+        <div class="app-empty"><h2 class="app-empty__title">No matching customers</h2><p class="app-empty__text">Nobody matches these filters yet. Try another product or category.</p></div>
+      {% else %}
+        <div class="app-empty"><h2 class="app-empty__title">No customers yet</h2><p class="app-empty__text">Customers appear here after their first order or enquiry.</p></div>
+      {% endif %}
     {% endif %}
   </div>
+
+  {% include "store/_customer_modals.html" %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/app/customers.js' %}" defer></script>
 {% endblock %}

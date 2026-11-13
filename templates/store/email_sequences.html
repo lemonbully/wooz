@@ -1,0 +1,53 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Drip sequences{% endblock %}
+{% block crumb %}Email marketing{% endblock %}
+
+{% block main %}
+<div class="app-page em">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Email marketing</p>
+      <h1 class="app-head__title pal-mt-4">Drip sequences</h1>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:email_marketing' site.id %}" class="pal-btn pal-btn--ghost">Back</a>
+      <a href="{% url 'store:email_sequence_new' site.id %}" class="pal-btn">New sequence <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__body">
+        {% if sequences %}
+        <div class="app-tablewrap">
+          <table class="app-table">
+            <thead><tr><th>Sequence</th><th class="app-table__num">Steps</th><th class="app-table__num">Days</th><th>Created</th><th></th></tr></thead>
+            <tbody>
+              {% for s in sequences %}
+              <tr>
+                <td><a class="app-table__strong" href="{% url 'store:email_sequence_edit' site.id s.id %}">{{ s.name }}</a></td>
+                <td class="app-table__num">{{ s.steps|length }}</td>
+                <td class="app-table__num">{{ s.max_day }}</td>
+                <td class="app-sub">{{ s.created_at|date:"d M Y" }}</td>
+                <td class="app-table__actions">
+                  <a class="app-iconbtn" href="{% url 'store:email_sequence_edit' site.id s.id %}">Edit</a>
+                  <form method="post" action="{% url 'store:email_sequence_delete' site.id s.id %}" onsubmit="return confirm('Remove this sequence?');">{% csrf_token %}<button class="app-iconbtn app-iconbtn--danger" type="submit">Delete</button></form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="app-empty">
+          <span class="app-empty__ico" aria-hidden="true">{% include "store/_icons.html" with icon="mail" %}</span>
+          <h2 class="app-empty__title">No sequences yet</h2>
+          <p class="app-empty__text">A welcome series is a great first drip: Day 1 a hello, Day 3 your best sellers, Day 7 a first-order discount.</p>
+          <a href="{% url 'store:email_sequence_new' site.id %}" class="pal-btn">Create a sequence <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

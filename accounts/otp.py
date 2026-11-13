@@ -15,7 +15,7 @@ did it, each of which was independently exploitable:
    leading digits were right.
 
 4. **Attempts and sends are both capped.** The old send endpoint would mail a
-   code to any address, any number of times — a free email-bombing tool
+   code to any address, any number of times  a free email-bombing tool
    pointed at a merchant's own domain reputation.
 
 Only a hash of the code is stored, so a dump of the cache does not hand over

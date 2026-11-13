@@ -282,6 +282,7 @@
         object-fit: cover;
     }
     
+    .cp-article-cover-empty.hidden, #cp-img.hidden { display: none !important; }
     .cp-article-cover-empty {
         width: 100%;
         height: 100%;
@@ -522,10 +523,10 @@
                         {{ sp.title }}
                     </a>
                     
-                    {% if sp.nested_subpages.all %}
+                    {% if sp.children %}
                     <div class="cp-menu-sub" data-nested-for="{{ sp.slug }}">
-                        {% for n in sp.nested_subpages.all %}
-                        {% if n.is_active %}
+                        {% for n in sp.children %}
+                        {% if n.slug %}
                         <a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/"
                            class="cp-menu-item"
                            data-nav="nested"
@@ -557,7 +558,7 @@
                     <ul>
                         {% for sp in subpages %}
                         <li><a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/">{{ sp.title }}</a>
-                            {% if sp.nested_subpages.all %}<ul>{% for n in sp.nested_subpages.all %}{% if n.is_active %}<li><a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/">{{ n.title }}</a></li>{% endif %}{% endfor %}</ul>{% endif %}
+                            {% if sp.children %}<ul>{% for n in sp.children %}{% if n.slug %}<li><a href="{{ website_base }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/">{{ n.title }}</a></li>{% endif %}{% endfor %}</ul>{% endif %}
                         </li>
                         {% endfor %}
                     </ul>
@@ -597,14 +598,13 @@
                     <p class="cp-article-intro {% if not core_page.subtitle %}hidden{% endif %}" id="cp-intro">{{ core_page.subtitle|default:'' }}</p>
                     
                     <div class="cp-article-cover" id="cp-cover">
-                        {% if core_page.image %}
-                        <img src="{{ core_page.image }}" alt="{{ core_page.title }}" id="cp-img">
-                        {% else %}
-                        <div class="cp-article-cover-empty" id="cp-img-empty">
+                        {% comment %}Both are always rendered: the script swaps between them as
+                        the shopper moves between the page and its subpages, so a
+                        subpage shows its own image (or the placeholder), never the page's.{% endcomment %}
+                        <div class="cp-article-cover-empty{% if core_page.image %} hidden{% endif %}" id="cp-img-empty">
                             <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         </div>
-                        <img src="" alt="" id="cp-img" class="hidden">
-                        {% endif %}
+                        <img src="{{ core_page.image|default:'' }}" alt="{{ core_page.title }}" id="cp-img"{% if not core_page.image %} class="hidden"{% endif %}>
                     </div>
                 </header>
                 
@@ -651,9 +651,9 @@
     {% for subpage in subpages %}
     <div id="cp-data-{{ subpage.slug }}" data-title="{{ subpage.title }}" data-subtitle="{{ subpage.subtitle|default:'' }}" data-image="{{ subpage.image|default:'' }}">
         <div class="cp-data-html">{{ subpage.content|safe }}</div>
-        {% if subpage.nested_subpages.all %}
+        {% if subpage.children %}
         <div class="cp-data-nested">
-            {% for n in subpage.nested_subpages.all %}{% if n.is_active %}
+            {% for n in subpage.children %}{% if n.slug %}
             <div class="cp-nested-item" data-slug="{{ n.slug }}" data-title="{{ n.title }}" data-subtitle="{{ n.subtitle|default:'' }}" data-image="{{ n.image|default:'' }}">{{ n.content|safe }}</div>
             {% endif %}{% endfor %}
         </div>
@@ -720,9 +720,9 @@
     const heroUpdate = (t, s, i) => {
         if (titleEl) titleEl.textContent = t || TITLE;
         if (introEl) { introEl.textContent = s || ''; introEl.classList.toggle('hidden', !s); }
-        if (imgEl && imgEmpty) {
+        if (imgEl) {
             if (i) { imgEl.src = i; imgEl.alt = t || ''; imgEl.classList.remove('hidden'); imgEmpty?.classList.add('hidden'); }
-            else { imgEl.classList.add('hidden'); imgEmpty?.classList.remove('hidden'); }
+            else { imgEl.removeAttribute('src'); imgEl.classList.add('hidden'); imgEmpty?.classList.remove('hidden'); }
         }
     };
 

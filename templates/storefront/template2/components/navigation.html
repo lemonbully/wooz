@@ -134,7 +134,7 @@
     @media (min-width:1025px){
       .nav-center.no-logo{ pointer-events:auto !important; z-index:4; }
       .nav-center.no-logo a{ pointer-events:auto !important; }
-      .nav-center.no-logo .nav-title{ pointer-events:auto !important; cursor:pointer; }
+      .nav-center .nav-title{ pointer-events:auto !important; cursor:pointer; }
       .nav-center.has-logo{ pointer-events:none !important; }
       .nav-center.has-logo a{ pointer-events:none !important; }
       .nav-center.has-logo img{ pointer-events:auto !important; }
@@ -387,6 +387,16 @@
     @media (min-width:1440px){ .nav-inner{padding:0 3rem;} .nav-left a{font-size:15px;} }
     @media (min-width:2400px){ .nav-inner{padding:0 3rem;} .nav-left a{font-size:16px;} .nav-logo{max-width:48px;} }
 
+    /* Categories mega menu. The precompiled tailwind.css has no col-span-8 or
+       the arbitrary-value classes this panel used, so the category list was
+       squeezed into one eighth of the panel; the layout is defined here. */
+    #nav-categories-mega { top: var(--header-height); z-index: 1100; }
+    #nav-categories-mega .nav-mega-sheet { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    #nav-categories-mega .nav-mega-scroll { max-height: 85vh; }
+    #nav-categories-mega .nav-mega-cats { grid-column: 1 / -1; min-width: 0; }
+    @media (min-width:768px){ #nav-categories-mega .nav-mega-cats.has-featured { grid-column: span 6 / span 6; } }
+    #nav-categories-mega .nav-mega-featured { min-height: 220px; }
+
     /* Search toggle and bar */
     .search-toggle {
         position: absolute;
@@ -537,6 +547,10 @@
         .nav-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; }
         .nav-center a { pointer-events: none; }
         .nav-center img { pointer-events: auto; }
+        /* No logo: the store name shown in its place must be tappable too (the
+           bar's centre stays click-through elsewhere so it never blocks the
+           hamburger / icons). The tap lands inside the home link, so it navigates. */
+        .nav-center .nav-title { pointer-events: auto; cursor: pointer; }
         .nav-logo-desktop { display: none !important; }
         .nav-logo-mobile {
             display: block !important;
@@ -567,8 +581,11 @@
 </style>
 
 <header class="site-header" role="banner">
+    {% comment %} {# Force the ow_csrf cookie on every storefront page so the cart drawer's
+       AJAX mutations (cart/update/) carry a valid token. Hidden, no visual. #} {% endcomment %}
+    <form hidden aria-hidden="true">{% csrf_token %}</form>
     <div class="nav-inner">
-        <div class="nav-top-banner">{{website.content.announcement_text | default:'FREE SHIPPING ON ORDERS OVER ₹999'}}</div>
+        {% include "storefront/shared/_announcement_bar.html" %}
     </div>
 
     <!-- Hidden checkbox to control the mobile drawer (CSS-only) -->
@@ -594,15 +611,16 @@
                         {# Default to mega menu when flag is missing or not explicitly "off" #}
                         {% if d2c_cfg.categories_mega_menu_enabled != 'off' %}
                         <a href="#" id="nav-categories-btn" class="inline-block" aria-haspopup="true" aria-expanded="false">CATEGORIES</a>
-                        <div id="nav-categories-mega" class="fixed inset-x-0 top-[var(--header-height)] hidden z-[1100]">
-                            <div class="w-full bg-gray-50 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]">
-                                <div class="w-full mx-auto px-10 py-12 max-h-[85vh] overflow-x-hidden overflow-y-auto">
+                        <div id="nav-categories-mega" class="fixed inset-x-0 hidden">
+                            <div class="w-full bg-gray-50 nav-mega-sheet">
+                                <div class="w-full mx-auto px-10 py-12 overflow-x-hidden overflow-y-auto nav-mega-scroll">
                                     <div class="grid grid-cols-8 gap-4">
-                                        <!-- left categories -->
-                                        <div class="col-span-5 md:col-span-6">
+                                        <!-- left categories (full width when no category is starred) -->
+                                        <div class="nav-mega-cats{% if mega_highlight_category %} has-featured{% endif %}">
                                             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                                                {% with cats=categories %}
-                                                {% for c in cats|slice:":24" %}
+                                                {# The featured (starred) category is excluded here; it has its own card on the right. #}
+                                                {% with cats=mega_menu_categories %}
+                                                {% for c in cats %}
                                                 <div class="block px-2">
                                                     <div class="flex items-center gap-3">
                                                         <div class="w-10 h-10 rounded-md bg-gray-50 border flex items-center justify-center overflow-hidden">
@@ -621,30 +639,32 @@
                                                 {% endwith %}
                                             </div>
                                         </div>
-                                        <!-- right highlight -->
-                                        <div class="hidden md:block col-span-5 md:col-span-2 mb-4">
-                                            {% with highlight_id=website.content.d2c_config.mega_highlight_category_id %}
-                                            {% if highlight_id %}
-                                                {% for hc in categories %}
-                                                    {% if hc.id == highlight_id %}
-                                                    <a href="{{ website_base }}products/?categories={{ hc.id }}" class="relative block w-full h-full min-h-[220px] rounded-xl overflow-hidden group bg-white">
-                                                        {% if hc.image %}
-                                                        <img src="{{ hc.image.url }}" alt="{{ hc.name }}" class="absolute inset-0 m-auto max-w-full max-h-full object-contain" />
-                                                        {% else %}
-                                                        <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200"></div>
-                                                        {% endif %}
-                                                        <div class="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent pointer-events-none"></div>
-                                                        <div class="absolute bottom-3 right-3">
-                                                            <div class="px-3 py-1.5 rounded-md bg-white/90 text-gray-900 text-xs font-semibold shadow">{{ hc.name }}</div>
-                                                        </div>
-                                                    </a>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            {% else %}
-                                                <div class="w-full h-full min-h-[220px] rounded-xl border border-dashed grid place-items-center text-gray-400 text-xs">No highlight set</div>
-                                            {% endif %}
-                                            {% endwith %}
+                                        {% comment %}
+                                        Right: the special card for the category the owner starred on
+                                        the dashboard Categories page (one at most). Resolved server-side
+                                        as mega_highlight_category (storefront.context.build_context).
+                                        {% endcomment %}
+                                        {% if mega_highlight_category %}
+                                        {% with hc=mega_highlight_category %}
+                                        <div class="hidden md:block md:col-span-2 mb-4">
+                                            <a href="{{ website_base }}products/?categories={{ hc.id }}" class="relative block w-full h-full nav-mega-featured rounded-xl overflow-hidden group bg-white shadow-sm ring-1 ring-black/5" aria-label="Shop {{ hc.name }}">
+                                                {% if hc.image %}
+                                                <img src="{{ hc.image.url }}" alt="{{ hc.name }}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                                {% else %}
+                                                <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200"></div>
+                                                {% endif %}
+                                                <div class="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent pointer-events-none"></div>
+                                                <div class="absolute top-3 left-3">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/90 text-[10px] font-semibold uppercase tracking-wider text-gray-900 shadow">&#9733; Featured</span>
+                                                </div>
+                                                <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
+                                                    <div class="min-w-0 px-3 py-1.5 rounded-md bg-white/90 text-gray-900 text-xs font-semibold shadow truncate">{{ hc.name }}</div>
+                                                    <span class="flex-none px-2.5 py-1.5 rounded-md bg-black/80 text-white text-[10px] font-semibold uppercase tracking-wider">Shop &rarr;</span>
+                                                </div>
+                                            </a>
                                         </div>
+                                        {% endwith %}
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -661,19 +681,22 @@
                 </nav>
             </div>
 
-            <div class="nav-center {% if website.content.media.desktop_logo %}has-logo{% else %}no-logo{% endif %}">
+            <div class="nav-center {% if website.content.desktop_logo or website.content.mobile_logo %}has-logo{% else %}no-logo{% endif %}">
                 <a href="{{ website_base }}" class="inline-flex items-center" aria-label="{{ website.content.websiteName|default:'Website' }}">
-                    {% if website.content.media.mobile_logo %}
-                        {% with mobile_logo_url=website.content.media.mobile_logo.url %}
+                    {% if website.content.mobile_logo %}
+                        {% with mobile_logo_url=website.content.mobile_logo %}
                         <img
                             src="{{ mobile_logo_url }}"
                             {% media_attrs website mobile_logo_url website.content.websiteName|default:'Prestige' %}
                             class="nav-logo nav-logo-mobile"
                             loading="lazy">
                         {% endwith %}
+                    {% else %}
+                        {# Mobile: the store name when there is no mobile logo (tappable, see the mobile CSS). #}
+                        <span class="nav-title nav-title-mobile">{{ website.content.websiteName|default:'Website' }}</span>
                     {% endif %}
-                    {% if website.content.media.desktop_logo %}
-                        {% with desktop_logo_url=website.content.media.desktop_logo.url %}
+                    {% if website.content.desktop_logo %}
+                        {% with desktop_logo_url=website.content.desktop_logo %}
                         <img
                             src="{{ desktop_logo_url }}"
                             {% media_attrs website desktop_logo_url website.content.websiteName|default:'Prestige' %}
@@ -681,7 +704,7 @@
                             loading="lazy">
                         {% endwith %}
                     {% else %}
-                        <span class="nav-title">{{ website.content.websiteName|default:'Website' }}</span>
+                        <span class="nav-title nav-title-desktop">{{ website.content.websiteName|default:'Website' }}</span>
                     {% endif %}
                 </a>
 
@@ -692,6 +715,13 @@
                     }
                     .nav-logo-mobile {
                         max-width: {{ website.content.mobile_logo_max_width|default:100 }}{{ website.content.mobile_logo_max_width_unit|default:"px" }} !important;
+                    }
+                    /* Each device shows its own logo, or the store name when that logo is missing. */
+                    .nav-title-mobile { display: block; }
+                    .nav-title-desktop { display: none; }
+                    @media (min-width: 1025px) {
+                        .nav-title-mobile { display: none; }
+                        .nav-title-desktop { display: block; }
                     }
                 </style>
             </div>
@@ -892,6 +922,16 @@
     (function(){
         var openBtn, closeBtn, overlay, panel, body, badgeEl;
         function fmtINR(x){ try { return new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 }).format(parseFloat(x||0)); } catch(e){ return '₹' + (x||0); } }
+        function getCsrf(){
+            try {
+                // Prefer the rendered token: robust to the cookie name differing
+                // between environments (dev: ow_csrf, prod: __Host-ow_csrf).
+                var input = document.querySelector('input[name=csrfmiddlewaretoken]');
+                if (input && input.value) return input.value;
+                var m = document.cookie.match(/(?:^|;\s*)(?:__Host-)?ow_csrf=([^;]+)/);
+                return m ? decodeURIComponent(m[1]) : '';
+            } catch(e){ return ''; }
+        }
         function setBadgeCount(count){
             if (!badgeEl) badgeEl = document.getElementById('cart-count-badge');
             if (!badgeEl) return;
@@ -1058,7 +1098,7 @@
                 fd.append('quantity', String(qty));
                 await fetch('{{ website_base }}cart/update/', {
                     method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrf() },
                     body: fd,
                     cache: 'no-store',
                     credentials: 'same-origin'
@@ -1073,13 +1113,27 @@
                 fd.append('product_id', productId);
                 await fetch('{{ website_base }}cart/update/', {
                     method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrf() },
                     body: fd,
                     cache: 'no-store',
                     credentials: 'same-origin'
                 });
                 await load();
             }catch(e){ /* ignore */ }
+        }
+        function showStockNotice(text){
+            var box = document.getElementById('ow-stock-notice');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'ow-stock-notice';
+                box.setAttribute('role', 'alert');
+                box.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;max-width:calc(100vw - 32px);padding:10px 16px;border-radius:8px;background:#b4232a;color:#fff;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.18);';
+                document.body.appendChild(box);
+            }
+            box.textContent = text || 'Sorry, this item is out of stock.';
+            box.hidden = false;
+            clearTimeout(box._t);
+            box._t = setTimeout(function(){ box.hidden = true; }, 4000);
         }
         async function addToCartAjax(url){
             var requestUrl = withNoCacheParam(url);
@@ -1091,7 +1145,13 @@
                 cache: 'no-store',
                 credentials: 'same-origin'
             });
-            if (!res.ok) throw new Error('Failed to add to cart');
+            if (!res.ok) {
+                // Sold out: say so here instead of falling back to a page load.
+                var errData = {};
+                try { errData = await res.clone().json(); } catch(_) { errData = {}; }
+                if (errData && errData.out_of_stock) { showStockNotice(errData.error); return; }
+                throw new Error('Failed to add to cart');
+            }
             var data = {};
             try { data = await res.json(); } catch(_) { data = {}; }
             if (data && data.redirect_url && data.buy_now) {

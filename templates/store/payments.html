@@ -3,21 +3,202 @@
 {% block crumb %}Payments{% endblock %}
 
 {% block main %}
-<div class="app-page">
+<style nonce="{{ csp_nonce }}">
+  .pay [hidden] { display: none !important; }
+  .pay-card { background: var(--pal-panel); border: 1px solid var(--pal-line); }
+  .pay-card + .pay-card { margin-top: 1.25rem; }
+  .pay-card__head { padding: 1.15rem 1.35rem; border-bottom: 1px solid var(--pal-line); }
+  .pay-card__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.05rem; letter-spacing: -0.01em; color: var(--pal-ink); }
+  .pay-card__lead { margin: 0.3rem 0 0; color: var(--pal-muted); font-size: 0.85rem; max-width: 60ch; }
+  .pay-card__body { padding: 1.35rem; }
+  .pay-grid { display: flex; flex-wrap: wrap; gap: 1.1rem 1.25rem; }
+  .pay-field { flex: 1 1 15rem; min-width: 0; display: block; }
+  .pay-field--full { flex-basis: 100%; }
+  .pay-field--half { flex-basis: 22rem; }
+  .pay-label { display: block; font-size: 0.82rem; color: var(--pal-muted); margin-bottom: 0.4rem; }
+  .pay-req { color: var(--pal-accent); }
+  /* Every control shares the exact same box model  border-box, identical
+     border, padding, font-size and line-height  so a <select> and an <input>
+     compute to the same height (setting an explicit `height` is unreliable
+     because a <select> honours it differently from an <input>). The rules are
+     scoped under .pay and marked !important so they win over the global
+     .app-form control styles regardless of stylesheet order. */
+  .pay .pay-form input:not([type="checkbox"]):not([type="radio"]),
+  .pay .pay-form select,
+  .pay .pay-form textarea {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border: 1px solid var(--pal-line) !important;
+    border-radius: 0 !important;
+    background: var(--pal-panel);
+    color: var(--pal-ink);
+    font-family: var(--pal-font-body) !important;
+    font-size: 0.9rem !important;
+    font-weight: 400 !important;
+    line-height: 1.4 !important;
+    padding: 0.6rem 0.7rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    vertical-align: middle;
+  }
+  .pay .pay-form textarea { min-height: 5.2rem !important; resize: vertical; }
+  .pay .pay-form input:focus, .pay .pay-form select:focus, .pay .pay-form textarea:focus {
+    outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent);
+  }
+  .pay-hint { display: block; margin-top: 0.35rem; font-size: 0.76rem; color: var(--pal-faint); }
+  .pay-toggles { display: flex; flex-direction: column; gap: 0.9rem; }
+  .pay-toggle { display: flex; gap: 0.6rem; align-items: flex-start; cursor: pointer; }
+  .pay-toggle input { margin-top: 0.15rem; width: 1rem; height: 1rem; accent-color: var(--pal-accent); flex: none; }
+  .pay-toggle__label { font-size: 0.9rem; color: var(--pal-ink-2); }
+  .pay-toggle__sub { display: block; margin-top: 0.1rem; font-size: 0.76rem; color: var(--pal-faint); }
+  .pay-sub { margin-top: 0.9rem; padding: 1rem 1.1rem; border: 1px solid var(--pal-line-soft); background: var(--pal-paper-2); }
+  .pay-foot { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.6rem; }
+  .pay-errs { margin: 0.3rem 0 0; padding-left: 1rem; color: #c0392b; font-size: 0.78rem; }
+</style>
+
+<div class="app-page pay">
   <div class="app-head"><div>
     <p class="pal-mono pal-mono--accent">Money</p>
     <h1 class="app-head__title pal-mt-4">Payments</h1>
-    <p class="app-head__lead">Connect a gateway to take online payments, and set COD, partial payment and invoice details. Keys are encrypted at rest.</p>
   </div></div>
 
-  <div class="app-block">
-    <form method="post" enctype="multipart/form-data" class="app-form app-card" style="padding:1.5rem;">
-      {% csrf_token %}
-      {% include "store/_form.html" with wide_fields="address" %}
-      <div class="app-form__foot">
-        <button class="pal-btn" type="submit">Save payment settings</button>
+  <form method="post" enctype="multipart/form-data" class="app-form pay-form app-block" style="margin-top:1.75rem;" data-edit-lock{% if form.errors %}="open"{% endif %}>
+    {% csrf_token %}
+    {% include "store/_edit_lock_bar.html" with what="payment settings" %}
+    {% if form.non_field_errors %}<div class="pal-alert" role="alert" style="margin-bottom:1rem;">{{ form.non_field_errors }}</div>{% endif %}
+
+    {# Locked until "Edit" is clicked (js/app/edit-lock.js). #}
+    <fieldset class="elock-fs" data-edit-lock-fields>
+    {# ── Gateway ─────────────────────────────────────────────────── #}
+    <div class="pay-card">
+      <div class="pay-card__head">
+        <h2 class="pay-card__title">Payment gateway</h2>
+        <p class="pay-card__lead">Online card/UPI payments run through your own gateway account. Keys are encrypted at rest.</p>
       </div>
-    </form>
-  </div>
+      <div class="pay-card__body">
+        <div class="pay-grid">
+          <label class="pay-field pay-field--half">
+            <span class="pay-label">{{ form.gateway.label }}</span>
+            {{ form.gateway }}
+            {% if form.gateway.errors %}<ul class="pay-errs">{% for e in form.gateway.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <label class="pay-field">
+            <span class="pay-label">{{ form.key_id.label }}</span>
+            {{ form.key_id }}
+            <span class="pay-hint">Leave blank to keep the saved key.</span>
+            {% if form.key_id.errors %}<ul class="pay-errs">{% for e in form.key_id.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <label class="pay-field">
+            <span class="pay-label">{{ form.key_secret.label }}</span>
+            {{ form.key_secret }}
+            <span class="pay-hint">Leave blank to keep the saved secret.</span>
+            {% if form.key_secret.errors %}<ul class="pay-errs">{% for e in form.key_secret.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+        </div>
+        <div style="margin-top:1.35rem; padding-top:1.2rem; border-top:1px solid var(--pal-line-soft);">
+          <label class="pay-toggle">
+            {{ form.enabled }}
+            <span><span class="pay-toggle__label">Enable online payments</span><span class="pay-toggle__sub">Show the gateway at checkout.</span></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    {# ── Checkout options ────────────────────────────────────────── #}
+    <div class="pay-card">
+      <div class="pay-card__head">
+        <h2 class="pay-card__title">Checkout options</h2>
+        <p class="pay-card__lead">Choose how shoppers can pay.</p>
+      </div>
+      <div class="pay-card__body">
+        <div class="pay-toggles">
+          <label class="pay-toggle">
+            {{ form.cod_enabled }}
+            <span><span class="pay-toggle__label">Cash on delivery (COD)</span><span class="pay-toggle__sub">Let shoppers pay when the order arrives.</span></span>
+          </label>
+          <label class="pay-toggle">
+            {{ form.partial_payment_enabled }}
+            <span><span class="pay-toggle__label">Partial payment</span><span class="pay-toggle__sub">Collect part online now; the courier collects the balance as COD on delivery. Needs online payments; works whether or not full COD is on.</span></span>
+          </label>
+        </div>
+        <div class="pay-sub" data-box="partial" {% if not form.partial_payment_enabled.value %}hidden{% endif %}>
+          <div class="pay-grid">
+            <label class="pay-field pay-field--half">
+              <span class="pay-label">{{ form.partial_payment_type.label }}</span>
+              {{ form.partial_payment_type }}
+              {% if form.partial_payment_type.errors %}<ul class="pay-errs">{% for e in form.partial_payment_type.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </label>
+            <label class="pay-field pay-field--half">
+              <span class="pay-label">{{ form.partial_payment_value.label }}</span>
+              {{ form.partial_payment_value }}
+              <span class="pay-hint">Amount (or %) collected online up front.</span>
+              {% if form.partial_payment_value.errors %}<ul class="pay-errs">{% for e in form.partial_payment_value.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Invoice identity ────────────────────────────────────────── #}
+    <div class="pay-card">
+      <div class="pay-card__head">
+        <h2 class="pay-card__title">Invoice identity</h2>
+        <p class="pay-card__lead">Printed on the receipts and invoices your customers receive.</p>
+      </div>
+      <div class="pay-card__body">
+        <div class="pay-grid">
+          <label class="pay-field pay-field--half">
+            <span class="pay-label">{{ form.company_name.label }}</span>
+            {{ form.company_name }}
+            {% if form.company_name.errors %}<ul class="pay-errs">{% for e in form.company_name.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <label class="pay-field">
+            <span class="pay-label">{{ form.gstin.label }}</span>
+            {{ form.gstin }}
+            {% if form.gstin.errors %}<ul class="pay-errs">{% for e in form.gstin.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <label class="pay-field">
+            <span class="pay-label">{{ form.state.label }}</span>
+            {{ form.state }}
+          </label>
+          <label class="pay-field">
+            <span class="pay-label">{{ form.pincode.label }}</span>
+            {{ form.pincode }}
+          </label>
+          <label class="pay-field">
+            <span class="pay-label">{{ form.mobile_number.label }}</span>
+            {{ form.mobile_number }}
+          </label>
+          <label class="pay-field">
+            <span class="pay-label">{{ form.email.label }}</span>
+            {{ form.email }}
+          </label>
+          <label class="pay-field pay-field--full">
+            <span class="pay-label">{{ form.address.label }}</span>
+            {{ form.address }}
+          </label>
+        </div>
+      </div>
+    </div>
+    </fieldset>
+
+    <div class="pay-foot" data-edit-lock-foot>
+      <button class="pal-btn pal-btn--ghost" type="button" data-edit-lock-cancel>Cancel</button>
+      <button class="pal-btn" type="submit">Save payment settings</button>
+    </div>
+  </form>
 </div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var root = document.querySelector('.pay');
+  if (!root) return;
+  var cb = root.querySelector('[name="partial_payment_enabled"]');
+  var box = root.querySelector('[data-box="partial"]');
+  function sync() { if (box) box.hidden = !(cb && cb.checked); }
+  if (cb) cb.addEventListener('change', sync);
+  sync();
+})();
+</script>
 {% endblock %}

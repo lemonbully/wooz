@@ -1,22 +1,455 @@
 {% extends "store/_shell.html" %}
 {% block title %}{{ site.name }} · {% if is_edit %}Edit discount{% else %}New discount{% endif %}{% endblock %}
-{% block crumb %}{% if is_edit %}{{ coupon.code }}{% else %}New discount{% endif %}{% endblock %}
+{% block crumb %}{% if is_edit %}{{ coupon.display_name }}{% else %}New discount{% endif %}{% endblock %}
 
 {% block main %}
-<div class="app-page">
-  <div class="app-head"><div>
-    <p class="pal-mono pal-mono--accent">Grow</p>
-    <h1 class="app-head__title pal-mt-4">{% if is_edit %}Edit discount{% else %}New discount{% endif %}</h1>
-  </div></div>
-  <div class="app-block">
-    <form method="post" class="app-form app-card" style="padding:1.5rem;">
-      {% csrf_token %}
-      {% include "store/_form.html" %}
-      <div class="app-form__foot">
-        <a href="{% url 'store:coupons' site.id %}" class="pal-btn pal-btn--ghost">Cancel</a>
-        <button class="pal-btn" type="submit">{% if is_edit %}Save changes{% else %}Create discount{% endif %}</button>
-      </div>
-    </form>
+{% include "store/_disc_styles.html" %}
+
+<div class="app-page disc" data-currency="{{ currency }}">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Grow</p>
+      <h1 class="app-head__title pal-mt-4">{% if is_edit %}Edit discount{% else %}Create discount{% endif %}</h1>
+      <p class="app-head__lead">Set up a discount the way you want it to behave  value, what it applies to, who can use it, and when.</p>
+    </div>
   </div>
+
+  {% if errors %}
+    <div class="disc-errors" role="alert">
+      <strong>Please fix the following:</strong>
+      <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  <form method="post" id="disc-form" class="app-block">
+    {% csrf_token %}
+    <div class="disc-layout">
+      <div class="disc-main">
+
+        {# ── Discount type ─────────────────────────────────────────── #}
+        <div class="disc-card">
+          <h2 class="disc-card__title">Discount type</h2>
+          <div class="disc-card__body disc-typegrid" id="disc-type">
+            <label class="disc-type"><input type="radio" name="discount_class" value="product" {% if form.discount_class == 'product' %}checked{% endif %}><span><span class="disc-type__name">Amount off products</span><span class="disc-type__desc">Percentage or fixed amount off specific products or categories.</span></span></label>
+            <label class="disc-type"><input type="radio" name="discount_class" value="order" {% if form.discount_class == 'order' %}checked{% endif %}><span><span class="disc-type__name">Amount off order</span><span class="disc-type__desc">Percentage or fixed amount off the whole order.</span></span></label>
+            <label class="disc-type"><input type="radio" name="discount_class" value="bxgy" {% if form.discount_class == 'bxgy' %}checked{% endif %}><span><span class="disc-type__name">Buy X get Y</span><span class="disc-type__desc">Buy a quantity or amount, get products free or discounted.</span></span></label>
+            <label class="disc-type"><input type="radio" name="discount_class" value="shipping" {% if form.discount_class == 'shipping' %}checked{% endif %}><span><span class="disc-type__name">Free shipping</span><span class="disc-type__desc">Waive shipping charges when the cart qualifies.</span></span></label>
+          </div>
+        </div>
+
+        {# ── Method & code ─────────────────────────────────────────── #}
+        <div class="disc-card">
+          <div class="disc-card__head-row">
+            <h2 class="disc-card__title">Method</h2>
+          </div>
+          <div class="disc-card__body">
+            <label class="disc-opt"><input type="radio" name="method" value="code" data-method {% if form.method == 'code' %}checked{% endif %}><span class="disc-opt__label">Discount code  shoppers enter a code at checkout</span></label>
+            <label class="disc-opt"><input type="radio" name="method" value="automatic" data-method {% if form.method == 'automatic' %}checked{% endif %}><span class="disc-opt__label">Automatic discount  applied when the cart qualifies</span></label>
+
+            <div class="disc-sub" data-when-method="code" style="margin-left:0;">
+              <label class="disc-label" for="disc-code">Discount code</label>
+              <div class="disc-inline">
+                <div class="disc-field" style="flex:1 1 16rem;">
+                  <input class="disc-in" type="text" id="disc-code" name="code" value="{{ form.code }}" placeholder="e.g. WELCOME10" spellcheck="false" maxlength="40" style="text-transform:uppercase;">
+                </div>
+                <button type="button" class="pal-btn pal-btn--ghost" id="disc-gen">Generate</button>
+              </div>
+              <span class="disc-hint">Customers type this at checkout. Uppercase, no spaces.</span>
+            </div>
+
+            <div class="disc-sub" data-when-method="automatic" style="margin-left:0;" hidden>
+              <label class="disc-label" for="disc-title">Title</label>
+              <input class="disc-in" type="text" id="disc-title" name="title" value="{{ form.title }}" placeholder="e.g. Summer sale" maxlength="120">
+              <span class="disc-hint">Shown to customers at checkout and on their order.</span>
+            </div>
+          </div>
+        </div>
+
+        {# ── Value (product / order) ───────────────────────────────── #}
+        <div class="disc-card" data-classes="product order">
+          <h2 class="disc-card__title">Value</h2>
+          <div class="disc-card__body">
+            <div class="disc-seg" id="disc-vtype">
+              <label data-seg><input type="radio" name="discount_type" value="percent" {% if form.discount_type == 'percent' %}checked{% endif %}>Percentage</label>
+              <label data-seg><input type="radio" name="discount_type" value="fixed" {% if form.discount_type == 'fixed' %}checked{% endif %}>Fixed amount</label>
+            </div>
+            <div class="disc-field" style="margin-top:0.8rem; max-width:16rem;">
+              <div class="disc-affix">
+                <span class="disc-affix__tag" data-vprefix {% if form.discount_type == 'percent' %}hidden{% endif %}>{{ currency }}</span>
+                <input class="disc-in" type="number" step="0.01" min="0" name="value" id="disc-value" value="{{ form.value }}" placeholder="0">
+                <span class="disc-affix__tag disc-affix__tag--suf" data-vsuffix {% if form.discount_type != 'percent' %}hidden{% endif %}>%</span>
+              </div>
+            </div>
+            <div data-when-vtype="percent" {% if form.discount_type != 'percent' %}hidden{% endif %} style="margin-top:0.9rem;">
+              <label class="disc-opt"><input type="checkbox" name="max_discount_enabled" data-toggle="max-disc" {% if form.max_discount_enabled %}checked{% endif %}><span class="disc-opt__label">Cap the maximum discount amount</span></label>
+              <div class="disc-sub" data-box="max-disc" {% if not form.max_discount_enabled %}hidden{% endif %}>
+                <div class="disc-affix" style="max-width:12rem;">
+                  <span class="disc-affix__tag">{{ currency }}</span>
+                  <input class="disc-in" type="number" step="0.01" min="0" name="max_discount_amount" value="{{ form.max_discount_amount }}" placeholder="0">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ── Applies to (product) ──────────────────────────────────── #}
+        <div class="disc-card" data-classes="product">
+          <h2 class="disc-card__title">Applies to</h2>
+          <div class="disc-card__body">
+            <label class="disc-opt"><input type="radio" name="applies_to" value="all" data-applies {% if form.applies_to == 'all' %}checked{% endif %}><span class="disc-opt__label">All products</span></label>
+            <label class="disc-opt"><input type="radio" name="applies_to" value="categories" data-applies {% if form.applies_to == 'categories' %}checked{% endif %}><span class="disc-opt__label">Specific categories</span></label>
+            <label class="disc-opt"><input type="radio" name="applies_to" value="products" data-applies {% if form.applies_to == 'products' %}checked{% endif %}><span class="disc-opt__label">Specific products</span></label>
+
+            <div class="disc-sub" data-when-applies="categories" style="margin-left:0;" {% if form.applies_to != 'categories' %}hidden{% endif %}>
+              {% include "store/_disc_picker.html" with field="applies_categories" kind="category" items=categories selected=form.applies_categories label="categories" %}
+            </div>
+            <div class="disc-sub" data-when-applies="products" style="margin-left:0;" {% if form.applies_to != 'products' %}hidden{% endif %}>
+              {% include "store/_disc_picker.html" with field="applies_products" kind="product" items=products selected=form.applies_products label="products" %}
+            </div>
+          </div>
+        </div>
+
+        {# ── Buy X get Y ───────────────────────────────────────────── #}
+        <div class="disc-card" data-classes="bxgy">
+          <h2 class="disc-card__title">Customer buys</h2>
+          <div class="disc-card__body">
+            <label class="disc-opt"><input type="radio" name="buy_type" value="quantity" data-buytype {% if form.buy_type == 'quantity' %}checked{% endif %}><span class="disc-opt__label">Minimum quantity of items</span></label>
+            <label class="disc-opt"><input type="radio" name="buy_type" value="amount" data-buytype {% if form.buy_type == 'amount' %}checked{% endif %}><span class="disc-opt__label">Minimum purchase amount</span></label>
+            <div class="disc-sub" data-when-buytype="quantity" style="margin-left:0;" {% if form.buy_type != 'quantity' %}hidden{% endif %}>
+              <label class="disc-label">Quantity</label>
+              <input class="disc-in" type="number" min="1" step="1" name="buy_quantity" value="{{ form.buy_quantity }}" placeholder="1" style="max-width:10rem;">
+            </div>
+            <div class="disc-sub" data-when-buytype="amount" style="margin-left:0;" {% if form.buy_type != 'amount' %}hidden{% endif %}>
+              <label class="disc-label">Amount</label>
+              <div class="disc-affix" style="max-width:12rem;"><span class="disc-affix__tag">{{ currency }}</span><input class="disc-in" type="number" step="0.01" min="0" name="buy_min_amount" value="{{ form.buy_min_amount }}" placeholder="0"></div>
+            </div>
+            <div class="disc-field">
+              <label class="disc-label">Any items from</label>
+              {% include "store/_disc_picker.html" with field="buy_products" kind="product" items=products selected=form.buy_products label="products" %}
+              {% include "store/_disc_picker.html" with field="buy_categories" kind="category" items=categories selected=form.buy_categories label="categories" %}
+            </div>
+          </div>
+        </div>
+        <div class="disc-card" data-classes="bxgy">
+          <h2 class="disc-card__title">Customer gets</h2>
+          <div class="disc-card__body">
+            <div class="disc-field">
+              <label class="disc-label">Quantity</label>
+              <input class="disc-in" type="number" min="1" step="1" name="get_quantity" value="{{ form.get_quantity }}" placeholder="1" style="max-width:10rem;">
+            </div>
+            <div class="disc-field">
+              <label class="disc-label">Any items from</label>
+              {% include "store/_disc_picker.html" with field="get_products" kind="product" items=products selected=form.get_products label="products" %}
+              {% include "store/_disc_picker.html" with field="get_categories" kind="category" items=categories selected=form.get_categories label="categories" %}
+            </div>
+            <div class="disc-field">
+              <label class="disc-label">At a discounted value</label>
+              <label class="disc-opt"><input type="radio" name="reward_type" value="free" data-reward {% if form.reward_type == 'free' %}checked{% endif %}><span class="disc-opt__label">Free</span></label>
+              <label class="disc-opt"><input type="radio" name="reward_type" value="percent" data-reward {% if form.reward_type == 'percent' %}checked{% endif %}><span class="disc-opt__label">Percentage off</span></label>
+              <label class="disc-opt"><input type="radio" name="reward_type" value="amount" data-reward {% if form.reward_type == 'amount' %}checked{% endif %}><span class="disc-opt__label">Amount off each</span></label>
+              <div class="disc-sub" data-when-reward="percent" {% if form.reward_type != 'percent' %}hidden{% endif %}>
+                <div class="disc-affix" style="max-width:10rem;"><input class="disc-in" type="number" step="0.01" min="0" max="100" name="reward_value" data-reward-pct value="{{ form.reward_value }}" placeholder="0"><span class="disc-affix__tag disc-affix__tag--suf">%</span></div>
+              </div>
+              <div class="disc-sub" data-when-reward="amount" {% if form.reward_type != 'amount' %}hidden{% endif %}>
+                <div class="disc-affix" style="max-width:12rem;"><span class="disc-affix__tag">{{ currency }}</span><input class="disc-in" type="number" step="0.01" min="0" name="reward_value_amount" data-reward-amt value="{{ form.reward_value }}" placeholder="0"></div>
+              </div>
+            </div>
+            <label class="disc-opt"><input type="checkbox" name="bxgy_max_enabled" data-toggle="bxgy-max" {% if form.bxgy_max_enabled %}checked{% endif %}><span class="disc-opt__label">Set a maximum number of uses per order</span></label>
+            <div class="disc-sub" data-box="bxgy-max" {% if not form.bxgy_max_enabled %}hidden{% endif %}>
+              <input class="disc-in" type="number" min="1" step="1" name="bxgy_max_per_order" value="{{ form.bxgy_max_per_order }}" placeholder="1" style="max-width:10rem;">
+            </div>
+          </div>
+        </div>
+
+        {# ── Minimum purchase requirements ─────────────────────────── #}
+        <div class="disc-card" data-classes="product order shipping">
+          <h2 class="disc-card__title">Minimum purchase requirements</h2>
+          <div class="disc-card__body">
+            <label class="disc-opt"><input type="radio" name="min_requirement" value="none" data-minreq {% if form.min_requirement == 'none' %}checked{% endif %}><span class="disc-opt__label">No minimum requirements</span></label>
+            <label class="disc-opt"><input type="radio" name="min_requirement" value="amount" data-minreq {% if form.min_requirement == 'amount' %}checked{% endif %}><span class="disc-opt__label">Minimum purchase amount ({{ currency }})</span></label>
+            <div class="disc-sub" data-when-minreq="amount" {% if form.min_requirement != 'amount' %}hidden{% endif %}>
+              <div class="disc-affix" style="max-width:12rem;"><span class="disc-affix__tag">{{ currency }}</span><input class="disc-in" type="number" step="0.01" min="0" name="min_order_value" value="{{ form.min_order_value }}" placeholder="0"></div>
+            </div>
+            <label class="disc-opt"><input type="radio" name="min_requirement" value="quantity" data-minreq {% if form.min_requirement == 'quantity' %}checked{% endif %}><span class="disc-opt__label">Minimum quantity of items</span></label>
+            <div class="disc-sub" data-when-minreq="quantity" {% if form.min_requirement != 'quantity' %}hidden{% endif %}>
+              <input class="disc-in" type="number" min="1" step="1" name="min_quantity" value="{{ form.min_quantity }}" placeholder="1" style="max-width:10rem;">
+            </div>
+          </div>
+        </div>
+
+        {# ── Free shipping options ─────────────────────────────────── #}
+        <div class="disc-card" data-classes="shipping">
+          <h2 class="disc-card__title">Shipping rates</h2>
+          <div class="disc-card__body">
+            <label class="disc-opt"><input type="checkbox" name="shipping_max_enabled" data-toggle="ship-max" {% if form.shipping_max_enabled %}checked{% endif %}><span class="disc-opt__label">Exclude shipping rates over a certain amount</span></label>
+            <div class="disc-sub" data-box="ship-max" {% if not form.shipping_max_enabled %}hidden{% endif %}>
+              <div class="disc-affix" style="max-width:12rem;"><span class="disc-affix__tag">{{ currency }}</span><input class="disc-in" type="number" step="0.01" min="0" name="shipping_max_amount" value="{{ form.shipping_max_amount }}" placeholder="0"></div>
+              <span class="disc-hint">Only rates at or below this amount become free.</span>
+            </div>
+          </div>
+        </div>
+
+        {# ── Maximum discount uses ─────────────────────────────────── #}
+        <div class="disc-card">
+          <h2 class="disc-card__title">Maximum discount uses</h2>
+          <div class="disc-card__body">
+            <label class="disc-opt"><input type="checkbox" name="usage_limit_enabled" data-toggle="usage" {% if form.usage_limit_enabled %}checked{% endif %}><span class="disc-opt__label">Limit number of times this discount can be used in total</span></label>
+            <div class="disc-sub" data-box="usage" {% if not form.usage_limit_enabled %}hidden{% endif %}>
+              <input class="disc-in" type="number" min="1" step="1" name="usage_limit" value="{{ form.usage_limit }}" placeholder="e.g. 100" style="max-width:12rem;">
+              {% if is_edit and coupon %}<span class="disc-hint">Used so far: {{ coupon.times_used }}.</span>{% endif %}
+            </div>
+            <label class="disc-opt"><input type="checkbox" name="once_per_customer" {% if form.once_per_customer %}checked{% endif %}><span class="disc-opt__label">Limit to one use per customer</span></label>
+          </div>
+        </div>
+
+        {# ── Customer eligibility ──────────────────────────────────── #}
+        <div class="disc-card">
+          <h2 class="disc-card__title">Customer eligibility</h2>
+          <div class="disc-card__body">
+            <label class="disc-opt"><input type="radio" name="customer_eligibility" value="all" data-elig {% if form.customer_eligibility == 'all' %}checked{% endif %}><span class="disc-opt__label">All customers</span></label>
+            <label class="disc-opt"><input type="radio" name="customer_eligibility" value="specific" data-elig {% if form.customer_eligibility == 'specific' %}checked{% endif %}><span class="disc-opt__label">Specific customers</span></label>
+            <div class="disc-sub" data-when-elig="specific" style="margin-left:0;" {% if form.customer_eligibility != 'specific' %}hidden{% endif %}>
+              {% include "store/_disc_picker.html" with field="eligible_customers" kind="customer" items=customers selected=form.eligible_customers label="customers" %}
+              <span class="disc-hint">Only these customers (matched by email at checkout) can use the discount.</span>
+            </div>
+          </div>
+        </div>
+
+        {# ── Combinations ──────────────────────────────────────────── #}
+        <div class="disc-card">
+          <h2 class="disc-card__title">Combinations</h2>
+          <p class="disc-card__lead">Choose which other discounts this one can stack with in a customer's cart.</p>
+          <div class="disc-card__body disc-comb">
+            <label class="disc-opt" data-comb="product"><input type="checkbox" name="combines_product" {% if form.combines_product %}checked{% endif %}><span class="disc-opt__label">Product discounts</span></label>
+            <label class="disc-opt" data-comb="order"><input type="checkbox" name="combines_order" {% if form.combines_order %}checked{% endif %}><span class="disc-opt__label">Order discounts</span></label>
+            <label class="disc-opt" data-comb="shipping"><input type="checkbox" name="combines_shipping" {% if form.combines_shipping %}checked{% endif %}><span class="disc-opt__label">Shipping discounts</span></label>
+          </div>
+        </div>
+
+        {# ── Active dates ──────────────────────────────────────────── #}
+        <div class="disc-card">
+          <h2 class="disc-card__title">Active dates</h2>
+          <div class="disc-card__body">
+            <div class="disc-inline">
+              <div class="disc-field"><label class="disc-label">Start date</label><input class="disc-in" type="date" name="start_date" value="{{ form.start_date }}"></div>
+              <div class="disc-field"><label class="disc-label">Start time (IST)</label><input class="disc-in" type="time" name="start_time" value="{{ form.start_time }}"></div>
+            </div>
+            <label class="disc-opt" style="margin-top:0.9rem;"><input type="checkbox" name="set_end_date" data-toggle="enddate" {% if form.set_end_date %}checked{% endif %}><span class="disc-opt__label">Set end date</span></label>
+            <div class="disc-sub" data-box="enddate" style="margin-left:0;" {% if not form.set_end_date %}hidden{% endif %}>
+              <div class="disc-inline">
+                <div class="disc-field"><label class="disc-label">End date</label><input class="disc-in" type="date" name="end_date" value="{{ form.end_date }}"></div>
+                <div class="disc-field"><label class="disc-label">End time (IST)</label><input class="disc-in" type="time" name="end_time" value="{{ form.end_time }}"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ── Summary / status side panel ─────────────────────────────── #}
+      <aside class="disc-side">
+        <div class="disc-card" style="margin-bottom:0;">
+          <div class="disc-card__head-row">
+            <h2 class="disc-card__title">Summary</h2>
+            <span class="disc-statuspill" id="disc-status-pill">{% if form.status == 'draft' %}Draft{% else %}Active{% endif %}</span>
+          </div>
+          <div class="disc-card__body disc-summary">
+            <p class="disc-summary__name" id="sum-name">{{ form.code|default:form.title|default:"No code yet" }}</p>
+            <dl>
+              <dt>Type</dt><dd id="sum-type"></dd>
+              <dt>Details</dt><dd id="sum-details"></dd>
+            </dl>
+          </div>
+        </div>
+        <div class="disc-card" style="margin-bottom:0;">
+          <h2 class="disc-card__title">Status</h2>
+          <div class="disc-card__body">
+            <label class="disc-opt"><input type="radio" name="status" value="active" data-status {% if form.status != 'draft' %}checked{% endif %}><span class="disc-opt__label">Active</span></label>
+            <label class="disc-opt"><input type="radio" name="status" value="draft" data-status {% if form.status == 'draft' %}checked{% endif %}><span class="disc-opt__label">Draft</span></label>
+          </div>
+          <div class="disc-card__foot" style="padding:0.9rem 1.3rem; border-top:1px solid var(--pal-line); display:flex; gap:0.6rem; flex-wrap:wrap;">
+            <button class="pal-btn" type="submit">{% if is_edit %}Save changes{% else %}Create discount{% endif %}</button>
+            <a href="{% url 'store:coupons' site.id %}" class="pal-btn pal-btn--ghost">Cancel</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </form>
 </div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var root = document.getElementById('disc-form');
+  if (!root) return;
+  var page = document.querySelector('.disc');
+  var currency = (page && page.getAttribute('data-currency')) || '';
+
+  function show(el, on) { if (el) el.hidden = !on; }
+  function val(name) { var el = root.querySelector('[name="' + name + '"]'); return el ? el.value : ''; }
+  function checked(name) { var el = root.querySelector('[name="' + name + '"]'); return !!(el && el.checked); }
+  function radio(name) { var el = root.querySelector('[name="' + name + '"]:checked'); return el ? el.value : ''; }
+
+  // -- discount class toggles which cards are visible ------------------
+  function currentClass() { return radio('discount_class'); }
+  function applyClass() {
+    var cls = currentClass();
+    root.querySelectorAll('[data-classes]').forEach(function (card) {
+      var list = card.getAttribute('data-classes').split(' ');
+      show(card, list.indexOf(cls) !== -1);
+    });
+    // Combinations: hide the option matching the discount's own class.
+    var ownComb = (cls === 'bxgy') ? 'product' : cls;
+    root.querySelectorAll('[data-comb]').forEach(function (row) {
+      var same = row.getAttribute('data-comb') === ownComb;
+      show(row, !same);
+      if (same) { var cb = row.querySelector('input'); if (cb) cb.checked = false; }
+    });
+    // Reflect selected type cards
+    root.querySelectorAll('#disc-type .disc-type').forEach(function (lab) {
+      var inp = lab.querySelector('input');
+      lab.classList.toggle('is-on', inp && inp.checked);
+    });
+    paint();
+  }
+
+  // -- generic toggles -------------------------------------------------
+  function bindGroup(radioName, showAttr) {
+    root.querySelectorAll('[name="' + radioName + '"]').forEach(function (inp) {
+      inp.addEventListener('change', function () { applyGroup(radioName, showAttr); });
+    });
+    applyGroup(radioName, showAttr);
+  }
+  function applyGroup(radioName, showAttr) {
+    var v = radio(radioName);
+    root.querySelectorAll('[' + showAttr + ']').forEach(function (box) {
+      show(box, box.getAttribute(showAttr) === v);
+    });
+    paint();
+  }
+  function bindToggle(key) {
+    var cb = root.querySelector('[data-toggle="' + key + '"]');
+    var box = root.querySelector('[data-box="' + key + '"]');
+    if (!cb || !box) return;
+    function sync() { show(box, cb.checked); paint(); }
+    cb.addEventListener('change', sync);
+    sync();
+  }
+
+  // -- segmented value type (percent/fixed) ---------------------------
+  function bindSeg() {
+    var seg = document.getElementById('disc-vtype');
+    if (!seg) return;
+    function sync() {
+      var v = radio('discount_type');
+      seg.querySelectorAll('[data-seg]').forEach(function (lab) {
+        lab.classList.toggle('is-on', lab.querySelector('input').checked);
+      });
+      show(root.querySelector('[data-vprefix]'), v === 'fixed');
+      show(root.querySelector('[data-vsuffix]'), v === 'percent');
+      root.querySelectorAll('[data-when-vtype]').forEach(function (box) {
+        show(box, box.getAttribute('data-when-vtype') === v);
+      });
+      paint();
+    }
+    seg.querySelectorAll('input').forEach(function (i) { i.addEventListener('change', sync); });
+    sync();
+  }
+
+  // -- pickers: search filter + live count ----------------------------
+  root.querySelectorAll('.disc-picker').forEach(function (pk) {
+    var search = pk.querySelector('.disc-picker__search');
+    var rows = pk.querySelectorAll('.disc-pick');
+    var countEl = pk.querySelector('[data-picker-count]');
+    function updateCount() {
+      var n = pk.querySelectorAll('.disc-pick input:checked').length;
+      if (countEl) countEl.textContent = n ? (n + ' selected') : '';
+      paint();
+    }
+    if (search) search.addEventListener('input', function () {
+      var q = search.value.toLowerCase();
+      rows.forEach(function (r) {
+        r.classList.toggle('is-hidden', q && r.getAttribute('data-label').indexOf(q) === -1);
+      });
+    });
+    pk.querySelectorAll('.disc-pick input').forEach(function (i) { i.addEventListener('change', updateCount); });
+    updateCount();
+  });
+
+  // -- generate code ---------------------------------------------------
+  var gen = document.getElementById('disc-gen');
+  if (gen) gen.addEventListener('click', function () {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', out = '';
+    for (var i = 0; i < 8; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+    var el = document.getElementById('disc-code');
+    if (el) { el.value = out; paint(); }
+  });
+
+  // -- keep reward amount/percent inputs sharing one field ------------
+  // (server reads reward_value from the visible input)
+  function syncRewardName() {
+    var rt = radio('reward_type');
+    var pct = root.querySelector('[data-reward-pct]');
+    var amt = root.querySelector('[data-reward-amt]');
+    if (pct) pct.setAttribute('name', rt === 'percent' ? 'reward_value' : 'reward_value_pct_off');
+    if (amt) amt.setAttribute('name', rt === 'amount' ? 'reward_value' : 'reward_value_amt_off');
+  }
+
+  // -- live summary ----------------------------------------------------
+  function paint() {
+    var cls = currentClass();
+    var nameEl = document.getElementById('sum-name');
+    var typeEl = document.getElementById('sum-type');
+    var detEl = document.getElementById('sum-details');
+    var pill = document.getElementById('disc-status-pill');
+    if (pill) pill.textContent = radio('status') === 'draft' ? 'Draft' : 'Active';
+    if (nameEl) {
+      nameEl.textContent = radio('method') === 'automatic'
+        ? (val('title') || 'Automatic discount')
+        : (val('code') || 'No code yet');
+    }
+    var labels = { product: 'Amount off products', order: 'Amount off order', bxgy: 'Buy X get Y', shipping: 'Free shipping' };
+    if (typeEl) typeEl.textContent = labels[cls] || '';
+    if (!detEl) return;
+    var d = '';
+    if (cls === 'order' || cls === 'product') {
+      var v = val('value');
+      if (v) d = radio('discount_type') === 'percent' ? (v + '% off') : (currency + v + ' off');
+      if (cls === 'product') d += ' · ' + ({ all: 'all products', categories: 'select categories', products: 'select products' }[radio('applies_to')] || '');
+    } else if (cls === 'shipping') {
+      d = 'Free shipping';
+    } else if (cls === 'bxgy') {
+      var buy = radio('buy_type') === 'amount' ? (currency + (val('buy_min_amount') || '0')) : ((val('buy_quantity') || '0') + ' items');
+      var rt = radio('reward_type');
+      var reward = rt === 'free' ? 'free' : (rt === 'percent' ? ((val('reward_value') || '0') + '% off') : (currency + (val('reward_value') || '0') + ' off'));
+      d = 'Buy ' + buy + ', get ' + (val('get_quantity') || '0') + ' ' + reward;
+    }
+    detEl.textContent = d;
+  }
+
+  // -- wire everything -------------------------------------------------
+  root.querySelectorAll('[name="discount_class"]').forEach(function (i) { i.addEventListener('change', applyClass); });
+  root.querySelectorAll('[data-method]').forEach(function (i) {
+    i.addEventListener('change', function () {
+      root.querySelectorAll('[data-when-method]').forEach(function (b) { show(b, b.getAttribute('data-when-method') === radio('method')); });
+      paint();
+    });
+  });
+  root.querySelectorAll('[data-reward]').forEach(function (i) { i.addEventListener('change', syncRewardName); });
+  root.querySelectorAll('[data-status]').forEach(function (i) { i.addEventListener('change', paint); });
+  ['code', 'title', 'value', 'buy_quantity', 'buy_min_amount', 'get_quantity'].forEach(function (n) {
+    var el = root.querySelector('[name="' + n + '"]'); if (el) el.addEventListener('input', paint);
+  });
+
+  bindGroup('applies_to', 'data-when-applies');
+  bindGroup('min_requirement', 'data-when-minreq');
+  bindGroup('customer_eligibility', 'data-when-elig');
+  bindGroup('buy_type', 'data-when-buytype');
+  bindGroup('reward_type', 'data-when-reward');
+  ['max-disc', 'bxgy-max', 'ship-max', 'usage', 'enddate'].forEach(bindToggle);
+  bindSeg();
+  // method initial
+  root.querySelectorAll('[data-when-method]').forEach(function (b) { show(b, b.getAttribute('data-when-method') === radio('method')); });
+  syncRewardName();
+  applyClass();
+})();
+</script>
 {% endblock %}

@@ -3,13 +3,13 @@
 The ported storefront templates read hundreds of ``content.*`` keys, many inside
 ``|default:content.x`` / ``|add:product.id`` positions where Django resolves the
 argument eagerly. A missing key there raises ``VariableDoesNotExist`` and takes
-the whole page down — a store must never be undisplayable because one optional
+the whole page down  a store must never be undisplayable because one optional
 field is blank.
 
 ``wrap`` deep-wraps a content blob so that:
 
 * a present key returns its (wrapped) value, and
-* a missing key — at any depth — returns :data:`MISSING`, a null object that
+* a missing key  at any depth  returns :data:`MISSING`, a null object that
   renders as an empty string, is falsy, iterates empty, and supports further
   ``[key]`` / ``.attr`` access so long chains keep resolving instead of raising.
 

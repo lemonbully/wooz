@@ -1,0 +1,11 @@
+{
+  "Comment": "SES for myugcstore.com (collaboration invite mail): DKIM CNAMEs, MAIL FROM mail.myugcstore.com MX+SPF, DMARC",
+  "Changes": [
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"TOKEN1._domainkey.myugcstore.com","Type":"CNAME","TTL":1800,"ResourceRecords":[{"Value":"TOKEN1.dkim.amazonses.com"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"TOKEN2._domainkey.myugcstore.com","Type":"CNAME","TTL":1800,"ResourceRecords":[{"Value":"TOKEN2.dkim.amazonses.com"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"TOKEN3._domainkey.myugcstore.com","Type":"CNAME","TTL":1800,"ResourceRecords":[{"Value":"TOKEN3.dkim.amazonses.com"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"mail.myugcstore.com","Type":"MX","TTL":1800,"ResourceRecords":[{"Value":"10 feedback-smtp.ap-south-1.amazonses.com"}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"mail.myugcstore.com","Type":"TXT","TTL":1800,"ResourceRecords":[{"Value":"\"v=spf1 include:amazonses.com ~all\""}]}},
+    {"Action":"UPSERT","ResourceRecordSet":{"Name":"_dmarc.myugcstore.com","Type":"TXT","TTL":1800,"ResourceRecords":[{"Value":"\"v=DMARC1; p=none; rua=mailto:dmarc@myugcstore.com; fo=1\""}]}}
+  ]
+}

@@ -1,0 +1,78 @@
+{% extends "store/_shell.html" %}
+{% load static %}
+{% block title %}{{ site.name }} · Subscribers{% endblock %}
+{% block crumb %}Subscribers{% endblock %}
+
+{% comment %}
+Newsletter subscribers captured from the storefront footer "Subscribe" form and
+the newsletter popup (commerce.NewsletterSubscriber; popup signups have
+source="newsletter_popup" and show a "Subscribed from newsletter" tag). Read-only list with search + remove, following
+the standard app list layout (responsive .app-tablewrap).
+{% endcomment %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">People</p>
+      <h1 class="app-head__title pal-mt-4">Subscribers</h1>
+      <p class="app-head__lead">Everyone who subscribed to your newsletter from your storefront{% if total_subscribers %}  {{ total_subscribers }} total{% endif %}.</p>
+    </div>
+    {% if total_subscribers %}
+      <div class="app-head__actions">
+        <a class="pal-btn" href="{% url 'store:subscribers_export' site.id %}?{% if q %}q={{ q|urlencode }}&amp;{% endif %}{% if source %}source={{ source }}{% endif %}">
+          Export to Excel <span class="pal-btn__arrow" aria-hidden="true">↓</span>
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="app-block">
+    <nav class="app-tabs" aria-label="Where they subscribed" style="margin-bottom:1rem">
+      <a class="app-tab" href="?{% if q %}q={{ q|urlencode }}{% endif %}"{% if not source %} aria-current="true"{% endif %}>All <span class="app-sub">{{ total_subscribers }}</span></a>
+      <a class="app-tab" href="?source=newsletter{% if q %}&amp;q={{ q|urlencode }}{% endif %}"{% if source == 'newsletter' %} aria-current="true"{% endif %}>From newsletter popup <span class="app-sub">{{ popup_total }}</span></a>
+      <a class="app-tab" href="?source=other{% if q %}&amp;q={{ q|urlencode }}{% endif %}"{% if source == 'other' %} aria-current="true"{% endif %}>Other forms <span class="app-sub">{{ other_total }}</span></a>
+    </nav>
+
+    <form method="get" class="app-toolbar">
+      {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
+      <div class="app-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" name="q" value="{{ q }}" placeholder="Search by email…">
+      </div>
+      <button class="pal-btn pal-btn--ghost" type="submit">Search</button>
+    </form>
+
+    {% if subscribers %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Email</th><th>Source</th><th>Subscribed</th><th class="app-table__actions">Action</th></tr></thead>
+          <tbody>
+            {% for s in subscribers %}
+              <tr>
+                <td class="app-table__strong">{{ s.email }}</td>
+                <td><span class="app-badge{% if s.source == 'newsletter_popup' %} app-badge--accent{% endif %}">{{ s.source_label }}</span></td>
+                <td>{{ s.created_at|date:'Y-m-d H:i' }}</td>
+                <td class="app-table__actions">
+                  <div class="app-actbtns">
+                    <a class="app-actbtn" href="mailto:{{ s.email }}" title="Email" aria-label="Email">{% include "store/_icons.html" with icon="mail" %}</a>
+                    <form method="post" action="{% url 'store:subscriber_delete' site.id s.id %}" class="app-actbtns__form" onsubmit="return confirm('Remove this subscriber?');">{% csrf_token %}
+                      <button type="submit" class="app-actbtn app-actbtn--danger" title="Remove" aria-label="Remove">{% include "store/_icons.html" with icon="trash" %}</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% include "store/_pagination.html" with page=subscribers %}
+    {% else %}
+      <div class="app-empty">
+        <h2 class="app-empty__title">No subscribers yet</h2>
+        <p class="app-empty__text">{% if source == 'newsletter' %}Signups from your newsletter popup appear here. Turn it on under Edit content → Newsletter.{% else %}When shoppers subscribe from your storefront footer or newsletter popup, they'll appear here.{% endif %}</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

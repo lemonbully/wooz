@@ -1,0 +1,221 @@
+{% load website_filters %}<!DOCTYPE html>
+{% comment %}
+A shopper's tax invoice for one order (account page → order menu → Invoice).
+Standalone and print-ready: "Print / Save as PDF" uses the browser's print
+dialog, and the print stylesheet hides the toolbar. Seller block = the store's
+Business & tax details (legal name, GSTIN, PAN, MSME/Udyam) from Store
+settings + its default warehouse address. Built by commerce.order_invoice.
+{% endcomment %}
+{% with inv=invoice sym=invoice.currency|currency_symbol %}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Invoice {{ inv.number }} · {{ inv.seller.brand }}</title>
+  <style>
+    :root { --ink: #111827; --muted: #6b7280; --faint: #9ca3af; --line: #e5e7eb; --soft: #f9fafb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f3f4f6; color: var(--ink); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Arial, sans-serif; }
+    .bar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 1rem; background: #fff; border-bottom: 1px solid var(--line); }
+    .bar a { color: var(--ink); text-decoration: none; font-size: 0.85rem; }
+    .bar a:hover { text-decoration: underline; }
+    .btn { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1rem; border: 0; border-radius: 0.5rem; background: var(--ink); color: #fff; font: inherit; font-size: 0.85rem; font-weight: 500; cursor: pointer; }
+    .btn svg { width: 1rem; height: 1rem; }
+    .sheet { max-width: 860px; margin: 1.5rem auto; background: #fff; border: 1px solid var(--line); border-radius: 0.75rem; padding: 2.25rem; }
+    .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap; }
+    .brand { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }
+    .legal { font-size: 0.85rem; color: var(--muted); margin-top: 0.15rem; }
+    .title { text-align: right; }
+    .title h1 { margin: 0; font-size: 1.15rem; letter-spacing: 0.18em; text-transform: uppercase; }
+    .title .no { margin-top: 0.3rem; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9rem; }
+    .rule { height: 2px; background: var(--ink); margin: 1.25rem 0 1.5rem; }
+    .meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .meta div { background: var(--soft); border: 1px solid var(--line); border-radius: 0.5rem; padding: 0.6rem 0.75rem; min-width: 0; }
+    .k { display: block; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 600; margin-bottom: 0.2rem; }
+    .v { font-size: 0.9rem; font-weight: 500; overflow-wrap: anywhere; }
+    .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .party { border: 1px solid var(--line); border-radius: 0.5rem; padding: 1rem; min-width: 0; }
+    .party .name { font-weight: 600; font-size: 0.95rem; }
+    .party p { margin: 0.15rem 0 0; font-size: 0.82rem; color: #374151; overflow-wrap: anywhere; }
+    .ids { margin-top: 0.6rem; display: grid; gap: 0.2rem; font-size: 0.8rem; }
+    .ids span b { font-weight: 600; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; margin-right: 0.35rem; }
+    .ids span { font-family: ui-monospace, Menlo, Consolas, monospace; }
+    table { width: 100%; border-collapse: collapse; }
+    .items th { background: var(--ink); color: #fff; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; padding: 0.6rem 0.65rem; text-align: left; }
+    .items td { padding: 0.65rem; border-bottom: 1px solid var(--line); font-size: 0.85rem; vertical-align: top; }
+    .items .r, .tax .r { text-align: right; white-space: nowrap; }
+    .items .c { text-align: center; }
+    .sub { font-size: 0.75rem; color: var(--muted); }
+    .wrap { border: 1px solid var(--line); border-radius: 0.5rem; overflow: hidden; margin-bottom: 1.25rem; }
+    .shipto { margin-top: 0.6rem !important; }
+    .k--inline { display: inline; }
+    .wrap--flush { margin-bottom: 0; }
+    .bottom { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.25rem; align-items: start; }
+    .tax th { font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 600; text-align: left; padding: 0.5rem 0.6rem; background: var(--soft); border-bottom: 1px solid var(--line); }
+    .tax td { padding: 0.5rem 0.6rem; font-size: 0.8rem; border-bottom: 1px solid var(--line); }
+    .tax tr:last-child td { border-bottom: 0; }
+    .totals { border: 1px solid var(--line); border-radius: 0.5rem; padding: 0.4rem 1rem; }
+    .totals div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0; font-size: 0.88rem; border-bottom: 1px dashed var(--line); }
+    .totals div:last-child { border-bottom: 0; }
+    .totals .grand { font-size: 1.05rem; font-weight: 700; border-top: 2px solid var(--ink); border-bottom: 0; margin-top: 0.25rem; padding-top: 0.6rem; }
+    .note { margin-top: 1.5rem; font-size: 0.75rem; color: var(--muted); }
+    .foot { margin-top: 1.75rem; padding-top: 1rem; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--muted); }
+    @media (max-width: 640px) {
+      .sheet { margin: 0; border-radius: 0; border-left: 0; border-right: 0; padding: 1.25rem; }
+      .meta { grid-template-columns: 1fr 1fr; }
+      .parties, .bottom { grid-template-columns: 1fr; }
+      .title { text-align: left; }
+      .items .hide-sm { display: none; }
+    }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: #fff; }
+      .bar { display: none; }
+      .sheet { margin: 0; border: 0; border-radius: 0; padding: 0; max-width: none; }
+      .items th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .items .hide-sm { display: table-cell; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <a href="{{ website_base }}account/">&larr; Back to your account</a>
+    <button type="button" class="btn" id="inv-print">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+      Print / Save as PDF
+    </button>
+  </div>
+
+  <main class="sheet">
+    <div class="head">
+      <div>
+        <div class="brand">{{ inv.seller.brand }}</div>
+        {% if inv.seller.name and inv.seller.name != inv.seller.brand %}<div class="legal">{{ inv.seller.name }}</div>{% endif %}
+      </div>
+      <div class="title">
+        <h1>{% if inv.seller.gstin %}Tax invoice{% else %}Invoice{% endif %}</h1>
+        <div class="no">{{ inv.number }}</div>
+      </div>
+    </div>
+    <div class="rule"></div>
+
+    <div class="meta">
+      <div><span class="k">Invoice date</span><span class="v">{{ inv.date|date:"d M Y" }}</span></div>
+      <div><span class="k">Order</span><span class="v">#{{ inv.order.display_number }}</span></div>
+      <div><span class="k">Payment</span><span class="v">{% if inv.payment_method %}{{ inv.payment_method|upper }}{% else %}{{ inv.order.get_status_display }}{% endif %}</span></div>
+      <div><span class="k">Place of supply</span><span class="v">{{ inv.place_of_supply|default:"—" }}</span></div>
+    </div>
+
+    <div class="parties">
+      <section class="party">
+        <span class="k">Sold by</span>
+        <div class="name">{{ inv.seller.name }}</div>
+        {% if inv.seller.address %}<p>{{ inv.seller.address }}</p>{% endif %}
+        {% if inv.seller.email %}<p>{{ inv.seller.email }}</p>{% endif %}
+        {% if inv.seller.phone %}<p>{{ inv.seller.phone }}</p>{% endif %}
+        {% if inv.seller.gstin or inv.seller.pan or inv.seller.msme %}
+        <div class="ids">
+          {% if inv.seller.gstin %}<span><b>GSTIN</b>{{ inv.seller.gstin }}</span>{% endif %}
+          {% if inv.seller.pan %}<span><b>PAN</b>{{ inv.seller.pan }}</span>{% endif %}
+          {% if inv.seller.msme %}<span><b>MSME / Udyam</b>{{ inv.seller.msme }}</span>{% endif %}
+        </div>
+        {% endif %}
+      </section>
+      <section class="party">
+        <span class="k">Bill to</span>
+        <div class="name">{{ inv.buyer.company|default:inv.buyer.name }}</div>
+        {% if inv.buyer.company %}<p>{{ inv.buyer.name }}</p>{% endif %}
+        {% if inv.buyer.billing_address %}<p>{{ inv.buyer.billing_address }}</p>{% endif %}
+        {% if inv.buyer.email %}<p>{{ inv.buyer.email }}</p>{% endif %}
+        {% if inv.buyer.phone %}<p>{{ inv.buyer.phone }}</p>{% endif %}
+        {% if inv.buyer.gstin %}<div class="ids"><span><b>GSTIN</b>{{ inv.buyer.gstin }}</span></div>{% endif %}
+        {% if inv.buyer.shipping_address %}
+        <p class="shipto"><span class="k k--inline">Ship to</span> {{ inv.buyer.shipping_address }}</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <div class="wrap">
+      <table class="items">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item</th>
+            <th class="hide-sm">HSN</th>
+            <th class="c">Qty</th>
+            <th class="r">Rate</th>
+            <th class="r hide-sm">GST</th>
+            <th class="r">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in inv.lines %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ line.title }}{% if line.variant %}<div class="sub">{{ line.variant }}</div>{% endif %}{% if line.sku %}<div class="sub">SKU {{ line.sku }}</div>{% endif %}</td>
+            <td class="hide-sm">{{ line.hsn|default:"—" }}</td>
+            <td class="c">{{ line.quantity }}</td>
+            <td class="r">{{ sym }}{{ line.unit_price }}</td>
+            <td class="r hide-sm">{% if line.rate %}{{ line.rate|floatformat:-2 }}%{% if line.inclusive %}<div class="sub">incl.</div>{% endif %}{% else %}—{% endif %}</td>
+            <td class="r">{{ sym }}{{ line.amount }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bottom">
+      <div>
+        {% if inv.tax_rows %}
+        <div class="wrap wrap--flush">
+          <table class="tax">
+            <thead>
+              <tr>
+                <th>GST rate</th>
+                <th class="r">Taxable value</th>
+                {% if inv.intra_state %}<th class="r">CGST</th><th class="r">SGST</th>{% else %}<th class="r">IGST</th>{% endif %}
+                <th class="r">Total tax</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in inv.tax_rows %}
+              <tr>
+                <td>{{ row.rate|floatformat:-2 }}%</td>
+                <td class="r">{{ sym }}{{ row.taxable }}</td>
+                {% if inv.intra_state %}
+                <td class="r">{{ sym }}{{ row.cgst }} <span class="sub">({{ row.half_rate|floatformat:-2 }}%)</span></td>
+                <td class="r">{{ sym }}{{ row.sgst }} <span class="sub">({{ row.half_rate|floatformat:-2 }}%)</span></td>
+                {% else %}
+                <td class="r">{{ sym }}{{ row.igst }}</td>
+                {% endif %}
+                <td class="r">{{ sym }}{{ row.tax }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="note">GST shown is calculated on each item's value before order-level discounts. {% if inv.intra_state %}Seller and buyer are in the same state, so GST is split into CGST and SGST.{% else %}Supply is inter-state, so IGST applies.{% endif %}</p>
+        {% endif %}
+      </div>
+      <div class="totals">
+        <div><span>Subtotal</span><span>{{ sym }}{{ inv.subtotal }}</span></div>
+        {% if inv.discount %}<div><span>Discount</span><span>&minus;{{ sym }}{{ inv.discount }}</span></div>{% endif %}
+        {% if inv.tax_added %}<div><span>GST (added)</span><span>{{ sym }}{{ inv.tax_added }}</span></div>{% elif inv.tax_total %}<div><span>GST (included)</span><span>{{ sym }}{{ inv.tax_total }}</span></div>{% endif %}
+        {% if inv.shipping %}<div><span>Shipping</span><span>{{ sym }}{{ inv.shipping }}</span></div>{% endif %}
+        <div class="grand"><span>Total</span><span>{{ sym }}{{ inv.total }}</span></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <span>Thank you for shopping with {{ inv.seller.brand }}.</span>
+      <span>This is a computer-generated invoice and needs no signature.</span>
+    </div>
+  </main>
+
+  <script nonce="{{ csp_nonce }}">
+    document.getElementById("inv-print").addEventListener("click", function () { window.print(); });
+  </script>
+</body>
+</html>
+{% endwith %}

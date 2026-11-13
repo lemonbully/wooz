@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · myUGCstore</title>
+  <meta name="color-scheme" content="light only">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style nonce="{{ csp_nonce }}">
+    :root{
+      --paper:#f4f4f2;--paper-2:#ececea;--panel:#ffffff;
+      --ink:#0a0a0b;--ink-2:#26262a;--muted:#66666b;--faint:#9a9aa0;
+      --line:rgb(10 10 11 / .16);--line-ink:rgb(244 244 242 / .16);
+      --accent:#4b2bf5;--accent-2:#6a44fb;--ok:#0f7a53;--danger:#a1201b;
+      --font-display:"Space Grotesk","Inter",system-ui,sans-serif;
+      --font-mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",monospace;
+      --font-body:"Inter",system-ui,-apple-system,sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{font-family:var(--font-body);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    a{color:inherit;text-decoration:none}
+    h1{margin:0;font-family:var(--font-display);font-weight:500;letter-spacing:-.03em;line-height:1.02}
+    .auth{min-height:100dvh;display:grid;grid-template-columns:1.05fr .95fr}
+    @media(max-width:60rem){.auth{grid-template-columns:1fr}}
+    /* ---- left panel (ink) ------------------------------------------------ */
+    .panel{background:var(--ink);color:var(--paper);position:relative;overflow:hidden;padding:clamp(2rem,1.5rem + 3vw,4rem);display:flex;flex-direction:column;justify-content:space-between;gap:2.5rem}
+    @media(max-width:60rem){.panel{display:none}}
+    .panel::before{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--line-ink) 1px,transparent 1px),linear-gradient(90deg,var(--line-ink) 1px,transparent 1px);background-size:3rem 3rem;-webkit-mask-image:radial-gradient(120% 120% at 0% 0%,#000,transparent 70%);mask-image:radial-gradient(120% 120% at 0% 0%,#000,transparent 70%);opacity:.5}
+    .panel > *{position:relative}
+    .kicker{font-family:var(--font-mono);font-size:.68rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-2)}
+    .headline{font-size:clamp(1.9rem,1.3rem + 2.5vw,3rem);letter-spacing:-.035em;max-width:15ch;margin-top:1rem;text-wrap:balance}
+    .stack{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+    .stack li{display:flex;gap:1rem;padding:1rem 0;border-top:1px solid var(--line-ink);font-size:.92rem;color:rgb(244 244 242 / .82)}
+    .stack li:last-child{border-bottom:1px solid var(--line-ink)}
+    .stack .i{font-family:var(--font-mono);font-size:.72rem;color:var(--accent-2);letter-spacing:.1em}
+    .status{font-family:var(--font-mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:rgb(244 244 242 / .6);display:flex;align-items:center;gap:.6rem}
+    .status .dot{width:.5rem;height:.5rem;border-radius:50%;background:var(--ok);animation:pulse 2.4s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    @media(prefers-reduced-motion:reduce){.status .dot{animation:none}}
+    /* ---- right (form) ---------------------------------------------------- */
+    .main{background:var(--paper);display:flex;align-items:center;justify-content:center;padding:clamp(1.5rem,1rem + 3vw,3rem)}
+    .wrap{width:100%;max-width:26rem}
+    .brand{display:flex;align-items:center;gap:.625rem;margin-bottom:2rem}
+    .brand__mark{width:1.6rem;height:1.6rem;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:600;font-size:.85rem}
+    .brand__name{font-family:var(--font-display);font-weight:600;font-size:1.05rem;letter-spacing:-.02em}
+    .title{font-size:clamp(1.6rem,1.2rem + 1.5vw,2.1rem);letter-spacing:-.03em}
+    .sub{margin:.6rem 0 1.75rem;font-size:.9rem;line-height:1.55;color:var(--muted);max-width:40ch}
+    .sub .chip{font-family:var(--font-mono);font-size:.8rem;color:var(--ink);letter-spacing:.02em}
+    .msg{margin:0 0 1.5rem;padding:.8rem .9rem;font-size:.85rem;line-height:1.5;border:1px solid var(--line);border-left:2px solid var(--accent);background:var(--panel);color:var(--ink-2)}
+    .msg.err{border-left-color:var(--danger)}
+    .field{display:flex;flex-direction:column;gap:.45rem}
+    .label{font-family:var(--font-mono);font-size:.64rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+    .input{width:100%;padding:.85rem .9rem;border:1px solid var(--line);background:var(--panel);font:inherit;font-size:.95rem;color:var(--ink);border-radius:0}
+    .input:focus{outline:none;border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+    .input.otp{text-align:center;font-family:var(--font-mono);font-size:1.4rem;letter-spacing:.5em;font-weight:500;padding-left:.5em}
+    .btn{width:100%;margin-top:1.25rem;padding:.9rem 1.25rem;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--font-mono);font-size:.7rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;border-radius:0;transition:background .16s ease,color .16s ease,border-color .16s ease}
+    .btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+    .note{margin-top:1.25rem;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:center}
+    .note a{color:var(--accent);border-bottom:1px solid var(--accent);padding-bottom:1px}
+  </style>
+</head>
+<body>
+  <div class="auth">
+    <aside class="panel">
+      <div class="kicker">Commerce collaboration OS</div>
+      <div>
+        <h1 class="headline">Sell for the brands you love, get paid per order.</h1>
+      </div>
+      <ul class="stack">
+        <li><span class="i">01</span><span>Your own storefront on a <b>.myugcstore.com</b> subdomain.</span></li>
+        <li><span class="i">02</span><span>Every attributed order tracked, with your commission.</span></li>
+        <li><span class="i">03</span><span>Request payouts the moment you have a balance.</span></li>
+      </ul>
+      <div class="status"><span class="dot"></span>Portal online</div>
+    </aside>
+
+    <main class="main">
+      <div class="wrap">
+        <div class="brand"><span class="brand__mark">M</span><span class="brand__name">myUGCstore</span></div>
+
+        {% if error %}<div class="msg err">{{ error }}</div>{% endif %}
+        {% if message %}<div class="msg">{{ message }}</div>{% endif %}
+
+        {% if step == "otp" %}
+          <h1 class="title">Enter your code</h1>
+          <p class="sub">We sent a 6-digit code to <span class="chip">{{ email }}</span>. It is valid for 10 minutes.</p>
+          <form method="post" action="{% url 'referral_login_verify' %}">
+            {% csrf_token %}
+            <input type="hidden" name="email" value="{{ email }}">
+            <div class="field">
+              <label class="label" for="code">Sign-in code</label>
+              <input class="input otp" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required autofocus>
+            </div>
+            <button class="btn" type="submit">Verify &amp; continue</button>
+          </form>
+          <p class="note"><a href="{% url 'referral_login' %}">Use a different email</a></p>
+        {% else %}
+          <h1 class="title">Collaborator sign in</h1>
+          <p class="sub">Enter the email your store invited you with. We'll send you a one-time code  no password needed.</p>
+          <form method="post" action="{% url 'referral_login_send_otp' %}">
+            {% csrf_token %}
+            <div class="field">
+              <label class="label" for="email">Email address</label>
+              <input class="input" id="email" name="email" type="email" value="{{ email|default:'' }}" placeholder="you@gmail.com" required autofocus>
+            </div>
+            <button class="btn" type="submit">Send me a code</button>
+          </form>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -4,90 +4,445 @@
 
 {% block main %}
 <div class="app-page">
-  <div class="app-head"><div>
-    <p class="pal-mono pal-mono--accent">Storefront</p>
-    <h1 class="app-head__title pal-mt-4">Custom domain</h1>
-    <p class="app-head__lead">
-      Serve your store on your own domain instead of
-      <code>{{ site.slug }}.{{ storefront_apex }}</code>. Point your DNS at
-      OneWooz, then verify.
-    </p>
-  </div></div>
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Storefront</p>
+      <h1 class="app-head__title pal-mt-4">Custom domain</h1>
+    </div>
+    {% if tutorial_video %}
+    <div class="app-head__actions">
+      <button type="button" class="dom-tut-btn" data-tut-open
+              data-tut-src="{{ tutorial_video.video.url }}"
+              {% if tutorial_video.poster %}data-tut-poster="{{ tutorial_video.poster.url }}"{% endif %}
+              data-tut-title="{{ tutorial_video.title }}">
+        {% include "store/_icons.html" with icon="video" %}
+        <span>Tutorial video</span>
+      </button>
+    </div>
+    {% endif %}
+  </div>
 
-  {# ---- Current domain + status ---- #}
+  {# ============================ STATUS HERO ============================ #}
   <div class="app-block">
-    <div class="app-card">
-      <div class="app-card__head">
-        <h2 class="app-card__title">Your domain</h2>
-        {% if site.custom_domain %}
-          {% if site.custom_domain_verified %}
-            <span class="app-pill app-pill--live">Verified</span>
-          {% else %}
-            <span class="app-pill">Pending verification</span>
-          {% endif %}
+    <div class="dom-hero {% if site.custom_domain_verified %}dom-hero--live{% elif site.custom_domain %}dom-hero--pending{% endif %}">
+      <div class="dom-hero__main">
+        {% if site.custom_domain_verified %}
+          <span class="dom-hero__state"><span class="dom-hero__dot"></span> Live &amp; secured</span>
+          <p class="dom-hero__domain">{{ site.custom_domain }}</p>
+          <p class="dom-hero__sub">Your storefront is answering on your domain over HTTPS. You don’t need to touch DNS again unless you change providers.</p>
+        {% elif site.custom_domain %}
+          <span class="dom-hero__state"><span class="dom-hero__dot"></span> Pending verification</span>
+          <p class="dom-hero__domain">{{ site.custom_domain }}</p>
+          <p class="dom-hero__sub">Add the two DNS records in step 2, then verify. DNS changes usually take a few minutes to an hour to take effect.</p>
+        {% else %}
+          <span class="dom-hero__state"><span class="dom-hero__dot"></span> No domain connected</span>
+          <p class="dom-hero__domain">Connect your domain</p>
+          <p class="dom-hero__sub">Point a domain you already own  like <code>shop.yourbrand.com</code>  at OneWooz to replace the default address. Follow the three steps below.</p>
         {% endif %}
       </div>
-      <div class="app-card__body">
-        <form method="post" action="{% url 'store:domain_save' site.id %}" class="app-form">
-          {% csrf_token %}
-          <label class="pal-field">
-            <span class="pal-field__label">Domain</span>
-            <input class="pal-input" type="text" name="custom_domain"
-                   value="{{ site.custom_domain }}"
-                   placeholder="shop.yourbrand.com" autocomplete="off" spellcheck="false">
-          </label>
-          <p class="app-form__hint">Use a subdomain like <code>shop.yourbrand.com</code> or <code>www.yourbrand.com</code> (recommended), or your root domain.</p>
-          <div class="app-form__foot pal-btn-row">
-            <button class="pal-btn" type="submit">Save domain</button>
-            {% if site.custom_domain %}
-            <button class="pal-btn pal-btn--ghost" type="submit"
-                    formaction="{% url 'store:domain_verify' site.id %}">Verify now</button>
-            {% endif %}
-          </div>
-        </form>
 
-        {% if site.custom_domain %}
-        <form method="post" action="{% url 'store:domain_remove' site.id %}" class="pal-mt-8">
+      {% if site.custom_domain %}
+      <div class="dom-hero__actions">
+        <form method="post" action="{% url 'store:domain_verify' site.id %}">
           {% csrf_token %}
-          <button class="pal-link" type="submit">Remove this domain</button>
+          <button class="pal-btn" type="submit" style="width:100%">
+            {% if site.custom_domain_verified %}Re-check DNS{% else %}Verify now{% endif %}
+            <span class="pal-btn__arrow" aria-hidden="true">→</span>
+          </button>
         </form>
+        {% if site.custom_domain_verified %}
+          <a class="dom-hero__visit" href="https://{{ site.custom_domain }}" target="_blank" rel="noopener">Visit store ↗</a>
         {% endif %}
       </div>
+      {% endif %}
     </div>
   </div>
 
-  {# ---- DNS instructions ---- #}
+  {# ============================ SSL CERTIFICATE ============================ #}
+  {% if site.custom_domain_verified %}
   <div class="app-block">
-    <div class="app-card">
-      <div class="app-card__head"><h2 class="app-card__title">DNS setup</h2></div>
-      <div class="app-card__body">
-        <p class="app-form__hint pal-mt-0">
-          At your domain registrar / DNS provider, add this record. It usually
-          takes a few minutes to an hour to take effect.
-        </p>
-
-        <div class="app-kv pal-mt-8">
-          <div><dt>Type</dt><dd>CNAME</dd></div>
-          <div><dt>Name / Host</dt><dd>{{ site.custom_domain|default:"your subdomain (e.g. shop)" }}</dd></div>
-          <div><dt>Value / Target</dt><dd><code>{{ cname_target }}</code></dd></div>
-          <div><dt>TTL</dt><dd>300 (or lowest available)</dd></div>
-        </div>
-
-        <div class="pal-alert pal-mt-12">
-          <p class="pal-alert__title">Using your root domain (no subdomain)?</p>
-          Most providers don’t allow a CNAME on the root (<code>yourbrand.com</code>).
-          Use an <strong>ALIAS</strong> / <strong>ANAME</strong> record to
-          <code>{{ cname_target }}</code> if your provider supports it, or point
-          the <code>www</code> subdomain with the CNAME above and redirect the root to it.
-        </div>
-
-        <p class="app-form__hint pal-mt-12">
-          After the record is live, click <strong>Verify now</strong> above. Once
-          verified, your storefront answers on your domain; secure HTTPS is
-          provisioned automatically shortly after.
-        </p>
+    <div class="dom-ssl is-checking" data-ssl data-ssl-url="{% url 'store:domain_ssl_status' site.id %}">
+      <span class="dom-ssl__icon" data-ssl-icon aria-hidden="true">
+        <span class="dom-ssl__spin"></span>
+        {% include "store/_icons.html" with icon="lock" %}
+      </span>
+      <div class="dom-ssl__text">
+        <p class="dom-ssl__state" data-ssl-state>Checking HTTPS certificate…</p>
+        <p class="dom-ssl__hint" data-ssl-hint>Confirming that <code>{{ site.custom_domain }}</code> is served over a trusted certificate.</p>
       </div>
+      <button type="button" class="pal-btn pal-btn--ghost dom-ssl__btn" data-ssl-recheck hidden>Re-check</button>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ===================== GUIDED SETUP (3-STEP FLOW) ===================== #}
+  <div class="app-block">
+    <ol class="dom-flow">
+
+      {# ---------- Step 1 · Enter your domain ---------- #}
+      <li class="dom-stage {% if site.custom_domain %}is-done{% else %}is-active{% endif %}">
+        <div class="dom-stage__rail">
+          <span class="dom-stage__num">{% if site.custom_domain %}✓{% else %}1{% endif %}</span>
+        </div>
+        <div class="dom-stage__content">
+          <div class="dom-stage__head">
+            <h2 class="dom-stage__title">Enter your domain</h2>
+            {% if site.custom_domain %}
+              {% if site.custom_domain_verified %}
+                <span class="app-pill app-pill--live">Verified</span>
+              {% else %}
+                <span class="app-pill app-pill--accent">Saved</span>
+              {% endif %}
+            {% endif %}
+          </div>
+          <p class="dom-stage__lead">Point a domain you already own. A subdomain like <code>shop.yourbrand.com</code> or <code>www.yourbrand.com</code> is recommended, but a root domain works too.</p>
+
+          <form method="post" action="{% url 'store:domain_save' site.id %}" class="dom-domform">
+            {% csrf_token %}
+            <div class="dom-domform__row">
+              <input class="pal-input dom-domform__input" type="text" name="custom_domain"
+                     value="{{ site.custom_domain }}"
+                     placeholder="shop.yourbrand.com" autocomplete="off" spellcheck="false"
+                     aria-label="Your domain">
+              <button class="pal-btn" type="submit">{% if site.custom_domain %}Update domain{% else %}Save domain{% endif %}</button>
+            </div>
+          </form>
+
+          {% if site.custom_domain %}
+          <form method="post" action="{% url 'store:domain_remove' site.id %}" class="dom-remove">
+            {% csrf_token %}
+            <button class="pal-link" type="submit">Remove this domain</button>
+          </form>
+          {% endif %}
+        </div>
+      </li>
+
+      {# ---------- Step 2 · Add DNS records ---------- #}
+      <li class="dom-stage {% if site.custom_domain_verified %}is-done{% elif site.custom_domain %}is-active{% else %}is-idle{% endif %}">
+        <div class="dom-stage__rail">
+          <span class="dom-stage__num">{% if site.custom_domain_verified %}✓{% else %}2{% endif %}</span>
+        </div>
+        <div class="dom-stage__content">
+          <div class="dom-stage__head">
+            <h2 class="dom-stage__title">Add these DNS records</h2>
+          </div>
+
+          {% if site.custom_domain %}
+          <p class="dom-stage__lead">Add <strong>both</strong> records at your domain registrar or DNS provider  one proves ownership, one points the domain to us. Use <strong>Copy</strong> to avoid typos.</p>
+
+          {# --- Ownership (TXT) --- #}
+          <p class="dom-sub"><span class="dom-sub__n">A</span> Verify ownership</p>
+          <div class="dom-recs">
+            <div class="dom-rec">
+              <div class="dom-rec__head">
+                <span class="dom-rec__title">Ownership check</span>
+                <span class="dom-rec__type">TXT</span>
+              </div>
+              <div class="dom-rec__body">
+                <div class="dom-row">
+                  <span class="dom-row__k">Name / Host</span>
+                  <div class="dom-row__v">
+                    <code class="dom-code">{{ verify_txt_host }}.{{ site.custom_domain }}</code>
+                    <button type="button" class="dom-copy" data-copy="{{ verify_txt_host }}.{{ site.custom_domain }}">{% include "store/_icons.html" with icon="copy" %}<span>Copy</span></button>
+                  </div>
+                </div>
+                <div class="dom-row">
+                  <span class="dom-row__k">Value</span>
+                  <div class="dom-row__v">
+                    <code class="dom-code">{{ verify_txt_value }}</code>
+                    <button type="button" class="dom-copy" data-copy="{{ verify_txt_value }}">{% include "store/_icons.html" with icon="copy" %}<span>Copy</span></button>
+                  </div>
+                </div>
+                <div class="dom-row">
+                  <span class="dom-row__k">TTL</span>
+                  <div class="dom-row__v dom-row__v--plain"><code class="dom-code">300 (or lowest available)</code></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="dom-note">If your provider asks only for the host portion, enter just <code>{{ verify_txt_host }}</code> (root domain) or <code>{{ verify_txt_host }}.shop</code> (for <code>shop.yourbrand.com</code>).</p>
+
+          {% comment %} {# --- Pointing (A record → our edge) ---------------------------------
+             One A record to our fixed edge IP, the same for a root domain or a
+             subdomain. The IP is shared by every store; Host-based routing
+             (core.hosts) sends each verified domain to the store that owns it,
+             so no per-store target is needed. The CNAME block below is only a
+             fallback for when no edge IP is configured (e.g. local dev). #} {% endcomment %}
+          <p class="dom-sub"><span class="dom-sub__n">B</span> Point your domain to OneWooz</p>
+          {% if a_records %}
+          <div class="dom-recs">
+            <div class="dom-rec">
+              <div class="dom-rec__head">
+                <span class="dom-rec__title">Point to OneWooz</span>
+                <span class="dom-rec__type">A</span>
+              </div>
+              <div class="dom-rec__body">
+                <div class="dom-row">
+                  <span class="dom-row__k">Name / Host</span>
+                  <div class="dom-row__v dom-row__v--plain"><code class="dom-code">@ for a root domain &middot; www or shop for a subdomain</code></div>
+                </div>
+                {% for ip in a_records %}
+                <div class="dom-row">
+                  <span class="dom-row__k">Value{% if a_records|length > 1 %} {{ forloop.counter }}{% endif %}</span>
+                  <div class="dom-row__v">
+                    <code class="dom-code">{{ ip }}</code>
+                    <button type="button" class="dom-copy" data-copy="{{ ip }}">{% include "store/_icons.html" with icon="copy" %}<span>Copy</span></button>
+                  </div>
+                </div>
+                {% endfor %}
+                <div class="dom-row">
+                  <span class="dom-row__k">TTL</span>
+                  <div class="dom-row__v dom-row__v--plain"><code class="dom-code">300 (or lowest available)</code></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="dom-note">Use this one <strong>A</strong> record whether you’re connecting a root domain (<code>yourbrand.com</code>  host <code>@</code>) or a subdomain (<code>www.yourbrand.com</code> / <code>shop.yourbrand.com</code>  host <code>www</code> / <code>shop</code>). Once it verifies, we serve your store on that address automatically  no other record needed.</p>
+          {% else %}
+          <div class="dom-recs">
+            <div class="dom-rec">
+              <div class="dom-rec__head">
+                <span class="dom-rec__title">Point to OneWooz</span>
+                <span class="dom-rec__type">CNAME</span>
+              </div>
+              <div class="dom-rec__body">
+                <div class="dom-row">
+                  <span class="dom-row__k">Name / Host</span>
+                  <div class="dom-row__v dom-row__v--plain"><code class="dom-code">{{ site.custom_domain|default:"shop (your subdomain)" }}</code></div>
+                </div>
+                <div class="dom-row">
+                  <span class="dom-row__k">Value / Target</span>
+                  <div class="dom-row__v">
+                    <code class="dom-code">{{ cname_target }}</code>
+                    <button type="button" class="dom-copy" data-copy="{{ cname_target }}">{% include "store/_icons.html" with icon="copy" %}<span>Copy</span></button>
+                  </div>
+                </div>
+                <div class="dom-row">
+                  <span class="dom-row__k">TTL</span>
+                  <div class="dom-row__v dom-row__v--plain"><code class="dom-code">300 (or lowest available)</code></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="dom-note">A direct IP isn’t configured for your store yet, so point a subdomain here with a <strong>CNAME</strong>, or use an <strong>ALIAS</strong> / <strong>ANAME</strong> at your root if your provider supports it.</p>
+          {% endif %}
+
+          {% if show_www_record %}
+          {% comment %}
+          "www" alias for a root domain. Not part of verification (domain_verify
+          checks only the domain itself), so a missing or still-propagating www
+          record never blocks it. Once present, www.<domain> is accepted and
+          301-redirected to the root domain (storefront.middleware).
+          {% endcomment %}
+          <p class="dom-sub"><span class="dom-sub__n">C</span> Also open your store on www <span class="dom-sub__opt">recommended</span></p>
+          <div class="dom-recs">
+            <div class="dom-rec">
+              <div class="dom-rec__head">
+                <span class="dom-rec__title">www → your domain</span>
+                <span class="dom-rec__type">CNAME</span>
+              </div>
+              <div class="dom-rec__body">
+                <div class="dom-row">
+                  <span class="dom-row__k">Name / Host</span>
+                  <div class="dom-row__v">
+                    <code class="dom-code">www</code>
+                    <button type="button" class="dom-copy" data-copy="www">{% include "store/_icons.html" with icon="copy" %}<span>Copy</span></button>
+                  </div>
+                </div>
+                <div class="dom-row">
+                  <span class="dom-row__k">Value / Target</span>
+                  <div class="dom-row__v">
+                    <code class="dom-code">@</code>
+                    <button type="button" class="dom-copy" data-copy="@">{% include "store/_icons.html" with icon="copy" %}<span>Copy</span></button>
+                  </div>
+                </div>
+                <div class="dom-row">
+                  <span class="dom-row__k">TTL</span>
+                  <div class="dom-row__v dom-row__v--plain"><code class="dom-code">600 (or higher)</code></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="dom-note">This makes <code>www.{{ site.custom_domain }}</code> work too  visitors who type it are sent to <code>{{ site.custom_domain }}</code> automatically, over HTTPS. If your provider doesn’t accept <code>@</code> as a value, enter <code>{{ site.custom_domain }}</code> instead. It isn’t needed for verification, so you can verify before it’s live.</p>
+          {% endif %}
+          {% else %}
+          <p class="dom-stage__lead dom-stage__lead--muted">Save your domain in step 1 and the exact DNS records to add will appear here.</p>
+          {% endif %}
+        </div>
+      </li>
+
+      {# ---------- Step 3 · Verify & go live ---------- #}
+      <li class="dom-stage {% if site.custom_domain_verified %}is-done{% elif site.custom_domain %}is-active{% else %}is-idle{% endif %}">
+        <div class="dom-stage__rail dom-stage__rail--last">
+          <span class="dom-stage__num">{% if site.custom_domain_verified %}✓{% else %}3{% endif %}</span>
+        </div>
+        <div class="dom-stage__content">
+          <div class="dom-stage__head">
+            <h2 class="dom-stage__title">Verify &amp; go live</h2>
+          </div>
+          {% if site.custom_domain_verified %}
+            <p class="dom-stage__lead">Done  your storefront answers on <strong>{{ site.custom_domain }}</strong> over HTTPS. A secure certificate was issued automatically.</p>
+            <a class="pal-btn" href="https://{{ site.custom_domain }}" target="_blank" rel="noopener">Visit store <span class="pal-btn__arrow" aria-hidden="true">↗</span></a>
+          {% elif site.custom_domain %}
+            <p class="dom-stage__lead">Once both records are live (usually a few minutes), verify. Your storefront then answers on your domain, and HTTPS is issued automatically on the first visit.</p>
+            <form method="post" action="{% url 'store:domain_verify' site.id %}">
+              {% csrf_token %}
+              <button class="pal-btn" type="submit">Verify now <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+            </form>
+          {% else %}
+            <p class="dom-stage__lead dom-stage__lead--muted">After your DNS records are in place, verify to publish your store on your domain.</p>
+          {% endif %}
+        </div>
+      </li>
+
+    </ol>
+  </div>
+</div>
+
+{% if tutorial_video %}
+{# Tutorial video player  a landscape (16:9) overlay opened by the header button. #}
+<div class="dom-video" id="dom-video" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Tutorial video">
+  <div class="dom-video__backdrop" data-tut-close></div>
+  <div class="dom-video__panel" role="document">
+    <div class="dom-video__head">
+      <h2 class="dom-video__title" data-tut-heading>{{ tutorial_video.title }}</h2>
+      <button type="button" class="dom-video__x" data-tut-close aria-label="Close">
+        {% include "store/_icons.html" with icon="close" %}
+      </button>
+    </div>
+    <div class="dom-video__stage">
+      <video class="dom-video__media" data-tut-video controls playsinline preload="metadata"></video>
     </div>
   </div>
 </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  // Copy-to-clipboard for DNS record values.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest(".dom-copy");
+    if (!btn) return;
+    var text = btn.getAttribute("data-copy") || "";
+    var label = btn.querySelector("span");
+    function done() {
+      btn.classList.add("is-copied");
+      if (label) { var old = label.textContent; label.textContent = "Copied"; setTimeout(function () { btn.classList.remove("is-copied"); label.textContent = old; }, 1500); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fallback);
+    } else { fallback(); }
+    function fallback() {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+        document.body.removeChild(ta); done();
+      } catch (err) {}
+    }
+  });
+
+  // ---- Live HTTPS certificate status --------------------------------------
+  var ssl = document.querySelector("[data-ssl]");
+  if (ssl) {
+    var url = ssl.getAttribute("data-ssl-url");
+    var stateEl = ssl.querySelector("[data-ssl-state]");
+    var hintEl = ssl.querySelector("[data-ssl-hint]");
+    var recheck = ssl.querySelector("[data-ssl-recheck]");
+    var domain = (hintEl.querySelector("code") || {}).textContent || "your domain";
+    var attempts = 0;
+    var maxAuto = 6; // Auto-poll a while: probing nudges on-demand issuance.
+    var timer = null;
+
+    function setClass(name) {
+      ssl.classList.remove("is-checking", "is-active", "is-pending");
+      ssl.classList.add(name);
+    }
+
+    function render(status) {
+      if (status === "active") {
+        setClass("is-active");
+        stateEl.textContent = "HTTPS certificate active";
+        hintEl.innerHTML = "<code>" + domain + "</code> is served over a trusted certificate. Your store loads securely with the padlock.";
+        if (recheck) recheck.hidden = true;
+        stop();
+      } else {
+        setClass("is-pending");
+        stateEl.textContent = "Certificate provisioning…";
+        hintEl.innerHTML = "We’ve requested a certificate for <code>" + domain + "</code>. It’s issued automatically on the first secure visit and can take a minute or two. This checks again shortly.";
+        if (recheck) recheck.hidden = false;
+      }
+    }
+
+    function stop() { if (timer) { clearTimeout(timer); timer = null; } }
+
+    function check(manual) {
+      if (manual) { setClass("is-checking"); stateEl.textContent = "Checking HTTPS certificate…"; }
+      fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          render(d && d.status === "active" ? "active" : "pending");
+          attempts++;
+          if ((!d || d.status !== "active") && attempts < maxAuto) {
+            timer = setTimeout(function () { check(false); }, 12000);
+          }
+        })
+        .catch(function () {
+          render("pending");
+          attempts++;
+          if (attempts < maxAuto) timer = setTimeout(function () { check(false); }, 12000);
+        });
+    }
+
+    if (recheck) recheck.addEventListener("click", function () { attempts = 0; check(true); });
+    check(false);
+  }
+})();
+</script>
+
+<script nonce="{{ csp_nonce }}">
+// Tutorial video overlay: open from the header button, play in a landscape
+// (16:9) stage. The source is set on open and cleared on close so the video
+// stops and nothing preloads until it's wanted. CSP-safe: no inline handlers.
+(function () {
+  "use strict";
+  var modal = document.getElementById("dom-video");
+  if (!modal) return;
+  var video = modal.querySelector("[data-tut-video]");
+  var heading = modal.querySelector("[data-tut-heading]");
+
+  function open(trigger) {
+    var src = trigger.getAttribute("data-tut-src");
+    if (!src || !video) return;
+    var poster = trigger.getAttribute("data-tut-poster");
+    var title = trigger.getAttribute("data-tut-title");
+    if (poster) video.setAttribute("poster", poster); else video.removeAttribute("poster");
+    if (title && heading) heading.textContent = title;
+    if (video.getAttribute("src") !== src) video.setAttribute("src", src);
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.documentElement.style.overflow = "hidden";
+    try { video.play(); } catch (e) {}
+  }
+  function close() {
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+    document.documentElement.style.overflow = "";
+    if (video) { try { video.pause(); } catch (e) {} }
+  }
+
+  document.addEventListener("click", function (e) {
+    var opener = e.target.closest && e.target.closest("[data-tut-open]");
+    if (opener) { e.preventDefault(); open(opener); return; }
+    if (e.target.closest && e.target.closest("[data-tut-close]")) { e.preventDefault(); close(); }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !modal.hidden) close();
+  });
+})();
+</script>
 {% endblock %}

@@ -2,7 +2,7 @@
 
 Protects secrets that OneWooz must be able to *use*, not merely verify:
 payment gateway keys, courier API credentials, OAuth tokens, warehouse contact
-details. Passwords are never encrypted — they are hashed with Argon2id and
+details. Passwords are never encrypted  they are hashed with Argon2id and
 never recoverable.
 
 Three deliberate differences from the implementation this replaces, each of
@@ -10,8 +10,8 @@ which was a real defect there:
 
 1. **A dedicated key.** The old code derived its encryption key from
    ``SECRET_KEY`` with a bare SHA-256 and no salt. That couples credential
-   encryption to a value that gets rotated for unrelated reasons — session
-   invalidation, a leaked signing key — and rotating it silently destroyed
+   encryption to a value that gets rotated for unrelated reasons  session
+   invalidation, a leaked signing key  and rotating it silently destroyed
    every stored credential. Here the key comes from ``FIELD_ENCRYPTION_KEY``
    and nothing else uses it.
 
@@ -111,7 +111,7 @@ def decrypt(stored: str, *, purpose: str = "credential") -> str:
     """Decrypt a stored value.
 
     Raises :class:`DecryptionError` on any failure. A caller that genuinely
-    wants a tolerant read should catch it explicitly and decide what to do —
+    wants a tolerant read should catch it explicitly and decide what to do 
     the decision is never made silently here.
     """
     if not stored:

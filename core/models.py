@@ -49,7 +49,7 @@ class BaseModel(TimeStampedModel):
 class SoftDeleteMixin(models.Model):
     """Reversible deletion for records an owner can remove from the UI.
 
-    Used where a hard delete would orphan history that must survive — deleting
+    Used where a hard delete would orphan history that must survive  deleting
     a product must not break the line items of orders that already contain it.
     """
 
@@ -92,8 +92,8 @@ class TenantScopedModel(BaseModel):
 
     objects = SiteScopedManager()
 
-    # Used by Django internals — related-object fetching, migrations,
-    # ``dumpdata`` — which must not be subject to tenant scoping.
+    # Used by Django internals  related-object fetching, migrations,
+    # ``dumpdata``  which must not be subject to tenant scoping.
     all_objects = models.Manager()
 
     class Meta:
@@ -107,7 +107,7 @@ class AuditEvent(BaseModel):
     Written for anything that changes money, access, or another person's data:
     admin actions, impersonation, credential changes, plan changes, domain
     verification, refunds. Rows are never updated and never deleted by
-    application code — the table is the evidence.
+    application code  the table is the evidence.
 
     Actor and target are stored denormalised as strings rather than as foreign
     keys, so the trail survives deletion of the account it describes. Losing an

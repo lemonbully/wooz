@@ -1,7 +1,6 @@
 {% extends "web/_shell.html" %}
 {% load onewooz %}
 
-{% block title %}Pricing · OneWooz{% endblock %}
 
 {% block main %}
 
@@ -13,10 +12,818 @@
       Build your store and see it live before you decide anything. No card to
       begin, and we never take a cut of your sales.
     </p>
+    {% if demo_links %}
+    <div class="pal-btn-row pal-mt-6">
+      {% for d in demo_links %}
+      <a href="{{ d.url }}" class="pal-btn{% if not forloop.first %} pal-btn--ghost{% endif %}" target="_blank" rel="noopener noreferrer">{{ d.label }} <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
 </header>
 
-{% comment %} Placeholder tiers — swap the figures for the real plan once set. {% endcomment %}
+{% if plans %}
+<style nonce="{{ csp_nonce }}">
+  /* ── Cadence toggle  squared segmented control ( register). ── */
+  .ow-cycle-wrap{display:flex;justify-content:center}
+  .ow-toggle{display:inline-flex;border:1px solid var(--pal-line);background:var(--pal-panel)}
+  .ow-toggle button{appearance:none;border:0;border-right:1px solid var(--pal-line);background:transparent;
+    font-family:var(--pal-font-mono);font-size:.68rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+    padding:.72rem 1.3rem;cursor:pointer;color:var(--pal-muted);transition:background .16s ease,color .16s ease}
+  .ow-toggle button:last-child{border-right:0}
+  .ow-toggle button:hover{color:var(--pal-ink)}
+  .ow-toggle button[aria-pressed="true"]{background:var(--pal-ink);color:var(--pal-paper)}
+
+  /* ── Pricing-card fixes (match the demo tiers exactly) ── */
+  /* The live price number sits in a <span> so JS can swap it on cadence change;
+     without this it inherits the small "/ month" suffix styling. Force it back
+     to the large display figure. */
+  .pal-plan__price .ow-price-num{font-family:inherit;font-size:inherit;letter-spacing:inherit;color:inherit}
+  /* Match the grid's column count to the number of plans so no empty (line-
+     coloured) cell shows when there are fewer than three; and centre / cap the
+     grid for one or two plans so the cards don't stretch and look empty.
+     NOTE: the attribute is `data-plan-count`, NOT `data-count`  the reveal
+     script treats any `[data-count]` element as an animate-from-zero counter
+     and would wipe the grid's children. */
+  .pal-plans[data-plan-count="1"]{grid-template-columns:1fr;max-width:27rem;margin-inline:auto}
+  .pal-plans[data-plan-count="2"]{grid-template-columns:repeat(2,1fr);max-width:56rem;margin-inline:auto}
+  .pal-plans[data-plan-count="4"]{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:60rem){
+    .pal-plans[data-plan-count="2"],.pal-plans[data-plan-count="4"]{grid-template-columns:1fr;max-width:27rem}
+  }
+  /* The cadence toggle hides non-matching plan cards via the `hidden` attribute.
+     `.pal-plan` sets `display:flex`, which beats the UA `[hidden]` rule  so
+     force it, or the toggle filters nothing. */
+  .pal-plan[hidden]{display:none !important}
+
+  /* ── Purchase modals  squared, hairline-ruled, no glow, one accent. ── */
+  .ow-modal{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;
+    padding:1.25rem;background:rgb(10 10 11 / .62);animation:ow-fade .16s ease}
+  .ow-modal[hidden]{display:none}
+  .ow-modal__box{position:relative;width:100%;max-width:26rem;background:var(--pal-panel);
+    border:1px solid var(--pal-ink);box-shadow:14px 14px 0 -1px rgb(10 10 11 / .08);
+    padding:clamp(1.25rem,1rem + 1.4vw,1.7rem);max-height:90vh;overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:none;-ms-overflow-style:none;animation:ow-rise .28s cubic-bezier(.16,1,.3,1)}
+  .ow-modal__box::-webkit-scrollbar{width:0;height:0;display:none}
+  .ow-modal__box--wide{max-width:38rem}
+  .ow-modal__box--form{max-width:34rem}
+  /* corner brackets  the registration-mark motif (flush inside the border so
+     they never nudge the box into an overflow that would show a scrollbar) */
+  .ow-modal__box::before,.ow-modal__box::after{content:"";position:absolute;width:11px;height:11px;pointer-events:none;z-index:2}
+  .ow-modal__box::before{top:0;left:0;border-top:1.5px solid var(--pal-accent);border-left:1.5px solid var(--pal-accent)}
+  .ow-modal__box::after{bottom:0;right:0;border-bottom:1.5px solid var(--pal-accent);border-right:1.5px solid var(--pal-accent)}
+  @keyframes ow-fade{from{opacity:0}to{opacity:1}}
+  @keyframes ow-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+  .ow-modal__head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;
+    padding-bottom:.85rem;border-bottom:1px solid var(--pal-line);margin-bottom:1.1rem}
+  .ow-kick{font-family:var(--pal-font-mono);font-size:.6rem;font-weight:500;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--pal-accent);margin:0 0 .45rem}
+  .ow-modal__title{font-family:var(--pal-font-display);font-weight:500;font-size:1.32rem;letter-spacing:-.03em;
+    line-height:1.02;margin:0;color:var(--pal-ink)}
+  .ow-modal__sub{font-family:var(--pal-font-mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--pal-muted);margin:.5rem 0 0;line-height:1.5}
+  .ow-modal__sub strong{color:var(--pal-ink);font-weight:500}
+  .ow-modal__x{appearance:none;border:1px solid var(--pal-line);background:transparent;width:2rem;height:2rem;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;font-size:1.15rem;line-height:1;cursor:pointer;
+    color:var(--pal-muted);transition:color .16s ease,border-color .16s ease}
+  .ow-modal__x:hover{color:var(--pal-accent);border-color:var(--pal-accent)}
+
+  .ow-f{margin-top:.9rem}
+  .ow-f:first-of-type{margin-top:0}
+  .ow-f label{display:block;font-family:var(--pal-font-mono);font-size:.6rem;font-weight:500;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--pal-muted);margin-bottom:.4rem}
+  .ow-f label span{text-transform:none;letter-spacing:0;color:var(--pal-faint);font-weight:500}
+  .ow-in{width:100%;font-family:var(--pal-font-body);font-size:.9rem;padding:.6rem .75rem;border-radius:0;
+    border:1px solid var(--pal-line);background:var(--pal-panel);color:var(--pal-ink)}
+  .ow-in::placeholder{color:var(--pal-faint)}
+  .ow-in:focus{outline:none;border-color:var(--pal-accent);box-shadow:inset 0 0 0 1px var(--pal-accent)}
+
+  /* Landscape two-column form (details step). */
+  .ow-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem 1rem}
+  .ow-form-grid .ow-f{margin-top:0}
+  .ow-form-grid .ow-f--full{grid-column:1 / -1}
+  .ow-f--disc{margin-top:.7rem}
+
+  .ow-err{font-family:var(--pal-font-mono);font-size:.64rem;letter-spacing:.03em;line-height:1.55;color:#b0271d;
+    margin-top:.85rem;border-left:2px solid #b0271d;padding-left:.65rem}
+  .ow-err[hidden]{display:none}
+  .ow-ok{font-family:var(--pal-font-mono);font-size:.64rem;letter-spacing:.03em;color:var(--positive);
+    margin-top:.85rem;border-left:2px solid var(--positive);padding-left:.65rem}
+  .ow-ok[hidden]{display:none}
+
+  .ow-link{display:inline-block;background:none;border:0;padding:0;font-family:var(--pal-font-mono);font-size:.6rem;
+    font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--pal-accent);cursor:pointer;
+    margin-top:.85rem;border-bottom:1px solid currentColor;line-height:1.4;transition:color .16s ease}
+  .ow-link:hover{color:var(--pal-ink)}
+  .ow-disc{display:flex;gap:.5rem}
+  .ow-disc .ow-in{flex:1}
+  .ow-disc .pal-btn{margin-top:0;flex:0 0 auto}
+  .ow-disc-info{font-family:var(--pal-font-mono);font-size:.62rem;letter-spacing:.03em;margin-top:.6rem}
+  .ow-disc-info.ok{color:var(--positive)}
+  .ow-disc-info.bad{color:#b0271d}
+
+  .ow-rows{margin-top:.25rem}
+  .ow-r{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;
+    padding:.72rem 0;border-bottom:1px solid var(--pal-line-soft)}
+  .ow-r > span:first-child{font-family:var(--pal-font-mono);font-size:.64rem;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--pal-muted)}
+  .ow-r > span:last-child{font-family:var(--pal-font-display);font-size:1rem;color:var(--pal-ink);font-feature-settings:"tnum"}
+  .ow-r--total{border-bottom:0;padding-top:1rem;margin-top:.3rem;border-top:1px solid var(--pal-ink)}
+  .ow-r--total > span:last-child{font-size:1.55rem;font-weight:500;letter-spacing:-.02em}
+  .ow-r--disc > span:last-child{color:var(--positive)}
+  .ow-r--disc span span{color:var(--pal-faint)}
+
+  .ow-note{font-family:var(--pal-font-mono);font-size:.56rem;letter-spacing:.05em;line-height:1.6;
+    text-transform:uppercase;color:var(--pal-faint);margin-top:1rem}
+  .ow-btn-full{width:100%;justify-content:center;margin-top:1.15rem}
+  .ow-modal__foot{display:flex;gap:.75rem;margin-top:1.25rem}
+  .ow-modal__foot .pal-btn{flex:1;justify-content:center;margin-top:0}
+
+  /* ── Agreement body  a datasheet panel, scrollable. ── */
+  .ow-agree-body{max-height:52vh;overflow-y:auto;overflow-x:hidden;padding:1.25rem;border:1px solid var(--pal-line);
+    background:var(--pal-paper);font-family:var(--pal-font-body);font-size:.92rem;line-height:1.65;color:var(--pal-ink-2);
+    scrollbar-width:none;-ms-overflow-style:none}
+  .ow-agree-body::-webkit-scrollbar{width:0;height:0;display:none}
+  .ow-agree-body h3,.ow-agree-body h4{font-family:var(--pal-font-display);font-weight:500;font-size:1.1rem;
+    letter-spacing:-.02em;margin:.15rem 0 .8rem;color:var(--pal-ink)}
+  .ow-agree-body p{margin:0 0 .85rem}
+  .ow-agree-body p:last-child{margin-bottom:0}
+  .ow-agree-load{display:flex;justify-content:center;align-items:center;min-height:6rem;
+    font-family:var(--pal-font-mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--pal-faint)}
+
+  /* ── OTP digit cells  squared. ── */
+  .ow-otp-row{display:flex;gap:.5rem;justify-content:space-between;margin:0}
+  .ow-otp-in{width:100%;text-align:center;font-family:var(--pal-font-display);font-size:1.45rem;font-weight:500;
+    padding:.7rem 0;border-radius:0;border:1px solid var(--pal-line);background:var(--pal-panel);
+    color:var(--pal-ink);font-feature-settings:"tnum"}
+  .ow-otp-in:focus{outline:none;border-color:var(--pal-accent);box-shadow:inset 0 0 0 1px var(--pal-accent)}
+  .ow-otp-sent{font-family:var(--pal-font-mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--pal-muted);margin-top:1.15rem;text-align:center}
+  .ow-otp-sent strong{color:var(--pal-ink);font-weight:500}
+  .ow-resend{background:none;border:0;padding:0;font-family:var(--pal-font-mono);font-size:.62rem;font-weight:500;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--pal-accent);cursor:pointer;border-bottom:1px solid currentColor}
+  .ow-resend:hover{color:var(--pal-ink)}
+  .ow-resend:disabled{color:var(--pal-faint);cursor:default;border-color:transparent}
+
+  /* ── Responsive + reduced motion ── */
+  @media (max-width:34rem){
+    .ow-form-grid{grid-template-columns:1fr;gap:.85rem}
+  }
+  @media (max-width:30rem){
+    .ow-modal{padding:.6rem}
+    .ow-modal__box{padding:1.25rem 1.05rem}
+    .ow-modal__title{font-size:1.22rem}
+    .ow-otp-row{gap:.35rem}
+    .ow-otp-in{font-size:1.15rem;padding:.55rem 0}
+    .ow-toggle button{padding:.6rem .85rem;font-size:.6rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .ow-modal,.ow-modal__box{animation:none}
+  }
+</style>
+
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>Plans</span></div>
+
+    {% if has_recurring %}
+    <div class="ow-cycle-wrap pal-mt-8" data-reveal>
+      <div class="ow-toggle" role="group" aria-label="Billing period" id="ow-cycle" data-default="{{ default_duration }}">
+        {% for d in durations %}
+        <button type="button" data-cycle="{{ d.key }}" aria-pressed="{% if d.key == default_duration %}true{% else %}false{% endif %}">{{ d.label }}</button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="pal-plans pal-mt-8" data-reveal data-plan-count="{{ plans|length }}">
+      {% for plan in plans %}
+      <div class="pal-plan{% if plan.is_featured %} pal-plan--featured{% endif %}"
+           {% if plan.is_purchasable %}data-plan-card data-plan-slug="{{ plan.slug }}" data-plan-name="{{ plan.name }}"
+             {% if plan.is_one_time %}data-one-time="1"{% else %}data-plan-duration="{{ plan.duration }}"{% endif %}
+           {% elif plan.plan_type == 'free' and not plan.custom_cta_url %}data-plan-card data-plan-slug="{{ plan.slug }}" data-plan-name="{{ plan.name }}" data-free="1"{% endif %}>
+        {% if plan.badge %}
+        <span class="pal-doodle pal-doodle--plan" aria-hidden="true">
+          <span class="pal-note">{{ plan.badge }}</span>
+          <svg width="30" height="26" viewBox="0 0 30 26"><path d="M2 3c8 2 13 8 15 17"/><path d="M11 17l6 4 3-6"/></svg>
+        </span>
+        {% endif %}
+
+        <div class="pal-plan__name">{{ plan.name }}</div>
+
+        {% if plan.plan_type == 'free' %}
+          <div class="pal-plan__price">Free</div>
+        {% elif plan.plan_type == 'custom' %}
+          <div class="pal-plan__price">Custom</div>
+        {% elif plan.is_one_time %}
+          <div class="pal-plan__price">₹ <span class="ow-price-num">{{ plan.one_time_total|floatformat:'-2' }}</span> <span>/ year</span></div>
+        {% else %}
+          <div class="pal-plan__price">₹ <span class="ow-price-num">{{ plan.card_per_month|floatformat:'-2' }}</span> <span>/ month</span></div>
+        {% endif %}
+
+        {% if plan.tagline %}<div class="pal-plan__desc">{{ plan.tagline }}</div>{% endif %}
+
+        {% if plan.feature_list %}
+        <ul class="pal-plan__list">
+          {% for f in plan.feature_list %}
+          <li{% if not f.included %} style="opacity:.5;text-decoration:line-through"{% endif %}><span>{{ f.text }}</span>{% if f.value %}<span class="pal-plan__fval">{{ f.value }}</span>{% endif %}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% include "partials/_plan_fee.html" %}
+
+        <div class="pal-plan__cta">
+          {% if plan.plan_type == 'free' %}
+            {% if plan.custom_cta_url %}
+              <a href="{{ plan.custom_cta_url }}"
+                 class="pal-btn{% if not plan.is_featured %} pal-btn--ghost{% endif %}">{{ plan.cta_label|default:"Start free" }}</a>
+            {% else %}
+              <a href="#" data-buy class="pal-btn{% if not plan.is_featured %} pal-btn--ghost{% endif %}">{{ plan.cta_label|default:"Start free" }}</a>
+            {% endif %}
+          {% elif plan.plan_type == 'custom' %}
+            <a href="{% if plan.custom_cta_url %}{{ plan.custom_cta_url }}{% else %}{% url 'web:contact' %}{% endif %}"
+               class="pal-btn{% if not plan.is_featured %} pal-btn--ghost{% endif %}">{{ plan.cta_label|default:"Talk to us" }}</a>
+          {% else %}
+            <a href="#" data-buy class="pal-btn{% if not plan.is_featured %} pal-btn--ghost{% endif %}">{{ plan.cta_label|default:"Choose plan" }}</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if has_paid or has_free_flow %}
+{# --------- Purchase modals (details -> breakdown -> Cashfree / free) --------- #}
+<span id="ow-billing" hidden
+      data-quote-url="{% url 'billing:quote' %}"
+      data-agreement-url="{% url 'billing:agreement' %}"
+      data-otp-send-url="{% url 'billing:otp_send' %}"
+      data-otp-verify-url="{% url 'billing:otp_verify' %}"
+      data-session-url="{% url 'billing:session' %}"
+      data-free-session-url="{% url 'billing:free_session' %}"></span>
+<form id="ow-csrf" hidden>{% csrf_token %}</form>
+
+<div class="ow-modal" id="ow-md-details" hidden aria-modal="true" role="dialog" aria-labelledby="ow-md-details-title">
+  <div class="ow-modal__box ow-modal__box--form">
+    <div class="ow-modal__head">
+      <div>
+        <p class="ow-kick">Checkout  01 / Details</p>
+        <h2 class="ow-modal__title" id="ow-md-details-title">Almost there</h2>
+        <p class="ow-modal__sub">Subscribing to <strong id="ow-d-plan"></strong> · <span id="ow-d-cycle"></span></p>
+      </div>
+      <button type="button" class="ow-modal__x" data-close aria-label="Close">&times;</button>
+    </div>
+
+    <div class="ow-form-grid">
+      <div class="ow-f">
+        <label for="ow-email">Email address</label>
+        <input class="ow-in" type="email" id="ow-email" autocomplete="email" placeholder="you@business.com">
+      </div>
+      <div class="ow-f">
+        <label for="ow-phone">Phone number</label>
+        <input class="ow-in" type="tel" id="ow-phone" autocomplete="tel" placeholder="10-digit mobile">
+      </div>
+      <div class="ow-f ow-f--full">
+        <label for="ow-name">Name <span>(optional)</span></label>
+        <input class="ow-in" type="text" id="ow-name" autocomplete="name" placeholder="Full name">
+      </div>
+    </div>
+
+    <button type="button" class="ow-link" id="ow-show-disc">Have a discount code?</button>
+    <div class="ow-f ow-f--disc" id="ow-disc-wrap" hidden>
+      <label for="ow-code">Discount code</label>
+      <div class="ow-disc">
+        <input class="ow-in" type="text" id="ow-code" placeholder="Enter code" autocapitalize="characters">
+        <button type="button" class="pal-btn pal-btn--ghost" id="ow-apply">Apply</button>
+      </div>
+      <div class="ow-disc-info" id="ow-disc-info" hidden></div>
+    </div>
+
+    <div class="ow-err" id="ow-md-err" role="alert" hidden></div>
+    <button type="button" class="pal-btn ow-btn-full" id="ow-continue">Continue</button>
+    <p class="ow-note" id="ow-d-note">Next: review the agreement, verify your email, see the 18% GST total, then pay via Cashfree. We never store your card details.</p>
+  </div>
+</div>
+
+{# --------- Agreement modal (review + accept) --------- #}
+<div class="ow-modal" id="ow-md-agree" hidden aria-modal="true" role="dialog" aria-labelledby="ow-md-agree-title">
+  <div class="ow-modal__box ow-modal__box--wide">
+    <div class="ow-modal__head">
+      <div>
+        <p class="ow-kick">Checkout  02 / Agreement</p>
+        <h2 class="ow-modal__title" id="ow-md-agree-title">User agreement</h2>
+        <p class="ow-modal__sub">Please review and accept to continue.</p>
+      </div>
+      <button type="button" class="ow-modal__x" data-close aria-label="Close">&times;</button>
+    </div>
+
+    <div class="ow-agree-body" id="ow-agree-body">
+      <div class="ow-agree-load">Loading agreement…</div>
+    </div>
+
+    <div class="ow-err" id="ow-agree-err" role="alert" hidden></div>
+    <div class="ow-modal__foot">
+      <button type="button" class="pal-btn pal-btn--ghost" id="ow-agree-back">Back</button>
+      <button type="button" class="pal-btn" id="ow-agree-accept">I accept</button>
+    </div>
+  </div>
+</div>
+
+<div class="ow-modal" id="ow-md-breakdown" hidden aria-modal="true" role="dialog" aria-labelledby="ow-md-breakdown-title">
+  <div class="ow-modal__box">
+    <div class="ow-modal__head">
+      <div>
+        <p class="ow-kick">Checkout  03 / Summary</p>
+        <h2 class="ow-modal__title" id="ow-md-breakdown-title">Order summary</h2>
+        <p class="ow-modal__sub"><strong id="ow-b-plan"></strong> · <span id="ow-b-cycle"></span></p>
+      </div>
+      <button type="button" class="ow-modal__x" data-close aria-label="Close">&times;</button>
+    </div>
+
+    <div class="ow-rows">
+      <div class="ow-r"><span id="ow-b-base-label">Base price</span><span id="ow-b-base">₹0.00</span></div>
+      <div class="ow-r ow-r--disc" id="ow-b-disc-row" hidden><span>Discount <span id="ow-b-disc-code"></span></span><span id="ow-b-disc">−₹0.00</span></div>
+      <div class="ow-r"><span>GST (<span id="ow-b-gst-rate">18</span>%)</span><span id="ow-b-gst">₹0.00</span></div>
+      <div class="ow-r ow-r--total"><span>Total</span><span id="ow-b-total">₹0.00</span></div>
+    </div>
+
+    <div class="ow-err" id="ow-bd-err" role="alert" hidden></div>
+    <div class="ow-modal__foot">
+      <button type="button" class="pal-btn pal-btn--ghost" id="ow-back">Back</button>
+      <button type="button" class="pal-btn" id="ow-proceed">Proceed</button>
+    </div>
+  </div>
+</div>
+
+{# --------- OTP verification modal --------- #}
+<div class="ow-modal" id="ow-md-otp" hidden aria-modal="true" role="dialog" aria-labelledby="ow-md-otp-title">
+  <div class="ow-modal__box">
+    <div class="ow-modal__head">
+      <div>
+        <p class="ow-kick">Checkout  04 / Verify</p>
+        <h2 class="ow-modal__title" id="ow-md-otp-title">Verify your email</h2>
+        <p class="ow-modal__sub">Enter the 6-digit code we emailed you.</p>
+      </div>
+      <button type="button" class="ow-modal__x" data-close aria-label="Close">&times;</button>
+    </div>
+
+    <div class="ow-otp-row" id="ow-otp-row">
+      <input class="ow-otp-in" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1" aria-label="OTP digit 1">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 2">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 3">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 4">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 5">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 6">
+    </div>
+
+    <p class="ow-otp-sent">Sent to <strong id="ow-otp-email"></strong></p>
+    <div class="ow-ok" id="ow-otp-ok" hidden></div>
+    <div class="ow-err" id="ow-otp-err" role="alert" hidden></div>
+
+    <button type="button" class="pal-btn ow-btn-full" id="ow-otp-verify">Verify &amp; pay</button>
+    <p class="ow-otp-sent" style="margin-top:.9rem">Didn’t get it? <button type="button" class="ow-resend" id="ow-otp-resend">Resend code</button></p>
+  </div>
+</div>
+
+{% if has_paid %}<script nonce="{{ csp_nonce }}" src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>{% endif %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var qs = function (s, r) { return (r || document).querySelector(s); };
+    var qsa = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+    var CFG = qs("#ow-billing");
+    if (!CFG) return;
+    var QUOTE_URL = CFG.getAttribute("data-quote-url");
+    var AGREEMENT_URL = CFG.getAttribute("data-agreement-url");
+    var OTP_SEND_URL = CFG.getAttribute("data-otp-send-url");
+    var OTP_VERIFY_URL = CFG.getAttribute("data-otp-verify-url");
+    var SESSION_URL = CFG.getAttribute("data-session-url");
+    var FREE_SESSION_URL = CFG.getAttribute("data-free-session-url");
+    var CSRF = (qs("#ow-csrf [name=csrfmiddlewaretoken]") || {}).value || "";
+
+    var LABELS = { monthly: "Monthly", quarterly: "Quarterly", half_yearly: "Half-yearly", yearly: "Yearly" };
+
+    function fmt(v) {
+      var n = parseFloat(v);
+      if (isNaN(n)) return v;
+      var parts = n.toFixed(2).split("."), whole = parts[0], dec = parts[1];
+      var last3 = whole.slice(-3), rest = whole.slice(0, -3);
+      if (rest) last3 = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last3;
+      return dec === "00" ? last3 : last3 + "." + dec;
+    }
+
+    function post(url, obj) {
+      var body = new URLSearchParams();
+      Object.keys(obj).forEach(function (k) { body.set(k, obj[k]); });
+      return fetch(url, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": CSRF,
+          "X-Requested-With": "XMLHttpRequest",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: body.toString(),
+        credentials: "same-origin",
+      }).then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); });
+    }
+
+    function showErr(el, msg) { if (el) { el.textContent = msg; el.hidden = false; } }
+    function hideErr(el) { if (el) { el.hidden = true; el.textContent = ""; } }
+
+    // ── Duration toggle  filters which plan cards are shown ─────────────
+    // Each recurring plan is its own object for one duration (data-plan-duration).
+    // Selecting a duration shows those cards; cards without a duration
+    // (free / custom / one-time) are always shown.
+    var toggle = qs("#ow-cycle");
+    var plansEl = qs(".pal-plans");
+    var allCards = qsa(".pal-plan");
+    function filterDuration(c) {
+      var shown = 0;
+      allCards.forEach(function (card) {
+        var d = card.getAttribute("data-plan-duration");
+        var hide = !!d && d !== c;
+        card.hidden = hide;
+        if (!hide) shown++;
+      });
+      // Resize the grid to what's actually visible so no empty columns show
+      // (the [data-plan-count] CSS handles 1 / 2 / 4; 3+ use the base grid).
+      if (plansEl && shown) plansEl.setAttribute("data-plan-count", String(shown));
+      if (toggle) qsa("button", toggle).forEach(function (b) {
+        b.setAttribute("aria-pressed", b.getAttribute("data-cycle") === c ? "true" : "false");
+      });
+    }
+    if (toggle) {
+      toggle.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-cycle]");
+        if (b) filterDuration(b.getAttribute("data-cycle"));
+      });
+      filterDuration(toggle.getAttribute("data-default") || "monthly");
+    }
+
+    // ── Modal plumbing ───────────────────────────────────────────────────
+    var mDetails = qs("#ow-md-details"), mAgree = qs("#ow-md-agree"),
+        mBreak = qs("#ow-md-breakdown"), mOtp = qs("#ow-md-otp");
+    var ALL_MODALS = [mDetails, mAgree, mBreak, mOtp];
+    function open(m) { if (m) m.hidden = false; }
+    function close(m) { if (m) m.hidden = true; }
+    function closeAll() { ALL_MODALS.forEach(close); }
+    qsa("[data-close]").forEach(function (x) {
+      x.addEventListener("click", closeAll);
+    });
+    ALL_MODALS.forEach(function (m) {
+      if (m) m.addEventListener("click", function (e) { if (e.target === m) close(m); });
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAll(); });
+
+    // Verified-email token minted by the OTP step; required to start payment.
+    var VERIFIED = "";
+    var current = { slug: "", name: "", oneTime: false, cycle: "", free: false };
+    // The cadence is intrinsic to the chosen plan (its own duration); one-time
+    // plans are always a single yearly charge. The server recomputes from the
+    // plan regardless, so this only drives the labels the buyer sees.
+    function effCycle() { return current.oneTime ? "yearly" : (current.cycle || "monthly"); }
+    function cycleLabel() { return current.oneTime ? "1 year" : (LABELS[current.cycle] || ""); }
+    var els = {
+      email: qs("#ow-email"), phone: qs("#ow-phone"), name: qs("#ow-name"),
+      code: qs("#ow-code"), discWrap: qs("#ow-disc-wrap"), discInfo: qs("#ow-disc-info"),
+      mdErr: qs("#ow-md-err"), bdErr: qs("#ow-bd-err"),
+      dPlan: qs("#ow-d-plan"), dCycle: qs("#ow-d-cycle"),
+      bPlan: qs("#ow-b-plan"), bCycle: qs("#ow-b-cycle"),
+      bBase: qs("#ow-b-base"), bBaseLabel: qs("#ow-b-base-label"),
+      bDiscRow: qs("#ow-b-disc-row"), bDisc: qs("#ow-b-disc"), bDiscCode: qs("#ow-b-disc-code"),
+      bGst: qs("#ow-b-gst"), bGstRate: qs("#ow-b-gst-rate"), bTotal: qs("#ow-b-total"),
+      proceed: qs("#ow-proceed"),
+      agreeBody: qs("#ow-agree-body"), agreeErr: qs("#ow-agree-err"), agreeAccept: qs("#ow-agree-accept"),
+      otpErr: qs("#ow-otp-err"), otpOk: qs("#ow-otp-ok"), otpEmail: qs("#ow-otp-email"),
+      otpVerify: qs("#ow-otp-verify"), otpResend: qs("#ow-otp-resend"),
+    };
+    var otpInputs = qsa(".ow-otp-in", qs("#ow-otp-row"));
+
+    // Open the details modal from a paid plan's button.
+    qsa("[data-buy]").forEach(function (a) {
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        var card = a.closest("[data-plan-card]");
+        if (!card) return;
+        current.slug = card.getAttribute("data-plan-slug");
+        current.name = card.getAttribute("data-plan-name");
+        current.free = card.hasAttribute("data-free");
+        current.oneTime = card.hasAttribute("data-one-time");
+        current.cycle = card.getAttribute("data-plan-duration") || "yearly";
+        VERIFIED = "";
+        if (els.email) els.email.value = "";
+        if (els.phone) els.phone.value = "";
+        if (els.name) els.name.value = "";
+        if (els.code) els.code.value = "";
+        if (els.discWrap) els.discWrap.hidden = true;
+        if (els.discInfo) els.discInfo.hidden = true;
+        // A free plan has nothing to discount and nothing to pay  hide the
+        // discount affordance and relabel the verify button accordingly.
+        var sd = qs("#ow-show-disc"); if (sd) sd.hidden = current.free;
+        if (els.otpVerify) els.otpVerify.textContent = current.free ? "Verify & activate" : "Verify & pay";
+        hideErr(els.mdErr);
+        if (els.dPlan) els.dPlan.textContent = current.name;
+        if (els.dCycle) els.dCycle.textContent = current.free ? "Free" : cycleLabel();
+        var note = qs("#ow-d-note");
+        if (note) note.textContent = current.free
+          ? "Next: review the agreement and verify your email  there’s nothing to pay."
+          : "Next: review the agreement, verify your email, see the 18% GST total, then pay via Cashfree. We never store your card details.";
+        open(mDetails);
+        if (els.email) els.email.focus();
+      });
+    });
+
+    // Reveal + apply discount.
+    var showDisc = qs("#ow-show-disc");
+    if (showDisc) showDisc.addEventListener("click", function () {
+      showDisc.hidden = true;
+      if (els.discWrap) els.discWrap.hidden = false;
+      if (els.code) els.code.focus();
+    });
+
+    function paintDiscInfo(q) {
+      if (!els.discInfo) return;
+      if (q.discount_error) {
+        els.discInfo.textContent = q.discount_error;
+        els.discInfo.className = "ow-disc-info bad";
+        els.discInfo.hidden = false;
+      } else if (parseFloat(q.discount_amount) > 0) {
+        els.discInfo.textContent = "Code applied  you save ₹" + fmt(q.discount_amount) + ".";
+        els.discInfo.className = "ow-disc-info ok";
+        els.discInfo.hidden = false;
+      } else {
+        els.discInfo.hidden = true;
+      }
+    }
+
+    var applyBtn = qs("#ow-apply");
+    if (applyBtn) applyBtn.addEventListener("click", function () {
+      var code = (els.code.value || "").trim();
+      if (!code) { showErr(els.mdErr, "Enter a discount code first."); return; }
+      hideErr(els.mdErr);
+      applyBtn.disabled = true;
+      post(QUOTE_URL, { slug: current.slug, cycle: effCycle(), code: code })
+        .then(function (r) { if (r.data && r.data.ok) paintDiscInfo(r.data.quote); })
+        .catch(function () {})
+        .then(function () { applyBtn.disabled = false; });
+    });
+
+    function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+    function digits(v) { return (v || "").replace(/\D+/g, ""); }
+
+    // Continue -> validate, then review the agreement.
+    var contBtn = qs("#ow-continue");
+    var agreementLoaded = false;
+    if (contBtn) contBtn.addEventListener("click", function () {
+      var email = (els.email.value || "").trim();
+      var phone = digits(els.phone.value);
+      if (!validEmail(email)) { showErr(els.mdErr, "Enter a valid email address."); return; }
+      if (phone.length < 10 || phone.length > 15) { showErr(els.mdErr, "Enter a valid phone number."); return; }
+      hideErr(els.mdErr);
+      // A change of email invalidates any earlier verification.
+      VERIFIED = "";
+      close(mDetails);
+      open(mAgree);
+      loadAgreement();
+    });
+
+    // ── Agreement step ───────────────────────────────────────────────────
+    function loadAgreement() {
+      hideErr(els.agreeErr);
+      if (agreementLoaded) return;
+      if (els.agreeBody) els.agreeBody.innerHTML = '<div class="ow-agree-load">Loading agreement…</div>';
+      fetch(AGREEMENT_URL, { headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.ok || !d.agreement) throw new Error("no agreement");
+          var a = d.agreement;
+          if (els.agreeBody) els.agreeBody.innerHTML =
+            "<h3>" + escapeHtml(a.title || "User agreement") + "</h3>" + (a.content || "");
+          agreementLoaded = true;
+        })
+        .catch(function () {
+          if (els.agreeBody) els.agreeBody.innerHTML = "";
+          showErr(els.agreeErr, "Couldn’t load the agreement. Please try again.");
+        });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    var agreeBack = qs("#ow-agree-back");
+    if (agreeBack) agreeBack.addEventListener("click", function () { close(mAgree); open(mDetails); });
+
+    // Accept -> fetch the breakdown and show the summary. A free plan has no
+    // priced quote to fetch (the quote endpoint only serves paid plans), so its
+    // summary is filled locally and shows "Free".
+    if (els.agreeAccept) els.agreeAccept.addEventListener("click", function () {
+      hideErr(els.agreeErr);
+      if (current.free) {
+        fillBreakdownFree();
+        hideErr(els.bdErr);
+        close(mAgree);
+        open(mBreak);
+        return;
+      }
+      els.agreeAccept.disabled = true;
+      var code = (els.code && els.code.value || "").trim();
+      post(QUOTE_URL, { slug: current.slug, cycle: effCycle(), code: code })
+        .then(function (r) {
+          if (!r.data || !r.data.ok) { showErr(els.agreeErr, "Something went wrong. Please try again."); return; }
+          fillBreakdown(r.data.quote);
+          hideErr(els.bdErr);
+          close(mAgree);
+          open(mBreak);
+        })
+        .catch(function () { showErr(els.agreeErr, "Network error. Please try again."); })
+        .then(function () { els.agreeAccept.disabled = false; });
+    });
+
+    function fillBreakdown(q) {
+      els.bPlan.textContent = current.name;
+      els.bCycle.textContent = cycleLabel();
+      els.bBaseLabel.textContent = "Base price (" + q.months + " month" + (q.months === 1 ? "" : "s") + ")";
+      els.bBase.textContent = "₹" + fmt(q.base);
+      if (parseFloat(q.discount_amount) > 0) {
+        els.bDiscRow.hidden = false;
+        els.bDisc.textContent = "−₹" + fmt(q.discount_amount);
+        els.bDiscCode.textContent = q.discount_code ? "· " + q.discount_code : "";
+      } else {
+        els.bDiscRow.hidden = true;
+      }
+      els.bGstRate.textContent = q.gst_rate;
+      els.bGst.textContent = "₹" + fmt(q.gst_amount);
+      // Re-show the GST row in case a free plan was viewed first (which hides it).
+      var gstRow = els.bGst ? els.bGst.closest(".ow-r") : null;
+      if (gstRow) gstRow.hidden = false;
+      els.bTotal.textContent = "₹" + fmt(q.total);
+    }
+
+    // Free plan summary: no base/discount/GST, total "Free".
+    function fillBreakdownFree() {
+      els.bPlan.textContent = current.name;
+      els.bCycle.textContent = "Free";
+      els.bBaseLabel.textContent = "Plan";
+      els.bBase.textContent = "Free";
+      if (els.bDiscRow) els.bDiscRow.hidden = true;
+      var gstRow = qs("#ow-b-gst") ? qs("#ow-b-gst").closest(".ow-r") : null;
+      if (gstRow) gstRow.hidden = true;
+      els.bTotal.textContent = "Free";
+    }
+
+    // Back from breakdown -> agreement.
+    var backBtn = qs("#ow-back");
+    if (backBtn) backBtn.addEventListener("click", function () { close(mBreak); open(mAgree); });
+
+    // ── OTP step ─────────────────────────────────────────────────────────
+    function otpValue() { return otpInputs.map(function (i) { return i.value; }).join(""); }
+    function resetOtp() { otpInputs.forEach(function (i) { i.value = ""; }); }
+
+    otpInputs.forEach(function (input, i) {
+      input.addEventListener("input", function () {
+        input.value = input.value.replace(/\D+/g, "").slice(0, 1);
+        if (input.value && i < otpInputs.length - 1) otpInputs[i + 1].focus();
+      });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Backspace" && !input.value && i > 0) { otpInputs[i - 1].focus(); }
+      });
+      input.addEventListener("paste", function (e) {
+        var raw = ((e.clipboardData || window.clipboardData) || {}).getData ?
+          (e.clipboardData || window.clipboardData).getData("text") : "";
+        var ds = (raw || "").replace(/\D+/g, "");
+        if (ds.length < 2) return;
+        e.preventDefault();
+        for (var k = 0; k < otpInputs.length; k++) otpInputs[k].value = ds[k] || "";
+        otpInputs[Math.min(ds.length, otpInputs.length) - 1].focus();
+      });
+    });
+
+    function sendOtp(isResend) {
+      hideErr(els.otpErr);
+      if (els.otpOk) els.otpOk.hidden = true;
+      return post(OTP_SEND_URL, {
+        slug: current.slug,
+        email: (els.email.value || "").trim(),
+        phone: digits(els.phone.value),
+      }).then(function (r) {
+        var d = r.data || {};
+        if (!d.ok) {
+          var msg = d.error || (d.errors && (d.errors.email || d.errors.phone)) || "Couldn’t send the code. Please try again.";
+          throw new Error(msg);
+        }
+        if (isResend && els.otpOk) { els.otpOk.textContent = "A new code is on its way."; els.otpOk.hidden = false; }
+        return true;
+      });
+    }
+
+    // Proceed (breakdown) -> send OTP, open the verify modal.
+    if (els.proceed) els.proceed.addEventListener("click", function () {
+      hideErr(els.bdErr);
+      els.proceed.disabled = true;
+      var original = els.proceed.textContent;
+      els.proceed.textContent = "Sending code…";
+      sendOtp(false).then(function () {
+        resetOtp();
+        if (els.otpEmail) els.otpEmail.textContent = (els.email.value || "").trim();
+        hideErr(els.otpErr);
+        if (els.otpOk) els.otpOk.hidden = true;
+        close(mBreak);
+        open(mOtp);
+        if (otpInputs[0]) otpInputs[0].focus();
+      }).catch(function (e) {
+        showErr(els.bdErr, (e && e.message) || "Couldn’t send the code. Please try again.");
+      }).then(function () {
+        els.proceed.disabled = false;
+        els.proceed.textContent = original;
+      });
+    });
+
+    if (els.otpResend) els.otpResend.addEventListener("click", function () {
+      els.otpResend.disabled = true;
+      sendOtp(true).catch(function (e) {
+        showErr(els.otpErr, (e && e.message) || "Couldn’t resend the code.");
+      }).then(function () {
+        setTimeout(function () { els.otpResend.disabled = false; }, 1200);
+      });
+    });
+
+    // Verify -> mint the verified token, then create the Cashfree session.
+    if (els.otpVerify) els.otpVerify.addEventListener("click", function () {
+      var code = otpValue();
+      if (!/^\d{6}$/.test(code)) { showErr(els.otpErr, "Enter the 6-digit code."); return; }
+      hideErr(els.otpErr);
+      if (els.otpOk) els.otpOk.hidden = true;
+      els.otpVerify.disabled = true;
+      var original = els.otpVerify.textContent;
+      els.otpVerify.textContent = "Verifying…";
+      post(OTP_VERIFY_URL, { email: (els.email.value || "").trim(), otp: code })
+        .then(function (r) {
+          var d = r.data || {};
+          if (!d.ok || !d.verified) { throw new Error(d.error || "That code is incorrect. Please try again."); }
+          VERIFIED = d.verified;
+          els.otpVerify.textContent = current.free ? "Activating…" : "Starting payment…";
+          return current.free ? startFree() : startPayment();
+        })
+        .catch(function (e) {
+          showErr(els.otpErr, (e && e.message) || "Network error. Please try again.");
+          els.otpVerify.disabled = false;
+          els.otpVerify.textContent = original;
+        });
+    });
+
+    // Free plan: settle the ₹0 order and go straight to onboarding.
+    function startFree() {
+      return post(FREE_SESSION_URL, {
+        slug: current.slug,
+        name: (els.name && els.name.value || "").trim(),
+        email: (els.email.value || "").trim(),
+        phone: digits(els.phone.value),
+        verified: VERIFIED,
+      }).then(function (r) {
+        var d = r.data || {};
+        if (!d.ok || !d.redirect) {
+          if (d.verify_required) { VERIFIED = ""; }
+          throw new Error(d.error || (d.errors && (d.errors.email || d.errors.phone)) || "We couldn’t activate this. Please try again.");
+        }
+        window.location.href = d.redirect;
+        return true;
+      });
+    }
+
+    // Create the Cashfree session and hand off to hosted checkout.
+    function startPayment() {
+      return post(SESSION_URL, {
+        slug: current.slug,
+        cycle: effCycle(),
+        code: (els.code && els.code.value || "").trim(),
+        name: (els.name && els.name.value || "").trim(),
+        email: (els.email.value || "").trim(),
+        phone: digits(els.phone.value),
+        verified: VERIFIED,
+      }).then(function (r) {
+        var d = r.data || {};
+        if (!d.ok || !d.payment_session_id) {
+          if (d.verify_required) { VERIFIED = ""; }
+          throw new Error(d.error || (d.errors && (d.errors.email || d.errors.phone)) || "We couldn’t start the payment. Please try again.");
+        }
+        if (typeof Cashfree !== "function") throw new Error("Couldn’t open the payment window. Please try again.");
+        var cf = Cashfree({ mode: d.mode });
+        cf.checkout({ paymentSessionId: d.payment_session_id, redirectTarget: "_self" });
+        return true;
+      });
+    }
+  })();
+</script>
+{% endif %}{# has_paid #}
+
+{% else %}
+{% comment %} No plans configured yet  static placeholder tiers so the page is never blank. {% endcomment %}
 <section class="pal-section pal-ruled">
   <div class="pal-container">
     <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>Plans</span></div>
@@ -68,16 +875,117 @@
     </div>
   </div>
 </section>
+{% endif %}
+
+{% if pricing_features %}
+{% comment %}
+Feature tabs under the pricing cards (billing.PricingFeature, managed in the
+admin). Titles run horizontally as tabs; the selected tab's description shows
+below. Accessible tabs pattern: click, arrow keys, Home/End. Without JS every
+description stays visible under its title, so nothing is ever hidden.
+{% endcomment %}
+<style nonce="{{ csp_nonce }}">
+  .ow-ftabs { margin-top: 3rem; }
+  .ow-ftabs__list { display: flex; gap: 0; overflow-x: auto; scrollbar-width: thin; border-bottom: 1px solid var(--pal-line);
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .ow-ftabs__tab { flex: 0 0 auto; scroll-snap-align: start; appearance: none; background: none; border: 0; cursor: pointer;
+    padding: 0.95rem 1.25rem 0.9rem; margin-bottom: -1px; border-bottom: 2px solid transparent;
+    font-family: var(--pal-font-display); font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.05rem); font-weight: 500;
+    letter-spacing: -0.01em; color: var(--pal-muted); white-space: nowrap; transition: color 160ms ease, border-color 160ms ease; }
+  .ow-ftabs__tab:hover { color: var(--pal-ink); }
+  .ow-ftabs__tab[aria-selected="true"] { color: var(--pal-ink); border-bottom-color: var(--pal-accent); }
+  .ow-ftabs__tab:focus-visible { outline: 2px solid var(--pal-accent); outline-offset: -2px; }
+  .ow-ftabs__panel { padding: 2rem 0 0.5rem; max-width: 62ch; }
+  .ow-ftabs__panel:focus-visible { outline: 2px solid var(--pal-accent); outline-offset: 4px; }
+  .ow-ftabs__title { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.35rem, 1.1rem + 1vw, 1.85rem);
+    letter-spacing: -0.02em; color: var(--pal-ink); line-height: 1.2; }
+  .ow-ftabs__desc { margin-top: 0.85rem; color: var(--pal-muted); font-size: 1rem; line-height: 1.7; }
+  /* No-JS: every panel shows under its own heading; the tab strip is JS-only. */
+  .ow-ftabs:not(.is-ready) .ow-ftabs__list { display: none; }
+  .ow-ftabs:not(.is-ready) .ow-ftabs__panel + .ow-ftabs__panel { border-top: 1px solid var(--pal-line-soft); }
+  @media (prefers-reduced-motion: reduce) { .ow-ftabs__tab { transition: none; } }
+</style>
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>What&rsquo;s included</span></div>
+    <div class="ow-ftabs" id="ow-ftabs" data-reveal>
+      <div class="ow-ftabs__list" role="tablist" aria-label="Features">
+        {% for f in pricing_features %}
+        <button type="button" class="ow-ftabs__tab" role="tab" id="ow-ftab-{{ forloop.counter }}"
+                aria-controls="ow-fpanel-{{ forloop.counter }}"
+                aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">{{ f.title }}</button>
+        {% endfor %}
+      </div>
+      {% for f in pricing_features %}
+      <div class="ow-ftabs__panel" role="tabpanel" id="ow-fpanel-{{ forloop.counter }}"
+           aria-labelledby="ow-ftab-{{ forloop.counter }}" tabindex="0">
+        <h3 class="ow-ftabs__title">{{ f.title }}</h3>
+        <div class="ow-ftabs__desc">{{ f.description|linebreaksbr }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  var root = document.getElementById("ow-ftabs");
+  if (!root) return;
+  var tabs = Array.prototype.slice.call(root.querySelectorAll('[role="tab"]'));
+  var panels = Array.prototype.slice.call(root.querySelectorAll('[role="tabpanel"]'));
+  var list = root.querySelector('[role="tablist"]');
+  if (!tabs.length) return;
+
+  // Bring a tab fully into view inside the horizontally scrolling strip. Only
+  // the strip scrolls; the page itself never jumps.
+  function reveal(tab) {
+    if (!list) return;
+    var left = tab.offsetLeft - list.offsetLeft;
+    var right = left + tab.offsetWidth;
+    if (left < list.scrollLeft) list.scrollLeft = left;
+    else if (right > list.scrollLeft + list.clientWidth) list.scrollLeft = right - list.clientWidth;
+  }
+
+  function select(i, focus) {
+    tabs.forEach(function (t, j) {
+      var on = j === i;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      panels[j].hidden = !on;
+    });
+    if (focus) tabs[i].focus({ preventScroll: true });
+    reveal(tabs[i]);
+  }
+
+  tabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { select(i, false); });
+    t.addEventListener("keydown", function (e) {
+      var n = tabs.length, k = e.key, next = null;
+      if (k === "ArrowRight") next = (i + 1) % n;
+      else if (k === "ArrowLeft") next = (i - 1 + n) % n;
+      else if (k === "Home") next = 0;
+      else if (k === "End") next = n - 1;
+      if (next !== null) { e.preventDefault(); select(next, true); }
+    });
+  });
+
+  root.classList.add("is-ready");
+  select(0, false);
+})();
+</script>
+{% endif %}
 
 {# -------------------------------------------------------------- FAQ #}
 <section class="pal-section pal-ruled">
   <div class="pal-container">
-    <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>Questions</span></div>
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">{% if pricing_features %}03{% else %}02{% endif %}</span><span>Questions</span></div>
     <div class="pal-matrix pal-mt-12" data-reveal>
       <div class="pal-matrix__row"><div class="pal-matrix__idx">01</div><div class="pal-matrix__body"><div class="pal-matrix__title">Do you take a cut of my sales?</div><div class="pal-matrix__desc">No. Your revenue is yours. Payment settlement goes to your own account through your payment provider.</div></div></div>
       <div class="pal-matrix__row"><div class="pal-matrix__idx">02</div><div class="pal-matrix__body"><div class="pal-matrix__title">What does it cost to try?</div><div class="pal-matrix__desc">Nothing. Build the store, see it live on a OneWooz address, and only pay when you connect a custom domain and go to market.</div></div></div>
       <div class="pal-matrix__row"><div class="pal-matrix__idx">03</div><div class="pal-matrix__body"><div class="pal-matrix__title">Can I leave?</div><div class="pal-matrix__desc">Any time. Export your data and point your domain elsewhere. There is no lock-in and nothing is held hostage.</div></div></div>
       <div class="pal-matrix__row"><div class="pal-matrix__idx">04</div><div class="pal-matrix__body"><div class="pal-matrix__title">Who owns the domain?</div><div class="pal-matrix__desc">You do. Connect a domain you already own, or one we help you register in your name.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">05</div><div class="pal-matrix__body"><div class="pal-matrix__title">Is email marketing included?</div><div class="pal-matrix__desc">Yes, it is built into the dashboard: campaigns, automatic welcome series, templates and AI writing, with opens and clicks tracked. Paid plans include it with a monthly sending allowance for your plan; on a free plan it is available when the plan lists it. <a href="{% url 'web:platform' %}#email-marketing">See how it works</a>.</div></div></div>
     </div>
   </div>
 </section>
@@ -88,7 +996,11 @@
     <h2 class="pal-display pal-cta__title pal-mt-6" style="font-size:clamp(2.4rem,1.2rem+5vw,4.5rem);" data-reveal>Build it free. Decide later.</h2>
     <div class="pal-btn-row pal-mt-8" data-reveal>
       <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
-      <a href="mailto:help@onewooz.com" class="pal-btn pal-btn--ghost">Talk to us first</a>
+      {% if demo_links_d2c %}
+        <a href="{{ demo_links_d2c.0.url }}" class="pal-btn pal-btn--ghost" target="_blank" rel="noopener noreferrer">See a live demo</a>
+      {% elif demo_links %}
+        <a href="{{ demo_links.0.url }}" class="pal-btn pal-btn--ghost" target="_blank" rel="noopener noreferrer">See a live demo</a>
+      {% endif %}
     </div>
   </div>
 </section>

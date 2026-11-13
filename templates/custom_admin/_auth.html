@@ -1,0 +1,49 @@
+{% load static onewooz %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>{% block title %}Staff sign-in · OneWooz Admin{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/admin/onewooz-admin.css' %}">
+  {% brand_favicon_links False %}
+</head>
+<body class="owa-auth">
+{% comment %}
+Staff auth layout for arcane.onewooz.com (sign-in, code, forgot, reset): an ink
+panel with the OneWooz mark and the access policy, beside the form card. Stacks
+into one column on narrow screens. Styles: css/admin/onewooz-admin.css (§14).
+{% endcomment %}
+<div class="owa-auth__grid">
+  <aside class="owa-auth__side">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="owa-brand">
+        <span class="owa-brand__mark"><img src="{% brand_logo_url %}" alt="" width="20" height="20"></span>
+        OneWooz
+      </span>
+      <span class="owa-tag"><span class="owa-tag__dot" aria-hidden="true"></span>Admin</span>
+    </div>
+    <div>
+      <h2 class="owa-auth__title-lg">Restricted<br><em>staff console.</em></h2>
+      <p class="owa-auth__lead">Platform administration for OneWooz. Access needs a staff account, a password and a one-time code sent to your email.</p>
+    </div>
+    <div class="owa-auth__specs">
+      <div class="owa-auth__spec"><span>Access</span><span>Staff only</span></div>
+      <div class="owa-auth__spec"><span>Sign-in</span><span>Password + email code</span></div>
+      <div class="owa-auth__spec"><span>Session</span><span>Idle timeout</span></div>
+      <div class="owa-auth__spec"><span>Activity</span><span>Audited</span></div>
+    </div>
+  </aside>
+
+  <main class="owa-auth__main">
+    <div class="owa-auth__card">
+      {% block card %}{% endblock %}
+    </div>
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

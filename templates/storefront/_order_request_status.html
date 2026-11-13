@@ -1,0 +1,31 @@
+{% comment %}
+Per-order request line for the shopper's account page: the request already
+raised (cancellation / replacement / support, with its status and the store's
+reply) and the buttons to raise one. Support can be asked on every order,
+whatever its status, one open query at a time. Needs
+storefront/_order_request.html once on the page (the modal).
+Context: order (annotated by commerce.order_requests.annotate_for_account).
+{% endcomment %}
+{% if order.cancel_request %}
+  <p class="orq-status">Cancellation request: <b>{{ order.cancel_request.get_status_display }}</b></p>
+{% endif %}
+{% if order.replace_request %}
+  <p class="orq-status">Replacement request: <b>{{ order.replace_request.get_status_display }}</b></p>
+{% endif %}
+{% if order.support_request %}
+  <p class="orq-status">Support request{% if order.support_request.reason %} ({{ order.support_request.reason }}){% endif %}: <b>{% if order.support_request.status == 'pending' %}Waiting for the store{% elif order.support_reply %}Answered{% else %}{{ order.support_request.get_status_display }}{% endif %}</b></p>
+  {% if order.support_reply %}
+    <div class="orq-reply"><span class="orq-reply__label">Store's reply</span>{{ order.support_reply|linebreaksbr }}</div>
+  {% endif %}
+{% endif %}
+<div class="orq-actions">
+  {% if order.can_cancel %}
+    <button type="button" class="orq-btn orq-btn--danger" data-orq-open data-orq-type="cancel" data-orq-url="{% url 'public_order_request' order.id %}" data-orq-order="{{ order.display_number }}">Request cancellation</button>
+  {% endif %}
+  {% if order.can_replace %}
+    <button type="button" class="orq-btn" data-orq-open data-orq-type="replace" data-orq-url="{% url 'public_order_request' order.id %}" data-orq-order="{{ order.display_number }}">Request replacement</button>
+  {% endif %}
+  {% if order.can_support %}
+    <button type="button" class="orq-btn orq-btn--support" data-orq-open data-orq-type="support" data-orq-url="{% url 'public_order_request' order.id %}" data-orq-order="{{ order.display_number }}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/></svg>Need help?</button>
+  {% endif %}
+</div>

@@ -1,4 +1,4 @@
-# OneWooz HA re-architecture — Phase 1: security groups, ElastiCache, ALB, NLB.
+# OneWooz HA re-architecture  Phase 1: security groups, ElastiCache, ALB, NLB.
 # Run in PowerShell. Captures all ARNs/endpoints into state.env for later phases.
 # Safe to read top-to-bottom; each step prints what it created.
 

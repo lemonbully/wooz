@@ -1,0 +1,22 @@
+{% extends "email/base.html" %}
+{% block preheader %}{{ store_name }} invited you to collaborate  enter your code to accept.{% endblock %}
+{% block kicker %}Collaboration{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text=store_name %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:23px; letter-spacing:-0.02em; line-height:1.15; color:#0a0a0b; margin:0 0 16px 0;">You've been invited to collaborate with {{ store_name }}</h1>
+
+  {% if collab_name %}<p style="margin:0 0 16px 0;">Hi {{ collab_name }},</p>{% endif %}
+  <p style="margin:0 0 16px 0;"><strong style="color:#0a0a0b;">{{ store_name }}</strong> would like you to promote their products as a referral partner. You’ll get your own store link and earn <strong style="color:#0a0a0b;">{{ commission_label }}</strong>.</p>
+  <p style="margin:0 0 8px 0;">Enter this one-time code on the contract page to accept:</p>
+
+  {% include "email/_code.html" with code=otp %}
+
+  {% include "email/_button.html" with url=contract_url label="Review &amp; accept" %}
+  <p style="margin:18px 0 0 0; font-size:13px; color:#66666b;">Or paste this link into your browser:</p>
+  <p style="margin:6px 0 0 0; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; word-break:break-all; color:#4b2bf5;">{{ contract_url }}</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0 0;">
+    <tr>
+      <td style="border-left:2px solid #4b2bf5; padding:1px 0 1px 14px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.55; color:#66666b;">This link and code are valid for about {{ hours }} hours. Once you accept, your referral store goes live and any orders placed through your link are credited to you. If you weren’t expecting this, you can ignore this email.</td>
+    </tr>
+  </table>
+{% endblock %}

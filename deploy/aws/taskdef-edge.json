@@ -17,9 +17,9 @@
       "essential": true,
       "memoryReservation": 256,
       "environment": [
-        { "name": "APP_UPSTREAM", "value": "localhost:8000" },
+        { "name": "APP_UPSTREAM", "value": "onewooz-alb-1587607702.ap-south-1.elb.amazonaws.com:8080" },
         { "name": "ACME_EMAIL", "value": "admin@onewooz.com" },
-        { "name": "REDIS_HOST", "value": "127.0.0.1" },
+        { "name": "REDIS_HOST", "value": "onewooz-redis.anbsbd.0001.aps1.cache.amazonaws.com" },
         { "name": "REDIS_PORT", "value": "6379" },
         { "name": "REDIS_TLS", "value": "false" }
       ],

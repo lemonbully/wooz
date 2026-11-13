@@ -1,0 +1,1077 @@
+{% extends store_base|default:"storefront/theme_base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% comment %}
+D2C checkout  a faithful re-creation of the 1matrix reference "order summary"
+checkout: Billing & Delivery on the left (Customer, GST, address, ship-to-a-
+different-address, free shipping, order notes) and a sticky Order summary on the
+right (items, subtotal/discount/store-credit/shipping/tax/total, coupon accordion
+with an applied chip, payment method, place-order CTA and a bulk-buy WhatsApp
+action), plus a mobile order-summary accordion. Wired to OneWooz's own cart /
+checkout JSON endpoints and its client-side Razorpay/Cashfree flow. Live shipping
+rates from the reference are intentionally omitted. Payment methods render as
+side-by-side cards (online / part now + rest on COD / COD) that wrap on narrow
+screens. A signed-in shopper's saved addresses (account page) appear as picker
+cards under the billing block (Billing / Shipping & billing) and under the
+ship-to-different block (Shipping / Shipping & billing); each block starts on
+its default (storefront.checkout_prefill.address_book). Shipping elsewhere
+posts the billing address separately (billing_address).
+{% endcomment %}
+
+{% block page_content %}
+{% website_base_path website request as website_base %}
+{% with sym=website.currency|currency_symbol %}
+<section class="bg-white py-2 md:py-6"
+         data-checkout data-base="{{ website_base }}"
+         data-currency="{{ website.currency|default:'INR' }}"
+         data-symbol="{{ sym }}"
+         data-gateway="{{ gateway_name }}"
+         data-partial-type="{{ partial_type }}"
+         data-partial-value="{{ partial_value }}"
+         data-credit-email="{{ credit_email|default:'' }}"
+         data-credit="{{ cart_summary.credit_discount|default:'0' }}"
+         data-total-before-credit="{{ cart_summary.total_before_credit|default:cart_summary.total }}">
+  <div class="mx-auto max-w-screen-xl px-4 2xl:px-0">
+    {% csrf_token %}
+
+    <div class="lg:grid lg:grid-cols-5 lg:gap-8 xl:gap-10">
+
+      <!-- Mobile order summary accordion (visible below lg) -->
+      <div class="block lg:hidden mt-2">
+        <button type="button" id="mobile-order-toggle" class="w-full flex items-center gap-3 rounded-lg border border-gray-400 bg-white px-3 py-2">
+          <span id="mobile-order-label" class="min-w-0 flex-1 text-left text-md font-medium text-gray-900">View products</span>
+          <div class="flex items-center gap-2">
+            <div class="text-sm font-semibold text-gray-900" data-sum-total>{{ sym }}{{ cart_summary.total }}</div>
+            <svg id="mobile-order-toggle-icon" class="w-4 h-4 text-gray-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </button>
+        <div id="mobile-order-panel" class="hidden mt-3"></div>
+        <div id="mobile-order-panel-spacer" class="h-5"></div>
+      </div>
+
+      <!-- LEFT: Billing & Delivery -->
+      <div class="mt-6 space-y-4 border-b border-t border-gray-200 py-8 sm:mt-8 lg:col-span-3 lg:border-0 lg:py-0 lg:order-1">
+        <h4 class="text-lg font-semibold text-gray-900">Billing &amp; delivery information</h4>
+
+        <form data-checkout-form onsubmit="return false;">
+          <dl>
+            <dt class="text-base font-medium text-gray-900">Customer</dt>
+            <dd class="mt-1 text-base font-normal text-gray-600">
+              <input name="name" required class="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-500 focus:ring-gray-500" placeholder="Your name" value="{{ prefill.name }}" autocomplete="name" />
+              <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input name="phone" inputmode="numeric" minlength="10" class="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-500 focus:ring-gray-500" placeholder="Phone (10 digits)" value="{{ prefill.phone }}" autocomplete="tel-national" />
+                <input name="email" type="email" class="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-gray-500 focus:ring-gray-500" placeholder="Email" value="{{ prefill.email }}" autocomplete="email" />
+              </div>
+              {% comment %}
+              Store credit follows a verified email only: a signed-in shopper's
+              credit comes off automatically; anyone else can prove their email
+              with a one-time code right here and the page reloads with it applied.
+              {% endcomment %}
+              {% if credit_email %}
+              <p class="mt-2 text-xs text-gray-500" data-credit-note>Signed in as {{ credit_email }}. Store credit on this email is applied automatically.</p>
+              {% else %}
+              <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700" data-credit-verify>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span>Have store credit? Verify your email to use it on this order.</span>
+                  <button type="button" class="font-medium text-gray-900 underline" data-credit-send>Send code</button>
+                </div>
+                <div class="mt-2 items-center gap-2" style="display:none" data-credit-code-row>
+                  <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white p-2 text-sm tracking-widest focus:border-gray-500 focus:ring-gray-500" placeholder="6-digit code" data-credit-code />
+                  <button type="button" class="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white" data-credit-verify-btn>Verify</button>
+                </div>
+                <p class="mt-1" style="display:none" data-credit-msg></p>
+              </div>
+              {% endif %}
+            </dd>
+          </dl>
+
+          <!-- Inline Billing & Shipping form -->
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <!-- GST -->
+            <div class="sm:col-span-2">
+              <div class="mb-2 flex items-center justify-start">
+                <input id="has_gst_onpage" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-gray-800 focus:ring-2 focus:ring-gray-400"{% if prefill.gstin %} checked{% endif %} />
+                <label for="has_gst_onpage" class="block text-sm font-medium text-gray-900 ml-2 cursor-pointer">Do you have GST?</label>
+              </div>
+              <div id="company_gst_row" class="{% if not prefill.gstin %}hidden {% endif %}grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="company_name_onpage" class="mb-2 block text-sm font-medium text-gray-900">Company name</label>
+                  <input type="text" id="company_name_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" placeholder="Company (optional)" value="{{ prefill.company_name }}" />
+                </div>
+                <div>
+                  <label for="gstin_onpage" class="mb-2 block text-sm font-medium text-gray-900">GSTIN*</label>
+                  <input type="text" id="gstin_onpage" maxlength="15" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm uppercase text-gray-900 focus:border-gray-500 focus:ring-gray-500" placeholder="15-character GSTIN" value="{{ prefill.gstin }}" />
+                </div>
+              </div>
+            </div>
+
+            {% if address_book.billing %}
+            {# Signed-in shopper: their saved billing addresses, above the address fields; picking one fills them, "New address" clears them. #}
+            <div class="sm:col-span-2 ab" data-ab="billing">
+              <p class="ab-title">Saved billing addresses</p>
+              <div class="ab-list" role="radiogroup" aria-label="Saved billing addresses">
+                {% for a in address_book.billing %}
+                <label class="ab-card">
+                  <input type="radio" name="ab_billing" value="{{ a.id }}"{% if a.id == address_book.billing_id %} checked{% endif %} />
+                  <span class="ab-body">
+                    <span class="ab-name">{{ a.label }}{% if a.is_default %}<span class="ab-tag">Default</span>{% endif %}</span>
+                    <span class="ab-line">{{ a.line }}</span>
+                  </span>
+                </label>
+                {% endfor %}
+                <label class="ab-card ab-card--new">
+                  <input type="radio" name="ab_billing" value="new" />
+                  <span class="ab-body">
+                    <span class="ab-name"><span class="ab-plus" aria-hidden="true">+</span>New address</span>
+                    <span class="ab-line">Clear the fields and enter a different address</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="sm:col-span-2">
+              <label for="country_onpage" class="mb-2 block text-sm font-medium text-gray-900">Country/Region*</label>
+              <select id="country_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500">
+                <option value="India" selected>India</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="house_onpage" class="mb-2 block text-sm font-medium text-gray-900">House No.*</label>
+              <input type="text" id="house_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" placeholder="House/Flat/Block" value="{{ prefill.house }}" required />
+            </div>
+            <div>
+              <label for="street_onpage" class="mb-2 block text-sm font-medium text-gray-900">Street/Area*</label>
+              <input type="text" id="street_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" placeholder="Street/Area" value="{{ prefill.street }}" required />
+            </div>
+            <div>
+              <label for="city_onpage" class="mb-2 block text-sm font-medium text-gray-900">City*</label>
+              <input type="text" id="city_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" placeholder="City" value="{{ prefill.city }}" required />
+            </div>
+            <div>
+              <label for="state_onpage" class="mb-2 block text-sm font-medium text-gray-900">State*</label>
+              <select id="state_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" required>
+                <option value=""{% if not prefill.state %} selected{% endif %} disabled>Select state</option>
+                {% for s in "Andhra Pradesh,Arunachal Pradesh,Assam,Bihar,Chhattisgarh,Goa,Gujarat,Haryana,Himachal Pradesh,Jharkhand,Karnataka,Kerala,Madhya Pradesh,Maharashtra,Manipur,Meghalaya,Mizoram,Nagaland,Odisha,Punjab,Rajasthan,Sikkim,Tamil Nadu,Telangana,Tripura,Uttar Pradesh,Uttarakhand,West Bengal,Andaman and Nicobar Islands,Chandigarh,Dadra and Nagar Haveli and Daman and Diu,Delhi,Jammu and Kashmir,Ladakh,Lakshadweep,Puducherry"|split:"," %}
+                <option value="{{ s }}"{% if prefill.state and s|lower == prefill.state|lower %} selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="pincode_onpage" class="mb-2 block text-sm font-medium text-gray-900">PIN*</label>
+              <input type="text" id="pincode_onpage" maxlength="6" inputmode="numeric" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" placeholder="PIN Code" value="{{ prefill.pincode }}" required />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label for="address_onpage" class="mb-2 block text-sm font-medium text-gray-900">Shipping Address</label>
+              <textarea id="address_onpage" rows="3" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" placeholder="Apartment, landmark, instructions (optional)">{{ prefill.notes }}</textarea>
+            </div>
+
+            <!-- Ship to a different address -->
+            <div class="sm:col-span-2">
+              <div class="flex items-center">
+                <input id="ship_diff_toggle_onpage" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-gray-800 focus:ring-2 focus:ring-gray-400"{% if address_book.ship_diff %} checked{% endif %} />
+                <label for="ship_diff_toggle_onpage" class="ml-2 text-sm font-medium text-gray-900 cursor-pointer">Ship to a different address?</label>
+              </div>
+            </div>
+            <div id="ship_diff_container_onpage" class="{% if not address_book.ship_diff %}hidden {% endif %}sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {% if address_book.shipping %}
+              {# Signed-in shopper: their saved shipping addresses, above the delivery fields; picking one fills them, "New address" clears them. #}
+              <div class="sm:col-span-2 ab" data-ab="shipping">
+                <p class="ab-title">Saved shipping addresses</p>
+                <div class="ab-list" role="radiogroup" aria-label="Saved shipping addresses">
+                  {% for a in address_book.shipping %}
+                  <label class="ab-card">
+                    <input type="radio" name="ab_shipping" value="{{ a.id }}"{% if address_book.ship_diff and a.id == address_book.shipping_id %} checked{% endif %} />
+                    <span class="ab-body">
+                      <span class="ab-name">{{ a.label }}{% if a.is_default %}<span class="ab-tag">Default</span>{% endif %}</span>
+                      <span class="ab-line">{{ a.line }}</span>
+                    </span>
+                  </label>
+                  {% endfor %}
+                  <label class="ab-card ab-card--new">
+                    <input type="radio" name="ab_shipping" value="new" />
+                    <span class="ab-body">
+                      <span class="ab-name"><span class="ab-plus" aria-hidden="true">+</span>New address</span>
+                      <span class="ab-line">Clear the fields and enter a different address</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+              {% endif %}
+              <div>
+                <label for="first_name_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900">Recipient name</label>
+                <input id="first_name_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" />
+              </div>
+              <div>
+                <label for="phone_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900">Recipient phone</label>
+                <input id="phone_ship_onpage" type="text" inputmode="numeric" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" value="{{ address_book.ship.phone|default:'' }}" />
+              </div>
+              <div>
+                <label for="house_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900">House No.</label>
+                <input id="house_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" value="{{ address_book.ship.house|default:'' }}" />
+              </div>
+              <div>
+                <label for="street_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900">Street/Area</label>
+                <input id="street_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" value="{{ address_book.ship.street|default:'' }}" />
+              </div>
+              <div>
+                <label for="city_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900">City</label>
+                <input id="city_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" value="{{ address_book.ship.city|default:'' }}" />
+              </div>
+              <div>
+                <label for="state_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900">State</label>
+                <select id="state_ship_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500">
+                  <option value=""{% if not address_book.ship.state %} selected{% endif %} disabled>Select state</option>
+                  {% for s in "Andhra Pradesh,Arunachal Pradesh,Assam,Bihar,Chhattisgarh,Goa,Gujarat,Haryana,Himachal Pradesh,Jharkhand,Karnataka,Kerala,Madhya Pradesh,Maharashtra,Manipur,Meghalaya,Mizoram,Nagaland,Odisha,Punjab,Rajasthan,Sikkim,Tamil Nadu,Telangana,Tripura,Uttar Pradesh,Uttarakhand,West Bengal,Andaman and Nicobar Islands,Chandigarh,Dadra and Nagar Haveli and Daman and Diu,Delhi,Jammu and Kashmir,Ladakh,Lakshadweep,Puducherry"|split:"," %}
+                  <option value="{{ s }}"{% if address_book.ship.state and s|lower == address_book.ship.state|lower %} selected{% endif %}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label for="pincode_ship_onpage" class="mb-2 block text-sm font-medium text-gray-900">PIN</label>
+                <input id="pincode_ship_onpage" type="text" maxlength="6" inputmode="numeric" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" value="{{ address_book.ship.pincode|default:'' }}" />
+              </div>
+
+            </div>
+            {% if address_book.billing or address_book.shipping %}{{ address_book|json_script:"checkout-address-book" }}{% endif %}
+          </div>
+
+          <!-- Shipping (free) -->
+          <div class="mt-6 rounded-lg bg-gray-50 p-4 border border-gray-200">
+            <div class="flex items-center justify-between">
+              <h5 class="text-base font-semibold text-gray-900">Shipping</h5>
+            </div>
+            <div class="mt-3 flex items-center">
+              <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900">Free Standard Shipping</p>
+                <p class="text-xs text-gray-500">Delivery in 5-7 business days</p>
+              </div>
+              <div class="text-base font-bold text-green-600">FREE</div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="mt-4">
+            <label for="order_notes" class="mb-2 block text-sm font-medium text-gray-900">Order notes</label>
+            <textarea id="order_notes" rows="3" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-gray-500 focus:ring-gray-500" placeholder="Notes about your order, e.g. special notes for delivery."></textarea>
+          </div>
+        </form>
+      </div>
+
+      <!-- RIGHT: Order summary (sticky) -->
+      <div id="order-summary-section" class="mt-6 sm:mt-8 lg:col-span-2 lg:order-2 lg:sticky lg:top-[120px] lg:self-start lg:rounded-xl lg:border lg:border-gray-200 lg:p-4 lg:bg-white">
+        <div class="relative overflow-hidden border-b border-gray-200">
+          <table class="w-full text-left font-medium text-gray-900 table-auto">
+            <tbody id="checkout-items-body" class="divide-y divide-gray-200">
+              {% for it in cart_items %}
+              <tr data-pid="{{ it.id }}" data-qty="{{ it.quantity }}" class="align-top">
+                <td class="py-4 w-full">
+                  <div class="flex items-start gap-4">
+                    <a href="{{ website_base }}products/{{ it.slug }}/" class="flex items-center aspect-square w-10 h-10 shrink-0">
+                      {% if it.image %}<img class="h-auto w-full max-h-full object-contain" src="{{ it.image.url }}" alt="{{ it.title }}" />{% endif %}
+                    </a>
+                    <div class="w-full grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                      <div class="flex-1 min-w-0">
+                        <a href="{{ website_base }}products/{{ it.slug }}/" class="hover:underline block text-sm font-medium text-gray-900 break-words [overflow-wrap:anywhere]">{{ it.title }}</a>
+                        {% if it.variant_label %}<div class="mt-0.5 text-[11px] text-gray-500">({{ it.variant_label }})</div>{% endif %}
+                        {% if it.mrp %}<div class="text-[11px] text-gray-500 line-through">MRP {{ sym }}{{ it.mrp }}</div>{% endif %}
+                        {% if not it.in_stock %}<div class="mt-0.5 text-xs font-medium text-red-600" data-stock-flag>Out of stock</div>{% elif it.short %}<div class="mt-0.5 text-xs font-medium text-red-600" data-stock-flag>Only {{ it.available }} left in stock</div>{% endif %}
+                        <button type="button" class="mt-1 text-xs text-red-600 hover:text-red-700 underline" data-action="remove">Remove</button>
+                      </div>
+                      <div class="flex items-center justify-end gap-3 shrink-0">
+                        <div class="inline-flex items-center gap-2">
+                          <button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="dec" aria-label="Decrease">−</button>
+                          <span class="min-w-[2ch] text-sm text-gray-900 text-center" data-role="qty">{{ it.quantity }}</span>
+                          <button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="inc" aria-label="Increase">+</button>
+                        </div>
+                        <span class="text-right text-base font-bold text-gray-900 whitespace-nowrap">{{ sym }}{{ it.line_total }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td class="py-6 text-center text-gray-500">No items in cart.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="my-4">
+          <h4 class="text-xl font-semibold text-gray-900">Order summary</h4>
+
+          <div class="mt-3 space-y-4">
+            <div class="space-y-2">
+              <dl class="flex items-center justify-between gap-4">
+                <dt class="text-gray-500">Subtotal</dt>
+                <dd id="checkout-subtotal" class="text-base font-medium text-gray-900">{{ sym }}{{ cart_summary.subtotal }}</dd>
+              </dl>
+              <dl id="checkout-discount-row" class="flex items-center justify-between gap-4 {% if not cart_summary.discount %}hidden{% endif %}">
+                <dt class="text-gray-500">Discount</dt>
+                <dd id="checkout-discount" class="text-base font-medium text-green-600">− {{ sym }}{{ cart_summary.discount }}</dd>
+              </dl>
+              <dl id="checkout-credit-row" class="flex items-center justify-between gap-4 {% if not cart_summary.credit_discount %}hidden{% endif %}">
+                <dt class="text-gray-500">Store Credit</dt>
+                <dd id="checkout-credit" class="text-base font-medium text-emerald-600">− {{ sym }}{{ cart_summary.credit_discount|default:"0.00" }}</dd>
+              </dl>
+              <dl class="flex items-center justify-between gap-4">
+                <dt class="text-gray-500">Shipping</dt>
+                <dd id="checkout-shipping" class="text-base font-medium text-gray-900">{{ sym }}0.00</dd>
+              </dl>
+              <dl id="checkout-tax-row" class="flex items-center justify-between gap-4 {% if not cart_summary.tax %}hidden{% endif %}">
+                <dt class="text-gray-500">GST</dt>
+                <dd id="checkout-tax" class="text-base font-medium text-gray-900">{{ sym }}{{ cart_summary.tax|default:"0.00" }}</dd>
+              </dl>
+            </div>
+
+            <dl class="flex items-center justify-between gap-4 border-t border-gray-200 pt-2">
+              <dt class="text-lg font-bold text-gray-900">Total</dt>
+              <dd id="checkout-total" class="text-lg font-bold text-gray-900">{{ sym }}{{ cart_summary.total }}</dd>
+            </dl>
+          </div>
+
+          <!-- Coupon accordion -->
+          <div class="mt-4 rounded-lg border border-gray-200" data-coupon-section>
+            <button type="button" id="coupon-accordion-btn" aria-expanded="true" class="w-full flex items-center justify-between px-4 py-3 text-left">
+              <span class="text-sm font-medium text-gray-900">Have a discount code?</span>
+              <svg id="coupon-accordion-icon" class="h-5 w-5 text-gray-500 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor" style="transform:rotate(180deg)"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+            </button>
+            <div id="coupon-accordion-panel" class="overflow-hidden transition-all duration-300 ease-in-out">
+              <div class="px-4 pb-4 space-y-3">
+                <div id="coupon-applied-row" class="{% if not cart_summary.coupon_code %}hidden {% endif %}rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800 flex items-center justify-between">
+                  <div><span class="font-semibold">Applied:</span> <span id="applied-coupon-code" class="ml-1">{{ cart_summary.coupon_code }}</span></div>
+                  <button type="button" id="remove-coupon" class="text-emerald-700 hover:text-emerald-900 underline">Remove</button>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <input id="coupon-input" type="text" spellcheck="false" value="{{ cart_summary.coupon_code }}" class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm uppercase text-gray-900 focus:border-gray-500 focus:ring-gray-500" placeholder="Enter code" />
+                  <button type="button" id="apply-coupon" class="w-full sm:w-auto shrink-0 inline-flex items-center justify-center rounded-lg bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800">Apply</button>
+                </div>
+                <p id="coupon-message" class="text-xs text-gray-500"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment method: one card per available option, side by side,
+               wrapping onto the next line on narrow screens. -->
+          {% if gateway_ready or cod_enabled %}
+          <style nonce="{{ csp_nonce }}">
+            .pm{margin:1.5rem 0;border:1px solid #e5e7eb;border-radius:.5rem;padding:1rem}
+            .pm-set{border:0;margin:0;padding:0;min-width:0}
+            .pm-legend{padding:0;margin:0 0 .75rem;font-size:1rem;font-weight:500;color:#111827}
+            .pm-grid{display:flex;flex-wrap:wrap;gap:.625rem}
+            .pm-card{position:relative;display:flex;flex:1 1 7rem;min-width:0;cursor:pointer;container-type:inline-size}
+            .pm-card--online{--pm-a:#2563eb;--pm-b:#7c3aed;--pm-ink:#1e3a8a;--pm-sub:#1d4ed8;--pm-soft-a:#eff6ff;--pm-soft-b:#f5f3ff;--pm-line:#bfdbfe;--pm-glow:rgba(37,99,235,.55)}
+            .pm-card--part{--pm-a:#c2410c;--pm-b:#be185d;--pm-ink:#7c2d12;--pm-sub:#c2410c;--pm-soft-a:#fff7ed;--pm-soft-b:#fdf2f8;--pm-line:#fdba74;--pm-glow:rgba(234,88,12,.5)}
+            .pm-card--cod{--pm-a:#047857;--pm-b:#0f766e;--pm-ink:#064e3b;--pm-sub:#047857;--pm-soft-a:#ecfdf5;--pm-soft-b:#f0fdfa;--pm-line:#6ee7b7;--pm-glow:rgba(5,150,105,.5)}
+            .pm-input{position:absolute;top:0;left:0;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+            .pm-body{position:relative;display:flex;align-items:center;gap:.5rem;width:100%;padding:.4rem .6rem;border:1px solid var(--pm-line,#e5e7eb);border-radius:.625rem;background:linear-gradient(135deg,var(--pm-soft-a,#fff),var(--pm-soft-b,#fff));transition:border-color .15s ease,box-shadow .2s ease,transform .2s ease}
+            .pm-card:hover .pm-body{border-color:var(--pm-a,#9ca3af);box-shadow:0 6px 14px -10px var(--pm-glow,rgba(0,0,0,.4))}
+            .pm-input:checked + .pm-body{border-color:transparent;background:linear-gradient(135deg,var(--pm-a,#000),var(--pm-b,#000));box-shadow:0 10px 22px -10px var(--pm-glow,rgba(0,0,0,.5));transform:translateY(-1px)}
+            .pm-input:focus-visible + .pm-body{outline:2px solid var(--pm-a,#111827);outline-offset:2px}
+            .pm-icon{display:inline-flex;flex:none;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border-radius:.4375rem;background:linear-gradient(135deg,var(--pm-a,#374151),var(--pm-b,#374151));color:#fff;box-shadow:0 4px 10px -6px var(--pm-glow,rgba(0,0,0,.4));transition:color .15s ease,box-shadow .15s ease}
+            .pm-icon svg{width:1rem;height:1rem}
+            .pm-input:checked + .pm-body .pm-icon{background:#fff;color:var(--pm-a,#111827);box-shadow:none}.pm-input:checked + .pm-body .pm-title{color:#fff}.pm-input:checked + .pm-body .pm-detail{color:rgba(255,255,255,.88)}.pm-input:checked + .pm-body .pm-detail .pm-amt{color:#fff}
+            .pm-text{display:flex;flex:1 1 auto;flex-direction:column;gap:.0625rem;min-width:0}
+            .pm-dot{position:relative;flex:none;width:1rem;height:1rem;border-radius:9999px;border:1.5px solid var(--pm-line,#d1d5db);background:#fff;transition:border-color .15s ease}
+            .pm-dot::after{content:"";position:absolute;inset:2.5px;border-radius:9999px;background:var(--pm-a,#111827);transform:scale(0);transition:transform .15s ease}
+            .pm-input:checked + .pm-body .pm-dot{border-color:#fff;background:transparent}.pm-input:checked + .pm-body .pm-dot::after{background:#fff}
+            .pm-input:checked + .pm-body .pm-dot::after{transform:scale(1)}
+            .pm-title{font-size:.8125rem;font-weight:600;line-height:1.2;color:var(--pm-ink,#111827)}
+            .pm-detail{font-size:.6875rem;line-height:1.25;color:var(--pm-sub,#6b7280)}
+            .pm-amt{white-space:nowrap}
+            .pm-detail .pm-amt{font-weight:600;color:var(--pm-ink,#374151)}
+            @container (max-width: 9.5rem){.pm-icon{display:none}.pm-body{gap:.375rem;padding:.4rem .5rem;border-left:3px solid var(--pm-a,#e5e7eb)}.pm-title{font-size:.75rem}.pm-detail{font-size:.65625rem}.pm-dot{width:.875rem;height:.875rem}.pm-dot::after{inset:2px}}
+            .pm-note{margin-top:.75rem;font-size:.8125rem;line-height:1.5;color:#4b5563}
+            .pm-note strong{font-weight:600;color:#111827}
+            .pm-split{margin-top:.75rem;padding:.75rem;border:1px solid #fdba74;border-radius:.5rem;background:linear-gradient(135deg,#fff7ed,#fdf2f8)}
+            .pm-bar{display:flex;height:.5rem;overflow:hidden;border-radius:9999px;background:linear-gradient(90deg,#047857,#0f766e)}
+            .pm-bar-now{background:linear-gradient(90deg,#2563eb,#7c3aed);transition:width .25s ease}
+            .pm-split-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-top:.5rem;font-size:.75rem;color:#4b5563}
+            .pm-split-row strong{font-weight:600;color:#111827;white-space:nowrap}
+            .pm-key{display:inline-flex;align-items:center;gap:.4rem}
+            .pm-swatch{width:.625rem;height:.625rem;border-radius:9999px;background:linear-gradient(135deg,#2563eb,#7c3aed)}
+            .pm-swatch--rest{background:linear-gradient(135deg,#047857,#0f766e)}
+            @media (prefers-reduced-motion:reduce){.pm-body,.pm-icon,.pm-dot,.pm-dot::after,.pm-bar-now{transition:none}.pm-input:checked + .pm-body{transform:none}}
+          </style>
+          <div id="payment-method-section" class="pm" data-payment-section>
+            <fieldset class="pm-set">
+              <legend class="pm-legend">Payment method</legend>
+              <div class="pm-grid">
+                {% if gateway_ready %}
+                <label class="pm-card pm-card--online">
+                  <input type="radio" name="method" value="gateway" class="pm-input" checked>
+                  <span class="pm-body">
+                    <span class="pm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h3"/></svg></span>
+                    <span class="pm-text">
+                      <span class="pm-title">Pay Online</span>
+                      <span class="pm-detail">UPI, cards, netbanking</span>
+                    </span>
+                    <span class="pm-dot" aria-hidden="true"></span>
+                  </span>
+                </label>
+                {% endif %}
+                {% if partial_enabled %}
+                <label class="pm-card pm-card--part">
+                  <input type="radio" name="method" value="partial" class="pm-input">
+                  <span class="pm-body">
+                    <span class="pm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg></span>
+                    <span class="pm-text">
+                      <span class="pm-title">Pay <span class="pm-amt" data-partial-now>{{ sym }}{{ partial_now }}</span> now</span>
+                      <span class="pm-detail">Rest <span class="pm-amt" data-partial-rest>{{ sym }}{{ partial_rest }}</span> on COD</span>
+                    </span>
+                    <span class="pm-dot" aria-hidden="true"></span>
+                  </span>
+                </label>
+                {% endif %}
+                {% if cod_enabled %}
+                <label class="pm-card pm-card--cod">
+                  <input type="radio" name="method" value="cod" class="pm-input" {% if not gateway_ready %}checked{% endif %}>
+                  <span class="pm-body">
+                    <span class="pm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5h.01M18 14.5h.01"/></svg></span>
+                    <span class="pm-text">
+                      <span class="pm-title">Cash on Delivery</span>
+                      <span class="pm-detail">Pay when it arrives</span>
+                    </span>
+                    <span class="pm-dot" aria-hidden="true"></span>
+                  </span>
+                </label>
+                {% endif %}
+              </div>
+            </fieldset>
+
+            <p class="pm-note" aria-live="polite" data-pay-note>
+              {% if gateway_ready %}You pay <strong>{{ sym }}{{ cart_summary.total }}</strong> now, online. Your order is confirmed as soon as the payment goes through.{% else %}You pay <strong>{{ sym }}{{ cart_summary.total }}</strong> when your order is delivered. Nothing to pay now.{% endif %}
+            </p>
+
+            {% if partial_enabled %}
+            <div id="partial-breakdown" class="pm-split hidden">
+              <div class="pm-bar" aria-hidden="true"><span class="pm-bar-now" data-partial-bar></span></div>
+              <div class="pm-split-row">
+                <span class="pm-key"><span class="pm-swatch" aria-hidden="true"></span>Online now</span>
+                <strong id="partial-online-amt">{{ sym }}{{ partial_now }}</strong>
+              </div>
+              <div class="pm-split-row">
+                <span class="pm-key"><span class="pm-swatch pm-swatch--rest" aria-hidden="true"></span>Cash on delivery (COD)</span>
+                <strong id="partial-cod-amt">{{ sym }}{{ partial_rest }}</strong>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {% if not gateway_ready and not cod_enabled %}
+          <div class="my-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <p class="text-sm font-medium text-amber-800">Online payments are currently unavailable.</p>
+            <p class="mt-1 text-xs text-amber-700">This store hasn't finished setting up its payment methods, so placing an order is disabled for now.</p>
+          </div>
+          {% endif %}
+
+          {% if request.GET.payment == 'incomplete' %}
+          <p class="my-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">Your payment wasn’t completed, so no order was placed. You can try again below. If money was debited from your account, please don’t pay again. Your order will be confirmed automatically once the payment reaches us.</p>
+          {% endif %}
+          <p class="my-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700{% if not stock_message %} hidden{% endif %}" data-stock-banner>{% if stock_message %}{{ stock_message }}{% else %}Some items in your cart are out of stock. Remove them or lower the quantity to continue.{% endif %}</p>
+          <p class="my-3 text-sm text-red-600 hidden" data-checkout-error></p>
+
+          <div id="order-cta-row" class="gap-4 sm:flex sm:items-center my-2" data-cta-section>
+            <a href="{{ website_base }}products/" class="w-full text-center rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100">Return to Shopping</a>
+            <button type="button" id="place-order" data-place
+                    {% if not gateway_ready and not cod_enabled or stock_message %}disabled{% endif %}
+                    {% if not gateway_ready and not cod_enabled %}data-payments-off{% endif %}
+                    class="mt-4 flex w-full items-center justify-center rounded-lg bg-black text-white px-5 py-3 text-sm font-medium hover:bg-gray-900 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed sm:mt-0">Place order</button>
+          </div>
+
+          <!-- Bulk buy WhatsApp -->
+          {% if website.support_phone %}
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <span class="text-sm font-medium text-gray-700">Bulk Buy Discount?</span>
+            <a id="bulk-whatsapp" href="{{ whatsapp_bulk_url }}"
+               data-phone="{{ website.support_phone|cut:'+'|cut:' ' }}" data-sym="{{ sym }}"
+               target="_blank" rel="noopener"
+               class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 bg-white text-green-600 hover:bg-green-50 hover:border-green-200" aria-label="WhatsApp support">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="h-5 w-5" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
+              </svg>
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if address_book.billing or address_book.shipping %}
+{% comment %}
+Saved-address pickers (signed-in shopper). Scoped CSS: the storefront's
+Tailwind build is precompiled, so new utility classes would not exist.
+Picking a card fills its block's fields; typing in a field deselects the card.
+{% endcomment %}
+<style nonce="{{ csp_nonce }}">
+  .ab{margin-top:.25rem}
+  .ab-title{margin:0 0 .5rem;font-size:.8rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;color:#374151}
+  .ab-list{display:grid;gap:.5rem}
+  @media (min-width:640px){.ab-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .ab-card{position:relative;display:flex;gap:.65rem;align-items:flex-start;padding:.7rem .8rem;border:1px solid #d1d5db;border-radius:.5rem;background:#fff;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
+  .ab-card:hover{border-color:#6b7280}
+  .ab-card input{flex:none;margin-top:.2rem;width:1rem;height:1rem;accent-color:#111827}
+  .ab-card:has(input:checked){border-color:#111827;box-shadow:0 0 0 1px #111827}
+  .ab-card input:focus-visible{outline:2px solid #111827;outline-offset:2px}
+  .ab-body{display:grid;gap:.15rem;min-width:0}
+  .ab-name{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;font-size:.85rem;font-weight:500;color:#111827}
+  .ab-tag{padding:.05rem .4rem;border:1px solid #111827;border-radius:4px;font-size:.65rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+  .ab-line{font-size:.8rem;line-height:1.45;color:#6b7280;overflow-wrap:anywhere}
+  .ab-card--new{border-style:dashed}
+  .ab-card--new:has(input:checked){border-style:solid}
+  .ab-plus{display:inline-flex;align-items:center;justify-content:center;width:1.1rem;height:1.1rem;border:1px solid currentColor;border-radius:9999px;font-size:.8rem;line-height:1}
+</style>
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var src = document.getElementById('checkout-address-book');
+  if (!src) return;
+  var book = {};
+  try { book = JSON.parse(src.textContent || '{}'); } catch (_) { return; }
+  var byId = {};
+  (book.billing || []).concat(book.shipping || []).forEach(function (a) { byId[a.id] = a; });
+  var FIELDS = {
+    billing: { house: 'house_onpage', street: 'street_onpage', city: 'city_onpage', state: 'state_onpage', pincode: 'pincode_onpage' },
+    shipping: { house: 'house_ship_onpage', street: 'street_ship_onpage', city: 'city_ship_onpage', state: 'state_ship_onpage', pincode: 'pincode_ship_onpage', phone: 'phone_ship_onpage' }
+  };
+  // Cleared by "New address" on top of the fields a saved address fills.
+  var EXTRA = {
+    billing: ['address_onpage'],
+    shipping: ['first_name_ship_onpage']
+  };
+  var applying = false;
+  var gstFromAddress = !!(byId[book.billing_id] && byId[book.billing_id].has_gst);
+
+  function setField(id, value) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    value = value == null ? '' : String(value);
+    if (el.tagName === 'SELECT') {
+      var want = value.toLowerCase(), hit = '';
+      Array.prototype.forEach.call(el.options, function (o) { if (o.value && o.value.toLowerCase() === want) hit = o.value; });
+      if (hit) el.value = hit; else el.selectedIndex = 0;  // the "Select state" prompt
+    } else {
+      el.value = value;
+    }
+  }
+  function setGst(on, company, gstin) {
+    var box = document.getElementById('has_gst_onpage');
+    var row = document.getElementById('company_gst_row');
+    if (box) box.checked = on;
+    if (row) row.classList.toggle('hidden', !on);
+    setField('company_name_onpage', company || '');
+    setField('gstin_onpage', gstin || '');
+  }
+  function apply(kind, a) {
+    if (!a) return;
+    applying = true;
+    var map = FIELDS[kind];
+    Object.keys(map).forEach(function (k) { setField(map[k], a[k]); });
+    if (kind === 'billing') {
+      var phone = document.querySelector('[data-checkout-form] input[name=phone]');
+      if (phone && !phone.value.trim() && a.phone) phone.value = a.phone;
+      if (a.has_gst) { setGst(true, a.company_name, a.gstin); gstFromAddress = true; }
+      else if (gstFromAddress) { setGst(false, '', ''); gstFromAddress = false; }
+    }
+    applying = false;
+  }
+  function radios(kind) { return document.querySelectorAll('input[name=ab_' + kind + ']'); }
+  // Typing in a field means it is no longer that saved address: it becomes
+  // the "New address" being entered.
+  function clearPick(kind) {
+    Array.prototype.forEach.call(radios(kind), function (r) { r.checked = r.value === 'new'; });
+  }
+  // "New address": blank every field of the block so a fresh one is typed in.
+  function blank(kind) {
+    applying = true;
+    var map = FIELDS[kind];
+    Object.keys(map).forEach(function (k) { setField(map[k], ''); });
+    (EXTRA[kind] || []).forEach(function (id) { setField(id, ''); });
+    if (kind === 'billing' && gstFromAddress) { setGst(false, '', ''); gstFromAddress = false; }
+    applying = false;
+    var firstField = document.getElementById(kind === 'billing' ? FIELDS.billing.house : 'first_name_ship_onpage');
+    if (firstField) { try { firstField.focus({ preventScroll: true }); } catch (_) { firstField.focus(); } }
+  }
+
+  ['billing', 'shipping'].forEach(function (kind) {
+    Array.prototype.forEach.call(radios(kind), function (r) {
+      r.addEventListener('change', function () {
+        if (!r.checked) return;
+        if (r.value === 'new') blank(kind); else apply(kind, byId[r.value]);
+      });
+    });
+    // Editing a field by hand means it is no longer that saved address.
+    Object.keys(FIELDS[kind]).forEach(function (k) {
+      var el = document.getElementById(FIELDS[kind][k]);
+      if (!el) return;
+      ['input', 'change'].forEach(function (ev) {
+        el.addEventListener(ev, function (e) { if (!applying && e.isTrusted) clearPick(kind); });
+      });
+    });
+  });
+  ['company_name_onpage', 'gstin_onpage'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', function () { gstFromAddress = false; });
+  });
+
+  // Ticking "Ship to a different address" with empty fields starts on the
+  // default saved shipping address.
+  var toggle = document.getElementById('ship_diff_toggle_onpage');
+  if (toggle) toggle.addEventListener('change', function () {
+    if (!toggle.checked || !book.shipping_id) return;
+    var empty = ['house_ship_onpage', 'city_ship_onpage', 'pincode_ship_onpage'].every(function (id) {
+      var el = document.getElementById(id); return !el || !el.value.trim();
+    });
+    if (!empty) return;
+    Array.prototype.forEach.call(radios('shipping'), function (r) { r.checked = r.value === book.shipping_id; });
+    apply('shipping', byId[book.shipping_id]);
+  });
+})();
+</script>
+{% endif %}
+{% if gateway_ready and gateway_name == 'razorpay' %}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{% endif %}
+{% if gateway_ready and gateway_name == 'cashfree' %}<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>{% endif %}
+<script>
+(function () {
+  var root = document.querySelector('[data-checkout]');
+  if (!root) return;
+  var base = root.getAttribute('data-base') || '/';
+  var cur = root.getAttribute('data-symbol') || root.getAttribute('data-currency') || '';
+  var token = (root.querySelector('input[name=csrfmiddlewaretoken]') || {}).value || '';
+  var form = root.querySelector('[data-checkout-form]');
+  var btn = root.querySelector('[data-place]');
+  var errBox = root.querySelector('[data-checkout-error]');
+
+  function money(v) { return cur + (v == null ? '' : v); }
+  function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+  function showError(m) { if (errBox) { errBox.textContent = m || 'Something went wrong.'; errBox.classList.remove('hidden'); } if (btn) { btn.disabled = false; btn.textContent = 'Place order'; } }
+  function post(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': token, 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'same-origin', body: body })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+  }
+  function selectedMethod() { var m = root.querySelector('input[name=method]:checked'); return m ? m.value : ''; }
+
+  // GST toggle
+  var gstToggle = document.getElementById('has_gst_onpage');
+  if (gstToggle) gstToggle.addEventListener('change', function () {
+    document.getElementById('company_gst_row').classList.toggle('hidden', !gstToggle.checked);
+  });
+
+  // Ship-to-different toggle
+  var shipToggle = document.getElementById('ship_diff_toggle_onpage');
+  if (shipToggle) shipToggle.addEventListener('change', function () {
+    document.getElementById('ship_diff_container_onpage').classList.toggle('hidden', !shipToggle.checked);
+  });
+
+  // Payment method cards. Display only: the server computes and charges the
+  // real split. Every total change (coupon, store credit) runs syncCredit,
+  // which calls this, so the amounts on the cards always match the summary.
+  var partialType = root.getAttribute('data-partial-type') || 'percent';
+  var partialValue = parseFloat(root.getAttribute('data-partial-value') || '0') || 0;
+  var gatewayName = root.getAttribute('data-gateway') || '';
+  var gatewayLabel = gatewayName ? gatewayName.charAt(0).toUpperCase() + gatewayName.slice(1) : '';
+  function currentTotal() {
+    var el = document.getElementById('checkout-total');
+    return el ? (parseFloat(el.textContent.replace(/[^0-9.]/g, '')) || 0) : 0;
+  }
+  function round2(n) { return Math.round(n * 100) / 100; }
+  function setNote(parts) {
+    var note = root.querySelector('[data-pay-note]');
+    if (!note) return;
+    while (note.firstChild) note.removeChild(note.firstChild);
+    parts.forEach(function (p) {
+      if (p && typeof p === 'object') {
+        var s = document.createElement('strong');
+        s.textContent = p.b;
+        note.appendChild(s);
+      } else {
+        note.appendChild(document.createTextNode(p));
+      }
+    });
+  }
+  function syncPartial() {
+    var total = currentTotal();
+    var online = partialType === 'fixed' ? partialValue : (total * partialValue / 100);
+    online = round2(online);
+    if (online < 0) online = 0;
+    if (online > total) online = total;
+    var cod = round2(Math.max(0, total - online));
+    var nowText = money(online.toFixed(2));
+    var restText = money(cod.toFixed(2));
+    var totalText = money(total.toFixed(2));
+    root.querySelectorAll('[data-partial-now]').forEach(function (el) { el.textContent = nowText; });
+    root.querySelectorAll('[data-partial-rest]').forEach(function (el) { el.textContent = restText; });
+    var onEl = document.getElementById('partial-online-amt');
+    var codEl = document.getElementById('partial-cod-amt');
+    if (onEl) onEl.textContent = nowText;
+    if (codEl) codEl.textContent = restText;
+    var bar = root.querySelector('[data-partial-bar]');
+    if (bar) bar.style.width = (total > 0 ? Math.max(0, Math.min(100, online / total * 100)) : 0).toFixed(2) + '%';
+
+    var method = selectedMethod();
+    var box = document.getElementById('partial-breakdown');
+    if (box) box.classList.toggle('hidden', method !== 'partial');
+    if (method === 'partial') {
+      setNote(['You pay ', { b: nowText }, ' now, online, to confirm your order. The remaining ', { b: restText }, ' is collected in cash on delivery (COD).']);
+    } else if (method === 'cod') {
+      setNote(['You pay ', { b: totalText }, ' when your order is delivered. Nothing to pay now.']);
+    } else if (method === 'gateway') {
+      setNote(['You pay ', { b: totalText }, ' now, online' + (gatewayLabel ? ' via ' + gatewayLabel : '') + '. Your order is confirmed as soon as the payment goes through.']);
+    }
+  }
+  root.addEventListener('change', function (e) { if (e.target && e.target.name === 'method') syncPartial(); });
+
+  // Coupon accordion open/close
+  var couponBtn = document.getElementById('coupon-accordion-btn');
+  var couponPanel = document.getElementById('coupon-accordion-panel');
+  var couponIcon = document.getElementById('coupon-accordion-icon');
+  // Open by default (rendered open); an open panel has no height cap so the
+  // applied-code row and messages are never clipped.
+  if (couponBtn) couponBtn.addEventListener('click', function () {
+    var open = couponBtn.getAttribute('aria-expanded') === 'true';
+    couponBtn.setAttribute('aria-expanded', String(!open));
+    couponPanel.style.maxHeight = couponPanel.scrollHeight + 'px';
+    if (open) { void couponPanel.offsetHeight; couponPanel.style.maxHeight = '0px'; }
+    if (couponIcon) couponIcon.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+  });
+  if (couponPanel) couponPanel.addEventListener('transitionend', function () {
+    if (couponBtn && couponBtn.getAttribute('aria-expanded') === 'true') couponPanel.style.maxHeight = 'none';
+  });
+
+  function setAll(id, text) { document.querySelectorAll('[id="' + id + '"]').forEach(function (el) { el.textContent = text; }); }
+  function toggleAll(id, show) { document.querySelectorAll('[id="' + id + '"]').forEach(function (el) { el.classList.toggle('hidden', !show); }); }
+  // Store credit: the server works it out for the verified shopper and sends
+  // the total both with and without it. It only applies while the order email
+  // is that verified email, so the summary follows the email field.
+  var creditEmail = (root.getAttribute('data-credit-email') || '').toLowerCase();
+  var credit = {
+    amount: root.getAttribute('data-credit') || '0',
+    total: null,
+    before: root.getAttribute('data-total-before-credit') || ''
+  };
+  var totalEl = document.getElementById('checkout-total');
+  if (totalEl) credit.total = totalEl.textContent.replace(/[^0-9.]/g, '');
+  var emailInput = form ? form.querySelector('input[name=email]') : null;
+  function creditApplies() {
+    if (!creditEmail || !(parseFloat(credit.amount) > 0)) return false;
+    var typed = emailInput ? emailInput.value.trim().toLowerCase() : '';
+    return typed === creditEmail;
+  }
+  function showTotal(total) {
+    setAll('checkout-total', money(total));
+    document.querySelectorAll('[data-sum-total]').forEach(function (el) { el.textContent = money(total); });
+  }
+  function syncCredit() {
+    var on = creditApplies();
+    setAll('checkout-credit', '− ' + money(credit.amount));
+    toggleAll('checkout-credit-row', on);
+    if (credit.total != null) showTotal(on ? credit.total : (credit.before || credit.total));
+    syncPartial();
+  }
+  function applyTotals(c) {
+    if (!c) return;
+    setAll('checkout-subtotal', money(c.subtotal));
+    var disc = parseFloat(c.discount) || 0;
+    setAll('checkout-discount', '− ' + money(c.discount));
+    toggleAll('checkout-discount-row', disc > 0);
+    var tax = parseFloat(c.tax) || 0;
+    if (c.tax != null) { setAll('checkout-tax', money(c.tax)); toggleAll('checkout-tax-row', tax > 0); }
+    credit.amount = c.credit_discount != null ? c.credit_discount : '0';
+    credit.total = c.total;
+    credit.before = c.total_before_credit != null ? c.total_before_credit : c.total;
+    syncCredit();
+  }
+  if (emailInput) emailInput.addEventListener('input', syncCredit);
+  syncCredit();
+
+  // "Have store credit?": prove the email with a one-time code, then reload so
+  // the server applies the credit on this verified email.
+  var cvBox = root.querySelector('[data-credit-verify]');
+  if (cvBox) {
+    var cvSend = cvBox.querySelector('[data-credit-send]');
+    var cvRow = cvBox.querySelector('[data-credit-code-row]');
+    var cvCode = cvBox.querySelector('[data-credit-code]');
+    var cvBtn = cvBox.querySelector('[data-credit-verify-btn]');
+    var cvMsg = cvBox.querySelector('[data-credit-msg]');
+    var cvEmail = '';
+    var cvSay = function (text, ok) {
+      if (!cvMsg) return;
+      cvMsg.textContent = text || '';
+      cvMsg.className = 'mt-1 ' + (ok ? 'text-green-600' : 'text-red-600');
+      cvMsg.style.display = text ? '' : 'none';
+    };
+    if (cvSend) cvSend.addEventListener('click', function () {
+      cvEmail = emailInput ? emailInput.value.trim() : '';
+      if (!cvEmail || cvEmail.indexOf('@') < 1) { cvSay('Enter your email above first.', false); if (emailInput) emailInput.focus(); return; }
+      cvSend.disabled = true;
+      post(base + 'account/send-otp/', 'email=' + encodeURIComponent(cvEmail)).then(function (res) {
+        cvSend.disabled = false;
+        if (res.ok && res.data && res.data.success) {
+          cvSend.textContent = 'Resend code';
+          if (cvRow) cvRow.style.display = 'flex';
+          if (cvCode) cvCode.focus();
+          cvSay('We sent a code to ' + cvEmail + '. Enter it to apply your store credit.', true);
+        } else {
+          cvSay((res.data && res.data.error) || 'We couldn’t send a code. Please try again.', false);
+        }
+      }).catch(function () { cvSend.disabled = false; cvSay('We couldn’t send a code. Please try again.', false); });
+    });
+    var cvVerify = function () {
+      var code = cvCode ? cvCode.value.trim() : '';
+      if (!code) { cvSay('Enter the code from your email.', false); return; }
+      if (cvBtn) cvBtn.disabled = true;
+      post(base + 'account/verify-otp/', 'email=' + encodeURIComponent(cvEmail) + '&otp=' + encodeURIComponent(code)).then(function (res) {
+        if (res.ok && res.data && res.data.success) {
+          cvSay('Email verified. Applying your store credit…', true);
+          window.location.reload();
+        } else {
+          if (cvBtn) cvBtn.disabled = false;
+          cvSay((res.data && res.data.error) || 'That code is incorrect or has expired.', false);
+        }
+      }).catch(function () { if (cvBtn) cvBtn.disabled = false; cvSay('Something went wrong. Please try again.', false); });
+    };
+    if (cvBtn) cvBtn.addEventListener('click', cvVerify);
+    if (cvCode) cvCode.addEventListener('keypress', function (e) { if (e.key === 'Enter') { e.preventDefault(); cvVerify(); } });
+  }
+  function setAppliedUI(code) {
+    var row = document.getElementById('coupon-applied-row');
+    var codeEl = document.getElementById('applied-coupon-code');
+    if (!row) return;
+    if (code) { if (codeEl) codeEl.textContent = String(code).toUpperCase(); row.classList.remove('hidden'); }
+    else { row.classList.add('hidden'); }
+  }
+
+  function applyCoupon(code) {
+    var msg = document.getElementById('coupon-message');
+    post(base + 'cart/coupon/', 'code=' + encodeURIComponent(code || '')).then(function (res) {
+      if (msg) { msg.textContent = (res.data && res.data.message) || ''; msg.className = 'text-xs ' + (res.data && res.data.ok ? 'text-green-600' : 'text-red-600'); }
+      if (res.data) applyTotals(res.data.cart);
+      var disc = (res.data && res.data.cart) ? (parseFloat(res.data.cart.discount) || 0) : 0;
+      setAppliedUI((code || '').trim() && disc > 0 ? code : '');
+    });
+  }
+  var couponApply = document.getElementById('apply-coupon');
+  if (couponApply) couponApply.addEventListener('click', function () { applyCoupon(val('coupon-input')); });
+  var couponInput = document.getElementById('coupon-input');
+  if (couponInput) couponInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(couponInput.value); } });
+  var couponRemove = document.getElementById('remove-coupon');
+  if (couponRemove) couponRemove.addEventListener('click', function () { var i = document.getElementById('coupon-input'); if (i) i.value = ''; applyCoupon(''); });
+
+  // Cart line qty / remove -> refresh from the drawer feed
+  function refresh() {
+    return fetch(base + 'cart/data/', { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store', credentials: 'same-origin' })
+      .then(function (r) { return r.json(); }).then(function (data) {
+        var tbody = document.getElementById('checkout-items-body');
+        if (tbody) {
+          var html = '';
+          (data.items || []).forEach(function (it) {
+            html += '<tr data-pid="' + it.product_id + '" data-qty="' + it.quantity + '" class="align-top">' +
+              '<td class="py-4 w-full"><div class="flex items-start gap-4">' +
+              '<a href="' + it.url + '" class="flex items-center aspect-square w-10 h-10 shrink-0">' + (it.image ? ('<img class="h-auto w-full max-h-full object-contain" src="' + it.image + '" alt=""/>') : '') + '</a>' +
+              '<div class="w-full grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">' +
+              '<div class="flex-1 min-w-0"><a href="' + it.url + '" class="hover:underline block text-sm font-medium text-gray-900 break-words [overflow-wrap:anywhere]">' + it.title + '</a>' +
+              (it.variant_label ? ('<div class="mt-0.5 text-[11px] text-gray-500">(' + it.variant_label + ')</div>') : '') +
+              (it.in_stock === false ? '<div class="mt-0.5 text-xs font-medium text-red-600" data-stock-flag>Out of stock</div>'
+                : (it.short ? ('<div class="mt-0.5 text-xs font-medium text-red-600" data-stock-flag>Only ' + it.available + ' left in stock</div>') : '')) +
+              '<button type="button" class="mt-1 text-xs text-red-600 hover:text-red-700 underline" data-action="remove">Remove</button></div>' +
+              '<div class="flex items-center justify-end gap-3 shrink-0"><div class="inline-flex items-center gap-2">' +
+              '<button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="dec">−</button>' +
+              '<span class="min-w-[2ch] text-sm text-gray-900 text-center" data-role="qty">' + it.quantity + '</span>' +
+              '<button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="inc">+</button></div>' +
+              '<span class="text-right text-base font-bold text-gray-900 whitespace-nowrap">' + money(it.line_total) + '</span></div></div></div></td></tr>';
+          });
+          if (!html) { html = '<tr><td class="py-6 text-center text-gray-500">No items in cart.</td></tr>'; }
+          tbody.innerHTML = html;
+        }
+        applyTotals(data.totals || null);
+        updateBulkWhatsApp(data);
+        syncStock(data.items || []);
+        if (data.count === 0) { window.location.href = base + '?open_cart=1'; }
+      }).catch(function () {});
+  }
+  // Keep the "Bulk Buy Discount?" WhatsApp link in sync with the live cart, so
+  // the pre-filled message lists the current products, variations, quantities,
+  // line totals and grand total even after qty/remove edits on this page.
+  function updateBulkWhatsApp(data) {
+    var link = document.getElementById('bulk-whatsapp');
+    if (!link) return;
+    var phone = link.getAttribute('data-phone') || '';
+    phone = phone.replace(/\D/g, '');
+    if (!phone) return;
+    var sym = link.getAttribute('data-sym') || '';
+    var lines = ["Hi, I'm interested in a bulk order for the following:", ''];
+    (data.items || []).forEach(function (it) {
+      var label = it.variant_label ? (' (' + it.variant_label + ')') : '';
+      lines.push('- ' + it.title + label + ' | Qty ' + it.quantity + ' | ' + sym + it.line_total);
+    });
+    lines.push('');
+    lines.push('Total: ' + sym + ((data.totals && data.totals.total) || ''));
+    lines.push('');
+    lines.push('Could you share your best bulk pricing? Thank you.');
+    link.href = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(lines.join('\n'));
+  }
+  // Out-of-stock lines block the order: banner on, Place order off, until the
+  // shopper removes them or lowers the quantity. The server enforces it too.
+  function syncStock(items) {
+    var blocked = items.some(function (it) { return it.in_stock === false || it.short; });
+    var banner = document.querySelector('[data-stock-banner]');
+    if (banner) {
+      if (blocked) banner.textContent = 'Some items in your cart are out of stock. Remove them or lower the quantity to continue.';
+      banner.classList.toggle('hidden', !blocked);
+    }
+    if (btn && !btn.hasAttribute('data-payments-off')) btn.disabled = blocked;
+  }
+  function cartAction(action, pid, qty) {
+    var body = new URLSearchParams(); body.set('action', action); body.set('product_id', pid);
+    if (qty != null) body.set('quantity', String(qty));
+    return post(base + 'cart/update/', body.toString()).then(function () { return refresh(); });
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target; if (!t || !t.matches('.qty-btn,[data-action]')) return;
+    var action = t.getAttribute('data-action'); if (!action) return;
+    var row = t.closest('[data-pid]'); if (!row) return;
+    var pid = row.getAttribute('data-pid');
+    var qtyEl = row.querySelector('[data-role="qty"]');
+    var current = parseInt(qtyEl ? qtyEl.textContent : (row.getAttribute('data-qty') || '1'), 10) || 1;
+    if (action === 'inc') cartAction('set', pid, current + 1);
+    else if (action === 'dec') { var n = current - 1; if (n <= 0) cartAction('remove', pid); else cartAction('set', pid, n); }
+    else if (action === 'remove') cartAction('remove', pid);
+  });
+
+  // Mobile summary accordion  clone the summary section
+  var mToggle = document.getElementById('mobile-order-toggle');
+  if (mToggle) {
+    var mOpen = false;
+    mToggle.addEventListener('click', function () {
+      var panel = document.getElementById('mobile-order-panel');
+      var icon = document.getElementById('mobile-order-toggle-icon');
+      var label = document.getElementById('mobile-order-label');
+      var section = document.getElementById('order-summary-section');
+      mOpen = !mOpen;
+      if (mOpen && section) {
+        var clone = section.cloneNode(true);
+        clone.removeAttribute('id');
+        clone.classList.remove('lg:sticky', 'lg:top-[120px]');
+        // Strip interactive controls from the preview clone so there are no
+        // duplicate-id / dead buttons; the real controls stay below.
+        ['[data-payment-section]', '[data-cta-section]', '[data-coupon-section]'].forEach(function (sel) {
+          var n = clone.querySelector(sel); if (n) n.remove();
+        });
+        panel.innerHTML = ''; panel.appendChild(clone); panel.classList.remove('hidden');
+        if (icon) icon.style.transform = 'rotate(180deg)';
+        if (label) label.textContent = 'Hide details';
+      } else {
+        panel.classList.add('hidden'); panel.innerHTML = '';
+        if (icon) icon.style.transform = 'rotate(0deg)';
+        if (label) label.textContent = 'View products';
+      }
+    });
+  }
+
+  // Compose the checkout payload from the on-page fields.
+  function payload(extra) {
+    var shipDiff = document.getElementById('ship_diff_toggle_onpage');
+    var useShip = shipDiff && shipDiff.checked;
+    var house = useShip ? val('house_ship_onpage') : val('house_onpage');
+    var street = useShip ? val('street_ship_onpage') : val('street_onpage');
+    var addr = [house, street, val('address_onpage')].filter(Boolean).join(', ');
+    var p = new URLSearchParams();
+    p.set('name', (form.querySelector('input[name=name]') || {}).value || '');
+    p.set('phone', useShip && val('phone_ship_onpage') ? val('phone_ship_onpage') : ((form.querySelector('input[name=phone]') || {}).value || ''));
+    p.set('email', (form.querySelector('input[name=email]') || {}).value || '');
+    p.set('address', addr);
+    // The parts too, so the next checkout on this store can be pre-filled.
+    p.set('house', val('house_onpage'));
+    p.set('street', val('street_onpage'));
+    p.set('notes', val('address_onpage'));
+    p.set('city', useShip ? val('city_ship_onpage') : val('city_onpage'));
+    p.set('state', useShip ? val('state_ship_onpage') : val('state_onpage'));
+    p.set('pincode', useShip ? val('pincode_ship_onpage') : val('pincode_onpage'));
+    // Shipping elsewhere: the main block is then the billing address only, so
+    // the order keeps it separately (otherwise billing = delivery address).
+    if (useShip) {
+      p.set('billing_address', [val('house_onpage'), val('street_onpage'), val('city_onpage'), val('state_onpage'), val('pincode_onpage')].filter(Boolean).join(', '));
+    }
+    p.set('company_name', val('company_name_onpage'));
+    p.set('gstin', val('gstin_onpage'));
+    // Each address block's parts, so a signed-in shopper's new address is
+    // saved to their address book (storefront.checkout_prefill).
+    p.set('bill_city', val('city_onpage'));
+    p.set('bill_state', val('state_onpage'));
+    p.set('bill_pincode', val('pincode_onpage'));
+    p.set('bill_phone', (form.querySelector('input[name=phone]') || {}).value || '');
+    if (useShip) {
+      p.set('ship_diff', '1');
+      p.set('ship_house', val('house_ship_onpage'));
+      p.set('ship_street', val('street_ship_onpage'));
+      p.set('ship_city', val('city_ship_onpage'));
+      p.set('ship_state', val('state_ship_onpage'));
+      p.set('ship_pincode', val('pincode_ship_onpage'));
+      p.set('ship_phone', val('phone_ship_onpage'));
+    }
+    p.set('method', selectedMethod());
+    if (extra) Object.keys(extra).forEach(function (k) { p.set(k, extra[k]); });
+    return p.toString();
+  }
+
+  function openRazorpay(p) {
+    var rzp = new Razorpay({
+      key: p.key_id, order_id: p.order_id, amount: p.amount, currency: p.currency, name: p.name, prefill: p.prefill || {},
+      handler: function (resp) {
+        post(base + 'checkout/verify/', new URLSearchParams({ payment_id: p.payment_id, razorpay_payment_id: resp.razorpay_payment_id || '', razorpay_signature: resp.razorpay_signature || '' }).toString())
+          .then(function (res) { if (res.ok && res.data.ok) window.location.href = res.data.redirect; else showError('We couldn’t confirm your payment, so no order was placed yet. If money was debited, your order will be confirmed automatically. Please don’t pay again.'); });
+      },
+      modal: { ondismiss: function () { showError('Payment cancelled. No order was placed.'); } }
+    });
+    rzp.open();
+  }
+  function openCashfree(p) {
+    if (typeof Cashfree !== 'function') { showError('Couldn’t open the payment window. Please refresh and try again.'); return; }
+    function verify(onFail) {
+      return post(base + 'checkout/verify/', new URLSearchParams({ payment_id: p.payment_id }).toString())
+        .then(function (res) { if (res.ok && res.data.ok) window.location.href = res.data.redirect; else showError(onFail); });
+    }
+    var cf = Cashfree({ mode: p.mode === 'production' ? 'production' : 'sandbox' });
+    cf.checkout({ paymentSessionId: p.payment_session_id, redirectTarget: '_modal' }).then(function (result) {
+      result = result || {};
+      if (result.redirect) return; // Cashfree is taking the page to the bank/UPI step.
+      if (result.error) {
+        // Closed or failed  still check, in case the payment went through.
+        return verify(((result.error && result.error.message) || 'Payment was cancelled.') + ' No order was placed.');
+      }
+      return verify('Payment wasn’t completed, so no order was placed. If money was debited, your order will be confirmed automatically. Please don’t pay again.');
+    }).catch(function () {
+      showError('Couldn’t open the payment window. Please try again.');
+    });
+  }
+
+  if (btn) btn.addEventListener('click', function () {
+    if (errBox) errBox.classList.add('hidden');
+    if (form && !form.reportValidity()) return;
+    if (!val('house_onpage') || !val('city_onpage') || !val('pincode_onpage')) {
+      return showError('Please complete your delivery address.');
+    }
+    btn.disabled = true; btn.textContent = 'Processing…';
+    post(base + 'checkout/place/', payload()).then(function (res) {
+      var d = res.data || {};
+      if (!res.ok || !d.ok) {
+        showError(d.error);
+        // Sold out since the page loaded: re-read the cart to flag the line.
+        if (d.out_of_stock) refresh();
+        return;
+      }
+      if (d.redirect) { window.location.href = d.redirect; return; }
+      if (d.gateway === 'razorpay') openRazorpay(d);
+      else if (d.gateway === 'cashfree') openCashfree(d);
+      else showError('Payment could not be started.');
+    }).catch(function () { showError(); });
+  });
+})();
+</script>
+{% endwith %}
+{% endblock %}

@@ -1,0 +1,17 @@
+{% autoescape off %}You've been invited to collaborate with {{ store_name }} on OneWooz.
+
+{% if collab_name %}Hi {{ collab_name }},
+
+{% endif %}{{ store_name }} would like you to promote their products as a referral partner. You'll get your own store link and earn {{ commission_label }}.
+
+To accept, open the contract page below and enter this one-time code:
+
+    {{ otp }}
+
+Contract link:
+{{ contract_url }}
+
+This link and code are valid for about {{ hours }} hours. Once you accept, your referral store goes live and any orders placed through your link are credited to you.
+
+If you weren't expecting this, you can ignore this email.
+{% endautoescape %}

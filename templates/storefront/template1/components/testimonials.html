@@ -16,17 +16,17 @@
             <template x-for="(testimonial, index) in content.testimonials" :key="index">
                 <div class="bg-white rounded-3xl shadow-xl hover:shadow-2xl p-8 transform hover:-translate-y-2 transition-all duration-300 border border-gray-100">
                     <div class="flex items-center mb-6">
-                        <template x-if="testimonial.avatar">
-                            <img :src="testimonial.avatar" alt="Avatar" class="w-16 h-16 rounded-full ring-4 ring-blue-50 mr-4">
+                        <template x-if="testimonial.image || testimonial.avatar">
+                            <img :src="testimonial.image || testimonial.avatar" alt="Avatar" class="w-16 h-16 rounded-full ring-4 ring-blue-50 mr-4">
                         </template>
-                        <template x-if="!testimonial.avatar">
+                        <template x-if="!(testimonial.image || testimonial.avatar)">
                             <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-4">
                                 <span class="text-white font-bold text-xl" x-text="testimonial.name.charAt(0)"></span>
                             </div>
                         </template>
                         <div>
                             <p class="font-bold text-lg text-gray-900" x-text="testimonial.name"></p>
-                            <p class="text-blue-600 font-medium" x-text="testimonial.position"></p>
+                            <p class="text-blue-600 font-medium" x-text="testimonial.role || testimonial.position"></p>
                         </div>
                     </div>
                     <div class="flex items-center mb-6">

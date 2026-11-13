@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% comment %}
+Single-page core-page tree editor. All core pages are listed as accordions
+(one open at a time); opening one reveals its fields and its nested subpages and
+child pages, each of which is itself an accordion that can be created inline.
+Everything autosaves to the three marketing models via the tree/save/ endpoint 
+mirroring the storefront owner's content editor.
+{% endcomment %}
+
+{% block extrahead %}{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js" referrerpolicy="origin"></script>
+<link rel="stylesheet" href="{% static 'css/admin/marketing-tree.css' %}">
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='web' %}">Web</a>
+  &rsaquo; Core pages
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="mkt-tree"
+     data-save-url="{{ save_url }}"
+     data-raw-url="{{ raw_changelist_url }}">
+  {% csrf_token %}
+
+  <div class="mkt-top">
+    <div class="mkt-top__intro">
+      <p class="mkt-top__hint">
+        Build your marketing pages here. Open a page to edit it and to add its
+        subpages and child pages  a three-level tree. Only one page stays open
+        at a time; everything saves automatically.
+      </p>
+    </div>
+    <div class="mkt-top__right">
+      <span class="mkt-save" id="mkt-save" data-state="idle">
+        <span class="mkt-save__dot"></span><span id="mkt-save__text">Saved</span>
+      </span>
+      <a class="mkt-rawlink" href="{{ raw_changelist_url }}">Table view</a>
+    </div>
+  </div>
+
+  <div class="mkt-acc" id="mkt-pages"></div>
+
+  <button type="button" class="mkt-add mkt-add--top" id="mkt-add-page">
+    <span aria-hidden="true">+</span> Add core page
+  </button>
+
+  <p class="mkt-empty" id="mkt-empty" hidden>
+    No core pages yet. Add your first one above.
+  </p>
+</div>
+
+{{ tree_data|json_script:"mkt-data" }}
+<script src="{% static 'js/admin/marketing_tree.js' %}"></script>
+{% endblock %}

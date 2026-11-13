@@ -1,6 +1,6 @@
 """Building links that cross from one surface to another.
 
-Within a surface, always use a plain path (``/sign-in/``) — it stays on the
+Within a surface, always use a plain path (``/sign-in/``)  it stays on the
 current host and needs nothing from this module. But a link from the marketing
 site to the dashboard, or from an email to a storefront, has to name a
 different host, and that is where hardcoding goes wrong.
@@ -8,7 +8,7 @@ different host, and that is where hardcoding goes wrong.
 Two things vary between development and production and both must be derived,
 never written into a template:
 
-* **Scheme.** ``https`` in production, ``http`` locally — there is no
+* **Scheme.** ``https`` in production, ``http`` locally  there is no
   certificate on ``runserver``.
 * **Port.** Production is on 443 and the port is implied. Locally everything
   is on one port, whatever ``runserver`` was given, and a link that omits it
@@ -25,7 +25,14 @@ from django.conf import settings
 from . import hosts
 from .hosts import Surface
 
-__all__ = ["surface_host", "surface_origin", "surface_url", "storefront_origin"]
+__all__ = [
+    "surface_host",
+    "surface_origin",
+    "surface_url",
+    "storefront_origin",
+    "referral_portal_url",
+    "referral_store_origin",
+]
 
 _DEFAULT_PORTS = {"80", "443"}
 
@@ -57,7 +64,7 @@ def _port_suffix(request=None) -> str:
     if request is not None:
         port = str(request.get_port() or "")
     if not port:
-        # No request — a Celery task or an email being rendered offline.
+        # No request  a Celery task or an email being rendered offline.
         port = str(getattr(settings, "DEV_PORT", "8000"))
 
     return "" if port in _DEFAULT_PORTS else f":{port}"
@@ -105,3 +112,23 @@ def storefront_origin(slug: str, request=None) -> str:
         return f"{_scheme(request)}://{request.get_host()}{prefix}/{slug}"
     host = f"{slug}.{settings.STOREFRONT_APEX}"
     return f"{_scheme(request)}://{host}{_port_suffix(request)}"
+
+
+def _referral_root() -> str:
+    return getattr(settings, "REFERRAL_ROOT_DOMAIN", "") or "myugcstore.com"
+
+
+def referral_portal_url(path: str = "/", request=None) -> str:
+    """Absolute URL on the collaborator portal (the referral apex,
+    ``myugcstore.com``)  its login and dashboard."""
+    if not path.startswith("/"):
+        path = f"/{path}"
+    if _in_path_mode(request):
+        prefix = hosts.dev_prefix_for(Surface.REFERRAL)
+        return f"{_scheme(request)}://{request.get_host()}{prefix}{path}"
+    return f"{_scheme(request)}://{_referral_root()}{_port_suffix(request)}{path}"
+
+
+def referral_store_origin(subdomain: str, request=None) -> str:
+    """Origin of a collaborator's own store, ``<sub>.myugcstore.com``."""
+    return f"{_scheme(request)}://{subdomain}.{_referral_root()}{_port_suffix(request)}"

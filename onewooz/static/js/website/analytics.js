@@ -86,12 +86,25 @@
         }
     }
 
+    // Expose a hook so page scripts can record funnel events, e.g.
+    // window.OneWoozTrack('add_to_cart', { product_id: '…', value: 999 }).
+    window.OneWoozTrack = sendEvent;
+
     document.addEventListener('DOMContentLoaded', () => {
         sendEvent('page_view', {
             path: window.location.pathname,
             title: document.title,
             referrer: document.referrer,
         });
+        // On a product page, record a product view (id resolved server-side into
+        // the config, or from a <meta name="ow-product-id"> tag as a fallback).
+        if ((config.page_type || '').toLowerCase() === 'product') {
+            const metaEl = document.querySelector('meta[name="ow-product-id"]');
+            const pid = (config.page_meta && config.page_meta.product_id) || (metaEl && metaEl.getAttribute('content'));
+            if (pid) {
+                sendEvent('product_view', { product_id: pid, path: window.location.pathname });
+            }
+        }
         if (pageLoadMs !== null || fcpMs !== null) {
             sendEvent('performance', {
                 page_load_ms: pageLoadMs,

@@ -1,0 +1,23 @@
+{% extends "email/base.html" %}
+{% comment %}Branded wrapper for a store marketing email when the campaign has no
+authored HTML (a drip step with only a subject/message, or a plain broadcast).
+Context: brand, title, preheader, message (plain, multi-line), cta_label,
+cta_url (already routed through the tracked click endpoint), unsubscribe_url,
+tracking_pixel_url, powered_by.{% endcomment %}
+{% block preheader %}{{ preheader|default:title }}{% endblock %}
+{% block kicker %}Newsletter{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text=brand %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:22px; letter-spacing:-0.02em; line-height:1.18; color:#0a0a0b; margin:0 0 16px 0;">{{ title }}</h1>
+  {% if message %}<div style="margin:0 0 4px 0; color:#26262a;">{{ message|linebreaksbr }}</div>{% endif %}
+  {% if cta_url and cta_label %}{% include "email/_button.html" with url=cta_url label=cta_label %}{% endif %}
+  <img src="{{ tracking_pixel_url }}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;outline:none;text-decoration:none;" />
+{% endblock %}
+{% block footer %}
+  <div style="color:#66666b;">{{ brand }}</div>
+  {% if powered_by %}<div style="color:#9a9aa0;">Powered by OneWooz</div>{% endif %}
+{% endblock %}
+{% block footer_links %}
+  <div style="margin-top:6px;"><a href="{{ unsubscribe_url }}" style="color:#9a9aa0;">Unsubscribe</a></div>
+{% endblock %}
+{% block sub_footer %}You’re receiving this because you’re a customer of {{ brand }}. <a href="{{ unsubscribe_url }}" style="color:#9a9aa0;">Unsubscribe</a>.{% endblock %}

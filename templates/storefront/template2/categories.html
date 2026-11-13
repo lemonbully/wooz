@@ -61,7 +61,9 @@
                         {% if category.image %}
                         <img src="{{ category.image.url }}" {% media_attrs website category.image.url category.name %} class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"/>
                         {% else %}
-                        <img src="https://source.unsplash.com/random/800x800/?{{ category.name|urlencode }}" alt="{{ category.name }}" class="w-full h-full object-cover"/>
+                        {% comment %} {# No category image uploaded, show a reference photo (not the
+                           retired source.unsplash.com host) so the grid stays complete. #} {% endcomment %}
+                        <img src="{% demo_media 'category' forloop.counter0 %}" alt="{{ category.name }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" data-no-srcset="true" loading="lazy"/>
                         {% endif %}
                     </div>
                     <div class="px-1 sm:px-2 md:px-4 pt-4 pb-3 sm:pb-5 text-left">

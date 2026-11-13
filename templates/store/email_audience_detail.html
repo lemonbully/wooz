@@ -1,0 +1,248 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · {{ list.name }}{% endblock %}
+{% block crumb %}Email marketing{% endblock %}
+
+{% block main %}
+<div class="app-page emx">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Audience</p>
+      <h1 class="app-head__title pal-mt-4">{{ list.name }}</h1>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:email_audiences' site.id %}" class="pal-btn pal-btn--ghost">All lists</a>
+    </div>
+  </div>
+
+  <div class="emx-card">
+    <div class="emx-card__head">
+      <div class="emx-card__titles">
+        <h2 class="emx-card__title">Add recipients</h2>
+        <p class="emx-card__hint">Add as many people as you like  each is a tab. Only the email is required. Nothing is saved until you press <strong>Save recipients</strong>.</p>
+      </div>
+    </div>
+    <div class="emx-card__body">
+      <form method="post" action="{% url 'store:email_audience_add' site.id list.id %}" id="ema-form">
+        {% csrf_token %}
+        <input type="hidden" name="recipients" id="ema-input">
+        <div class="emx-tabed" id="ema-tabed">
+          <div class="emx-tabed__head">
+            <span class="emx-tabed__htitle">
+              <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+              <span>Recipients</span> <span class="emx-tabed__count"></span>
+            </span>
+            <div class="emx-tabed__tools">
+              <button type="button" class="emx-tabed__tool emx-tabed__tool--del" data-del title="Remove this recipient">
+                <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+              </button>
+              <button type="button" class="emx-tabed__tool" data-prev title="Move left">
+                <svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>
+              </button>
+              <button type="button" class="emx-tabed__tool" data-next title="Move right">
+                <svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="emx-tabed__tabs" id="ema-tabs"></div>
+          <div class="emx-tabed__panel" id="ema-panel"></div>
+        </div>
+        <div class="emx-actions" style="justify-content:flex-end;margin-top:1.15rem;">
+          <button class="pal-btn" type="submit">Save recipients <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <template id="ema-tpl">
+    <div class="emx-item">
+      <div class="emx-item__body">
+        <div class="emx-field emx-field--4">
+          <label class="emx-label">Name</label>
+          <input class="emx-input" data-f="name" placeholder="Optional">
+        </div>
+        <div class="emx-field emx-field--5">
+          <label class="emx-label">Email</label>
+          <input class="emx-input" data-f="email" type="email" placeholder="email@example.com">
+        </div>
+        <div class="emx-field emx-field--3">
+          <label class="emx-label">Phone</label>
+          <input class="emx-input" data-f="phone" placeholder="Optional">
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <div class="emx-card">
+    <div class="emx-card__head">
+      <div class="emx-card__titles">
+        <h2 class="emx-card__title">Import a file</h2>
+        <p class="emx-card__hint">A .csv or .xlsx with an <strong>Email</strong> column (Name and Phone optional). Duplicates are skipped.</p>
+      </div>
+    </div>
+    <div class="emx-card__body">
+      <form method="post" action="{% url 'store:email_audience_import' site.id list.id %}" enctype="multipart/form-data" class="emx-inline">
+        {% csrf_token %}
+        <input class="emx-input" type="file" name="file" accept=".csv,.xlsx" required>
+        <button class="pal-btn" type="submit">Import</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="emx-card">
+    <div class="emx-card__head">
+      <div class="emx-card__titles">
+        <h2 class="emx-card__title">Recipients</h2>
+      </div>
+    </div>
+    <div class="emx-card__body" style="padding:0;">
+      {% if members %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th></th></tr></thead>
+          <tbody>
+            {% for m in members %}
+            <tr>
+              <td class="app-table__strong">{{ m.name|default:"" }}</td>
+              <td>{{ m.email }}</td>
+              <td class="app-sub">{{ m.phone|default:"" }}</td>
+              <td class="app-table__actions">
+                <form method="post" action="{% url 'store:email_audience_member_delete' site.id list.id m.id %}">{% csrf_token %}<button class="app-iconbtn app-iconbtn--danger" type="submit">Remove</button></form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="emx-help" style="padding:1.2rem;">No recipients yet. Add one above or import a file.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% include "store/_email_styles.html" %}
+
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var tabed = document.getElementById("ema-tabed");
+    if (!tabed) return;
+    var panel = document.getElementById("ema-panel");
+    var tabsEl = document.getElementById("ema-tabs");
+    var tpl = document.getElementById("ema-tpl");
+    var form = document.getElementById("ema-form");
+    var hidden = document.getElementById("ema-input");
+    var countEl = tabed.querySelector(".emx-tabed__count");
+    var delBtn = tabed.querySelector("[data-del]");
+    var prevBtn = tabed.querySelector("[data-prev]");
+    var nextBtn = tabed.querySelector("[data-next]");
+
+    var active = 0;
+    function cards() { return Array.prototype.slice.call(panel.querySelectorAll(".emx-item")); }
+
+    function tabLabel(card, i) {
+      var email = (card.querySelector('[data-f="email"]').value || "").trim();
+      var name = (card.querySelector('[data-f="name"]').value || "").trim();
+      return email || name || ("Recipient " + (i + 1));
+    }
+
+    function renderTabs() {
+      var cs = cards();
+      tabsEl.innerHTML = "";
+      cs.forEach(function (card, i) {
+        var t = document.createElement("button");
+        t.type = "button";
+        t.className = "emx-tabed__tab" + (i === active ? " is-active" : "");
+        var n = document.createElement("span"); n.className = "emx-tabed__tabn"; n.textContent = i + 1;
+        var l = document.createElement("span"); l.className = "emx-tabed__tabl"; l.textContent = tabLabel(card, i);
+        t.appendChild(n); t.appendChild(l);
+        t.addEventListener("click", function () { setActive(i); });
+        tabsEl.appendChild(t);
+      });
+      var add = document.createElement("button");
+      add.type = "button"; add.className = "emx-tabed__add";
+      add.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>Add recipient</span>';
+      add.addEventListener("click", addRecipient);
+      tabsEl.appendChild(add);
+      if (countEl) countEl.textContent = cs.length;
+    }
+
+    function showActive() {
+      var cs = cards();
+      if (active >= cs.length) active = Math.max(0, cs.length - 1);
+      cs.forEach(function (card, i) { card.classList.toggle("is-active", i === active); });
+      delBtn.disabled = cs.length <= 1;
+      prevBtn.disabled = active <= 0;
+      nextBtn.disabled = active >= cs.length - 1;
+    }
+    function refresh() { showActive(); renderTabs(); }
+    function setActive(i) { active = i; refresh(); }
+
+    function makeCard(data) {
+      data = data || {};
+      var node = tpl.content.firstElementChild.cloneNode(true);
+      node.querySelector('[data-f="name"]').value = data.name || "";
+      node.querySelector('[data-f="email"]').value = data.email || "";
+      node.querySelector('[data-f="phone"]').value = data.phone || "";
+      return node;
+    }
+
+    function addRecipient() {
+      panel.appendChild(makeCard({}));
+      active = cards().length - 1;
+      refresh();
+      var c = cards()[active]; if (c) { var e = c.querySelector('[data-f="email"]'); if (e) e.focus(); }
+    }
+
+    delBtn.addEventListener("click", function () {
+      var cs = cards();
+      if (cs.length <= 1) { // clearing the only recipient just empties it
+        var only = cs[0];
+        only.querySelector('[data-f="name"]').value = "";
+        only.querySelector('[data-f="email"]').value = "";
+        only.querySelector('[data-f="phone"]').value = "";
+        renderTabs();
+        return;
+      }
+      cs[active].remove();
+      if (active >= cards().length) active = cards().length - 1;
+      if (active < 0) active = 0;
+      refresh();
+    });
+    function move(dir) {
+      var cs = cards(); var i = active, j = i + dir;
+      if (j < 0 || j >= cs.length) return;
+      if (dir < 0) panel.insertBefore(cs[i], cs[j]); else panel.insertBefore(cs[j], cs[i]);
+      active = j; refresh();
+    }
+    prevBtn.addEventListener("click", function () { move(-1); });
+    nextBtn.addEventListener("click", function () { move(1); });
+
+    // Keep the tab labels live as the active recipient's fields change.
+    panel.addEventListener("input", function (e) { if (e.target.closest && e.target.closest(".emx-item")) renderTabs(); });
+
+    // Start with one empty recipient.
+    panel.appendChild(makeCard({}));
+    refresh();
+
+    form.addEventListener("submit", function (e) {
+      var rows = [];
+      cards().forEach(function (el) {
+        var email = (el.querySelector('[data-f="email"]').value || "").trim();
+        if (!email) return;
+        rows.push({
+          name: (el.querySelector('[data-f="name"]').value || "").trim(),
+          email: email,
+          phone: (el.querySelector('[data-f="phone"]').value || "").trim()
+        });
+      });
+      if (!rows.length) {
+        e.preventDefault();
+        var first = cards()[0]; if (first) { var em = first.querySelector('[data-f="email"]'); if (em) em.focus(); }
+        return;
+      }
+      hidden.value = JSON.stringify(rows);
+    });
+  })();
+</script>
+{% endblock %}

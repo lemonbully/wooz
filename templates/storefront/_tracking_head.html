@@ -1,0 +1,62 @@
+{% comment %}
+Marketing tags for the storefront <head>. Rendered as high in the head as
+possible (right after the charset/viewport metas). Each block is gated on its
+own ID so only configured providers emit anything. Values are escaped for the
+JavaScript string context they sit in. These run under the storefront's
+`'unsafe-inline'` CSP; the external hosts are admitted to script-src only when
+the store's `allows_custom_scripts` flag is set (done automatically when the
+owner saves any tag under Tracking & Ads).
+{% endcomment %}
+{% if tracking %}
+{% if tracking.google_tag_manager_id %}
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ tracking.google_tag_manager_id|escapejs }}');</script>
+<!-- End Google Tag Manager -->
+{% endif %}
+{% if tracking.google_analytics_id or tracking.google_ads_id %}
+<!-- Google gtag.js (Analytics + Ads) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ tracking.google_analytics_id|default:tracking.google_ads_id|escapejs }}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  {% if tracking.google_analytics_id %}gtag('config', '{{ tracking.google_analytics_id|escapejs }}');{% endif %}
+  {% if tracking.google_ads_id %}gtag('config', '{{ tracking.google_ads_id|escapejs }}');{% endif %}
+</script>
+{% endif %}
+{% if tracking.meta_pixel_id %}
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '{{ tracking.meta_pixel_id|escapejs }}');
+fbq('track', 'PageView');
+</script>
+{% endif %}
+{% if tracking.tiktok_pixel_id %}
+<!-- TikTok Pixel -->
+<script>
+!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{};ttq._i[e]=[];ttq._i[e]._u=i;ttq._t=ttq._t||{};ttq._t[e]=+new Date;ttq._o=ttq._o||{};ttq._o[e]=n||{};var o=d.createElement("script");o.type="text/javascript";o.async=!0;o.src=i+"?sdkid="+e+"&lib="+t;var a=d.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
+ttq.load('{{ tracking.tiktok_pixel_id|escapejs }}');
+ttq.page();
+}(window,document,'ttq');
+</script>
+{% endif %}
+{% if tracking.pinterest_tag_id %}
+<!-- Pinterest Tag -->
+<script>
+!function(e){if(!window.pintrk){window.pintrk=function(){window.pintrk.queue.push(Array.prototype.slice.call(arguments))};var n=window.pintrk;n.queue=[],n.version="3.0";var t=document.createElement("script");t.async=!0,t.src=e;var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r)}}("https://s.pinimg.com/ct/core.js");
+pintrk('load', '{{ tracking.pinterest_tag_id|escapejs }}');
+pintrk('page');
+</script>
+{% endif %}
+{% if tracking.microsoft_uet_id %}
+<!-- Microsoft UET (Bing) -->
+<script>
+(function(w,d,t,r,u){var f,n,i;w[u]=w[u]||[],f=function(){var o={ti:"{{ tracking.microsoft_uet_id|escapejs }}",enableAutoSpaTracking:!0};o.q=w[u],w[u]=new UET(o),w[u].push("pageLoad")},n=d.createElement(t),n.src=r,n.async=1,n.onload=n.onreadystatechange=function(){var s=this.readyState;s&&s!=="loaded"&&s!=="complete"||(f(),n.onload=n.onreadystatechange=null)},i=d.getElementsByTagName(t)[0],i.parentNode.insertBefore(n,i)})(window,document,"script","//bat.bing.com/bat.js","uetq");
+</script>
+{% endif %}
+{% if tracking.custom_head_html %}
+<!-- Custom head tags -->
+{{ tracking.custom_head_html|safe }}
+{% endif %}
+{% endif %}

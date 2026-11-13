@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product | velora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+
+<main class="container">
+  <nav class="crumbs" aria-label="Breadcrumb" data-crumbs-top></nav>
+  <div class="pdp">
+    <!-- Gallery -->
+    <div class="gallery">
+      <div class="gallery__stage" data-stage>
+        <img src="" alt="" data-main>
+        <div class="p-card__badges" data-pbadges style="top:16px;left:16px"></div>
+        <div class="gallery__tools">
+          <button class="circle-btn" data-share aria-label="Share"></button>
+          <button class="circle-btn" data-zoom aria-label="Zoom"></button>
+        </div>
+        <button class="circle-btn gallery__nav gallery__nav--prev" data-gprev aria-label="Previous image"></button>
+        <button class="circle-btn gallery__nav gallery__nav--next" data-gnext aria-label="Next image"></button>
+        <div class="gallery__thumbs" data-thumbs></div>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="pdp__info">
+      <nav class="crumbs" aria-label="Breadcrumb" data-crumbs></nav>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap" data-top></div>
+      <h1 class="pdp__title" data-title></h1>
+      <div class="pdp__price" data-price></div>
+      <p class="pdp__tax">Inclusive of all taxes. Free shipping above ₹2,999.</p>
+      <button class="pdp__lowest" data-open-ph></button>
+      <p class="pdp__desc" data-desc></p>
+
+      <div class="option" data-color-opt><div class="option__label"><div>Shade: <span data-color-name></span></div></div><div class="opt-swatches" data-colors></div></div>
+      <div class="option"><div class="option__label"><div>Size: <span data-size-name></span></div><button class="link small" data-open="size">Skin type guide</button></div><div class="opt-sizes" data-sizes></div></div>
+
+      <div class="stock"><i></i><span data-stock>In stock and ready to ship</span></div>
+
+      <div class="buy-row">
+        <div class="qty qty--lg"><button data-q="-1" aria-label="Decrease"></button><input value="1" data-qty-input aria-label="Quantity"><button data-q="1" aria-label="Increase"></button></div>
+        <button class="btn btn--outline" data-atc>Add to cart</button>
+        <button class="wish-btn" data-wish-main aria-label="Add to wishlist"></button>
+      </div>
+      <a class="btn btn--black btn--block" href="checkout.html" data-buy>Buy it now</a>
+      <div class="deal-box"><span data-ico="leaf"></span><b>More deals from Velora!</b><a href="shop.html?sale=1" class="btn btn--outline btn--sm">+ Add</a></div>
+
+      <div class="perks" data-perks></div>
+
+      <div class="info-box">
+        <span data-ico="truck"></span>
+        <div style="flex:1">
+          <b>Check delivery date</b><small data-eta>Enter your pincode for delivery date and COD availability</small>
+          <form class="pincode" data-pin><input class="input" maxlength="6" inputmode="numeric" placeholder="Enter pincode" aria-label="Pincode"><button class="btn btn--black">Check</button></form>
+          <div class="pincode-msg" data-pin-msg></div>
+        </div>
+      </div>
+
+      <p class="eyebrow" style="margin-top:14px">Video reviews</p>
+      <div class="video-feed" data-vfeed></div>
+
+      <div data-acc-single data-details></div>
+
+      <div class="share-row">
+        <div style="display:flex;align-items:center;gap:6px">Share: <div class="socials" data-socials></div></div>
+        <a href="contact.html" class="tlink"><span>Need help?</span><span>Need help?</span></a>
+      </div>
+
+      <div class="pairs">
+        <h4>Complete the <em class="hl">ritual</em></h4>
+        <div class="grid grid--3" data-pairs></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Specific features -->
+  <section class="section">
+    <div class="container--narrow" style="margin:0 auto" data-features></div>
+  </section>
+
+  <!-- Reviews -->
+  <section id="reviews" style="padding-bottom:var(--section)">
+    <div class="sec-head"><h2 class="h2">Customer <em class="hl">reviews.</em></h2><button class="btn btn--black btn--sm" data-open="review">Write a review</button></div>
+    <div class="rv-summary">
+      <div class="card card--soft">
+        <div class="rv-big" data-rv-score></div>
+        <div data-rv-stars style="margin:8px 0 4px"></div>
+        <p class="small muted" data-rv-count></p>
+        <ul class="rv-bars" style="margin-top:16px" data-rv-bars></ul>
+        <div class="faq-help" style="background:#fff;margin-top:18px"><span data-ico="shield"></span><div class="small"><b>Only verified buyers</b><div class="muted">Every review comes from a delivered order.</div></div></div>
+      </div>
+      <div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" class="pill-tabs"><button class="is-active">All</button><button>With photos</button><button>5 star</button><button>Fit</button><button>Quality</button></div>
+        <div class="rv-list" data-rv-list></div>
+        <button class="btn btn--outline" style="margin-top:16px">Load more reviews</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Product FAQs -->
+  <section style="padding-bottom:var(--section)">
+    <div class="faq-wrap">
+      <div><p class="eyebrow">Questions</p><h2 class="h2" style="margin-top:8px">About this <em class="hl">product.</em></h2><p style="margin-top:12px">Answers to what customers ask most before buying.</p></div>
+      <div data-acc-single data-pfaq></div>
+    </div>
+  </section>
+
+  <!-- Related -->
+  <section>
+    <div class="sec-head sec-head--center"><h2 class="h2">You may also <em class="hl">like.</em></h2></div>
+    <div class="slider" data-slider>
+      <div class="slider__track" data-related style="--col:calc((100% - 3*16px)/4);--col-sm:62%"></div>
+      <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
+    </div>
+  </section>
+  <section class="section" style="padding-bottom:0">
+    <div class="sec-head sec-head--center"><h2 class="h2">Recently <em class="hl">viewed.</em></h2></div>
+    <div class="grid grid--5" data-recent></div>
+  </section>
+</main>
+
+<!-- Sticky add to cart -->
+<div class="sticky-atc" data-sticky>
+  <img src="" alt="" data-s-img>
+  <div class="t"><b data-s-title></b><span class="small muted" data-s-meta></span></div>
+  <div class="hide-sm" data-s-price style="font-weight:800"></div>
+  <button class="btn btn--black" data-s-atc>Add to cart</button>
+</div>
+
+<!-- Price history drawer -->
+<aside class="drawer" id="drawer-ph" aria-label="Price history">
+  <div class="drawer__head"><h3>Price history</h3><button class="icon-btn" data-close aria-label="Close"></button></div>
+  <div class="drawer__body" data-ph></div>
+</aside>
+
+<!-- Size guide -->
+<div class="modal" id="modal-size" role="dialog" aria-label="Size guide">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__box modal__box--single">
+    <button class="modal__close" data-close aria-label="Close"></button>
+    <h3 class="h3">Skin type <em class="hl">guide</em></h3>
+    <p class="small" style="margin:6px 0 18px">Not sure which size or formula to pick? Start here.</p>
+    <table class="spec-table">
+      <tr><td>Skin type</td><td>How it feels</td><td>Best size to start</td></tr>
+      <tr><td>Dry</td><td>Tight after cleansing, flaky patches</td><td>50 ml</td></tr>
+      <tr><td>Oily</td><td>Shine by midday, visible pores</td><td>30 ml</td></tr>
+      <tr><td>Combination</td><td>Oily T-zone, normal cheeks</td><td>30 ml</td></tr>
+      <tr><td>Sensitive</td><td>Redness or stinging with new products</td><td>30 ml, patch test first</td></tr>
+    </table>
+    <div class="faq-help"><span data-ico="chat"></span><div class="small"><b>Still unsure?</b><div>Book a free 10 minute call with our skin experts.</div></div></div>
+  </div>
+</div>
+
+<!-- Write review -->
+<div class="modal" id="modal-review" role="dialog" aria-label="Write a review">
+  <div class="modal__backdrop" data-close></div>
+  <form class="modal__box modal__box--single" data-review-form>
+    <button type="button" class="modal__close" data-close aria-label="Close"></button>
+    <h3 class="h3">Write a review</h3>
+    <div style="display:grid;gap:14px;margin-top:18px">
+      <div class="field"><label>Your rating</label><div class="stars" style="font-size:22px;gap:4px" data-rate></div></div>
+      <div class="field"><label for="rv-t">Title</label><input id="rv-t" class="input" placeholder="Sum it up in a line" required></div>
+      <div class="field"><label for="rv-b">Review</label><textarea id="rv-b" class="textarea" placeholder="How did your skin feel after a few weeks?" required></textarea></div>
+      <button class="btn btn--black btn--block">Submit review</button>
+    </div>
+  </form>
+</div>
+
+<div data-footer></div>
+
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$;
+  const p = T3.byId(T3.qs('p')) || D.products[0];
+  document.title = `${p.name} | velora`;
+  $$('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
+  $$('[data-prev]').forEach(e => e.innerHTML = I.left); $$('[data-next]').forEach(e => e.innerHTML = I.right);
+  $$('.modal__close, #drawer-ph [data-close]').forEach(e => e.innerHTML = I.close);
+  const NAMES = { '#b3342f': 'Brick Red', '#c46a5a': 'Terracotta', '#8c3b4a': 'Berry', '#d89a8a': 'Nude Rose', '#f1d9c2': 'Fair', '#e2b994': 'Medium', '#c9946a': 'Deep',  '#111': 'Black', '#f4f4f2': 'White', '#ece3d2': 'Cream', '#9aab8c': 'Sage', '#1f2b4a': 'Navy', '#b5562f': 'Rust', '#c4301c': 'Red', '#f3b7c2': 'Pink', '#7da2c9': 'Sky', '#9a9a9a': 'Grey', '#6d7246': 'Olive', '#c49a6c': 'Tan', '#6b4a33': 'Brown', '#46607e': 'Indigo', '#e9c53a': 'Yellow', '#2f7a4f': 'Green' };
+
+  /* gallery: product images plus lifestyle shots for a fuller preview */
+  const extra = [D.IMG.flatlay1, D.IMG.pastelTubes].map(id => D.U(id, 900, 1100));
+  const imgs = [...p.img, ...extra].slice(0, 5);
+  let gi = 0;
+  const show = i => { gi = (i + imgs.length) % imgs.length; const m = $('[data-main]'); m.style.opacity = .3; setTimeout(() => { m.src = imgs[gi]; m.style.opacity = 1; }, 120);
+    $$('[data-thumbs] button').forEach((b, k) => b.classList.toggle('is-active', k === gi)); };
+  $('[data-main]').src = imgs[0]; $('[data-main]').alt = p.name;
+  $('[data-thumbs]').innerHTML = imgs.map((s, i) => `<button class="${i ? '' : 'is-active'}" data-g="${i}" aria-label="Image ${i + 1}"><img src="${s.replace('w=900', 'w=160').replace('h=1100', 'h=160')}" alt=""></button>`).join('');
+  $('[data-gprev]').innerHTML = I.left; $('[data-gnext]').innerHTML = I.right;
+  $('[data-share]').innerHTML = I.share; $('[data-zoom]').innerHTML = I.search;
+  $('[data-pbadges]').innerHTML = p.badges.map(b => `<span class="badge badge--${b}">${b[0].toUpperCase() + b.slice(1)}</span>`).join('');
+  document.addEventListener('click', e => {
+    const g = e.target.closest('[data-g]'); if (g) show(+g.dataset.g);
+    if (e.target.closest('[data-gprev]')) show(gi - 1);
+    if (e.target.closest('[data-gnext]')) show(gi + 1);
+    if (e.target.closest('[data-zoom]') || (e.target.matches('[data-main]'))) $('[data-stage]').classList.toggle('is-zoom');
+    if (e.target.closest('[data-share]')) { navigator.clipboard?.writeText(location.href).catch(() => {}); T3.toast('Link copied to clipboard'); }
+  });
+  $('[data-stage]').addEventListener('mousemove', e => { const st = $('[data-stage]'); if (!st.classList.contains('is-zoom')) return; const r = st.getBoundingClientRect(); $('[data-main]').style.transformOrigin = `${(e.clientX - r.left) / r.width * 100}% ${(e.clientY - r.top) / r.height * 100}%`; });
+
+  /* info */
+  $('[data-crumbs-top]').innerHTML = $('[data-crumbs]').innerHTML = `<a href="index.html">Home</a><span class="sep">&gt;</span><a href="category.html?c=${p.cat}">${p.catName}</a><span class="sep">&gt;</span><span>${p.name}</span>`;
+  $('[data-top]').innerHTML = `${p.badges.map(b => `<span class="badge badge--${b}">${b[0].toUpperCase() + b.slice(1)}</span>`).join('')}<a href="#reviews" class="rating">${T3.stars(p.rating)} <b style="color:#000">${p.rating}</b> (${p.reviews} reviews)</a>`;
+  $('[data-title]').textContent = p.name;
+  const sale = p.mrp && p.mrp > p.price;
+  $('[data-price]').innerHTML = `<span style="${sale ? 'color:var(--badge-sale)' : ''}">${T3.inr(p.price)}</span>${sale ? `<span class="price__was">${T3.inr(p.mrp)}</span><span class="badge badge--sale">Save ${Math.round((1 - p.price / p.mrp) * 100)}%</span>` : ''}`;
+  $('[data-open-ph]').innerHTML = `${I.trend} Lowest price in 30 days: ${T3.inr(Math.round(p.price * .94 / 10) * 10)}`;
+  $('[data-desc]').textContent = `A lightweight, fast-absorbing formula from our ${p.catName.toLowerCase()} range, blended with Kerala grown botanicals and clinically proven actives. Suits ${p.skin.join(', ').toLowerCase()} skin and layers beautifully morning and night.`;
+  if (!p.colors.length) $('[data-color-opt]').remove();
+
+  let ci = 0, size = p.sizes.find(s => !p.out.includes(s));
+  const renderOpts = () => {
+    if ($('[data-colors]')) $('[data-colors]').innerHTML = p.colors.map((c, i) => `<button class="${i === ci ? 'is-active' : ''}" data-c="${i}" aria-label="${NAMES[c] || 'Colour'}"><i style="background:${c}"></i></button>`).join('');
+    if ($('[data-color-name]')) $('[data-color-name]').textContent = NAMES[p.colors[ci]] || 'Default';
+    $('[data-sizes]').innerHTML = p.sizes.map(s => `<button class="${s === size ? 'is-active' : ''} ${p.out.includes(s) ? 'is-out' : ''}" data-s="${s}" ${p.out.includes(s) ? 'title="Sold out"' : ''}>${s}</button>`).join('');
+    $('[data-size-name]').textContent = size;
+    $('[data-s-meta]').textContent = p.colors.length ? `${NAMES[p.colors[ci]] || ''} / ${size}` : size;
+  };
+  renderOpts();
+  $('[data-colors]')?.addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (!b) return; ci = +b.dataset.c; renderOpts(); show(ci % imgs.length); });
+  $('[data-sizes]').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; if (p.out.includes(b.dataset.s)) { T3.toast('This size is sold out. We will notify you.'); return; } size = b.dataset.s; renderOpts(); });
+
+  const qi = $('[data-qty-input]');
+  $$('[data-q]').forEach(b => { b.innerHTML = +b.dataset.q > 0 ? I.plus : I.minus; b.onclick = () => qi.value = Math.max(1, Math.min(10, (+qi.value || 1) + +b.dataset.q)); });
+  const add = () => T3.addToCart(p.id, { size, color: ci, qty: +qi.value || 1 });
+  $('[data-atc]').onclick = add; $('[data-s-atc]').onclick = add;
+  $('[data-buy]').onclick = () => T3.addToCart(p.id, { size, color: ci, qty: +qi.value || 1, silent: true });
+  const wb = $('[data-wish-main]'); wb.innerHTML = I.heart; wb.dataset.wish = p.id; wb.classList.toggle('is-on', T3.getWish().includes(p.id));
+
+  $('[data-perks]').innerHTML = [['leaf', 'Cruelty-free'], ['return', 'Skin match promise'], ['truck', 'Free shipping ₹1,499+']].map(([i, t]) => `<div>${I[i].replace(/26/g, '22')}${t}</div>`).join('');
+
+  $('[data-pin]').addEventListener('submit', e => { e.preventDefault(); const v = e.target.querySelector('input').value.trim(); const m = $('[data-pin-msg]');
+    if (!/^\d{6}$/.test(v)) { m.style.color = 'var(--badge-sale)'; m.textContent = 'Please enter a valid 6 digit pincode.'; return; }
+    const d = new Date(Date.now() + 3 * 864e5).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+    m.style.color = 'var(--ok)'; m.textContent = `Delivery by ${d}. Cash on Delivery available.`; });
+
+  $('[data-vfeed]').innerHTML = D.reels.slice(0, 5).map(r => `<button aria-label="Play customer video"><img src="${r.img.replace('w=700', 'w=120').replace('h=1100', 'h=120')}" alt=""></button>`).join('');
+
+  $('[data-details]').innerHTML =
+    T3.acc('Key ingredients', `<ul class="ing-bars" style="list-style:none;padding:0">${[['Hyaluronic Acid', 5], ['Niacinamide', 4], ['Aloe Vera Extract', 8], ['Jojoba Oil', 3]].map(([n, v]) => `<li><div><span>${n}</span><span>${v}%</span></div><i><b style="--w:${v * 10}%"></b></i></li>`).join('')}</ul><p style="margin-top:10px">This ingredient bar highlights the hero actives and how much of each goes into every bottle.</p>`, true) +
+    T3.acc('How to use', `<ul><li>Apply 2 to 3 drops to clean, damp skin</li><li>Press gently into face and neck</li><li>Follow with moisturiser, and SPF in the morning</li></ul>`) +
+    T3.acc('Full ingredient list', `<p>Aqua, Glycerin, Niacinamide, Sodium Hyaluronate, Aloe Barbadensis Leaf Juice, Simmondsia Chinensis (Jojoba) Seed Oil, Panthenol, Allantoin, Centella Asiatica Extract, Xanthan Gum, Phenoxyethanol, Ethylhexylglycerin.</p>`) +
+    T3.acc('Shipping &amp; Returns', `<p>Ships within 24 hours. Delivery in 2 to 4 days in metros and 4 to 7 days elsewhere. Unopened products can be returned within 15 days.</p>`) +
+    T3.acc('Manufacturer Details', `<p>Velora Botanicals Pvt. Ltd., 21 Infopark Road, Kakkanad, Kochi, Kerala 682042.</p>`);
+  $('[data-socials]').innerHTML = [I.fb, I.pinterest, I.x, I.wa].map(s => `<a href="#">${s}</a>`).join('');
+
+  const others = D.products.filter(x => x.id !== p.id);
+  $('[data-pairs]').innerHTML = others.filter(x => x.cat !== p.cat).slice(2, 5).map(x => T3.card(x, { quick: false, swatch: false, reveal: false, tag: false, stars: false })).join('');
+
+  $('[data-features]').innerHTML = `<div class="sec-head sec-head--center"><h2 class="h2">Why it <em class="hl">works.</em></h2></div><div class="feature-rows" data-acc-single>${
+    T3.acc(`<span style="display:flex;gap:12px;align-items:center">${I.leaf.replace(/26/g, '22')} Clinically proven results</span>`, `<p>In an independent 4 week study on 112 volunteers, 94% saw visibly brighter skin and 89% reported less redness.</p><ul><li>Dermatologist tested on sensitive skin</li><li>Non-comedogenic, fragrance free</li><li>pH balanced at 5.5</li></ul>`, true) +
+    T3.acc(`<span style="display:flex;gap:12px;align-items:center">${I.box.replace(/26/g, '22')} Sustainable packaging</span>`, `<p>Recyclable glass bottle, FSC certified carton and a refill pouch available on subscription.</p>`) +
+    T3.acc(`<span style="display:flex;gap:12px;align-items:center">${I.shield.replace(/26/g, '22')} Skin match promise</span>`, `<p>If it does not suit your skin within 30 days, we will exchange it for free, even if opened.</p>`)}</div>`;
+
+  /* reviews */
+  $('[data-rv-score]').textContent = p.rating.toFixed(1);
+  $('[data-rv-stars]').innerHTML = T3.stars(p.rating);
+  $('[data-rv-count]').textContent = `Based on ${p.reviews} reviews`;
+  $('[data-rv-bars]').innerHTML = [[5, 78], [4, 15], [3, 4], [2, 2], [1, 1]].map(([s, v]) => `<li><span>${s} ★</span><i><b style="width:${v}%"></b></i><span>${v}%</span></li>`).join('');
+  $('[data-rv-list]').innerHTML = D.reviews.slice(0, 4).map((r, i) => `<div class="rv-item"><div class="rv-item__head"><div style="display:flex;gap:10px;align-items:center"><img src="${r.avatar}" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt=""><div><b>${r.name}</b><span class="verified">${I.check} Verified buyer</span></div></div><span class="small muted">${['2 days ago', '1 week ago', '3 weeks ago', '1 month ago'][i]}</span></div>
+    ${T3.stars(5 - (i === 3 ? 1 : 0))}<b style="display:block;margin:6px 0 4px">${r.title}</b><p>${r.text}</p>
+    ${i % 2 === 0 ? `<div class="rv-item__photos">${p.img.slice(0, 2).map(s => `<img src="${s.replace('w=900', 'w=160').replace('h=1100', 'h=160')}" alt="">`).join('')}</div>` : ''}
+    <p class="small" style="margin-top:10px">Skin type: <b>${['Dry', 'Combination', 'Sensitive', 'Oily'][i]}</b> · Used for: <b>${['4 weeks', '2 months', '3 weeks', '6 weeks'][i]}</b></p></div>`).join('');
+  $('[data-rate]').innerHTML = Array.from({ length: 5 }, (_, i) => `<button type="button" data-r="${i + 1}" style="opacity:.25">${I.star.replace(/14/g, '26')}</button>`).join('');
+  $('[data-rate]').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (!b) return; $$('[data-r]').forEach(x => x.style.opacity = +x.dataset.r <= +b.dataset.r ? 1 : .25); });
+  $('[data-review-form]').addEventListener('submit', e => { e.preventDefault(); T3.closeAll(); T3.toast('Thanks! Your review will appear after moderation'); e.target.reset(); });
+
+  $('[data-pfaq]').innerHTML = [
+    ['Can I use this with retinol?', 'Yes. Use this in the morning and retinol at night, or alternate evenings if your skin is sensitive.'],
+    ['Is it safe during pregnancy?', 'The formula is free from retinoids and salicylic acid, but we always suggest checking with your doctor first.'],
+    ['How long does one bottle last?', 'Used twice daily, a 30 ml bottle lasts about 8 weeks.'],
+    ['Is Cash on Delivery available?', 'Yes, COD is available on this product for orders up to ₹10,000.'],
+  ].map(([q, a], i) => T3.acc(q, `<p>${a}</p>`, i === 0)).join('');
+
+  $('[data-related]').innerHTML = others.filter(x => x.cat === p.cat).concat(others.filter(x => x.cat !== p.cat)).slice(0, 10).map(x => T3.card(x, { reveal: false })).join('');
+  const recent = T3.store.get('t4_recent', []).filter(id => id !== p.id);
+  T3.store.set('t4_recent', [p.id, ...recent].slice(0, 10));
+  const rlist = recent.map(T3.byId).filter(Boolean); while (rlist.length < 5) rlist.push(others[rlist.length + 12]);
+  $('[data-recent]').innerHTML = rlist.slice(0, 5).map(x => T3.card(x, { swatch: false })).join('');
+
+  /* sticky ATC */
+  $('[data-s-img]').src = p.img[0]; $('[data-s-title]').textContent = p.name; $('[data-s-price]').textContent = T3.inr(p.price);
+  const atc = $('[data-atc]'), st = $('[data-sticky]');
+  addEventListener('scroll', () => { const r = atc.getBoundingClientRect(); st.classList.toggle('is-show', r.bottom < 0 && scrollY < document.body.scrollHeight - innerHeight - 600); }, { passive: true });
+
+  /* price history drawer */
+  $('[data-open-ph]').onclick = () => {
+    const pts = Array.from({ length: 30 }, (_, i) => Math.round(p.price * (1 + .08 * Math.sin(i / 4) + (i < 8 ? .06 : 0) - (i > 24 ? .06 : 0)) / 10) * 10);
+    pts[29] = p.price;
+    const mn = Math.min(...pts), mx = Math.max(...pts), W = 380, H = 170;
+    const xy = pts.map((v, i) => [i / 29 * W, H - 14 - (v - mn) / (mx - mn || 1) * (H - 34)]);
+    const path = xy.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' ');
+    $('[data-ph]').innerHTML = `<div style="display:flex;gap:12px;align-items:center;margin-bottom:18px"><img src="${p.img[0]}" style="width:56px;height:70px;border-radius:10px;object-fit:cover" alt=""><div><b>${p.name}</b><div class="small muted">Last 30 days</div></div></div>
+      <div class="ph-stats"><div><small>Current</small><b>${T3.inr(p.price)}</b></div><div><small>Lowest</small><b style="color:var(--ok)">${T3.inr(mn)}</b></div><div><small>Highest</small><b>${T3.inr(mx)}</b></div></div>
+      <svg class="ph-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Price over the last 30 days">
+        <defs><linearGradient id="phg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5ba86d" stop-opacity=".28"/><stop offset="1" stop-color="#5ba86d" stop-opacity="0"/></linearGradient></defs>
+        <path d="${path} L${W} ${H} L0 ${H}Z" fill="url(#phg)"/><path d="${path}" fill="none" stroke="#000" stroke-width="2"/>
+        <circle cx="${xy[29][0] - 3}" cy="${xy[29][1]}" r="5" fill="#000"/></svg>
+      <div style="display:flex;justify-content:space-between" class="small muted"><span>30 days ago</span><span>Today</span></div>
+      <p class="small muted" style="margin-top:18px">Prices shown include taxes. The lowest price is the minimum selling price recorded for this product over the period.</p>`;
+    T3.openDrawer('ph');
+  };
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

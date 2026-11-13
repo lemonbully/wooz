@@ -9,4 +9,4 @@ they are not from OneWooz.
 
 If you didn't ask for this code, you can ignore it.
 
-— {{ brand }}
+ {{ brand }}

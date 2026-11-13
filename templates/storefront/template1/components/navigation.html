@@ -134,7 +134,7 @@
     @media (min-width:1025px){
       .nav-center.no-logo{ pointer-events:auto !important; z-index:4; }
       .nav-center.no-logo a{ pointer-events:auto !important; }
-      .nav-center.no-logo .nav-title{ pointer-events:auto !important; cursor:pointer; }
+      .nav-center .nav-title{ pointer-events:auto !important; cursor:pointer; }
       .nav-center.has-logo{ pointer-events:none !important; }
       .nav-center.has-logo a{ pointer-events:none !important; }
       .nav-center.has-logo img{ pointer-events:auto !important; }
@@ -489,6 +489,10 @@
         .nav-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; }
         .nav-center a { pointer-events: none; }
         .nav-center img { pointer-events: auto; }
+        /* No logo: the store name shown in its place must be tappable too (the
+           bar's centre stays click-through elsewhere so it never blocks the
+           hamburger / icons). The tap lands inside the home link, so it navigates. */
+        .nav-center .nav-title { pointer-events: auto; cursor: pointer; }
         .nav-logo-desktop { display: none !important; }
         .nav-logo-mobile {
             display: block !important;
@@ -504,7 +508,7 @@
 
 <header class="site-header" role="banner">
     <div class="nav-inner">
-        <div class="nav-top-banner">{{website.content.announcement_text | default:'FREE SHIPPING ON ORDERS OVER ₹999'}}</div>
+        {% include "storefront/shared/_announcement_bar.html" %}
     </div>
 
     <!-- Hidden checkbox to control the mobile drawer (CSS-only) -->
@@ -532,10 +536,10 @@
                 </nav>
             </div>
 
-            <div class="nav-center {% if website.content.media.desktop_logo or website.content.media.mobile_logo %}has-logo{% else %}no-logo{% endif %}">
+            <div class="nav-center {% if website.content.desktop_logo or website.content.mobile_logo %}has-logo{% else %}no-logo{% endif %}">
                 <a href="{{ website_base }}" class="inline-flex items-center" aria-label="{{ website.content.websiteName|default:'Website' }}">
-                    {% if website.content.media.mobile_logo %}
-                        {% with mobile_logo_url=website.content.media.mobile_logo.url %}
+                    {% if website.content.mobile_logo %}
+                        {% with mobile_logo_url=website.content.mobile_logo %}
                         <img
                             src="{{ mobile_logo_url }}"
                             {% media_attrs website mobile_logo_url website.content.websiteName|default:'Prestige' %}
@@ -546,8 +550,8 @@
                         <!-- Text fallback for mobile when no mobile logo -->
                         <span class="nav-title nav-title-mobile">{{ website.content.websiteName|default:'Website' }}</span>
                     {% endif %}
-                    {% if website.content.media.desktop_logo %}
-                        {% with desktop_logo_url=website.content.media.desktop_logo.url %}
+                    {% if website.content.desktop_logo %}
+                        {% with desktop_logo_url=website.content.desktop_logo %}
                         <img
                             src="{{ desktop_logo_url }}"
                             {% media_attrs website desktop_logo_url website.content.websiteName|default:'Prestige' %}

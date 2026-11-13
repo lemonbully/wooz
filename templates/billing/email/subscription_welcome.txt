@@ -1,0 +1,35 @@
+{% autoescape off %}{% if is_returning %}Thank you for staying with us{% if first_name %}, {{ first_name }}{% endif %}!
+
+It means a lot to have you with us again. Your {{ plan_name }} plan is active, so you can pick up exactly where you left off and keep your store growing.
+
+Every order you take, every customer you delight, every little win along the way: we are cheering for all of it, and we are right here whenever you need us.{% else %}Welcome to OneWooz{% if first_name %}, {{ first_name }}{% endif %}!
+
+We are truly happy you are here. Your {{ plan_name }} plan is active, and everything you need to launch a beautiful online store is ready and waiting for you.
+
+No developers, no page builders, no late nights wrestling with code. Tell us a little about your brand, click once, and your store goes live with products, checkout, payments and shipping already in place. Starting something new takes courage, and we are honoured you chose to start it with us.{% endif %}
+
+YOUR PLAN
+  Plan:          {{ plan_name }} · {{ duration_label }}{% if period_end %}
+  Active until:  {{ period_end|date:"j F Y" }}{% endif %}
+  {% if is_free %}Price:         Free, on us{% else %}Amount paid:   {{ amount_label }} (incl. GST){% endif %}
+  Order:         {{ order_number }}
+
+{% if is_returning %}PICK UP WHERE YOU LEFT OFF{% else %}YOUR FIRST THREE STEPS{% endif %}
+{% if has_account %}  01  Open your dashboard. Sign in with your usual email and everything is right where you left it.{% else %}  01  Set up your account. Choose a password and add your business details. It takes about a minute.{% endif %}
+{% if is_returning %}  02  Freshen up your store. New products, a new banner or a seasonal offer can make your storefront feel brand new.
+  03  Keep the momentum going. Share your store link, follow your orders and watch your business grow.{% else %}  02  Create your store. Tell us about your brand, pick a design you love, and we will build the whole store for you.
+  03  Add your products and go live. Share your store link and get ready to welcome your very first customers.{% endif %}
+
+{% if has_account %}Open your dashboard:{% else %}Set up your account:{% endif %}
+
+  {{ cta_url }}
+
+Need a hand at any step? Our team would love to help. Get in touch with us here and a real person will get back to you:
+
+  {{ contact_url }}
+
+Here is to a wonderful journey together.
+
+With warmth,
+The OneWooz team
+{% endautoescape %}

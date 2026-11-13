@@ -8,7 +8,7 @@ claude.md
 onewooz_design.md
 DEPLOY.md
 
-# Local secrets. Generated automatically on first dev run — never committed.
+# Local secrets. Generated automatically on first dev run  never committed.
 .secrets/
 .env
 .env.*
@@ -32,3 +32,8 @@ htmlcov/
 .idea/
 .vscode/
 *.log
+
+# Local-only email-marketing working notes (never pushed)
+EMAILWORKING.md
+email.md
+emailworking.md

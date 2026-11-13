@@ -1,0 +1,14 @@
+{% extends "custom_admin/_auth.html" %}
+
+{% block title %}Check your email · OneWooz Admin{% endblock %}
+
+{% block card %}
+  <p class="owa-kicker">Account recovery</p>
+  <h1 class="owa-auth__h">Check your email</h1>
+  <p class="owa-auth__p">
+    If a staff account exists for <strong>{{ email }}</strong>, we’ve sent it a link to reset the password. The link works once and expires shortly.
+  </p>
+  <div class="owa-auth__foot">
+    <a href="{% url 'custom_admin:sign_in' %}">← Back to sign in</a>
+  </div>
+{% endblock %}

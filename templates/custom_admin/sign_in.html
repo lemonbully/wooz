@@ -1,70 +1,30 @@
-{% extends "base.html" %}
-{% load static %}
+{% extends "custom_admin/_auth.html" %}
 
-{% block title %}Staff sign-in{% endblock %}
-{% block meta %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block title %}Staff sign-in · OneWooz Admin{% endblock %}
 
-{% block body %}
-<main class="auth auth--inverse">
-  <div class="auth__inner">
-    <div class="auth__card">
-      <h1 class="auth__title">Staff access</h1>
+{% block card %}
+  <p class="owa-kicker">Step 1 of 2</p>
+  <h1 class="owa-auth__h">Staff sign-in</h1>
+  <p class="owa-auth__p">Sign in with your staff email and password. We’ll email you a one-time code to finish.</p>
 
-      {% if timed_out %}
-        <p class="alert alert--info mt-4">Your session timed out.</p>
-      {% endif %}
+  {% if timed_out %}<p class="owa-alert" role="status">Your session timed out. Please sign in again.</p>{% endif %}
+  {% if request.GET.reset %}<p class="owa-alert" role="status">Your password was changed. Sign in with your new password.</p>{% endif %}
+  {% if error %}<p class="owa-alert owa-alert--error" role="alert">{{ error }}</p>{% endif %}
 
-      {% comment %}
-      No email field and no password field, deliberately. The assertion is
-      discoverable, so the authenticator offers whichever staff credential it
-      holds for this origin — there is nothing here to phish.
-      {% endcomment %}
-      <p class="auth__subtitle mt-3">Continue with your registered passkey.</p>
+  <form method="post" action="{% url 'custom_admin:sign_in' %}">
+    {% csrf_token %}
+    <label class="owa-field">
+      <span class="owa-field__label">Email</span>
+      <input class="owa-input" type="email" name="email" id="email" autocomplete="username" required autofocus spellcheck="false">
+    </label>
+    <label class="owa-field">
+      <span class="owa-field__label">Password</span>
+      <input class="owa-input" type="password" name="password" id="password" autocomplete="current-password" required>
+    </label>
+    <button type="submit" class="owa-btn owa-btn--accent owa-btn--block">Continue <span class="owa-btn__arw" aria-hidden="true">→</span></button>
+  </form>
 
-      <button type="button" id="passkey-signin" class="btn btn--primary btn--block mt-6">
-        Continue with passkey
-      </button>
-      <p id="passkey-error" class="alert alert--error mt-4 hidden" role="alert"></p>
-    </div>
+  <div class="owa-auth__foot">
+    <a href="{% url 'custom_admin:forgot' %}">Forgot your password?</a>
   </div>
-</main>
-{% endblock %}
-
-{% block scripts %}
-{% comment %}
-The admin surface exposes only the authentication half of the ceremony;
-registering a staff passkey happens on the dashboard, while signed in.
-{% endcomment %}
-<script nonce="{{ csp_nonce }}" src="{% static 'js/passkeys.js' %}"
-        data-auth-begin="{% url 'custom_admin:passkey_auth_begin' %}"
-        data-auth-finish="{% url 'custom_admin:passkey_auth_finish' %}"
-        data-register-begin="{% url 'custom_admin:passkey_auth_begin' %}"
-        data-register-finish="{% url 'custom_admin:passkey_auth_finish' %}"></script>
-<script nonce="{{ csp_nonce }}">
-  (function () {
-    var button = document.getElementById('passkey-signin');
-    var errorBox = document.getElementById('passkey-error');
-
-    if (!window.OneWoozPasskeys || !window.OneWoozPasskeys.isSupported()) {
-      button.disabled = true;
-      errorBox.textContent = 'This browser does not support passkeys.';
-      errorBox.classList.remove('hidden');
-      return;
-    }
-
-    button.addEventListener('click', async function () {
-      errorBox.classList.add('hidden');
-      button.disabled = true;
-      try {
-        var result = await window.OneWoozPasskeys.signIn();
-        window.location.href = result.redirect || '/';
-      } catch (err) {
-        // No detail: a failed staff sign-in should teach a prober nothing.
-        errorBox.textContent = 'That did not work.';
-        errorBox.classList.remove('hidden');
-        button.disabled = false;
-      }
-    });
-  })();
-</script>
 {% endblock %}

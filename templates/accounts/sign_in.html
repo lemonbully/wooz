@@ -8,6 +8,12 @@
 {% endblock %}
 
 {% block auth_body %}
+  {% if request.GET.reset == 'done' %}
+    <div class="alert alert--info mt-5" role="status">
+      Your password has been reset. Sign in with your new password.
+    </div>
+  {% endif %}
+
   <button type="button" id="passkey-signin" class="btn btn--secondary btn--block mt-6 hidden">
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="4"/><path d="M10.3 15H7a4 4 0 0 0-4 4v2"/><circle cx="17" cy="15" r="2"/><path d="M17 17v4"/><path d="M19 19h-4"/></svg>
     Sign in with a passkey
@@ -30,8 +36,8 @@
     <div class="field">
       <div class="label-row">
         <label class="label" for="password" style="margin:0;">Password</label>
-        <a href="{% url 'accounts:magic_link_request' %}" class="small" style="color:var(--accent-600);">
-          Sign in without a password
+        <a href="{% url 'accounts:password_reset_request' %}" class="small" style="color:var(--accent-600);">
+          Forgot password?
         </a>
       </div>
       <input class="input" type="password" name="password" id="password"
@@ -43,8 +49,13 @@
 {% endblock %}
 
 {% block auth_footer %}
+  {% comment %}
+  Self-service sign-up is disabled for now (see accounts.views.sign_up), so the
+  "Create an account" link is intentionally removed. What's offered instead is
+  the passwordless sign-in option for existing accounts.
+  {% endcomment %}
   <p class="auth__footer">
-    New to OneWooz? <a href="{% url 'accounts:sign_up' %}">Create an account</a>
+    <a href="{% url 'accounts:magic_link_request' %}">Sign in without a password</a>
   </p>
 {% endblock %}
 
@@ -65,7 +76,7 @@ development and no prefix on app.onewooz.com.
     var divider = document.getElementById('passkey-divider');
     var errorBox = document.getElementById('passkey-error');
 
-    // Only offer the passkey path where the browser can actually do it —
+    // Only offer the passkey path where the browser can actually do it 
     // a dead button is worse than no button.
     if (!window.OneWoozPasskeys || !window.OneWoozPasskeys.isSupported()) return;
 

@@ -1,0 +1,12 @@
+{% comment %}
+Ranked horizontal bar list. Expects `bars` (from views `_bars`); optional
+`mono` to render labels monospaced (paths), and `empty` text.
+{% endcomment %}
+{% for b in bars %}
+<div class="an-bar">
+  <span class="an-bar__label{% if mono %} an-bar__label--mono{% endif %}" title="{{ b.label }}">{{ b.label }}</span>
+  <span class="an-bar__track"><span class="an-bar__fill{% if b.accent %} an-bar__fill--accent{% endif %}" style="width:{{ b.pct }}%"></span></span>
+  <span class="an-bar__val">{{ b.value }}{% if b.extra %} <em class="an-bar__extra">{{ b.extra }}</em>{% endif %}</span>
+</div>
+{% empty %}<p class="app-note-inline">{{ empty|default:"No data yet." }}</p>
+{% endfor %}

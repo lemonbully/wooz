@@ -1,0 +1,23 @@
+{% load store_extras %}
+{% comment %}
+Product video  one block in the same style as the image blocks. Click
+it to upload a video (it goes to the store library and its asset id
+posts as `media_video`), pick one from the library, or paste a link.
+× clears both, so saving detaches the video. Wired by initVideoSlot.
+{% endcomment %}
+<div class="app-f--full" data-vidslot data-current="{{ product.video_link|default:'' }}">
+  {# Link first; the upload / library block below is the alternative. #}
+  <label class="pal-field app-vidslot__link">
+    <span class="pal-field__label">Video link (URL){% field_tip "video_link" %}</span>
+    <input type="url" name="video_link" value="{{ product.video_link|default:'' }}" placeholder="https://…" data-vidslot-link>
+  </label>
+  <div class="app-imgslots__head">
+    <span class="pal-field__label" style="margin:0">…or upload a product video <span class="app-field-hint" style="display:inline">(one video)</span>{% field_tip "media_video" %}</span>
+    <button type="button" class="pal-btn pal-btn--ghost app-imgslots__lib" data-vidslot-lib>Choose from media library</button>
+  </div>
+  <div class="app-vidslot__row">
+    <div class="app-imgslots app-imgslots--video" data-vidslot-grid></div>
+  </div>
+  <input type="hidden" name="media_video" value="" data-vidslot-id>
+  <p class="app-imgslots__err" data-vidslot-err role="alert" hidden></p>
+</div>

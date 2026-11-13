@@ -1,0 +1,122 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Staff & admins{% endblock %}
+{% block crumb %}Staff & admins{% endblock %}
+
+{% block main %}
+<style nonce="{{ csp_nonce }}">
+  .stf-grid__act { text-align: center; width: 4.5rem; }
+  .stf-grid__grp td { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); background: var(--pal-paper-2); }
+  .stf-grid__page { color: var(--pal-ink); }
+  .stf-grid input[type="checkbox"] { width: 1rem; height: 1rem; accent-color: var(--pal-accent); cursor: pointer; }
+  .stf-hint { margin: 0.6rem 0 0; font-size: 0.78rem; color: var(--pal-faint); }
+  .stf-card { background: var(--pal-panel); border: 1px solid var(--pal-line); padding: 1.2rem 1.3rem; margin-bottom: 1.1rem; }
+  .stf-card__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.02rem; color: var(--pal-ink); }
+  .stf-field { margin-top: 0.9rem; }
+  .stf-label { display: block; font-size: 0.82rem; color: var(--pal-muted); margin-bottom: 0.4rem; }
+  .stf-in { width: 100%; max-width: 22rem; padding: 0.58rem 0.7rem; border: 1px solid var(--pal-line); background: var(--pal-panel); font: inherit; font-size: 0.9rem; color: var(--pal-ink); }
+  .stf-in:focus { outline: 2px solid var(--pal-accent); outline-offset: 1px; border-color: var(--pal-accent); }
+  .stf-usage { display: inline-flex; align-items: baseline; gap: 0.5rem; font-family: var(--pal-font-mono); font-size: 0.72rem; letter-spacing: 0.04em; color: var(--pal-muted); }
+  .stf-usage strong { font-size: 1rem; color: var(--pal-ink); }
+  .stf-member { border: 1px solid var(--pal-line); background: var(--pal-panel); margin-bottom: 0.8rem; }
+  .stf-member > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 1rem; }
+  .stf-member > summary::-webkit-details-marker { display: none; }
+  .stf-member[open] > summary { border-bottom: 1px solid var(--pal-line); }
+  .stf-member__who { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+  .stf-member__name { font-weight: 500; color: var(--pal-ink); }
+  .stf-member__mail { font-size: 0.8rem; color: var(--pal-muted); overflow: hidden; text-overflow: ellipsis; }
+  .stf-member__meta { display: inline-flex; align-items: center; gap: 0.6rem; flex: none; }
+  .stf-member__body { padding: 1rem; }
+  .stf-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
+  .stf-check { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--pal-ink-2); }
+</style>
+
+<div class="app-page">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Team</p>
+      <h1 class="app-head__title pal-mt-4">Staff &amp; admins</h1>
+      <p class="app-head__lead">Add people to help run <strong>{{ site.name }}</strong>. Each person signs in with their own account and only sees the pages and actions you grant them.</p>
+    </div>
+    <div class="app-head__actions">
+      <span class="stf-usage"><strong>{{ total_users }}</strong> of {{ total_allowed }} users</span>
+    </div>
+  </div>
+
+  {# ── Add a member ──────────────────────────────────────────────── #}
+  <div class="app-block">
+    <div class="stf-card">
+      <h2 class="stf-card__title">Add a team member</h2>
+      {% if can_add %}
+        <form method="post" action="{% url 'store:staff' site.id %}">
+          {% csrf_token %}
+          <div class="stf-field">
+            <label class="stf-label" for="stf-name">Name</label>
+            <input class="stf-in" type="text" id="stf-name" name="name" placeholder="e.g. Priya Sharma" maxlength="120" required>
+          </div>
+          <div class="stf-field">
+            <label class="stf-label" for="stf-email">Email (Gmail)</label>
+            <input class="stf-in" type="email" id="stf-email" name="email" placeholder="name@gmail.com" required>
+          </div>
+          <div class="stf-field">
+            <label class="stf-label">Which pages &amp; actions they can access</label>
+            {% include "store/_staff_perm_grid.html" with perm_groups=blank_perm_groups %}
+          </div>
+          <div class="stf-actions">
+            <button type="submit" class="pal-btn">Add member <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+          </div>
+        </form>
+      {% else %}
+        <p class="app-head__lead" style="margin-top:0.8rem;">
+          {% if total_allowed > 1 %}You’ve added all {{ allowance }} team member{{ allowance|pluralize }} your plan includes.{% else %}Your plan doesn’t include team members.{% endif %}
+          <a href="{{ upgrade_url }}" class="pal-link">Upgrade your plan</a> to add more.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Existing members ──────────────────────────────────────────── #}
+  <div class="app-block">
+    <h2 class="stf-card__title" style="margin-bottom:0.7rem;">Members</h2>
+    {% if members %}
+      {% for row in members %}
+        <details class="stf-member">
+          <summary>
+            <span class="stf-member__who">
+              <span class="stf-member__name">{{ row.obj.name|default:row.obj.email }}</span>
+              <span class="stf-member__mail">{{ row.obj.email }}</span>
+            </span>
+            <span class="stf-member__meta">
+              {% if row.obj.is_active %}<span class="app-badge app-badge--ok">Active</span>{% else %}<span class="app-badge app-badge--muted">Paused</span>{% endif %}
+              <span class="pal-mono" style="font-size:0.7rem;color:var(--pal-muted)">Edit access ▾</span>
+            </span>
+          </summary>
+          <div class="stf-member__body">
+            <form method="post" action="{% url 'store:staff_edit' site.id row.obj.id %}">
+              {% csrf_token %}
+              <div class="stf-field">
+                <label class="stf-label" for="stf-name-{{ row.obj.id }}">Name</label>
+                <input class="stf-in" type="text" id="stf-name-{{ row.obj.id }}" name="name" value="{{ row.obj.name }}" maxlength="120">
+              </div>
+              <div class="stf-field">
+                {% include "store/_staff_perm_grid.html" with perm_groups=row.perm_groups %}
+              </div>
+              <div class="stf-actions">
+                <label class="stf-check"><input type="checkbox" name="is_active" {% if row.obj.is_active %}checked{% endif %}> Active (can sign in)</label>
+                <button type="submit" class="pal-btn">Save access</button>
+              </div>
+            </form>
+            <div class="stf-actions">
+              <form method="post" action="{% url 'store:staff_remove' site.id row.obj.id %}" onsubmit="return confirm('Remove {{ row.obj.name|default:row.obj.email|escapejs }} from this store?');">
+                {% csrf_token %}
+                <button type="submit" class="app-iconbtn app-iconbtn--danger">Remove member</button>
+              </form>
+            </div>
+          </div>
+        </details>
+      {% endfor %}
+    {% else %}
+      <div class="app-empty"><p class="app-empty__text">No team members yet. Add someone above to give them scoped access to this store.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

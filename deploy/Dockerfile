@@ -1,9 +1,9 @@
-# OneWooz application image — Django (Gunicorn) + Celery in one image, the role
+# OneWooz application image  Django (Gunicorn) + Celery in one image, the role
 # chosen at runtime by the entrypoint (web | worker | beat | migrate).
 #
 # Multi-stage: a build stage compiles the wheels (mysqlclient and Pillow need a
 # toolchain), the runtime stage carries only the virtualenv + app and runs as an
-# unprivileged user. Targets ARM64 (AWS Graviton, t4g.*) as well as x86_64 —
+# unprivileged user. Targets ARM64 (AWS Graviton, t4g.*) as well as x86_64 
 # nothing here is architecture-specific.
 
 # --- build ----------------------------------------------------------------

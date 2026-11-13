@@ -1,4 +1,4 @@
-# OneWooz — AWS deployment state
+# OneWooz  AWS deployment state
 
 Account `521831014282` · region `ap-south-1` (Mumbai) · budget target < ₹10k/mo.
 Architecture: **ECS on a single EC2 (Graviton) host**, Caddy at the edge,
@@ -20,14 +20,14 @@ pushed to ECR by you (no CodeBuild).
 | Exec role | `ecsTaskExecutionRole` (+ inline `onewooz-ssm-read`) |
 | Task role | `onewooz-task-role` (S3 + inline `onewooz-sqs-ses`) |
 | Task definitions | `onewooz-app:1`, `onewooz-edge:1` (see `taskdef-*.json`) |
-| ECS services | `onewooz-app`, `onewooz-edge` — ACTIVE, **desiredCount 0** |
+| ECS services | `onewooz-app`, `onewooz-edge`  ACTIVE, **desiredCount 0** |
 | Secrets (SSM SecureString) | `/onewooz/prod/{SECRET_KEY,FIELD_ENCRYPTION_KEY,CADDY_ASK_SECRET,DB_PASSWORD,EMAIL_HOST,EMAIL_USER,EMAIL_PASSWORD}` |
 
 ## Security fixes applied
 - RDS SG `onewooz-rds`: removed `0.0.0.0/0:3306`; now allows 3306 **only** from
   app SG `onewooz-app` (`sg-0323ab11d67c244b2`).
 - Deleted stray Aurora PostgreSQL `database-1` (final snapshot
-  `database-1-final-20260824`) — was billing and unrelated to OneWooz.
+  `database-1-final-20260824`)  was billing and unrelated to OneWooz.
 
 ## YOUR manual steps (in order)
 
@@ -38,7 +38,7 @@ pushed to ECR by you (no CodeBuild).
    # app
    docker buildx build --platform linux/arm64 -f deploy/Dockerfile \
      -t 521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app:latest --push .
-   # caddy (repo is currently empty — required for the edge service)
+   # caddy (repo is currently empty  required for the edge service)
    docker buildx build --platform linux/arm64 -f deploy/caddy/Dockerfile \
      -t 521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-caddy:latest --push .
    ```
@@ -55,17 +55,17 @@ pushed to ECR by you (no CodeBuild).
        --type SecureString --overwrite --value 'SES_SMTP_PASSWORD'
      ```
 
-3. **DNS** — point these A-records at **`13.204.135.123`**:
+3. **DNS**  point these A-records at **`13.204.135.123`**:
    `onewooz.com`, `www.onewooz.com`, `app.onewooz.com`, `admin.onewooz.com`
    (and later `*.onewooz.site` for storefronts). If your real domain differs
    from `onewooz.com`, also set `ONEWOOZ_MARKETING_HOST` / `ONEWOOZ_APP_HOST` /
    `ONEWOOZ_ADMIN_HOST` (env in `taskdef-app.json`) and re-register.
 
-4. **Admin IP allowlist** — admin refuses all requests until set. Add
+4. **Admin IP allowlist**  admin refuses all requests until set. Add
    `ONEWOOZ_ADMIN_IP_ALLOWLIST` (comma-separated) to the `web` container env in
    `taskdef-app.json`, then re-register + update the service.
 
-5. **Start it** — once images are pushed and SES creds are set:
+5. **Start it**  once images are pushed and SES creds are set:
    ```sh
    aws ecs update-service --region ap-south-1 --cluster onewooz-prod --service onewooz-app  --desired-count 1
    aws ecs update-service --region ap-south-1 --cluster onewooz-prod --service onewooz-edge --desired-count 1

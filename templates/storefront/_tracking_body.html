@@ -1,0 +1,14 @@
+{% comment %}
+The <noscript> fallbacks that must sit immediately after the opening <body>:
+Google Tag Manager's iframe and the Meta Pixel image beacon. Image beacons fall
+under img-src (which already allows https:), so no CSP change is needed here.
+{% endcomment %}
+{% if tracking %}
+{% if tracking.google_tag_manager_id %}
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ tracking.google_tag_manager_id|urlencode }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+{% endif %}
+{% if tracking.meta_pixel_id %}
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id={{ tracking.meta_pixel_id|urlencode }}&ev=PageView&noscript=1"/></noscript>
+{% endif %}
+{% endif %}

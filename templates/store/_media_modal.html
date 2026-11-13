@@ -1,0 +1,117 @@
+{% comment %}
+Universal media modal  mounted once in the store shell, driven by
+`static/js/app/media-library.js`. Every media surface (the library page, product
+galleries, category images, banners, section content) opens this one modal via
+`window.OneWoozMedia.open({ kind, multiple, onSelect })` or a
+`[data-ow-media-open]` trigger. Inside it a user uploads a new file or selects an
+existing one; each item carries Edit and Delete. Config and the CSRF token are
+rendered by Django onto the root so the script needs no globals.
+
+`data-*-tmpl` URLs embed the all-zero UUID as a placeholder the script swaps for
+the real asset id  the only CSP-safe way to hand a reversed URL to JS.
+{% endcomment %}
+<div id="ow-media" class="app-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Media library"
+     data-list-url="{% url 'store:media_list' site.id %}"
+     data-upload-url="{% url 'store:media_upload' site.id %}"
+     data-update-tmpl="{% url 'store:media_update' site.id '00000000-0000-0000-0000-000000000000' %}"
+     data-delete-tmpl="{% url 'store:media_delete' site.id '00000000-0000-0000-0000-000000000000' %}"
+     data-bulk-delete-url="{% url 'store:media_delete_bulk' site.id %}">
+  {% csrf_token %}
+  <div class="app-modal__backdrop" data-med-backdrop></div>
+
+  <div class="app-modal__panel" role="document">
+    <header class="app-modal__head">
+      <h2 class="app-modal__title" data-med-title>Media library</h2>
+      <button type="button" class="app-modal__x" data-med-close aria-label="Close">
+        {% include "store/_icons.html" with icon="close" %}
+      </button>
+    </header>
+
+    <div class="app-modal__toolbar">
+      <label class="app-search app-modal__search">
+        {% include "store/_icons.html" with icon="search" %}
+        <input type="search" data-med-search placeholder="Search media by name or alt text…" aria-label="Search media">
+      </label>
+      <div class="app-medkinds" role="group" aria-label="Filter by type">
+        <button type="button" class="app-medkind is-active" data-med-kind="" aria-pressed="true">All</button>
+        <button type="button" class="app-medkind" data-med-kind="image" aria-pressed="false">Images</button>
+        <button type="button" class="app-medkind" data-med-kind="video" aria-pressed="false">Videos</button>
+      </div>
+      <label class="pal-btn app-medupload" tabindex="0">
+        {% include "store/_icons.html" with icon="upload" %}
+        <span>Upload</span>
+        <input type="file" data-med-file accept="image/*,video/*" multiple hidden>
+      </label>
+    </div>
+
+    <div class="app-modal__body">
+      <div class="app-meddrop" data-med-drop>
+        <p class="app-medhint">
+          Drag files here or use <strong>Upload</strong>. Images: JPG, PNG, GIF, WEBP, BMP, TIFF, AVIF, HEIC.
+          Videos: MP4, MOV, WEBM, MKV, AVI, OGV, 3GP. Every file is scanned and verified before it is stored.
+        </p>
+
+        <div class="app-medgrid" data-med-grid role="list"></div>
+        <p class="app-medloading" data-med-loading hidden>Loading…</p>
+        <p class="app-medempty" data-med-empty hidden>No media yet. Upload a file to get started.</p>
+      </div>
+    </div>
+
+    {% comment %} {# Edit sub-panel  name, alt text, description, placeholder. Overlays the
+       whole panel (not just the body) so the fields always get full height. #} {% endcomment %}
+    <form class="app-medit" data-med-editpanel>
+      <div class="app-medit__head">
+        <h3 class="app-medit__title">Edit media details</h3>
+        <button type="button" class="app-modal__x" data-edit-cancel aria-label="Back to library">
+          {% include "store/_icons.html" with icon="close" %}
+        </button>
+      </div>
+      <div class="app-medit__grid">
+        <div class="app-medit__preview" data-edit-preview aria-hidden="true"></div>
+        <div class="app-medit__fields">
+          <label class="pal-field">
+            <span class="pal-field__label">Name</span>
+            <input type="text" data-edit-name maxlength="255" autocomplete="off">
+          </label>
+          <label class="pal-field">
+            <span class="pal-field__label">Placeholder</span>
+            <input type="text" data-edit-placeholder maxlength="255" autocomplete="off">
+          </label>
+          <label class="pal-field app-medit__span">
+            <span class="pal-field__label">Alt text</span>
+            <input type="text" data-edit-alt maxlength="255" autocomplete="off">
+            <span class="app-field-hint">Describes the media for screen readers and search engines.</span>
+          </label>
+          <label class="pal-field app-medit__span">
+            <span class="pal-field__label">Description</span>
+            <textarea data-edit-description rows="3"></textarea>
+          </label>
+          <p class="app-field-err app-medit__span" data-edit-error hidden></p>
+        </div>
+      </div>
+      <div class="app-medit__foot">
+        <button type="button" class="pal-btn pal-btn--danger app-medit__delete" data-edit-delete>Delete media</button>
+        <button type="button" class="pal-btn pal-btn--ghost" data-edit-cancel>Cancel</button>
+        <button type="submit" class="pal-btn" data-edit-save>Save details</button>
+      </div>
+    </form>
+
+    <footer class="app-modal__foot">
+      {% comment %} Multi-select bar  holds the "Select multiple" toggle; reveals
+         Cancel / Delete selected once an item is ticked. {% endcomment %}
+      {% include "store/_media_bulkbar.html" %}
+
+      <nav class="app-medpager" data-med-pager aria-label="Media pages" hidden>
+        <button type="button" class="app-pager__link" data-med-prev>← Prev</button>
+        <span class="app-pager__at" data-med-at>Page 1 of 1</span>
+        <button type="button" class="app-pager__link" data-med-next>Next →</button>
+      </nav>
+      <div class="app-modal__actions">
+        <button type="button" class="pal-btn pal-btn--ghost" data-med-close>Close</button>
+        <button type="button" class="pal-btn app-medconfirm" data-med-confirm disabled>
+          Use selected <span class="app-medconfirm__n" data-med-selcount></span>
+        </button>
+      </div>
+    </footer>
+  </div>
+</div>

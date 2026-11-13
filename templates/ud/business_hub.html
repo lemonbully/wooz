@@ -1,0 +1,510 @@
+{% extends "ud/_shell.html" %}
+
+{% comment %}
+Business Hub (ud.views.business_hub). Posts OneWooz authors in the admin, split
+into News / Help / Important tabs. Each owner only sees posts sent to them (or
+to all users). Tabs are plain ?tab= links, so the page works without JS and a
+bell / email link opens straight onto the right tab.
+{% endcomment %}
+
+{% block title %}Business hub · OneWooz{% endblock %}
+{% block crumb %}Business hub{% endblock %}
+
+{% block main %}
+<style nonce="{{ csp_nonce }}">
+  .hub-tabs { margin-top: 1.25rem; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .hub-tabs::-webkit-scrollbar { display: none; }
+  .hub-tab { display: inline-flex; align-items: center; gap: 0.45rem; }
+  .hub-tab__n { display: inline-grid; place-items: center; min-width: 1.35rem; height: 1.35rem; padding: 0 0.35rem;
+    border: 1px solid var(--pal-line); font-size: 0.58rem; color: var(--pal-muted); letter-spacing: 0; }
+  .hub-tab[aria-current="true"] .hub-tab__n { border-color: var(--pal-accent); color: var(--pal-accent); }
+  .hub-tab--important[aria-current="true"] { border-bottom-color: #b26a00; }
+  .hub-tab--important[aria-current="true"] .hub-tab__n { border-color: #b26a00; color: #b26a00; }
+
+  .hub-list { display: grid; gap: 1rem; margin-top: 1.25rem; }
+  .hub-post { background: var(--pal-panel); border: 1px solid var(--pal-line); padding: clamp(1rem, 0.75rem + 1.2vw, 1.6rem); min-width: 0; }
+  .hub-post--important { border-left: 3px solid #b26a00; }
+  .hub-post__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+  .hub-post__date { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-faint); }
+  .hub-post__title { margin-top: 0.7rem; font-family: var(--pal-font-display); font-weight: 500;
+    font-size: clamp(1.1rem, 0.95rem + 0.7vw, 1.4rem); letter-spacing: -0.02em; line-height: 1.2; color: var(--pal-ink); overflow-wrap: anywhere; }
+
+  /* The post body is rich text authored in the admin (TinyMCE). */
+  .hub-body { margin-top: 0.85rem; color: var(--pal-ink-2); font-size: 0.95rem; line-height: 1.65; overflow-wrap: anywhere; }
+  .hub-body > * + * { margin-top: 0.85rem; }
+  .hub-body h1, .hub-body h2, .hub-body h3, .hub-body h4 { font-family: var(--pal-font-display); font-weight: 500; color: var(--pal-ink); letter-spacing: -0.01em; line-height: 1.25; }
+  .hub-body h1 { font-size: 1.3rem; } .hub-body h2 { font-size: 1.15rem; } .hub-body h3, .hub-body h4 { font-size: 1rem; }
+  .hub-body a { color: var(--pal-accent); border-bottom: 1px solid currentColor; }
+  .hub-body strong { color: var(--pal-ink); font-weight: 600; }
+  .hub-body ul, .hub-body ol { padding-left: 1.3rem; }
+  .hub-body ul { list-style: disc; } .hub-body ol { list-style: decimal; }
+  .hub-body li + li { margin-top: 0.35rem; }
+  .hub-body blockquote { border-left: 2px solid var(--pal-accent); padding-left: 0.9rem; color: var(--pal-ink); }
+  .hub-body img, .hub-body video, .hub-body iframe { max-width: 100%; height: auto; }
+  .hub-body table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; font-size: 0.9rem; }
+  .hub-body th, .hub-body td { border: 1px solid var(--pal-line); padding: 0.45rem 0.65rem; text-align: left; vertical-align: top; }
+  .hub-body hr { border: 0; border-top: 1px solid var(--pal-line); }
+
+  /* Optional video (uploaded file or a YouTube / Vimeo embed), below the body. */
+  .hub-video { margin-top: 1rem; background: #000; border: 1px solid var(--pal-line); max-width: 48rem; }
+  .hub-video video { display: block; width: 100%; max-height: 32rem; background: #000; }
+  .hub-video--embed { position: relative; aspect-ratio: 16 / 9; }
+  .hub-video--embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+  .hub-search { margin: 1.25rem 0 0; }
+  .hub-search__clear { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); }
+  .hub-search__clear:hover { color: var(--pal-accent); }
+  .hub-search__note { margin-top: 0.75rem; font-size: 0.85rem; color: var(--pal-muted); }
+
+  .hub-empty { margin-top: 1.25rem; }
+
+  /* 60 / 40: posts on the left, the support-ticket panel on the right. Below
+     64rem the panel drops under the posts (full width) so nothing is cramped. */
+  .hub-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(1.25rem, 0.8rem + 1.5vw, 2rem); align-items: start; margin-top: 0.25rem; }
+  @media (min-width: 64rem) { .hub-layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+  .hub-main { min-width: 0; }
+  .hub-side { min-width: 0; display: grid; gap: 1rem; }
+  @media (min-width: 64rem) { .hub-side { position: sticky; top: 1rem; } }
+
+  .hub-panel { background: var(--pal-panel); border: 1px solid var(--pal-line); padding: clamp(1rem, 0.8rem + 0.9vw, 1.5rem); min-width: 0; }
+  .hub-panel__title { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.25rem); letter-spacing: -0.02em; color: var(--pal-ink); }
+  .hub-panel__lead { margin-top: 0.35rem; font-size: 0.85rem; line-height: 1.5; color: var(--pal-muted); }
+  .hub-tform { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 0.75rem; }
+  .hub-tform .pal-field { margin-top: 0.9rem; min-width: 0; }
+  .hub-tform .pal-field--full { grid-column: 1 / -1; }
+  .hub-tform .pal-input, .hub-tform .pal-select, .hub-tform .pal-textarea { min-height: 2.5rem; font-size: 0.875rem; }
+  .hub-tform .pal-textarea { min-height: 7rem; }
+  @media (max-width: 30rem) { .hub-tform { grid-template-columns: minmax(0, 1fr); } }
+  .hub-tform__err { display: block; margin-top: 0.35rem; font-size: 0.78rem; color: #a5271b; }
+  .hub-tform__hint { display: block; margin-top: 0.35rem; font-size: 0.75rem; color: var(--pal-faint); }
+  .hub-tform__actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: 1.1rem; }
+  @media (max-width: 30rem) { .hub-tform__actions .pal-btn { width: 100%; justify-content: center; } }
+
+  /* Attachment: a dashed drop-style box around the native file input. */
+  .hub-file { position: relative; display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.8rem; border: 1px dashed var(--pal-line); background: var(--pal-paper); cursor: pointer; min-width: 0; }
+  .hub-file:hover, .hub-file:focus-within { border-color: var(--pal-accent); }
+  .hub-file svg { flex: none; width: 1.1rem; height: 1.1rem; fill: none; stroke: var(--pal-muted); stroke-width: 1.6; }
+  .hub-file__name { font-size: 0.82rem; color: var(--pal-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .hub-file input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .hub-file__clear { position: relative; z-index: 1; margin-left: auto; flex: none; border: 0; background: transparent; color: var(--pal-muted); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0.2rem; }
+  .hub-file__clear:hover { color: #a5271b; }
+
+  .hub-tickets { display: grid; gap: 0.6rem; margin-top: 0.9rem; }
+  .hub-ticket { border: 1px solid var(--pal-line-soft); background: var(--pal-paper); min-width: 0; }
+  .hub-ticket > summary { list-style: none; cursor: pointer; padding: 0.75rem 2.4rem 0.75rem 0.85rem; display: grid; gap: 0.3rem; position: relative; }
+  .hub-ticket > summary::after { content: ""; position: absolute; right: 0.95rem; top: 1.05rem; width: 0.5rem; height: 0.5rem;
+    border-right: 1.5px solid var(--pal-muted); border-bottom: 1.5px solid var(--pal-muted); transform: rotate(45deg);
+    transition: transform 260ms ease; }
+  .hub-ticket[open] > summary::after { transform: rotate(225deg); top: 1.3rem; }
+  .hub-ticket > summary:hover::after { border-color: var(--pal-ink); }
+  .hub-ticket > summary:focus-visible { outline: 2px solid var(--pal-accent); outline-offset: -2px; }
+  .hub-ticket[open] { border-color: var(--pal-line); }
+  .hub-ticket.is-animating > .hub-ticket__body { overflow: hidden; }
+  .hub-ticket > summary::-webkit-details-marker { display: none; }
+  .hub-ticket__row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
+  .hub-ticket__ref { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.06em; color: var(--pal-faint); }
+  .hub-ticket__subj { font-size: 0.9rem; font-weight: 500; color: var(--pal-ink); overflow-wrap: anywhere; }
+  .hub-ticket__body { box-sizing: border-box; padding: 0 0.85rem 0.85rem; font-size: 0.85rem; line-height: 1.55; color: var(--pal-ink-2); overflow-wrap: anywhere; }
+  .hub-ticket__msg { margin-top: 0.5rem; white-space: pre-line; }
+  .hub-ticket__file { display: inline-block; margin-top: 0.5rem; color: var(--pal-accent); border-bottom: 1px solid currentColor; font-size: 0.8rem; overflow-wrap: anywhere; }
+  .hub-ticket__reply { margin-top: 0.75rem; padding: 0.65rem 0.75rem; border-left: 2px solid var(--pal-accent); background: var(--pal-panel); white-space: pre-line; }
+  .hub-ticket__reply b { display: block; margin-bottom: 0.25rem; font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-accent); font-weight: 500; }
+  .hub-alert { margin-top: 0.9rem; }
+  .hub-alert--modal { margin: 0 0 0.9rem; }
+  .hub-panel__btn { margin-top: 0.9rem; }
+  .hub-tickets-btn { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .hub-tickets-btn__n { font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-accent); border: 1px solid currentColor; padding: 0.1rem 0.35rem; }
+  .hub-tickets--modal { margin-top: 0; }
+  .hub-msg { margin-top: 0.75rem; }
+  .hub-msg__who { display: block; font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); font-weight: 500; }
+  .hub-msg .hub-ticket__msg { margin-top: 0.3rem; }
+  .hub-ticket__wait { margin-top: 0.75rem; font-size: 0.8rem; color: var(--pal-faint); }
+  .hub-reply { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--pal-line-soft); display: grid; gap: 0.6rem; min-width: 0; }
+  .hub-reply .pal-textarea { min-height: 5rem; font-size: 0.875rem; }
+  .hub-reply__row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+  .hub-reply__row .hub-file { flex: 1 1 14rem; }
+  @media (max-width: 30rem) { .hub-reply__row .pal-btn { width: 100%; justify-content: center; } }
+  @media (max-width: 40rem) {
+    .hub-tab { padding-left: 0.7rem; padding-right: 0.7rem; }
+  }
+</style>
+
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">From OneWooz</p>
+    <h1 class="app-head__title pal-mt-4">Business hub</h1>
+    <p class="app-head__lead">News, help and important updates from the OneWooz team, sent to your account. Need help? Raise a ticket and we’ll reply right here.</p>
+  </div>
+  <div class="app-head__actions">
+    <button type="button" class="pal-btn pal-btn--ghost hub-tickets-btn" data-popup-open="tickets-modal" aria-haspopup="dialog" aria-controls="tickets-modal">
+      View tickets{% if ticket_open_count %} <span class="hub-tickets-btn__n">{{ ticket_open_count }} open</span>{% endif %}
+    </button>
+  </div></div>
+
+  <div class="hub-layout">
+  <div class="hub-main">
+
+  <form method="get" class="app-toolbar hub-search" role="search">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <div class="app-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" name="q" value="{{ q }}" placeholder="Search by title…" aria-label="Search business hub posts by title" maxlength="100">
+    </div>
+    <button class="pal-btn pal-btn--ghost" type="submit">Search</button>
+    {% if q %}<a class="hub-search__clear" href="?tab={{ tab }}">Clear</a>{% endif %}
+  </form>
+  {% if q %}
+    <p class="hub-search__note">Showing posts whose title matches “{{ q }}”. Counts on each tab are for this search.</p>
+  {% endif %}
+
+  <nav class="app-tabs hub-tabs" aria-label="Business hub sections">
+    {% for t in tabs %}
+      <a class="app-tab hub-tab hub-tab--{{ t.key }}" href="?tab={{ t.key }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}"{% if t.active %} aria-current="true"{% endif %}>
+        {{ t.label }} <span class="hub-tab__n">{{ t.count }}</span>
+      </a>
+    {% endfor %}
+  </nav>
+
+  {% if posts %}
+    <div class="hub-list">
+      {% for post in posts %}
+        <article class="hub-post{% if post.kind == 'important' %} hub-post--important{% endif %}">
+          <div class="hub-post__meta">
+            <span class="app-badge {% if post.kind == 'important' %}app-badge--warn{% elif post.kind == 'help' %}app-badge--ok{% else %}app-badge--accent{% endif %}">{{ post.get_kind_display }}</span>
+            {% if post.created_at >= fresh_since %}<span class="app-badge app-badge--accent">New</span>{% endif %}
+            <time class="hub-post__date" datetime="{{ post.created_at|date:'c' }}">{{ post.created_at|date:"d M Y" }}</time>
+          </div>
+          <h2 class="hub-post__title">{{ post.title }}</h2>
+          {% if post.description %}<div class="hub-body">{{ post.description|safe }}</div>{% endif %}
+          {% if post.video_file_url %}
+            <div class="hub-video">
+              <video controls playsinline preload="metadata" src="{{ post.video_file_url }}" aria-label="Video: {{ post.title }}">
+                Your browser can’t play this video. <a href="{{ post.video_file_url }}" target="_blank" rel="noopener">Download it</a> instead.
+              </video>
+            </div>
+          {% elif post.video_embed_url %}
+            <div class="hub-video hub-video--embed">
+              <iframe src="{{ post.video_embed_url }}" title="Video: {{ post.title }}" loading="lazy"
+                      allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen
+                      referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            </div>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+      <div class="app-pager">
+        {% if page_obj.has_previous %}<a class="app-pager__link" href="?tab={{ tab }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}&amp;page={{ page_obj.previous_page_number }}">← Prev</a>{% else %}<span class="app-pager__link app-pager__link--off">← Prev</span>{% endif %}
+        <span class="app-pager__at">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a class="app-pager__link" href="?tab={{ tab }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}&amp;page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="app-pager__link app-pager__link--off">Next →</span>{% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="app-empty hub-empty">
+      <span class="app-empty__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg></span>
+      {% if q %}
+        <p class="app-empty__title">No {{ tab_label|lower }} posts match “{{ q }}”</p>
+        <p class="app-empty__text">Try a different word from the title, check the other tabs, or <a href="?tab={{ tab }}">clear the search</a>.</p>
+      {% else %}
+        <p class="app-empty__title">No {{ tab_label|lower }} yet</p>
+        <p class="app-empty__text">When OneWooz posts {{ tab_label|lower }} for your account, it will appear here. You’ll also get a notification and an email.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+  </div>{# /.hub-main #}
+
+  {# ── Support: raise a ticket + the owner's own tickets (the 40% column) ── #}
+  <aside class="hub-side" id="support" aria-label="Support tickets">
+    {% if not open_tickets %}
+      {% for message in messages %}
+        <div class="pal-alert{% if message.tags == 'success' %} pal-alert--ok{% endif %}" role="status">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <section class="hub-panel" aria-labelledby="hub-ticket-title">
+      <h2 class="hub-panel__title" id="hub-ticket-title">Raise a ticket</h2>
+      <p class="hub-panel__lead">Tell us what’s wrong. Attach a screenshot or file if it helps (up to 10 MB).</p>
+
+      {% if ticket_form.non_field_errors %}
+        <div class="pal-alert hub-alert" role="alert">{{ ticket_form.non_field_errors|join:" " }}</div>
+      {% endif %}
+
+      <form method="post" action="?tab={{ tab }}#support" enctype="multipart/form-data" class="hub-tform" data-ticket-form novalidate>
+        {% csrf_token %}
+        {% with f=ticket_form.subject %}
+          <label class="pal-field pal-field--full"><span class="pal-field__label">{{ f.label }} <span class="app-req">*</span></span>{{ f }}{% for e in f.errors %}<span class="hub-tform__err">{{ e }}</span>{% endfor %}</label>
+        {% endwith %}
+        {% with f=ticket_form.category %}
+          <label class="pal-field"><span class="pal-field__label">{{ f.label }}</span>{{ f }}{% for e in f.errors %}<span class="hub-tform__err">{{ e }}</span>{% endfor %}</label>
+        {% endwith %}
+        {% with f=ticket_form.priority %}
+          <label class="pal-field"><span class="pal-field__label">{{ f.label }}</span>{{ f }}{% for e in f.errors %}<span class="hub-tform__err">{{ e }}</span>{% endfor %}</label>
+        {% endwith %}
+        {% with f=ticket_form.site %}
+          <label class="pal-field pal-field--full"><span class="pal-field__label">{{ f.label }}</span>{{ f }}{% for e in f.errors %}<span class="hub-tform__err">{{ e }}</span>{% endfor %}</label>
+        {% endwith %}
+        {% with f=ticket_form.message %}
+          <label class="pal-field pal-field--full"><span class="pal-field__label">{{ f.label }} <span class="app-req">*</span></span>{{ f }}{% for e in f.errors %}<span class="hub-tform__err">{{ e }}</span>{% endfor %}</label>
+        {% endwith %}
+        <div class="pal-field pal-field--full">
+          <span class="pal-field__label">{{ ticket_form.attachment.label }}</span>
+          <label class="hub-file">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l9.2-9.2a3.7 3.7 0 0 1 5.2 5.2l-9.2 9.2a1.8 1.8 0 0 1-2.6-2.6l8.5-8.5"/></svg>
+            <span class="hub-file__name" data-file-name>Choose a file</span>
+            <input type="file" name="attachment" accept="{{ attachment_accept }}" aria-label="Attach a file">
+            <button type="button" class="hub-file__clear" data-file-clear hidden aria-label="Remove attachment">×</button>
+          </label>
+          <span class="hub-tform__hint">Images, PDF, text, CSV, Word or Excel · up to 10 MB</span>
+          <span class="hub-tform__err" data-file-err hidden></span>
+          {% for e in ticket_form.attachment.errors %}<span class="hub-tform__err">{{ e }}</span>{% endfor %}
+        </div>
+        <div class="hub-tform__actions">
+          <button type="submit" class="pal-btn" data-ticket-submit>Submit ticket</button>
+        </div>
+      </form>
+    </section>
+
+  </aside>
+  </div>{# /.hub-layout #}
+
+  {# ── "Your tickets" popup: every conversation, our replies, and a reply box ── #}
+  <div class="app-modal app-modal--auto" id="tickets-modal" role="dialog" aria-modal="true" aria-labelledby="tickets-modal-title" hidden
+       data-auto-open="{% if open_tickets %}1{% endif %}" data-focus-ticket="{{ focus_ticket }}">
+    <div class="app-modal__backdrop" data-popup-close></div>
+    <div class="app-modal__panel">
+      <div class="app-modal__head">
+        <div>
+          <h2 class="app-modal__title" id="tickets-modal-title">Your tickets</h2>
+          <p class="hub-panel__lead" style="margin-top:0.2rem">{% if ticket_open_count %}{{ ticket_open_count }} open · {% endif %}Your queries and OneWooz’s replies. Reply on any ticket to follow up.</p>
+        </div>
+        <button type="button" class="app-modal__x" data-popup-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="app-modal__body">
+        {% if open_tickets %}
+          {% for message in messages %}
+            <div class="pal-alert{% if message.tags == 'success' %} pal-alert--ok{% endif %} hub-alert hub-alert--modal" role="status">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+        {% if tickets %}
+          <div class="hub-tickets hub-tickets--modal">
+            {% for t in tickets %}
+              {% with tid=t.pk|stringformat:"s" %}
+              <details class="hub-ticket" id="ticket-{{ t.pk }}" data-ticket-id="{{ t.pk }}" data-accordion-item{% if focus_ticket == tid %} open{% elif not focus_ticket and forloop.first %} open{% endif %}>
+                <summary>
+                  <span class="hub-ticket__row">
+                    <span class="app-badge {% if t.thread_status_key == 'resolved' or t.thread_status_key == 'closed' %}app-badge--ok{% elif t.thread_status_key == 'in_progress' %}app-badge--accent{% else %}app-badge--warn{% endif %}">{{ t.thread_status }}</span>
+                    {% if t.thread_has_reply %}<span class="app-badge app-badge--accent">Replied</span>{% endif %}
+                    {% if t.thread_replies %}<span class="app-badge">{{ t.thread_replies|length|add:1 }} messages</span>{% endif %}
+                    <span class="hub-ticket__ref">{{ t.reference }} · {{ t.created_at|date:"d M Y" }}</span>
+                  </span>
+                  <span class="hub-ticket__subj">{{ t.subject }}</span>
+                </summary>
+                <div class="hub-ticket__body">
+                  <p class="hub-ticket__ref">{{ t.get_category_display }} · {{ t.get_priority_display }} priority{% if t.site %} · {{ t.site.name }}{% endif %}</p>
+
+                  <div class="hub-msg">
+                    <b class="hub-msg__who">Your query · {{ t.created_at|date:"d M Y, g:i A" }}</b>
+                    <p class="hub-ticket__msg">{{ t.message }}</p>
+                    {% if t.attachment_url %}<a class="hub-ticket__file" href="{{ t.attachment_url }}" target="_blank" rel="noopener">{{ t.attachment_name|default:"Attachment" }}</a>{% endif %}
+                  </div>
+                  {% if t.reply %}
+                    <div class="hub-ticket__reply"><b>OneWooz replied{% if t.replied_at %} · {{ t.replied_at|date:"d M Y, g:i A" }}{% endif %}</b>{{ t.reply }}</div>
+                  {% endif %}
+
+                  {% for r in t.thread_replies %}
+                    <div class="hub-msg">
+                      <b class="hub-msg__who">Your reply · {{ r.reference }} · {{ r.created_at|date:"d M Y, g:i A" }} · {{ r.get_status_display }}</b>
+                      <p class="hub-ticket__msg">{{ r.message }}</p>
+                      {% if r.attachment_url %}<a class="hub-ticket__file" href="{{ r.attachment_url }}" target="_blank" rel="noopener">{{ r.attachment_name|default:"Attachment" }}</a>{% endif %}
+                    </div>
+                    {% if r.reply %}
+                      <div class="hub-ticket__reply"><b>OneWooz replied{% if r.replied_at %} · {{ r.replied_at|date:"d M Y, g:i A" }}{% endif %}</b>{{ r.reply }}</div>
+                    {% endif %}
+                  {% endfor %}
+
+                  {% if not t.thread_has_reply %}
+                    <p class="hub-ticket__wait">We’ve got your query and will reply here soon.</p>
+                  {% endif %}
+
+                  <form method="post" action="?tab={{ tab }}&amp;tickets=1&amp;ticket={{ t.pk }}" enctype="multipart/form-data" class="hub-reply" data-ticket-form data-reply-form novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reply">
+                    <input type="hidden" name="ticket_id" value="{{ t.pk }}">
+                    {% if reply_form and reply_thread_id == tid and reply_form.non_field_errors %}
+                      <div class="pal-alert hub-alert" role="alert">{{ reply_form.non_field_errors|join:" " }}</div>
+                    {% endif %}
+                    <label class="pal-field">
+                      <span class="pal-field__label">Reply on this ticket</span>
+                      <textarea name="message" class="pal-textarea" rows="3" maxlength="5000" required placeholder="Ask a follow-up question or add more detail…">{% if reply_form and reply_thread_id == tid %}{{ reply_form.data.message }}{% endif %}</textarea>
+                      {% if reply_form and reply_thread_id == tid %}{% for e in reply_form.message.errors %}<span class="hub-tform__err">{{ e }}</span>{% endfor %}{% endif %}
+                    </label>
+                    <div class="hub-reply__row">
+                      <label class="hub-file">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l9.2-9.2a3.7 3.7 0 0 1 5.2 5.2l-9.2 9.2a1.8 1.8 0 0 1-2.6-2.6l8.5-8.5"/></svg>
+                        <span class="hub-file__name" data-file-name>Attach a file (optional)</span>
+                        <input type="file" name="attachment" accept="{{ attachment_accept }}" aria-label="Attach a file to your reply">
+                        <button type="button" class="hub-file__clear" data-file-clear hidden aria-label="Remove attachment">×</button>
+                      </label>
+                      <button type="submit" class="pal-btn" data-ticket-submit>Send reply</button>
+                    </div>
+                    <span class="hub-tform__err" data-file-err hidden></span>
+                    {% if reply_form and reply_thread_id == tid %}{% for e in reply_form.attachment.errors %}<span class="hub-tform__err">{{ e }}</span>{% endfor %}{% endif %}
+                    <span class="hub-tform__hint">Your reply reaches our team as a new ticket in this conversation.</span>
+                  </form>
+                </div>
+              </details>
+              {% endwith %}
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="hub-panel__lead">No tickets yet. Raise one from the Business Hub and it will show here, along with our reply.</p>
+          <div class="hub-panel__btn"><button type="button" class="pal-btn" data-popup-close data-goto-ticket-form>Raise a ticket</button></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script nonce="{{ csp_nonce }}">
+// Ticket attachments (the raise form and every reply form): show the chosen
+// file's name, check size and type before uploading, allow removing it, and
+// prevent double submits. The server re-checks everything (ud.forms).
+(function () {
+  var MAX = 10 * 1024 * 1024;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-ticket-form]"), function (form) {
+    var input = form.querySelector('input[type=file][name=attachment]');
+    var nameEl = form.querySelector("[data-file-name]");
+    var clearBtn = form.querySelector("[data-file-clear]");
+    var errEl = form.querySelector("[data-file-err]");
+    var placeholder = nameEl ? nameEl.textContent : "";
+    var OK = String((input && input.getAttribute("accept")) || "").toLowerCase().split(",").filter(Boolean);
+    function reset() {
+      if (input) input.value = "";
+      if (nameEl) nameEl.textContent = placeholder;
+      if (clearBtn) clearBtn.hidden = true;
+    }
+    function fail(msg) { if (errEl) { errEl.textContent = msg; errEl.hidden = false; } }
+    if (input) input.addEventListener("change", function () {
+      if (errEl) errEl.hidden = true;
+      var f = input.files && input.files[0];
+      if (!f) { reset(); return; }
+      var ext = "." + String(f.name.split(".").pop() || "").toLowerCase();
+      if (OK.length && OK.indexOf(ext) === -1) { reset(); fail("That file type isn't supported."); return; }
+      if (f.size > MAX) { reset(); fail("Attachments can be up to 10 MB."); return; }
+      if (nameEl) nameEl.textContent = f.name;
+      if (clearBtn) clearBtn.hidden = false;
+    });
+    if (clearBtn) clearBtn.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); reset(); });
+    form.addEventListener("submit", function (e) {
+      var msg = form.querySelector("textarea[name=message]");
+      if (form.hasAttribute("data-reply-form") && msg && !msg.value.trim()) {
+        e.preventDefault(); msg.focus(); return;
+      }
+      var btn = form.querySelector("[data-ticket-submit]");
+      if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+    });
+  });
+})();
+
+// "Your tickets" popup: open it on load when the page was reached from a
+// ticket notification (?tickets=1&ticket=<id>) or a reply came back with an
+// error, then expand and scroll to that ticket.
+(function () {
+  var modal = document.getElementById("tickets-modal");
+  if (!modal) return;
+  // Accordion: one ticket open at a time, opening and closing with a smooth
+  // height transition (instant when the visitor prefers reduced motion).
+  var items = Array.prototype.slice.call(modal.querySelectorAll("[data-accordion-item]"));
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var DURATION = 280;
+
+  function isOpen(item) {
+    return typeof item._target === "boolean" ? item._target : item.open;
+  }
+
+  function animate(item, opening) {
+    var body = item.querySelector(".hub-ticket__body");
+    item._target = opening;
+    // Reversing mid-animation starts from where it is now, not from the end.
+    var midway = item._anim && body ? body.getBoundingClientRect().height : null;
+    if (item._anim) { item._anim.cancel(); item._anim = null; }
+    if (!body || reduce || typeof body.animate !== "function") {
+      item.open = opening;
+      return;
+    }
+    item.classList.add("is-animating");
+    var from, to;
+    if (opening) {
+      item.open = true;
+      from = midway !== null ? midway : 0; to = body.scrollHeight;
+    } else {
+      from = midway !== null ? midway : body.offsetHeight; to = 0;
+    }
+    var anim = body.animate(
+      [{ height: from + "px", opacity: opening ? 0 : 1 }, { height: to + "px", opacity: opening ? 1 : 0 }],
+      { duration: DURATION, easing: "cubic-bezier(0.2, 0, 0, 1)" }
+    );
+    item._anim = anim;
+    anim.onfinish = function () {
+      if (item._anim !== anim) return;
+      item._anim = null;
+      item.classList.remove("is-animating");
+      if (!opening) item.open = false;
+    };
+    // A cancelled animation was replaced by a newer one, which owns the state.
+    anim.oncancel = function () {
+      if (!item._anim) item.classList.remove("is-animating");
+    };
+  }
+
+  function show(item, instant) {
+    items.forEach(function (other) {
+      if (other !== item && isOpen(other)) {
+        if (instant) { other._target = false; other.open = false; } else animate(other, false);
+      }
+    });
+    if (instant) { item._target = true; item.open = true; }
+    else if (!isOpen(item)) animate(item, true);
+  }
+
+  items.forEach(function (item) {
+    var summary = item.querySelector("summary");
+    if (!summary) return;
+    summary.addEventListener("click", function (e) {
+      e.preventDefault();
+      // Where the item is heading (mid-animation it may still report open).
+      if (isOpen(item)) animate(item, false);
+      else show(item, false);
+    });
+  });
+
+  // Never more than one open from the server either.
+  var firstOpen = items.filter(function (i) { return i.open; })[0];
+  if (firstOpen) show(firstOpen, true);
+
+  function focusTicket(id) {
+    var el = id ? modal.querySelector('[data-ticket-id="' + id + '"]') : null;
+    if (!el) return;
+    show(el, true);
+    setTimeout(function () { try { el.scrollIntoView({ block: "start" }); } catch (e) {} }, 30);
+  }
+  var goForm = modal.querySelector("[data-goto-ticket-form]");
+  if (goForm) goForm.addEventListener("click", function () {
+    var subject = document.querySelector("[data-ticket-form]:not([data-reply-form]) input[name=subject]");
+    if (subject) { subject.scrollIntoView({ behavior: "smooth", block: "center" }); subject.focus({ preventScroll: true }); }
+  });
+  function autoOpen() {
+    if (modal.getAttribute("data-auto-open") !== "1" || !window.OWPopup) return;
+    window.OWPopup.open("tickets-modal");
+    focusTicket(modal.getAttribute("data-focus-ticket"));
+  }
+  // popup.js is deferred, so it is ready by DOMContentLoaded.
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", autoOpen);
+  else autoOpen();
+})();
+</script>
+{% endblock %}

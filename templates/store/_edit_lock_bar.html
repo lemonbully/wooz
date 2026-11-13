@@ -1,0 +1,28 @@
+{% comment %}
+  The "locked until Edit" bar for a settings form (Payments, Shipping carrier,
+  Store settings). Put it inside the <form data-edit-lock>, before the
+  <fieldset class="elock-fs" data-edit-lock-fields> holding the inputs, and give
+  the form's footer data-edit-lock-foot (plus a data-edit-lock-cancel button).
+  js/app/edit-lock.js does the rest. Hidden until that script runs, so without
+  JavaScript the form stays editable exactly as before.
+
+  Params: what  plural noun for the locked values, e.g. "payment settings".
+{% endcomment %}
+<div class="elock" data-edit-lock-bar hidden
+     data-locked-text="Your {{ what }} are locked. Click Edit to change them."
+     data-editing-text="Editing your {{ what }}. Save to apply, or cancel to discard your changes.">
+  <span class="elock__state">
+    <span class="elock__ico" aria-hidden="true">
+      <svg class="elock__ico-locked" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      <svg class="elock__ico-editing" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>
+    </span>
+    <span class="elock__text" data-edit-lock-text role="status" aria-live="polite">Your {{ what }} are locked. Click Edit to change them.</span>
+  </span>
+  <span class="elock__actions">
+    <button type="button" class="pal-btn elock__btn" data-edit-lock-edit>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>
+      <span>Edit</span>
+    </button>
+    <button type="button" class="pal-btn pal-btn--ghost" data-edit-lock-cancel hidden>Cancel</button>
+  </span>
+</div>

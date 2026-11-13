@@ -8,6 +8,72 @@ owner switch profiles or sign out from anywhere.
 {% if request.user.is_authenticated %}
 <div class="app-top__actions">
 
+  {# ---- Notifications bell ---- #}
+  <details class="app-acct app-bell" data-bell data-csrf="{{ csrf_token }}">
+    <summary aria-label="Notifications{% if notif_unread %}  {{ notif_unread }} unread{% endif %}">
+      <span class="app-bell__ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </span>
+      <span class="app-bell__badge" data-bell-badge{% if not notif_unread %} hidden{% endif %}>{{ notif_unread }}</span>
+    </summary>
+    <div class="app-acct__panel app-bell__panel">
+      <div class="app-acct__head app-bell__head">
+        <div class="app-acct__name">Notifications</div>
+        <form method="post" action="{% url 'ud:notifications_read' %}" data-bell-readall{% if not notif_unread %} hidden{% endif %}>
+          {% csrf_token %}
+          <button type="submit" class="app-bell__readall">Mark all read</button>
+        </form>
+      </div>
+      {% if notif_items %}
+      <div class="app-bell__list">
+        {% for n in notif_items %}
+        <div class="app-bell__item{% if not n.is_read %} is-unread{% endif %} app-bell__item--{{ n.level }}">
+          <p class="app-bell__t">{{ n.headline }}</p>
+          {% if n.description %}<p class="app-bell__d">{{ n.description|linebreaksbr }}</p>{% endif %}
+          <p class="app-bell__meta">{{ n.created_at|date:"d M Y, g:i A" }}{% if n.site_name %} &middot; {{ n.site_name }}{% endif %}</p>
+          <div class="app-bell__actions">
+            {% if n.opens_directly %}
+              <a class="app-bell__link" href="{{ n.open_href }}">Open</a>
+            {% else %}
+              <button type="button" class="app-bell__link" data-popup-open="notif-{{ n.pk }}" aria-haspopup="dialog">Open</button>
+            {% endif %}
+            {% if n.attachment_url %}<a class="app-bell__link app-bell__link--attach" href="{{ n.attachment_url }}" target="_blank" rel="noopener noreferrer">View attachment ↗</a>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="app-bell__empty">You’re all caught up  no notifications yet.</div>
+      {% endif %}
+    </div>
+  </details>
+
+  {% comment %}
+  One detail popup per notification ("Open" in the bell). popup.js lifts it to
+  <body> when opened, so it isn't clipped by the closed bell or the top bar.
+  {% endcomment %}
+  {% for n in notif_items %}{% if not n.opens_directly %}
+  <div class="app-modal app-modal--auto app-modal--narrow" id="notif-{{ n.pk }}" role="dialog" aria-modal="true" aria-labelledby="notif-{{ n.pk }}-title" hidden>
+    <div class="app-modal__backdrop" data-popup-close></div>
+    <div class="app-modal__panel">
+      <div class="app-modal__head">
+        <h2 class="app-modal__title" id="notif-{{ n.pk }}-title">{{ n.headline }}</h2>
+        <button type="button" class="app-modal__x" data-popup-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="app-modal__body">
+        <p class="app-notif__meta">{{ n.get_kind_display }} · {{ n.created_at|date:"d M Y, g:i A" }}{% if n.site_name %} · {{ n.site_name }}{% endif %}</p>
+        <div class="app-notif__body">{% if n.description %}{{ n.description }}{% else %}No further details.{% endif %}</div>
+        {% if n.open_href or n.attachment_url %}
+        <div class="app-notif__actions">
+          {% if n.open_href %}<a class="pal-btn" href="{{ n.open_href }}">Go to page <span class="pal-btn__arrow" aria-hidden="true">→</span></a>{% endif %}
+          {% if n.attachment_url %}<a class="pal-btn pal-btn--ghost" href="{{ n.attachment_url }}" target="_blank" rel="noopener noreferrer">View attachment ↗</a>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}{% endfor %}
+
   {# ---- Store profile switcher ---- #}
   <details class="app-acct app-switcher">
     <summary aria-label="Switch store profile">
@@ -23,23 +89,31 @@ owner switch profiles or sign out from anywhere.
     <div class="app-acct__panel app-switcher__panel">
       <div class="app-acct__head">
         <div class="app-acct__name">Your store profiles</div>
-        <div class="app-acct__mail">Each store is a separate profile — its products, orders and content never mix. Switch to work on another.</div>
+        <div class="app-acct__mail">Each store is a separate profile  its products, orders and content never mix. Switch to work on another.</div>
       </div>
       {% if profile_sites %}
       <div class="app-acct__links app-switcher__list">
         {% for s in profile_sites %}
-        <a href="{% url 'store:overview' s.id %}"{% if profile_current and s.id == profile_current.id %} aria-current="true"{% endif %}>
-          <span class="app-switcher__dot" aria-hidden="true"></span>
-          <span class="app-switcher__row">
-            <span class="app-switcher__row-name">{{ s.name }}</span>
-            <span class="app-switcher__row-meta">{{ s.get_business_model_display }} · {{ s.get_status_display }}</span>
-          </span>
-          {% if profile_current and s.id == profile_current.id %}<span class="app-switcher__cur">Current</span>{% endif %}
-        </a>
+        <div class="app-switcher__item">
+          <a class="app-switcher__go" href="{% url 'store:overview' s.id %}"{% if profile_current and s.id == profile_current.id %} aria-current="true"{% endif %}>
+            <span class="app-switcher__dot" aria-hidden="true"></span>
+            <span class="app-switcher__row">
+              <span class="app-switcher__row-name">{{ s.name }}</span>
+              <span class="app-switcher__row-meta">{{ s.get_business_model_display }} · {{ s.get_status_display }}</span>
+            </span>
+            {% if profile_current and s.id == profile_current.id %}<span class="app-switcher__cur">Current</span>{% endif %}
+          </a>
+          <a class="app-switcher__eye" href="{{ s.preview_url }}" target="_blank" rel="noopener"
+             title="Preview {{ s.name }} storefront" aria-label="Preview {{ s.name }} storefront in a new tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </a>
+        </div>
         {% endfor %}
       </div>
       {% else %}
-      <div class="app-switcher__empty">No stores yet — create your first profile below.</div>
+      <div class="app-switcher__empty">No stores yet  create your first profile below.</div>
       {% endif %}
       <div class="app-acct__sep" aria-hidden="true"></div>
       <div class="app-acct__links">
@@ -68,10 +142,20 @@ owner switch profiles or sign out from anywhere.
         <div class="app-acct__mail">{{ request.user.email }}</div>
       </div>
       <div class="app-acct__links">
+        <a href="{% url 'accounts:profile' %}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+          Profile &amp; notifications
+        </a>
         <a href="{% url 'accounts:security' %}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="M9 12l2 2 4-4"/></svg>
           Security &amp; devices
         </a>
+        {% if profile_current and profile_current_owned %}
+        <a href="{% url 'store:staff' profile_current.id %}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Staff &amp; admins
+        </a>
+        {% endif %}
         <div class="app-acct__sep" aria-hidden="true"></div>
         <form method="post" action="{% url 'accounts:sign_out' %}">
           {% csrf_token %}
@@ -85,4 +169,52 @@ owner switch profiles or sign out from anywhere.
   </details>
 
 </div>
+
+<script nonce="{{ csp_nonce }}">
+  // Notification bell: clear the unread badge when the owner opens it, and keep
+  // the badge fresh with a light poll so a notification created while the page
+  // is open (an order, a shipment update, an admin message) still shows up.
+  (function () {
+    "use strict";
+    var bell = document.querySelector("[data-bell]");
+    if (!bell) return;
+    var badge = bell.querySelector("[data-bell-badge]");
+    var readAll = bell.querySelector("[data-bell-readall]");
+    var csrf = bell.getAttribute("data-csrf") || "";
+    var readUrl = "{% url 'ud:notifications_read' %}";
+    var unreadUrl = "{% url 'ud:notifications_unread' %}";
+
+    function setBadge(n) {
+      if (!badge) return;
+      if (n > 0) { badge.textContent = n; badge.hidden = false; if (readAll) readAll.hidden = false; }
+      else { badge.hidden = true; if (readAll) readAll.hidden = true; }
+    }
+
+    function markAllRead() {
+      fetch(readUrl, {
+        method: "POST",
+        headers: { "X-CSRFToken": csrf, "X-Requested-With": "fetch", "Accept": "application/json" },
+        credentials: "same-origin",
+      }).then(function () {
+        setBadge(0);
+        Array.prototype.forEach.call(bell.querySelectorAll(".app-bell__item.is-unread"),
+          function (el) { el.classList.remove("is-unread"); });
+      }).catch(function () {});
+    }
+
+    bell.addEventListener("toggle", function () {
+      if (bell.open && badge && !badge.hidden) markAllRead();
+    });
+
+    // Poll only while the bell is closed, so a freshly-cleared badge isn't
+    // repopulated the instant the owner reads it.
+    setInterval(function () {
+      if (bell.open) return;
+      fetch(unreadUrl, { headers: { "Accept": "application/json" }, credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { if (d && typeof d.unread === "number") setBadge(d.unread); })
+        .catch(function () {});
+    }, 60000);
+  })();
+</script>
 {% endif %}

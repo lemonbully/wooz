@@ -7,7 +7,7 @@
    competing primary colours, seven card radii and three generations of modal
    styling, because every page assembled its own look from utility classes with
    no token layer underneath. Defining the system once, here, is what stops
-   that happening again — and it means the site is styled the moment it is
+   that happening again  and it means the site is styled the moment it is
    checked out, with no npm install between a developer and a working page.
 
    Structure
@@ -820,6 +820,9 @@ body {
 /* 7. Forms and auth ======================================================== */
 
 .field { display: block; }
+/* A field toggled with the hidden attribute must actually disappear: the display
+   above otherwise beats the browser's own [hidden] { display: none }. */
+.field[hidden] { display: none; }
 .field + .field { margin-top: var(--space-4); }
 
 .label {
@@ -1082,7 +1085,7 @@ body {
 /* 11. Futuristic marketing layer ==========================================
    --------------------------------------------------------------------------
    A brighter, more expressive treatment for the marketing homepage only. The
-   base system above stays deliberately restrained — this layer adds the
+   base system above stays deliberately restrained  this layer adds the
    "futuristic, full-white" presence the product page needs to stand next to
    modern SaaS sites, without touching the app, admin or auth chrome.
 
@@ -1163,7 +1166,7 @@ body {
   mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 10%, transparent 72%);
 }
 
-/* Shimmering pill — a moving highlight sweeps across the accent badge. */
+/* Shimmering pill  a moving highlight sweeps across the accent badge. */
 .badge--glow {
   position: relative;
   overflow: hidden;
@@ -1206,7 +1209,7 @@ body {
 
 /* Conic gradient glow, sitting behind the frame. It lives on the stage rather
    than the frame itself, because the frame clips its own overflow to round the
-   mockup corners — a ring drawn inside it would be hidden behind the opaque
+   mockup corners  a ring drawn inside it would be hidden behind the opaque
    chrome. Slightly inset and heavily blurred, so it reads as a halo. */
 .frame-stage::before {
   content: "";
@@ -1282,7 +1285,7 @@ body {
   .chip--bl, .chip--br { display: none; }
 }
 
-/* Richer hero mockup — the first pane now leads with a violet gradient so the
+/* Richer hero mockup  the first pane now leads with a violet gradient so the
    product's own surface reads as premium, not greyscale. */
 .mock__pane--a .mock__hero {
   background: var(--grad-accent);
@@ -1290,7 +1293,7 @@ body {
 }
 
 /* --- Logo marquee -------------------------------------------------------- */
-/* The static logo row becomes a slow, continuous drift — more alive, and it
+/* The static logo row becomes a slow, continuous drift  more alive, and it
    reads as "many merchants" rather than "six we could fit". */
 
 .marquee {
@@ -1374,8 +1377,8 @@ body {
 }
 
 /* --- Aurora panel -------------------------------------------------------- */
-/* Replaces the old dark "inverse" bands on the homepage. Same job — a band
-   with weight that breaks the white rhythm — but kept luminous: a tinted glass
+/* Replaces the old dark "inverse" bands on the homepage. Same job  a band
+   with weight that breaks the white rhythm  but kept luminous: a tinted glass
    panel floating over the page, framed by a soft accent glow. */
 
 .panel-aurora {

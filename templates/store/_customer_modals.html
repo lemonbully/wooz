@@ -1,0 +1,216 @@
+{% comment %}
+Customer action dialogs  View (rich profile, addresses, purchase history),
+Edit (profile + editable addresses), Credits (history + add; also bulk) and
+Notify (with attachments; also bulk). Driven by `static/js/app/customers.js`.
+Categories for the credit scope come from `categories_all`.
+{% endcomment %}
+
+{# ---- View ---- #}
+<div class="app-dlg" data-dlg="view" hidden>
+  <div class="app-dlg__backdrop" data-dlg-close></div>
+  <div class="app-dlg__panel app-dlg__panel--wide">
+    <header class="app-dlg__head">
+      <div>
+        <h3 class="app-dlg__title" data-cv="name">Customer</h3>
+        <p class="app-dlg__sub" data-cv="email"></p>
+      </div>
+      <button type="button" class="app-dlg__x" data-dlg-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+    </header>
+    <div class="app-dlg__body">
+      <div class="app-custstats">
+        <div class="app-custstat"><span class="app-custstat__k">Total spent</span><span class="app-custstat__v" data-cv="spent"></span></div>
+        <div class="app-custstat"><span class="app-custstat__k">Orders</span><span class="app-custstat__v" data-cv="orders"></span></div>
+        <div class="app-custstat"><span class="app-custstat__k">Customer since</span><span class="app-custstat__v" data-cv="created"></span></div>
+      </div>
+
+      <div class="app-dlg__section">
+        <p class="app-dlg__subhead">Contact</p>
+        <dl class="app-dlg__list">
+          <div><dt>Full name</dt><dd data-cv="name2"></dd></div>
+          <div><dt>Email address</dt><dd data-cv="email2"></dd></div>
+          <div><dt>Mobile number</dt><dd data-cv="phone"></dd></div>
+        </dl>
+      </div>
+
+      <div class="app-dlg__section">
+        <p class="app-dlg__subhead">Addresses</p>
+        <div class="app-custaddrs" data-cv="addresses"></div>
+      </div>
+
+      <div class="app-dlg__section">
+        <p class="app-dlg__subhead">Purchase history</p>
+        <div class="app-custhist" data-cv="orders-wrap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ---- Edit (profile + addresses; plain form POST → redirect) ---- #}
+<div class="app-dlg" data-dlg="edit" hidden>
+  <div class="app-dlg__backdrop" data-dlg-close></div>
+  <div class="app-dlg__panel app-dlg__panel--wide">
+    <header class="app-dlg__head">
+      <h3 class="app-dlg__title">Edit customer</h3>
+      <button type="button" class="app-dlg__x" data-dlg-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+    </header>
+    <form method="post" action="" data-cust-edit-form>
+      {% csrf_token %}
+      <input type="hidden" name="addresses_json" data-addresses-json value="">
+      <div class="app-dlg__body">
+        <div class="app-dlg__section app-dlg__section--first">
+          <p class="app-dlg__subhead">Contact</p>
+          <div class="app-dlg__grid2">
+            <label class="app-dlg__field"><span>Full name</span><input type="text" name="name" maxlength="120" autocomplete="off"></label>
+            <label class="app-dlg__field"><span>Mobile number</span><input type="text" name="phone" maxlength="20" autocomplete="off"></label>
+            <label class="app-dlg__field app-dlg__span"><span>Email address</span><input type="email" name="email" autocomplete="off"></label>
+          </div>
+        </div>
+
+        <div class="app-dlg__section">
+          <div class="app-dlg__sectionhead">
+            <p class="app-dlg__subhead">Addresses</p>
+            <button type="button" class="pal-btn pal-btn--ghost pal-btn--sm" data-addr-add>+ Add address</button>
+          </div>
+          <div data-addr-list class="app-addrs"></div>
+          <p class="app-dlg__muted" data-addr-empty hidden>No addresses yet  add one above.</p>
+        </div>
+      </div>
+      <footer class="app-dlg__foot">
+        <button type="button" class="pal-btn pal-btn--ghost" data-dlg-close>Cancel</button>
+        <button type="submit" class="pal-btn">Save changes</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+{# Address card template, cloned per address by the controller. #}
+<template data-addr-template>
+  <div class="app-addr" data-addr>
+    <input type="hidden" data-addr-id value="">
+    <div class="app-addr__head">
+      <select data-addr-field="address_type" class="pal-select pal-select--sm">
+        <option value="both">Shipping &amp; billing</option>
+        <option value="shipping">Shipping</option>
+        <option value="billing">Billing</option>
+      </select>
+      <label class="app-dlg__check app-addr__default"><input type="radio" name="addr_default" data-addr-default> Default</label>
+      <button type="button" class="app-addr__rm" data-addr-remove aria-label="Remove address" title="Remove">{% include "store/_icons.html" with icon="trash" %}</button>
+    </div>
+    <div class="app-addr__grid">
+      <label class="app-dlg__field app-dlg__span"><span>House / building</span><input data-addr-field="house_no" maxlength="120"></label>
+      <label class="app-dlg__field app-dlg__span"><span>Street / area</span><input data-addr-field="street_area" maxlength="200"></label>
+      <label class="app-dlg__field"><span>City</span><input data-addr-field="city" maxlength="120"></label>
+      <label class="app-dlg__field"><span>State</span><input data-addr-field="state" maxlength="120"></label>
+      <label class="app-dlg__field"><span>Pincode</span><input data-addr-field="pincode" maxlength="10"></label>
+      <label class="app-dlg__field"><span>Company (optional)</span><input data-addr-field="company_name" maxlength="200"></label>
+      <label class="app-dlg__field app-dlg__span"><span>GSTIN (optional)</span><input data-addr-field="gstin" maxlength="15"></label>
+    </div>
+  </div>
+</template>
+
+{# ---- Credits (history + add; also bulk) ---- #}
+<div class="app-dlg" data-dlg="credit" hidden>
+  <div class="app-dlg__backdrop" data-dlg-close></div>
+  <div class="app-dlg__panel">
+    <header class="app-dlg__head">
+      <div>
+        <h3 class="app-dlg__title" data-credit-title>Customer credits</h3>
+        <p class="app-dlg__sub" data-credit-sub></p>
+      </div>
+      <button type="button" class="app-dlg__x" data-dlg-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+    </header>
+    <div class="app-dlg__tabs" data-credit-tabs>
+      <button type="button" class="app-dlg__tab is-active" data-credit-tab="history" data-credit-history-label>History</button>
+      <button type="button" class="app-dlg__tab" data-credit-tab="add">Add credit</button>
+    </div>
+    <div class="app-dlg__body">
+      <div data-credit-pane="history">
+        <p class="app-dlg__muted" data-credit-loading>Loading…</p>
+        <div data-credit-list class="app-dlg__credits" hidden></div>
+        <p class="app-dlg__muted" data-credit-empty hidden>No credits for this customer yet.</p>
+        <p class="app-dlg__muted app-dlg__credithint" data-credit-hint hidden>Deleting a credit removes whatever is left of it straight away. Orders already placed with it keep their discount.</p>
+      </div>
+      <form data-credit-pane="add" data-cust-credit-form hidden>
+        <div class="app-dlg__grid2">
+          <label class="app-dlg__field">
+            <span>Type</span>
+            <select name="credit_type" class="pal-select">
+              <option value="amount">Amount ({{ site.currency }})</option>
+              <option value="percent">Discount (%)</option>
+            </select>
+          </label>
+          <label class="app-dlg__field">
+            <span>Value</span>
+            <input type="number" step="0.01" min="0" name="credit_value" placeholder="e.g. 250 or 10">
+          </label>
+        </div>
+        <label class="app-dlg__field">
+          <span>Valid until (optional)</span>
+          <input type="date" name="valid_until">
+        </label>
+        <div class="app-dlg__field">
+          <span class="app-dlg__scope">
+            <label class="app-dlg__check"><input type="checkbox" data-credit-scope-all checked> All categories</label>
+          </span>
+          <div class="app-dlg__cats" data-credit-cats hidden>
+            {% for cat in categories_all %}
+              <label class="app-dlg__check"><input type="checkbox" class="app-credit-cat" value="{{ cat.id }}"> {{ cat.name }}</label>
+            {% empty %}
+              <p class="app-dlg__muted">No categories yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+        <label class="app-dlg__field">
+          <span>Note (optional)</span>
+          <input type="text" name="note" maxlength="255" placeholder="e.g. Loyalty credit">
+        </label>
+        <p class="app-dlg__err" data-credit-err hidden></p>
+        <div class="app-dlg__foot app-dlg__foot--flush">
+          <button type="button" class="pal-btn pal-btn--ghost" data-dlg-close>Cancel</button>
+          <button type="submit" class="pal-btn" data-credit-submit>Apply credit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ---- Notify (single; also bulk)  with attachments ---- #}
+<div class="app-dlg" data-dlg="notify" hidden>
+  <div class="app-dlg__backdrop" data-dlg-close></div>
+  <div class="app-dlg__panel">
+    <header class="app-dlg__head">
+      <div>
+        <h3 class="app-dlg__title" data-notify-title>Send notification</h3>
+        <p class="app-dlg__sub" data-notify-sub></p>
+      </div>
+      <button type="button" class="app-dlg__x" data-dlg-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+    </header>
+    <form data-cust-notify-form>
+      <div class="app-dlg__body">
+        <label class="app-dlg__field">
+          <span>Title</span>
+          <input type="text" name="title" maxlength="255" placeholder="e.g. New arrivals this week!">
+        </label>
+        <label class="app-dlg__field">
+          <span>Message</span>
+          <textarea name="message" rows="4" placeholder="Write your message…"></textarea>
+        </label>
+        <label class="app-dlg__field">
+          <span>Link (optional)</span>
+          <input type="url" name="link" placeholder="https://…">
+        </label>
+        <label class="app-dlg__field">
+          <span>Attachments (optional)</span>
+          <input type="file" name="attachments" multiple>
+          <small class="app-dlg__hint">Up to 5 files, 10&nbsp;MB each  sent with the email.</small>
+        </label>
+        <p class="app-dlg__note">Delivered to the customer(s) by email.</p>
+        <p class="app-dlg__err" data-notify-err hidden></p>
+      </div>
+      <footer class="app-dlg__foot">
+        <button type="button" class="pal-btn pal-btn--ghost" data-dlg-close>Cancel</button>
+        <button type="submit" class="pal-btn" data-notify-submit>Send</button>
+      </footer>
+    </form>
+  </div>
+</div>

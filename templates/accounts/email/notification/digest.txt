@@ -1,0 +1,16 @@
+Your OneWooz daily digest  {{ date }}
+
+{{ total }} update{{ total|pluralize }} across your store{{ groups|length|pluralize }} in the last day.
+{% for g in groups %}
+{{ g.site_name }}
+{% for line in g.lines %}  • {{ line }}
+{% endfor %}{% endfor %}
+Open your dashboard for the full picture:
+  {{ app_origin }}/
+
+
+You're getting this because your notifications are set to a daily digest.
+Switch to instant or turn it off:
+  {{ app_origin }}/profile/
+
+ {{ brand }}

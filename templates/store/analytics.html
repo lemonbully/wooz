@@ -1,5 +1,4 @@
 {% extends "store/_shell.html" %}
-{% load store_extras %}
 {% block title %}{{ site.name }} · Analytics{% endblock %}
 {% block crumb %}Analytics{% endblock %}
 
@@ -9,62 +8,311 @@
     <div>
       <p class="pal-mono pal-mono--accent">Grow</p>
       <h1 class="app-head__title pal-mt-4">Analytics</h1>
-      <p class="app-head__lead">How your store is performing over the last {{ days }} days.</p>
     </div>
     <div class="app-head__actions">
-      <form method="get" class="app-inline-form">
-        <select name="days" class="pal-select" onchange="this.form.submit()">
-          <option value="7" {% if days == 7 %}selected{% endif %}>7 days</option>
-          <option value="30" {% if days == 30 %}selected{% endif %}>30 days</option>
-          <option value="90" {% if days == 90 %}selected{% endif %}>90 days</option>
-          <option value="365" {% if days == 365 %}selected{% endif %}>1 year</option>
-        </select>
-      </form>
+      <div class="an-range" role="group" aria-label="Date range">
+        {% for opt in range_options %}
+          <a class="an-range__opt {% if days == opt %}is-active{% endif %}" href="?tab={{ tab }}&amp;days={{ opt }}">{{ opt }}d</a>
+        {% endfor %}
+      </div>
     </div>
   </div>
 
+  {# ---- Tabs ---- #}
   <div class="app-block">
-    <div class="app-kpis">
-      {% for m in metrics %}
-        <div class="app-kpi"><p class="app-kpi__label">{{ m.label }}</p><p class="app-kpi__value">{{ m.value }}</p></div>
+    <div class="app-tabs" role="tablist">
+      {% for t in tabs %}
+      <a class="app-tab" href="?tab={{ t.key }}&amp;days={{ days }}" {% if tab == t.key %}aria-current="true"{% endif %}>{{ t.label }}</a>
       {% endfor %}
     </div>
   </div>
 
+  {% if not has_data %}
   <div class="app-block">
-    <div class="app-split">
-      <section>
-        <div class="app-card__head"><h2 class="app-card__title">Top products</h2></div>
-        {% if top_products %}
-          <div class="app-tablewrap" style="border-top:0;">
-            <table class="app-table">
-              <thead><tr><th>Product</th><th class="app-table__num">Units</th><th class="app-table__num">Revenue</th></tr></thead>
-              <tbody>
-                {% for row in top_products %}
-                  <tr><td class="app-table__strong">{{ row.items__product__title|default:"—" }}</td><td class="app-table__num">{{ row.units|default:0 }}</td><td class="app-table__num">{{ site.currency }} {{ row.revenue|default:0 }}</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <div class="app-card__body"><p class="app-note-inline">No sales in this window yet.</p></div>
-        {% endif %}
-      </section>
-
-      <aside>
-        <div class="app-card__head"><h2 class="app-card__title">Orders by status</h2></div>
-        <div class="app-card__body">
-          <div class="app-bars">
-            {% for st in status_choices %}
-              <div class="app-bar">
-                <span class="app-bar__k">{{ st.label }}</span>
-                <span class="app-bar__v">{{ by_status|dictkey:st.value }}</span>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      </aside>
+    <div class="app-empty">
+      <span class="app-empty__ico" aria-hidden="true">{% include "store/_icons.html" with icon="chart" %}</span>
+      <h2 class="app-empty__title">No activity yet in this window</h2>
+      <p class="app-empty__text">As soon as visitors browse your storefront, this dashboard fills with traffic trends, a conversion funnel, web-vitals performance ratings, revenue and product analytics  plus plain-language recommendations tuned to your business.</p>
     </div>
   </div>
+
+  {% elif tab == "overview" %}
+  {# ============================================================ OVERVIEW #}
+  {% include "store/_an_kpis.html" %}
+
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head">
+        <h2 class="app-card__title">Traffic over time</h2>
+        <div class="an-legend">
+          <span class="an-legend__item"><span class="an-legend__dot an-legend__dot--pv"></span> Page views</span>
+          <span class="an-legend__item"><span class="an-legend__dot an-legend__dot--se"></span> Sessions</span>
+        </div>
+      </div>
+      <div class="app-card__body">{% include "store/_an_line.html" with chart=trend label="Daily page views and sessions" %}</div>
+    </div>
+  </div>
+
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Acquisition channels</h2></div>
+      <div class="app-card__body">{% include "store/_an_donut.html" with donut=sources_donut label="Traffic sources" empty="No sessions yet." %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Devices</h2></div>
+      <div class="app-card__body">
+        {% include "store/_an_donut.html" with donut=devices_donut label="Devices" empty="No sessions yet." %}
+        <div class="an-split" title="New vs returning visitors">
+          <span class="an-split__seg an-split__seg--new" style="width:{{ new_pct }}%"></span>
+        </div>
+        <div class="an-split__legend">
+          <span><span class="an-legend__dot an-legend__dot--pv"></span> New {{ new_visitors }}</span>
+          <span><span class="an-legend__dot an-legend__dot--se"></span> Returning {{ returning_visitors }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head">
+        <h2 class="app-card__title">Conversion funnel</h2>
+        <span class="app-card__hint">where visitors drop off</span>
+      </div>
+      <div class="app-card__body">{% include "store/_an_funnel.html" %}</div>
+    </div>
+  </div>
+
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Top pages</h2></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=top_pages mono=1 empty="No page views yet." %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Top locations</h2></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=geo empty="No location data yet." %}</div>
+    </div>
+  </div>
+
+  {% if campaigns %}
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Campaigns</h2></div>
+      <div class="app-card__body">
+        {% for c in campaigns %}
+        <div class="an-bar">
+          <span class="an-bar__label">{{ c.label }}</span>
+          <span class="an-bar__track"><span class="an-bar__fill an-bar__fill--accent" style="width:100%"></span></span>
+          <span class="an-bar__val">{{ c.value }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% include "store/_an_insights.html" %}
+
+  {% elif tab == "performance" %}
+  {# ==================================================== SITE PERFORMANCE #}
+  {% include "store/_an_kpis.html" with kpis=quality %}
+
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Core web vitals</h2><span class="app-card__hint">p75 / avg</span></div>
+      <div class="app-card__body">
+        {% for v in vitals %}
+        <div class="an-vital an-vital--{{ v.rating }}">
+          <div class="an-vital__top">
+            <span class="an-vital__label">{{ v.label }}</span>
+            <span class="an-vital__value">{{ v.value }} <em>{{ v.note }}</em></span>
+          </div>
+          <div class="an-vital__gauge">
+            <span class="an-vital__band an-vital__band--good" style="width:{{ v.good_pct }}%"></span>
+            <span class="an-vital__band an-vital__band--needs" style="left:{{ v.good_pct }}%;width:{{ v.needs_pct }}%"></span>
+            <span class="an-vital__marker" style="left:{{ v.pos }}%"></span>
+          </div>
+          <div class="an-vital__scale"><span>fast</span><span>needs work</span><span>slow</span></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Load-speed spread</h2></div>
+      <div class="app-card__body">{% include "store/_an_donut.html" with donut=vitals_dist center_value=vitals_total center_label="page loads" label="Load speed distribution" empty="No performance samples yet." %}</div>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Bounce rate over time</h2><span class="app-card__hint">lower is better</span></div>
+      <div class="app-card__body">{% include "store/_an_line.html" with chart=bounce_trend label="Daily bounce rate" %}</div>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">When your visitors are active</h2><span class="app-card__hint">sessions · peak {{ heatmap.peak }}</span></div>
+      <div class="app-card__body">
+        <div class="an-heat">
+          <div class="an-heat__hours">
+            <span class="an-heat__corner"></span>
+            {% for h in heatmap.hours %}<span class="an-heat__hour">{{ h }}h</span>{% endfor %}
+          </div>
+          {% for row in heatmap.rows %}
+          <div class="an-heat__row">
+            <span class="an-heat__day">{{ row.day }}</span>
+            <div class="an-heat__cells">
+              {% for c in row.cells %}<span class="an-heat__cell" style="--i:{{ c.intensity }}" title="{{ row.day }} {{ c.hr }}:00 · {{ c.n }} sessions"></span>{% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Session duration</h2></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=duration_buckets empty="No sessions yet." %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Speed by device</h2><span class="app-card__hint">avg load</span></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=device_perf empty="No performance samples yet." %}</div>
+    </div>
+  </div>
+
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Slowest pages</h2><span class="app-card__hint">fix these first</span></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=slowest mono=1 empty="No performance samples yet." %}</div>
+    </div>
+  </div>
+
+  {% include "store/_an_insights.html" %}
+
+  {% elif tab == "sales" %}
+  {# ======================================================= SALES ANALYSIS #}
+  {% include "store/_an_kpis.html" %}
+
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Revenue over time</h2></div>
+      <div class="app-card__body">{% include "store/_an_line.html" with chart=revenue_trend label="Daily revenue" %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Orders over time</h2></div>
+      <div class="app-card__body">{% include "store/_an_line.html" with chart=orders_trend label="Daily orders" %}</div>
+    </div>
+  </div>
+
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Order status</h2></div>
+      <div class="app-card__body">{% include "store/_an_donut.html" with donut=status_donut label="Orders by status" empty="No orders yet." %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Payment methods</h2></div>
+      <div class="app-card__body">{% include "store/_an_donut.html" with donut=payment_donut label="Payment method mix" empty="No captured payments yet." %}</div>
+    </div>
+  </div>
+
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Top products by revenue</h2></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=top_products empty="No sales yet." %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Revenue by category</h2></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=category_bars empty="No sales yet." %}</div>
+    </div>
+  </div>
+
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Sales funnel</h2></div>
+      <div class="app-card__body">{% include "store/_an_funnel.html" %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Discount performance</h2></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=coupons empty="No coupon redemptions yet." %}</div>
+    </div>
+  </div>
+
+  {% if d2c %}
+  {# ---- D2C consumer cohorts ---- #}
+  <div class="app-block">
+    <div class="app-block__head">
+      <h2 class="app-block__title">Consumer intelligence</h2>
+      <p class="app-block__note">Loyalty, retention and satisfaction  the levers that make D2C profitable.</p>
+    </div>
+    <div class="an-kpis">
+      <div class="an-kpi"><span class="an-kpi__label">Repeat rate</span><span class="an-kpi__value">{{ d2c.repeat_rate }}%</span><span class="an-kpi__sub">{{ d2c.repeat_buyers }} of {{ d2c.buyers }} buyers</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">Customer LTV</span><span class="an-kpi__value">{{ d2c.ltv }}</span><span class="an-kpi__sub">avg lifetime value</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">Orders / customer</span><span class="an-kpi__value">{{ d2c.avg_orders_per }}</span><span class="an-kpi__sub">lifetime</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">Cart abandonment</span><span class="an-kpi__value">{{ d2c.abandonment }}%</span><span class="an-kpi__sub">~{{ d2c.recoverable }} recoverable</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">New customers</span><span class="an-kpi__value">{{ d2c.new_customers }}</span><span class="an-kpi__sub">in window</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">Wishlist saves</span><span class="an-kpi__value">{{ d2c.wishlist }}</span><span class="an-kpi__sub">purchase intent</span></div>
+    </div>
+  </div>
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Review sentiment</h2><span class="app-card__hint">{{ d2c.avg_rating }}★ · {{ d2c.review_count }} reviews</span></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=d2c.rating_dist empty="No reviews yet." %}</div>
+    </div>
+    <div class="app-card an-satisfaction">
+      <div class="app-card__head"><h2 class="app-card__title">Satisfaction</h2></div>
+      <div class="app-card__body">
+        <div class="an-gaugebig">
+          <span class="an-gaugebig__value">{{ d2c.sentiment }}%</span>
+          <span class="an-gaugebig__label">positive reviews (4★+)</span>
+          <div class="an-gaugebig__track"><span class="an-gaugebig__fill" style="width:{{ d2c.sentiment }}%"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if b2b %}
+  {# ---- B2B business intelligence ---- #}
+  <div class="app-block">
+    <div class="app-block__head">
+      <h2 class="app-block__title">Business intelligence</h2>
+      <p class="app-block__note">Order size, invoicing base and the enquiry-to-order pipeline that drives B2B revenue.</p>
+    </div>
+    <div class="an-kpis">
+      <div class="an-kpi"><span class="an-kpi__label">Units / order</span><span class="an-kpi__value">{{ b2b.avg_units }}</span><span class="an-kpi__sub">bulk depth</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">Avg line value</span><span class="an-kpi__value">{{ b2b.avg_line_value }}</span><span class="an-kpi__sub">per line item</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">GST orders</span><span class="an-kpi__value">{{ b2b.gst_share }}%</span><span class="an-kpi__sub">{{ b2b.gst_orders }} registered</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">Enquiries</span><span class="an-kpi__value">{{ b2b.enq_total }}</span><span class="an-kpi__sub">{{ b2b.enq_unread }} unread</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">Lead response</span><span class="an-kpi__value">{{ b2b.enq_response }}%</span><span class="an-kpi__sub">enquiries actioned</span></div>
+      <div class="an-kpi"><span class="an-kpi__label">Enquiry → order</span><span class="an-kpi__value">{{ b2b.enq_conversion }}%</span><span class="an-kpi__sub">pipeline conversion</span></div>
+    </div>
+  </div>
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Top business accounts</h2></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=b2b.top_accounts empty="No business orders yet." %}</div>
+    </div>
+    {% if b2b.channel_items %}
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Order channel</h2><span class="app-card__hint">consumer vs business</span></div>
+      <div class="app-card__body">
+        {% for c in b2b.channel_items %}
+        <div class="an-bar">
+          <span class="an-bar__label">{{ c.label }}</span>
+          <span class="an-bar__track"><span class="an-bar__fill an-bar__fill--accent" style="width:100%"></span></span>
+          <span class="an-bar__val">{{ c.value }} <em class="an-bar__extra">{{ c.extra }}</em></span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% include "store/_an_insights.html" %}
+  {% endif %}
 </div>
 {% endblock %}

@@ -34,6 +34,8 @@ __all__ = [
     "begin_email_verification",
     "resolve_email_verification",
     "clear_email_verification",
+    "remember_session_device",
+    "touch_session_device",
 ]
 
 PENDING_SESSION_KEY = "pending_login"
@@ -70,7 +72,7 @@ def begin_email_verification(request, *, flow: str, email: str, data: dict) -> N
     Only what is needed to finish the flow is stored, server-side in the
     session: for a sign-in that is the user id; for a sign-up the profile fields
     and an already-hashed password, never a plaintext one. The code itself is
-    never held here — only :mod:`accounts.otp` (server-side, hashed) knows it.
+    never held here  only :mod:`accounts.otp` (server-side, hashed) knows it.
     """
     request.session[EMAIL_VERIFY_SESSION_KEY] = {
         "flow": flow,
@@ -118,7 +120,7 @@ def record_attempt(request, *, method: str, outcome: str, user=None, email: str 
     """Write one row of sign-in history.
 
     Recorded for failures as well as successes, and with the attempted address
-    even when no such account exists — that is what makes an attack spread
+    even when no such account exists  that is what makes an attack spread
     across many accounts from one address visible.
     """
     try:
@@ -145,8 +147,8 @@ def record_attempt(request, *, method: str, outcome: str, user=None, email: str 
 def needs_second_factor(request, user) -> bool:
     """Whether this sign-in must be challenged for a second factor.
 
-    A passkey sign-in is already multi-factor by construction — possession of
-    the authenticator plus, usually, a biometric or PIN — so it is never
+    A passkey sign-in is already multi-factor by construction  possession of
+    the authenticator plus, usually, a biometric or PIN  so it is never
     challenged again.
     """
     if not user.mfa_is_required():
@@ -160,7 +162,7 @@ def needs_second_factor(request, user) -> bool:
 def begin_pending_login(request, user, *, method: str) -> None:
     """Park a half-authenticated user while the second factor is collected.
 
-    Only the user id and a timestamp are stored — never the password, never a
+    Only the user id and a timestamp are stored  never the password, never a
     code. The parked state expires with the session and is cleared on
     completion or failure.
     """
@@ -222,15 +224,85 @@ def remember_device(request, response, user) -> None:
 # --------------------------------------------------------------------------
 
 
+#: Key under which each session records the device it belongs to, so the
+#: security page can list live sessions and end any one. Kept in sync with
+#: ``accounts.sessions.DEVICE_KEY``.
+SESSION_DEVICE_KEY = "ow_device"
+
+
+def remember_session_device(request) -> None:
+    """Stamp the current session with the device that established it.
+
+    Written into the session itself (not a separate table) so
+    ``accounts.sessions`` can present every live session  its device, rough
+    location and when it began  and end any one. Best-effort: a session that
+    can't be written must never break a sign-in.
+    """
+    try:
+        request.session[SESSION_DEVICE_KEY] = {
+            "ua": request.META.get("HTTP_USER_AGENT", "")[:400],
+            "ip": _client_ip(request),
+            "at": timezone.now().isoformat(),
+            "seen": timezone.now().isoformat(),
+        }
+    except Exception:
+        pass
+
+
+def touch_session_device(request) -> None:
+    """Refresh this session's ``last seen`` stamp (called by the heartbeat)."""
+    try:
+        meta = request.session.get(SESSION_DEVICE_KEY)
+        if isinstance(meta, dict):
+            meta["seen"] = timezone.now().isoformat()
+            request.session[SESSION_DEVICE_KEY] = meta
+    except Exception:
+        pass
+
+
+def _enforce_session_limit(request, user) -> None:
+    """Trim the owner's live sessions to their plan's device cap. Best-effort.
+
+    Staff and superusers are exempt (the admin surface manages its own access),
+    and a missing/zero cap means unlimited. Never raises  a session-accounting
+    hiccup must not block a sign-in.
+    """
+    try:
+        if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+            return
+        from billing.entitlements import concurrent_sessions_for_user
+
+        limit = concurrent_sessions_for_user(user)
+        if not limit or limit <= 0:
+            return
+        key = request.session.session_key or ""
+        if not key:
+            return
+        from . import sessions as session_registry
+
+        session_registry.enforce_limit(user, key, limit)
+    except Exception:
+        pass
+
+
 def complete_login(request, user, *, method: str):
     """Establish the authenticated session.
 
     ``django_login`` cycles the session key, which is what defends against
-    session fixation: any session identifier the visitor arrived holding —
-    including one an attacker planted — is discarded and replaced.
+    session fixation: any session identifier the visitor arrived holding 
+    including one an attacker planted  is discarded and replaced.
     """
     clear_pending_login(request)
     django_login(request, user, backend="accounts.backends.EmailPasswordBackend")
+
+    # Record which device this (freshly-keyed) session belongs to, so the owner
+    # can see and end it from the security page.
+    remember_session_device(request)
+
+    # Enforce the subscription's concurrent-device cap: signing in on a new
+    # device ends the oldest sessions beyond the plan's allowance, so an account
+    # is only ever managed on the permitted number of devices at once.
+    _enforce_session_limit(request, user)
 
     user.last_seen_at = timezone.now()
     user.save(update_fields=["last_seen_at", "updated_at"])
@@ -264,7 +336,7 @@ def safe_next_url(request, default: str = "/") -> str:
 
     Only same-host, path-only destinations are accepted. An unchecked ``next``
     is an open redirect, which turns a legitimate sign-in link into a
-    convincing phishing vector — the victim really does authenticate on the
+    convincing phishing vector  the victim really does authenticate on the
     real site, and only then gets bounced to the attacker's page.
     """
     candidate = request.POST.get("next") or request.GET.get("next") or ""

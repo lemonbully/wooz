@@ -1,0 +1,14 @@
+Your Shiprocket wallet is running low
+
+The Shiprocket wallet connected to {{ site_name }} has dropped below {{ threshold }}.
+Shiprocket deducts shipping charges from this wallet, so when it runs out
+couriers can't be assigned and pickups can't be scheduled.
+
+Current balance: {{ balance }}
+Checked: {{ when }}
+
+Recharge your wallet from the Shiprocket dashboard (Billing > Recharge Wallet).
+{% if shipping_url %}
+Shipping settings: {{ shipping_url }}
+{% endif %}
+{{ brand }}

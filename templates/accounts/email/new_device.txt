@@ -13,4 +13,4 @@ recognise:
 
   {{ app_origin }}/security/
 
-— {{ brand }}
+ {{ brand }}

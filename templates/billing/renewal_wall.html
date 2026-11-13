@@ -1,0 +1,613 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% comment %}
+Universal subscription-renewal wall.
+
+Rendered by billing.middleware.SubscriptionRenewalGateMiddleware in place of
+every owner-dashboard page once a paid subscription has lapsed, so whatever URL
+the owner opens, this same un-dismissable wall answers and no dashboard data is
+ever rendered behind it.
+
+Two modes:
+
+* ``plan`` set (the normal case): the owner renews the plan they had, and only
+  that plan. One plan panel on the left, the renewal checkout (breakdown,
+  optional discount code, agreement, pay) inline on the right. The checkout
+  endpoints (billing.renewal_views) refuse any other slug server-side too.
+* ``plan`` empty but ``cards`` set: their previous plan was retired, so there
+  is nothing to pin them to. The active plans are listed and selecting one
+  fills the same checkout panel underneath.
+{% endcomment %}
+
+{% block title %}Renew your subscription · OneWooz{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/onewooz-pal.css' %}">
+<style nonce="{{ csp_nonce }}">
+  /* The wall owns the whole viewport: no dashboard chrome, nothing behind it. */
+  html, body { height: 100%; }
+  .owr { position: fixed; inset: 0; z-index: 200; overflow-y: auto; overflow-x: hidden; background: var(--pal-paper);
+    background-image: linear-gradient(var(--pal-line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--pal-line-soft) 1px, transparent 1px);
+    background-size: 46px 46px; display: flex; align-items: flex-start; justify-content: center;
+    padding: clamp(1rem, 0.5rem + 2vw, 3rem); }
+  .owr *, .owr *::before, .owr *::after { box-sizing: border-box; }
+  .owr-panel { width: 100%; max-width: 62rem; min-width: 0; margin-block: auto; background: var(--pal-panel);
+    border: 1px solid var(--pal-ink); box-shadow: 16px 16px 0 -1px rgb(10 10 11 / 0.07);
+    padding: clamp(1.25rem, 0.75rem + 2vw, 2.5rem); position: relative; overflow-wrap: anywhere; }
+  .owr-panel::before, .owr-panel::after { content: ""; position: absolute; width: 12px; height: 12px; pointer-events: none; }
+  .owr-panel::before { top: 0; left: 0; border-top: 1.5px solid var(--pal-accent); border-left: 1.5px solid var(--pal-accent); }
+  .owr-panel::after { bottom: 0; right: 0; border-bottom: 1.5px solid var(--pal-accent); border-right: 1.5px solid var(--pal-accent); }
+
+  /* ── Header ── */
+  .owr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem 1.5rem; flex-wrap: wrap; }
+  .owr-head > div { flex: 1 1 22rem; min-width: 0; }
+  .owr-kick { font-family: var(--pal-font-mono); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--pal-accent); margin: 0 0 0.55rem; }
+  .owr-title { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.55rem, 1.1rem + 1.5vw, 2.25rem);
+    letter-spacing: -0.03em; line-height: 1.05; margin: 0; color: var(--pal-ink); }
+  .owr-lead { margin: 0.85rem 0 0; max-width: 54ch; font-size: 0.95rem; line-height: 1.6; color: var(--pal-muted); }
+  .owr-lead strong { color: var(--pal-ink); font-weight: 600; }
+  .owr-signout { flex: 0 0 auto; margin: 0; }
+  .owr-signout button { appearance: none; background: transparent; border: 1px solid var(--pal-line); cursor: pointer;
+    font-family: var(--pal-font-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--pal-muted); padding: 0.6rem 0.9rem; transition: color .16s ease, border-color .16s ease; }
+  .owr-signout button:hover { color: var(--pal-accent); border-color: var(--pal-accent); }
+
+  /* ── Facts strip: plan · ended · billing ── */
+  .owr-facts { margin: clamp(1.25rem, 1rem + 1vw, 1.75rem) 0 0; display: grid; gap: 1px; background: var(--pal-line);
+    border: 1px solid var(--pal-line); grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
+  .owr-fact { background: var(--pal-paper); padding: 0.8rem 1rem; min-width: 0; }
+  .owr-fact dt { font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
+  .owr-fact dd { margin: 0.3rem 0 0; font-family: var(--pal-font-display); font-size: 1rem; font-weight: 500; color: var(--pal-ink); }
+  .owr-fact dd.is-warn { color: #b0271d; }
+
+  /* ── Body grid: plan | checkout ── */
+  .owr-grid { margin-top: clamp(1.25rem, 1rem + 1vw, 1.75rem); display: grid; gap: clamp(1rem, 0.6rem + 1.4vw, 1.75rem);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .owr-grid > * { min-width: 0; }
+  .owr-grid--pick { grid-template-columns: minmax(0, 1fr); }
+  @media (max-width: 52rem) { .owr-grid { grid-template-columns: minmax(0, 1fr); } }
+
+  /* The plan panel reuses the pricing card look, with the bits that used to
+     spill (nowrap values, the floating badge doodle) tamed for a narrow column. */
+  .owr .pal-plan { min-width: 0; height: 100%; padding: clamp(1.25rem, 0.9rem + 1.4vw, 2rem); }
+  .owr .pal-plan__price { font-size: clamp(1.9rem, 1.4rem + 1.6vw, 2.6rem); overflow-wrap: anywhere; }
+  .owr .pal-plan__list li > span:first-child { min-width: 0; }
+  .owr .pal-plan__fval { white-space: normal; }
+  .owr .pal-plan__fee > summary { flex-wrap: wrap; }
+  .owr .pal-plan__fee-row > span:last-child { white-space: normal; text-align: right; }
+  .owr-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; }
+  .owr-tag { display: inline-flex; align-items: center; font-family: var(--pal-font-mono); font-size: 0.56rem; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-accent); border: 1px solid var(--pal-accent); padding: 0.25rem 0.5rem; }
+  .pal-plan--featured .owr-tag { color: var(--pal-accent-2); border-color: var(--pal-accent-2); }
+  .pal-plan--featured .owr-tag--soft { color: rgb(244 244 242 / 0.7); border-color: rgb(244 244 242 / 0.28); }
+  .owr-billed { margin-top: 0.55rem; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.04em; color: var(--pal-muted); }
+  .pal-plan--featured .owr-billed { color: rgb(244 244 242 / 0.6); }
+
+  /* ── Plan list (only when the previous plan was retired) ── */
+  .owr-notice { margin: 0 0 1rem; padding: 0.85rem 1rem; border-left: 2px solid var(--pal-accent); background: var(--pal-paper);
+    font-size: 0.9rem; line-height: 1.55; color: var(--pal-ink-2); }
+  .owr .pal-plans { grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); max-width: none; margin: 0; }
+  .owr .pal-plans > * { min-width: 0; }
+  .owr-plan-cta { margin-top: auto; padding-top: 1.25rem; }
+  .owr-plan-cta .pal-btn { width: 100%; }
+  .owr .pal-plan.is-selected { outline: 2px solid var(--pal-accent); outline-offset: -2px; }
+
+  /* ── Checkout panel ── */
+  .owr-co { background: var(--pal-paper); border: 1px solid var(--pal-line); padding: clamp(1.25rem, 0.9rem + 1.4vw, 2rem); min-width: 0; }
+  .owr-co[hidden] { display: none; }
+  .owr-grid--pick .owr-co { max-width: 34rem; width: 100%; justify-self: center; }
+  .owr-co__title { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.2rem, 1rem + 0.6vw, 1.4rem);
+    letter-spacing: -0.02em; line-height: 1.1; margin: 0; color: var(--pal-ink); }
+  .owr-co__sub { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--pal-muted); margin: 0.45rem 0 0; }
+
+  .owr-rows { margin-top: 1rem; border-top: 1px solid var(--pal-line); }
+  .owr-r { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 0.7rem 0;
+    border-bottom: 1px solid var(--pal-line-soft); }
+  .owr-r[hidden] { display: none; }
+  .owr-r > span:first-child { min-width: 0; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--pal-muted); }
+  .owr-r > span:last-child { flex: 0 0 auto; text-align: right; font-family: var(--pal-font-display); font-size: 1rem;
+    color: var(--pal-ink); font-feature-settings: "tnum"; }
+  .owr-r--disc > span:last-child { color: #1f8a4c; }
+  .owr-r--total { border-bottom: 0; padding-top: 0.95rem; border-top: 1px solid var(--pal-ink); margin-top: -1px; }
+  .owr-r--total > span:first-child { color: var(--pal-ink); }
+  .owr-r--total > span:last-child { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
+
+  .owr-disc { margin-top: 1.1rem; }
+  .owr-label { display: block; font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--pal-ink-2); margin-bottom: 0.45rem; }
+  .owr-label span { color: var(--pal-faint); }
+  .owr-disc__row { display: flex; gap: 0.5rem; align-items: stretch; }
+  .owr-disc__in { flex: 1 1 auto; min-width: 0; width: auto; padding: 0.65rem 0.8rem; font-family: var(--pal-font-mono);
+    font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .owr-disc__in::placeholder { text-transform: none; letter-spacing: 0.02em; color: var(--pal-faint); }
+  .owr-disc__btn { flex: 0 0 auto; padding-inline: 1rem; }
+  .owr-disc__btn[disabled] { opacity: 0.55; cursor: default; }
+  .owr-disc__info { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin: 0.55rem 0 0;
+    font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.03em; line-height: 1.5; }
+  .owr-disc__info[hidden] { display: none; }
+  .owr-disc__info.is-ok { color: #1f8a4c; }
+  .owr-disc__info.is-bad { color: #b0271d; }
+  .owr-disc__remove { flex: 0 0 auto; appearance: none; background: none; border: 0; padding: 0; cursor: pointer; font: inherit;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--pal-muted); border-bottom: 1px solid currentColor; }
+  .owr-disc__remove:hover { color: var(--pal-accent); }
+  .owr-disc__remove[hidden] { display: none; }
+
+  .owr-agree { margin-top: 1.15rem; padding-top: 1rem; border-top: 1px solid var(--pal-line-soft); }
+  .owr-agree__toggle { background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--pal-font-mono);
+    font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-accent);
+    border-bottom: 1px solid currentColor; }
+  .owr-agree__body { display: none; max-height: 16rem; overflow-y: auto; margin-top: 0.8rem; padding: 0.9rem 1rem;
+    border: 1px solid var(--pal-line); background: var(--pal-panel); font-size: 0.86rem; line-height: 1.6; color: var(--pal-ink-2); }
+  .owr-agree__body.is-open { display: block; }
+  .owr-agree__body h3, .owr-agree__body h4 { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.02rem;
+    letter-spacing: -0.02em; margin: 0.1rem 0 0.65rem; color: var(--pal-ink); }
+  .owr-agree__body p { margin: 0 0 0.75rem; }
+  .owr-agree__body img, .owr-agree__body table { max-width: 100%; }
+  .owr-check { display: flex; align-items: flex-start; gap: 0.6rem; margin-top: 0.9rem; font-size: 0.85rem; color: var(--pal-ink-2); line-height: 1.5; cursor: pointer; }
+  .owr-check input { margin-top: 0.2rem; width: 1rem; height: 1rem; accent-color: var(--pal-accent); flex: 0 0 auto; }
+
+  .owr-err { font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.03em; line-height: 1.55; color: #b0271d;
+    margin-top: 0.85rem; border-left: 2px solid #b0271d; padding-left: 0.65rem; }
+  .owr-err[hidden] { display: none; }
+  .owr-pay { width: 100%; margin-top: 1.1rem; }
+  .owr-pay[disabled] { opacity: 0.5; cursor: default; }
+  .owr-note { font-family: var(--pal-font-mono); font-size: 0.56rem; letter-spacing: 0.05em; line-height: 1.6;
+    text-transform: uppercase; color: var(--pal-faint); margin: 0.9rem 0 0; }
+  .owr-note[hidden] { display: none; }
+
+  .owr-foot { margin: clamp(1.25rem, 1rem + 1vw, 1.75rem) 0 0; padding-top: 1rem; border-top: 1px solid var(--pal-line-soft);
+    font-size: 0.85rem; line-height: 1.6; color: var(--pal-muted); }
+  .owr-foot strong { color: var(--pal-ink); font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="pal{% if request.impersonation %} pal--impersonating{% endif %}">
+{% include "_impersonation_banner.html" %}
+<div class="owr" role="dialog" aria-modal="true" aria-labelledby="owr-title">
+  <div class="owr-panel">
+
+    <div class="owr-head">
+      <div>
+        <p class="owr-kick">Subscription · Renew to continue</p>
+        <h1 class="owr-title" id="owr-title">Your subscription has ended</h1>
+        <p class="owr-lead">
+          {% if renewal.order.plan_name %}Your <strong>{{ renewal.order.plan_name }}</strong> plan has expired.{% else %}Your plan has expired.{% endif %}
+          {% if plan %}Renew it below to unlock your dashboard again. Your stores, products and data are all safe and waiting.{% else %}Choose a plan below to unlock your dashboard again. Your stores, products and data are all safe and waiting.{% endif %}
+        </p>
+      </div>
+      <form class="owr-signout" method="post" action="{% url 'accounts:sign_out' %}">
+        {% csrf_token %}
+        <button type="submit">Sign out</button>
+      </form>
+    </div>
+
+    {% if renewal.order %}
+    <dl class="owr-facts">
+      <div class="owr-fact"><dt>Previous plan</dt><dd>{{ renewal.order.plan_name|default:"Subscription" }}</dd></div>
+      {% if renewal.order.current_period_end %}
+      <div class="owr-fact"><dt>Ended on</dt><dd class="is-warn">{{ renewal.order.current_period_end|date:"j M Y" }}</dd></div>
+      {% endif %}
+      <div class="owr-fact"><dt>Billing</dt><dd>{% if plan %}{% if plan.is_one_time %}One-time · 1 year{% else %}{{ plan.get_duration_display }}{% endif %}{% else %}{{ renewal.order.months }} month{{ renewal.order.months|pluralize }}{% endif %}</dd></div>
+    </dl>
+    {% endif %}
+
+    {% if plan or cards %}
+    <div class="owr-grid{% if not plan %} owr-grid--pick{% endif %}">
+
+      {% if plan %}
+      {# ---------- The one plan this owner renews ---------- #}
+      <article class="pal-plan pal-plan--featured" aria-label="{{ plan.name }} plan">
+        <div class="owr-tags">
+          <span class="owr-tag">Your plan</span>
+          {% if plan.badge %}<span class="owr-tag owr-tag--soft">{{ plan.badge }}</span>{% endif %}
+        </div>
+        <div class="pal-plan__name">{{ plan.name }}</div>
+
+        {% if plan.is_one_time %}
+          <div class="pal-plan__price">₹{{ plan.one_time_total|floatformat:'-2' }} <span>/ year, once</span></div>
+        {% else %}
+          <div class="pal-plan__price">₹{{ plan.card_per_month|floatformat:'-2' }} <span>/ month</span></div>
+          {% if plan.months > 1 %}<p class="owr-billed">Billed ₹{{ plan.card_total|floatformat:'-2' }} every {{ plan.months }} months, plus GST</p>{% else %}<p class="owr-billed">Billed monthly, plus GST</p>{% endif %}
+        {% endif %}
+
+        {% if plan.tagline %}<div class="pal-plan__desc">{{ plan.tagline }}</div>{% endif %}
+
+        {% if plan.feature_list or plan.number_of_stores or plan.number_of_collaborations %}
+        <ul class="pal-plan__list">
+          {% for f in plan.feature_list %}
+          <li{% if not f.included %} style="opacity:.5;text-decoration:line-through"{% endif %}><span>{{ f.text }}</span>{% if f.value %}<span class="pal-plan__fval">{{ f.value }}</span>{% endif %}</li>
+          {% endfor %}
+          {% if plan.number_of_stores %}<li><span>{{ plan.number_of_stores }} store{{ plan.number_of_stores|pluralize }} included</span></li>{% endif %}
+          {% if plan.number_of_collaborations %}<li><span>{{ plan.number_of_collaborations }} team collaborator{{ plan.number_of_collaborations|pluralize }}</span></li>{% endif %}
+        </ul>
+        {% endif %}
+
+        {% include "partials/_plan_fee.html" %}
+      </article>
+
+      {% else %}
+      {# ---------- Previous plan retired: pick any active plan ---------- #}
+      <div>
+        <p class="owr-notice">Your previous plan is no longer offered. Pick a plan below and complete the renewal underneath.</p>
+        <div class="pal-plans">
+          {% for card in cards %}
+          <div class="pal-plan{% if card.is_featured %} pal-plan--featured{% endif %}" data-card="{{ card.slug }}">
+            {% if card.badge %}<div class="owr-tags"><span class="owr-tag owr-tag--soft">{{ card.badge }}</span></div>{% endif %}
+            <div class="pal-plan__name">{{ card.name }}</div>
+            {% if card.plan_type == 'free' %}
+              <div class="pal-plan__price">Free</div>
+            {% elif card.plan_type == 'custom' %}
+              <div class="pal-plan__price">Custom</div>
+            {% elif card.is_one_time %}
+              <div class="pal-plan__price">₹{{ card.one_time_total|floatformat:'-2' }} <span>/ year, once</span></div>
+            {% else %}
+              <div class="pal-plan__price">₹{{ card.card_per_month|floatformat:'-2' }} <span>/ month</span></div>
+            {% endif %}
+            {% if card.tagline %}<div class="pal-plan__desc">{{ card.tagline }}</div>{% endif %}
+            {% with plan=card %}{% include "partials/_plan_fee.html" %}{% endwith %}
+            <div class="owr-plan-cta">
+              {% if card.is_purchasable %}
+                <button type="button" class="pal-btn{% if not card.is_featured %} pal-btn--ghost{% endif %}"
+                        data-select data-slug="{{ card.slug }}" data-name="{{ card.name }}"
+                        data-cycle="{% if card.is_one_time %}One-time · 1 year{% else %}{{ card.get_duration_display }}{% endif %}">Select plan</button>
+              {% elif card.plan_type == 'free' %}
+                <button type="button" class="pal-btn pal-btn--ghost"
+                        data-select data-free data-slug="{{ card.slug }}" data-name="{{ card.name }}" data-cycle="Free plan">Continue on free</button>
+              {% else %}
+                <a href="{% if card.custom_cta_url %}{{ card.custom_cta_url }}{% else %}mailto:hello@onewooz.com{% endif %}"
+                   class="pal-btn pal-btn--ghost">{{ card.cta_label|default:"Talk to us" }}</a>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ---------- Renewal checkout ---------- #}
+      <section class="owr-co" id="owr-checkout" aria-labelledby="owr-co-title"
+               {% if plan %}data-slug="{{ plan.slug }}" data-name="{{ plan.name }}" data-cycle="{% if plan.is_one_time %}One-time · 1 year{% else %}{{ plan.get_duration_display }}{% endif %}"{% else %}hidden{% endif %}>
+        <p class="owr-kick">Renewal summary</p>
+        <h2 class="owr-co__title" id="owr-co-title">Renew <span id="owr-s-plan">{{ plan.name }}</span></h2>
+        <p class="owr-co__sub" id="owr-s-cycle">{% if plan %}{% if plan.is_one_time %}One-time · 1 year{% else %}{{ plan.get_duration_display }}{% endif %}{% endif %}</p>
+
+        <div class="owr-rows">
+          <div class="owr-r"><span id="owr-s-base-label">Base price{% if quote %} ({{ quote.months }} month{{ quote.months|pluralize }}){% endif %}</span><span id="owr-s-base">{% if quote %}₹{{ quote.base }}{% endif %}</span></div>
+          <div class="owr-r owr-r--disc" id="owr-s-disc-row" hidden><span>Discount <span id="owr-s-disc-code"></span></span><span id="owr-s-disc"></span></div>
+          <div class="owr-r" id="owr-s-gst-row"><span>GST (<span id="owr-s-gst-rate">{% if quote %}{{ quote.gst_rate }}{% else %}18{% endif %}</span>%)</span><span id="owr-s-gst">{% if quote %}₹{{ quote.gst_amount }}{% endif %}</span></div>
+          <div class="owr-r owr-r--total"><span>Total</span><span id="owr-s-total">{% if quote %}₹{{ quote.total }}{% endif %}</span></div>
+        </div>
+
+        <div class="owr-disc" id="owr-disc">
+          <label class="owr-label" for="owr-code">Discount code <span>(optional)</span></label>
+          <div class="owr-disc__row">
+            <input class="pal-input owr-disc__in" type="text" id="owr-code" name="code" maxlength="40"
+                   placeholder="Enter code" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <button type="button" class="pal-btn pal-btn--ghost owr-disc__btn" id="owr-apply">Apply</button>
+          </div>
+          <p class="owr-disc__info" id="owr-disc-info" role="status" hidden>
+            <span id="owr-disc-msg"></span>
+            <button type="button" class="owr-disc__remove" id="owr-disc-remove" hidden>Remove</button>
+          </p>
+        </div>
+
+        <div class="owr-agree">
+          <button type="button" class="owr-agree__toggle" id="owr-agree-toggle" aria-expanded="false" aria-controls="owr-agree-body">Read the user agreement</button>
+          <div class="owr-agree__body" id="owr-agree-body"></div>
+          <label class="owr-check">
+            <input type="checkbox" id="owr-agree-check">
+            <span>I have read and accept the OneWooz user agreement.</span>
+          </label>
+        </div>
+
+        <div class="owr-err" id="owr-s-err" role="alert" hidden></div>
+        <button type="button" class="pal-btn owr-pay" id="owr-pay" disabled>Renew &amp; pay</button>
+        <p class="owr-note" id="owr-s-note">Payments are processed securely by Cashfree. We never store your card details.</p>
+      </section>
+    </div>
+
+    {% if plan %}
+    <p class="owr-foot">Want a different plan? Renew <strong>{{ plan.name }}</strong> first. Once it is active again you can switch plans any time from your profile.</p>
+    {% endif %}
+
+    {% else %}
+    <p class="owr-lead" style="margin-top:1.5rem">
+      No plans are available to renew right now. Please contact us at
+      <a class="pal-link" href="mailto:hello@onewooz.com">hello@onewooz.com</a> to restore your subscription.
+    </p>
+    {% endif %}
+
+  </div>
+</div>
+
+{{ quote|json_script:"owr-quote" }}
+<span id="owr-cfg" hidden
+      data-quote-url="{% url 'billing_renew:renew_quote' %}"
+      data-agreement-url="{% url 'billing_renew:renew_agreement' %}"
+      data-session-url="{% url 'billing_renew:renew_session' %}"
+      data-free-url="{% url 'billing_renew:renew_free' %}"
+      data-cashfree="{% if cashfree_ready %}1{% else %}0{% endif %}"></span>
+<form id="owr-csrf" hidden>{% csrf_token %}</form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if cashfree_ready %}<script nonce="{{ csp_nonce }}" src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>{% endif %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var qs = function (s, r) { return (r || document).querySelector(s); };
+    var qsa = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+    var CFG = qs("#owr-cfg");
+    var BOX = qs("#owr-checkout");
+    if (!CFG || !BOX) return;
+    var QUOTE_URL = CFG.getAttribute("data-quote-url");
+    var AGREEMENT_URL = CFG.getAttribute("data-agreement-url");
+    var SESSION_URL = CFG.getAttribute("data-session-url");
+    var FREE_URL = CFG.getAttribute("data-free-url");
+    var HAS_CASHFREE = CFG.getAttribute("data-cashfree") === "1";
+    var CSRF = (qs("#owr-csrf [name=csrfmiddlewaretoken]") || {}).value || "";
+
+    // Indian digit grouping, two decimals dropped when whole (12,34,567.50).
+    function fmt(v) {
+      var n = parseFloat(v);
+      if (isNaN(n)) return v;
+      var parts = n.toFixed(2).split("."), whole = parts[0], dec = parts[1];
+      var last3 = whole.slice(-3), rest = whole.slice(0, -3);
+      if (rest) last3 = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last3;
+      return dec === "00" ? last3 : last3 + "." + dec;
+    }
+    function post(url, obj) {
+      var body = new URLSearchParams();
+      Object.keys(obj).forEach(function (k) { body.set(k, obj[k]); });
+      return fetch(url, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": CSRF,
+          "X-Requested-With": "XMLHttpRequest",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: body.toString(),
+        credentials: "same-origin",
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, data: d || {} }; });
+      });
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    var els = {
+      sPlan: qs("#owr-s-plan"), sCycle: qs("#owr-s-cycle"),
+      baseLabel: qs("#owr-s-base-label"), base: qs("#owr-s-base"),
+      discRow: qs("#owr-s-disc-row"), disc: qs("#owr-s-disc"), discCode: qs("#owr-s-disc-code"),
+      gstRow: qs("#owr-s-gst-row"), gst: qs("#owr-s-gst"), gstRate: qs("#owr-s-gst-rate"), total: qs("#owr-s-total"),
+      discWrap: qs("#owr-disc"), code: qs("#owr-code"), apply: qs("#owr-apply"),
+      info: qs("#owr-disc-info"), infoMsg: qs("#owr-disc-msg"), remove: qs("#owr-disc-remove"),
+      agreeToggle: qs("#owr-agree-toggle"), agreeBody: qs("#owr-agree-body"), agreeCheck: qs("#owr-agree-check"),
+      err: qs("#owr-s-err"), pay: qs("#owr-pay"), note: qs("#owr-s-note"),
+    };
+
+    function showErr(msg) { if (els.err) { els.err.textContent = msg; els.err.hidden = false; } }
+    function hideErr() { if (els.err) { els.err.hidden = true; els.err.textContent = ""; } }
+
+    // What is being renewed, the quote without any code (to fall back to), the
+    // quote on screen, and the code the server confirmed. Only a confirmed code
+    // is ever sent to checkout, so the amount charged is the amount shown.
+    var current = {
+      slug: BOX.getAttribute("data-slug") || "",
+      name: BOX.getAttribute("data-name") || "",
+      cycle: BOX.getAttribute("data-cycle") || "",
+      free: false,
+    };
+    var baseQuote = null, shownQuote = null, appliedCode = "", busy = false;
+    try { baseQuote = JSON.parse((qs("#owr-quote") || {}).textContent || "null"); } catch (e) { baseQuote = null; }
+
+    function payLabel() {
+      if (current.free) return "Activate free plan";
+      if (shownQuote && parseFloat(shownQuote.total) <= 0) return "Renew now";
+      if (shownQuote) return "Renew & pay ₹" + fmt(shownQuote.total);
+      return "Renew & pay";
+    }
+    function syncPay() {
+      if (!els.pay) return;
+      els.pay.disabled = busy || !current.slug || !(els.agreeCheck && els.agreeCheck.checked) || (!current.free && !shownQuote);
+      if (!busy) els.pay.textContent = payLabel();
+    }
+    if (els.agreeCheck) els.agreeCheck.addEventListener("change", function () { hideErr(); syncPay(); });
+
+    function fillPaid(q) {
+      shownQuote = q;
+      var months = parseInt(q.months, 10) || 1;
+      if (els.baseLabel) els.baseLabel.textContent = "Base price (" + months + " month" + (months === 1 ? "" : "s") + ")";
+      if (els.base) els.base.textContent = "₹" + fmt(q.base);
+      var saving = parseFloat(q.discount_amount) > 0;
+      if (els.discRow) els.discRow.hidden = !saving;
+      if (saving) {
+        if (els.disc) els.disc.textContent = "−₹" + fmt(q.discount_amount);
+        if (els.discCode) els.discCode.textContent = q.discount_code ? "· " + q.discount_code : "";
+      }
+      if (els.gstRow) els.gstRow.hidden = false;
+      if (els.gstRate) els.gstRate.textContent = q.gst_rate;
+      if (els.gst) els.gst.textContent = "₹" + fmt(q.gst_amount);
+      if (els.total) els.total.textContent = "₹" + fmt(q.total);
+      if (els.note) els.note.hidden = parseFloat(q.total) <= 0;
+      syncPay();
+    }
+    function fillFree() {
+      shownQuote = null;
+      if (els.baseLabel) els.baseLabel.textContent = "Plan";
+      if (els.base) els.base.textContent = "Free";
+      if (els.discRow) els.discRow.hidden = true;
+      if (els.gstRow) els.gstRow.hidden = true;
+      if (els.total) els.total.textContent = "Free";
+      if (els.note) els.note.hidden = true;
+      syncPay();
+    }
+
+    function paintInfo(kind, msg, removable) {
+      if (!els.info) return;
+      if (!kind) { els.info.hidden = true; if (els.infoMsg) els.infoMsg.textContent = ""; return; }
+      els.info.className = "owr-disc__info " + (kind === "ok" ? "is-ok" : "is-bad");
+      if (els.infoMsg) els.infoMsg.textContent = msg;
+      if (els.remove) els.remove.hidden = !removable;
+      els.info.hidden = false;
+    }
+    function clearCode(keepInput) {
+      appliedCode = "";
+      if (!keepInput && els.code) els.code.value = "";
+      paintInfo(null);
+      if (baseQuote && !current.free) fillPaid(baseQuote);
+    }
+
+    // Apply a code against the server-side quote (the server re-checks it at pay).
+    function applyCode() {
+      if (current.free || !current.slug || !els.code) return;
+      var code = els.code.value.trim().toUpperCase();
+      els.code.value = code;
+      if (!code) { paintInfo("bad", "Enter a discount code first.", false); els.code.focus(); return; }
+      hideErr();
+      els.apply.disabled = true;
+      els.apply.textContent = "Applying…";
+      post(QUOTE_URL, { slug: current.slug, code: code })
+        .then(function (r) {
+          var d = r.data;
+          if (!d.ok || !d.quote) { paintInfo("bad", d.error || "Couldn’t check that code. Please try again.", false); return; }
+          var q = d.quote;
+          if (q.discount_error) {
+            appliedCode = "";
+            fillPaid(q); // the undiscounted figures
+            paintInfo("bad", q.discount_error, false);
+            return;
+          }
+          appliedCode = q.discount_code || code;
+          fillPaid(q);
+          if (parseFloat(q.discount_amount) > 0) {
+            paintInfo("ok", "Code " + appliedCode + " applied. You save ₹" + fmt(q.discount_amount) + " before GST.", true);
+          } else {
+            paintInfo("ok", "Code " + appliedCode + " applied.", true);
+          }
+        })
+        .catch(function () { paintInfo("bad", "Network error. Please try again.", false); })
+        .then(function () { els.apply.disabled = false; els.apply.textContent = "Apply"; });
+    }
+    if (els.apply) els.apply.addEventListener("click", applyCode);
+    if (els.code) {
+      els.code.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); applyCode(); } });
+      // Editing the field after a code was confirmed un-applies it, so the
+      // total on screen never claims a saving the checkout won't give.
+      els.code.addEventListener("input", function () {
+        if (appliedCode && els.code.value.trim().toUpperCase() !== appliedCode) clearCode(true);
+        else if (!appliedCode && els.info && !els.info.hidden) paintInfo(null);
+      });
+    }
+    if (els.remove) els.remove.addEventListener("click", function () { clearCode(false); if (els.code) els.code.focus(); });
+
+    // Agreement, loaded on first open.
+    var agreementLoaded = false;
+    function loadAgreement() {
+      if (agreementLoaded || !els.agreeBody) return;
+      els.agreeBody.innerHTML = "<p>Loading agreement…</p>";
+      fetch(AGREEMENT_URL, { headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.ok || !d.agreement) throw new Error("no agreement");
+          var a = d.agreement;
+          els.agreeBody.innerHTML = "<h3>" + escapeHtml(a.title || "User agreement") + "</h3>" + (a.content || "");
+          agreementLoaded = true;
+        })
+        .catch(function () { els.agreeBody.innerHTML = "<p>Couldn’t load the agreement. You can still continue.</p>"; });
+    }
+    if (els.agreeToggle) els.agreeToggle.addEventListener("click", function () {
+      var open = els.agreeBody.classList.toggle("is-open");
+      els.agreeToggle.textContent = open ? "Hide the user agreement" : "Read the user agreement";
+      els.agreeToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) loadAgreement();
+    });
+
+    // Load the no-code quote for the current plan (used when none was rendered).
+    function loadBaseQuote() {
+      shownQuote = null; syncPay();
+      if (els.total) els.total.textContent = "…";
+      post(QUOTE_URL, { slug: current.slug })
+        .then(function (r) {
+          if (r.data && r.data.ok && r.data.quote) { baseQuote = r.data.quote; fillPaid(baseQuote); }
+          else showErr((r.data && r.data.error) || "Couldn’t load the price. Please try again.");
+        })
+        .catch(function () { showErr("Network error. Please try again."); });
+    }
+
+    // Only when the previous plan was retired: choosing a plan fills the panel.
+    qsa("[data-select]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        current.slug = btn.getAttribute("data-slug") || "";
+        current.name = btn.getAttribute("data-name") || "";
+        current.cycle = btn.getAttribute("data-cycle") || "";
+        current.free = btn.hasAttribute("data-free");
+        qsa("[data-card]").forEach(function (c) { c.classList.toggle("is-selected", c.getAttribute("data-card") === current.slug); });
+        hideErr();
+        appliedCode = "";
+        if (els.code) els.code.value = "";
+        paintInfo(null);
+        if (els.discWrap) els.discWrap.hidden = current.free;
+        if (els.sPlan) els.sPlan.textContent = current.name;
+        if (els.sCycle) els.sCycle.textContent = current.cycle;
+        BOX.hidden = false;
+        if (current.free) { baseQuote = null; fillFree(); } else { baseQuote = null; loadBaseQuote(); }
+        BOX.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    // Pay / activate.
+    if (els.pay) els.pay.addEventListener("click", function () {
+      if (!current.slug) return;
+      if (!els.agreeCheck || !els.agreeCheck.checked) { showErr("Please accept the agreement to continue."); return; }
+      hideErr();
+      var fail = function (msg) { busy = false; showErr(msg); syncPay(); };
+
+      if (current.free) {
+        busy = true; els.pay.disabled = true; els.pay.textContent = "Activating…";
+        post(FREE_URL, { slug: current.slug, agree: "1" })
+          .then(function (r) {
+            var d = r.data;
+            if (!d.ok || !d.redirect) throw new Error(d.error || "We couldn’t activate this. Please try again.");
+            window.location.href = d.redirect;
+          })
+          .catch(function (e) { fail((e && e.message) || "Network error. Please try again."); });
+        return;
+      }
+
+      var zero = shownQuote && parseFloat(shownQuote.total) <= 0;
+      if (!zero && !HAS_CASHFREE) { showErr("Online payment isn’t available right now. Please contact us."); return; }
+      busy = true; els.pay.disabled = true; els.pay.textContent = zero ? "Renewing…" : "Starting payment…";
+      post(SESSION_URL, { slug: current.slug, agree: "1", code: appliedCode })
+        .then(function (r) {
+          var d = r.data;
+          // A code covering the full amount is settled server-side, no gateway.
+          if (d.ok && d.redirect) { window.location.href = d.redirect; return; }
+          if (!d.ok || !d.payment_session_id) throw new Error(d.error || "We couldn’t start the payment. Please try again.");
+          if (typeof Cashfree !== "function") throw new Error("Couldn’t open the payment window. Please try again.");
+          var cf = Cashfree({ mode: d.mode });
+          cf.checkout({ paymentSessionId: d.payment_session_id, redirectTarget: "_self" });
+        })
+        .catch(function (e) { fail((e && e.message) || "Network error. Please try again."); });
+    });
+
+    // Initial paint.
+    if (current.slug) {
+      if (baseQuote) fillPaid(baseQuote); else loadBaseQuote();
+    } else {
+      syncPay();
+    }
+  })();
+</script>
+{% endblock %}

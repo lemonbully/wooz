@@ -1,44 +1,141 @@
 {% extends "store/_shell.html" %}
+{% load billing_money %}
 {% block title %}{{ site.name }} · Bills{% endblock %}
 {% block crumb %}Bills{% endblock %}
 
 {% block main %}
 <div class="app-page">
-  <div class="app-head"><div>
-    <p class="pal-mono pal-mono--accent">Money</p>
-    <h1 class="app-head__title pal-mt-4">Bills</h1>
-    <p class="app-head__lead">What this store owes OneWooz for the platform. Each billing period rolls per-order charges into one invoice.</p>
-  </div></div>
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Money</p>
+      <h1 class="app-head__title pal-mt-4">Bills</h1>
+      <p class="app-head__lead">What this store owes OneWooz. The commerce fee accrues on each delivered order and rolls into a payable invoice for the period.</p>
+    </div>
+    <div class="app-head__actions">
+      <form method="post" action="{% url 'store:bill_generate' site.id %}">
+        {% csrf_token %}
+        <button class="pal-btn" type="submit" {% if not can_generate %}disabled{% endif %}>Generate bill <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+      </form>
+    </div>
+  </div>
 
   <div class="app-block">
     <div class="app-kpis">
-      <div class="app-kpi"><p class="app-kpi__label">Outstanding</p><p class="app-kpi__value">{{ site.currency }} {{ outstanding }}</p></div>
-      <div class="app-kpi"><p class="app-kpi__label">Billing cycle</p><p class="app-kpi__value">{% if config %}{{ config.get_billing_cycle_type_display }}{% else %}—{% endif %}</p></div>
-      <div class="app-kpi"><p class="app-kpi__label">Per-order charge</p><p class="app-kpi__value">{% if config %}{% if config.per_order_charge_type == 'percent' %}{{ config.per_order_charge_value }}%{% else %}{{ site.currency }} {{ config.per_order_charge_value }}{% endif %}{% else %}—{% endif %}</p></div>
+      <div class="app-kpi">
+        <p class="app-kpi__label">Outstanding</p>
+        <p class="app-kpi__value">{{ site.currency }} {{ outstanding|floatformat:2 }}</p>
+        <p class="app-kpi__sub">Across unpaid bills</p>
+      </div>
+      <div class="app-kpi">
+        <p class="app-kpi__label">Accruing this period</p>
+        <p class="app-kpi__value">{{ site.currency }} {{ accrual.total|floatformat:2 }}</p>
+        <p class="app-kpi__sub">{{ accrual.orders }} order{{ accrual.orders|pluralize }} not yet billed · GST added on the bill</p>
+      </div>
+      <button type="button" class="app-kpi app-kpi--btn" data-popup-open="delivered-modal" aria-haspopup="dialog" aria-controls="delivered-modal">
+        <span class="app-kpi__label">Delivered orders</span>
+        <span class="app-kpi__value">{{ delivered_total }}</span>
+        <span class="app-kpi__sub">{% if delivered_total %}See the commerce fee on each order →{% else %}Shown once an order is delivered{% endif %}</span>
+      </button>
+      <div class="app-kpi">
+        <p class="app-kpi__label">Billing cycle</p>
+        <p class="app-kpi__value">Every {{ bill_every_days }} days</p>
+        <p class="app-kpi__sub">Next bill {{ next_bill_due|date:"d M Y" }}{% if config.last_bill_generated_at %} · last {{ config.last_bill_generated_at|date:"d M Y" }}{% endif %}</p>
+      </div>
     </div>
   </div>
+
+  {% if commission.type == 'bands' %}
+  <div class="app-block">
+    <div class="app-tablewrap">
+      <table class="app-table">
+        <caption class="app-sub" style="caption-side:top;text-align:left;padding-bottom:0.5rem;">How the commerce fee is charged: each product sold at a price from a range's minimum value to its maximum value is charged that range's fee, per unit, on delivery. The price is the product variation's selling price (else the product's); coupons don't change it. 18% GST is added on each bill.</caption>
+        <thead><tr><th>Product price range</th><th class="app-table__num">Commerce fee per unit</th></tr></thead>
+        <tbody>
+          {% for b in commission.bands %}
+            <tr><td>{{ b.label }}</td><td class="app-table__num">{{ b.fee|inr }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% elif commission.type == 'none' %}
+  <div class="app-block">
+    <p class="app-sub">Your subscription doesn't set any commerce fee price ranges, so no commerce fee is being charged on your orders.</p>
+  </div>
+  {% endif %}
 
   <div class="app-block">
     {% if bills %}
       <div class="app-tablewrap">
         <table class="app-table">
-          <thead><tr><th>Invoice</th><th>Period</th><th class="app-table__num">Orders</th><th class="app-table__num">Amount</th><th>Status</th></tr></thead>
+          <thead><tr><th>Invoice</th><th>Period</th><th class="app-table__num">Orders</th><th class="app-table__num">Amount (incl. GST)</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {% for b in bills %}
               <tr>
-                <td class="app-table__id">{{ b.invoice_number|default:b.id }}</td>
-                <td>{{ b.period_start|date:"d M" }} → {{ b.period_end|date:"d M Y" }}</td>
+                <td><a href="{% url 'store:bill_detail' site.id b.id %}" class="app-table__strong">{{ b.invoice_number|default:b.id }}</a></td>
+                <td class="app-sub">{{ b.period_start|date:"d M" }} → {{ b.period_end|date:"d M Y" }}</td>
                 <td class="app-table__num">{{ b.total_orders }}</td>
-                <td class="app-table__num">{{ b.currency }} {{ b.total_amount }}</td>
+                <td class="app-table__num">{{ b.currency }} {{ b.total_amount|floatformat:2 }}</td>
                 <td><span class="app-badge app-badge--{% if b.status == 'paid' %}ok{% elif b.status == 'pending_review' %}warn{% else %}danger{% endif %}">{{ b.get_status_display }}</span></td>
+                <td class="app-table__actions">
+                  <a href="{% url 'store:bill_detail' site.id b.id %}" class="app-iconbtn">View</a>
+                  <a href="{% url 'store:bill_pdf' site.id b.id %}?download=1" class="app-iconbtn">PDF</a>
+                  <a href="{% url 'store:bill_export' site.id b.id %}" class="app-iconbtn">Export</a>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     {% else %}
-      <div class="app-empty"><h2 class="app-empty__title">No bills yet</h2><p class="app-empty__text">Invoices appear here at the end of each billing period.</p></div>
+      <div class="app-empty">
+        <h2 class="app-empty__title">No bills yet</h2>
+        <p class="app-empty__text">{% if can_generate %}You have {{ site.currency }} {{ accrual.total|floatformat:2 }} accruing. Generate your first bill to roll it into an invoice.{% else %}The commerce fee accrues as your orders are delivered. Once there’s something to bill, generate an invoice here.{% endif %}</p>
+        {% if can_generate %}
+          <div class="app-empty__actions">
+            <form method="post" action="{% url 'store:bill_generate' site.id %}">{% csrf_token %}<button class="pal-btn" type="submit">Generate bill</button></form>
+          </div>
+        {% endif %}
+      </div>
     {% endif %}
+  </div>
+  {# Delivered orders popup: every order the commerce fee was charged on. #}
+  <div class="app-modal app-modal--auto" id="delivered-modal" role="dialog" aria-modal="true" aria-labelledby="delivered-modal-title" hidden>
+    <div class="app-modal__backdrop" data-popup-close></div>
+    <div class="app-modal__panel">
+      <div class="app-modal__head">
+        <div>
+          <h2 class="app-modal__title" id="delivered-modal-title">Delivered orders</h2>
+          <p class="app-sub" style="margin-top:0.25rem">{{ delivered_total }} order{{ delivered_total|pluralize }} · {{ site.currency }} {{ delivered_fee|floatformat:2 }} commerce fee in total</p>
+        </div>
+        <button type="button" class="app-modal__x" data-popup-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="app-modal__body">
+        {% if delivered_charges %}
+          <div class="app-tablewrap">
+            <table class="app-table">
+              <thead><tr><th>Order</th><th>Customer</th><th>Delivered</th><th class="app-table__num">Order value</th><th class="app-table__num">Selling value</th><th class="app-table__num">Commerce fee</th><th>Bill</th></tr></thead>
+              <tbody>
+                {% for c in delivered_charges %}
+                  <tr>
+                    <td><a class="app-table__strong" href="{% url 'store:order_detail' site.id c.order_id %}">#{{ c.order.number }}</a></td>
+                    <td class="app-sub">{{ c.order.customer_name|default:"" }}</td>
+                    <td class="app-sub">{{ c.order.delivered_at|default:c.charged_at|date:"d M Y" }}</td>
+                    <td class="app-table__num">{{ site.currency }} {{ c.order.total|floatformat:2 }}</td>
+                    <td class="app-table__num">{% if c.selling_value is not None %}{{ site.currency }} {{ c.selling_value|floatformat:2 }}{% else %}-{% endif %}</td>
+                    <td class="app-table__num app-table__strong">{{ site.currency }} {{ c.amount|floatformat:2 }}</td>
+                    <td>{% if c.bill %}<a class="app-badge app-badge--{% if c.bill.status == 'paid' %}ok{% else %}warn{% endif %}" href="{% url 'store:bill_detail' site.id c.bill_id %}">{{ c.bill.invoice_number|default:"Bill" }}</a>{% else %}<span class="app-badge">Not billed yet</span>{% endif %}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if delivered_total > delivered_charges|length %}<p class="app-sub" style="margin-top:0.75rem">Showing the latest {{ delivered_charges|length }}. Open a bill to see all of its orders.</p>{% endif %}
+        {% else %}
+          <p class="app-sub">No delivered orders yet. The commerce fee is charged only once an order is delivered, and each one will be listed here.</p>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

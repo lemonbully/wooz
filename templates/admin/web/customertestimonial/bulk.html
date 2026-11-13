@@ -1,0 +1,111 @@
+{% extends "admin/base_site.html" %}
+
+{% comment %}
+One-screen editor for the Customers page testimonials: every testimonial is a
+row, blank rows add new ones, "Add another testimonial" appends more, and one
+Save writes them all (a Django model formset). Tick "Delete" to remove a row.
+{% endcomment %}
+
+{% block extrahead %}{{ block.super }}
+<style nonce="{{ csp_nonce }}">
+  .tb-hint { margin: 0 0 1rem; color: var(--body-quiet-color, #666); max-width: 60rem; }
+  .tb-wrap { overflow-x: auto; }
+  .tb-table { width: 100%; border-collapse: collapse; }
+  .tb-table th { text-align: left; white-space: nowrap; }
+  .tb-table td { vertical-align: top; padding: 8px 6px; }
+  .tb-table td textarea { width: 100%; min-width: 18rem; box-sizing: border-box; }
+  .tb-table td input[type=text] { width: 100%; box-sizing: border-box; }
+  .tb-table tr.tb-row--new td { background: var(--darkened-bg, #f8f8f8); }
+  .tb-table .errorlist { margin: 4px 0 0; }
+  .tb-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 1rem 0; }
+  .tb-actions .tb-raw { margin-left: auto; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='web' %}">Web</a>
+  &rsaquo; Customer testimonials
+</div>
+{% endblock %}
+
+{% block content %}
+<p class="tb-hint">
+  Add, edit and reorder every testimonial here, then press <strong>Save all</strong> once.
+  Fill a blank row to add a testimonial (use <strong>Add another testimonial</strong> for more rows);
+  tick <strong>Delete</strong> to remove one. Active testimonials scroll across the Customers page,
+  lowest order first.
+</p>
+
+<form method="post" novalidate id="tb-form">
+  {% csrf_token %}
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}<ul class="errorlist">{% for e in formset.non_form_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+
+  <div class="tb-wrap">
+    <table class="tb-table">
+      <thead>
+        <tr>
+          <th>Company name</th><th>Industry</th><th>Name</th><th>Review</th><th>Order</th><th>Active</th><th>Delete</th>
+        </tr>
+      </thead>
+      <tbody id="tb-rows">
+        {% for form in formset %}
+          <tr class="{% if not form.instance.pk %}tb-row--new{% endif %}">
+            <td>{% for h in form.hidden_fields %}{{ h }}{% endfor %}{{ form.company_name }}{{ form.company_name.errors }}</td>
+            <td>{{ form.industry }}{{ form.industry.errors }}</td>
+            <td>{{ form.name }}{{ form.name.errors }}</td>
+            <td>{{ form.review }}{{ form.review.errors }}</td>
+            <td>{{ form.order }}{{ form.order.errors }}</td>
+            <td>{{ form.is_active }}</td>
+            <td>{% if form.instance.pk %}{{ form.DELETE }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <template id="tb-empty">
+    <tr class="tb-row--new">
+      <td>{% for h in formset.empty_form.hidden_fields %}{{ h }}{% endfor %}{{ formset.empty_form.company_name }}</td>
+      <td>{{ formset.empty_form.industry }}</td>
+      <td>{{ formset.empty_form.name }}</td>
+      <td>{{ formset.empty_form.review }}</td>
+      <td>{{ formset.empty_form.order }}</td>
+      <td>{{ formset.empty_form.is_active }}</td>
+      <td></td>
+    </tr>
+  </template>
+
+  <div class="tb-actions">
+    <button type="button" class="button" id="tb-add">+ Add another testimonial</button>
+    <input type="submit" class="default" value="Save all">
+    <a class="tb-raw" href="{{ raw_changelist_url }}">Plain list view</a>
+  </div>
+</form>
+
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var add = document.getElementById("tb-add");
+    var rows = document.getElementById("tb-rows");
+    var tpl = document.getElementById("tb-empty");
+    var total = document.getElementById("id_t-TOTAL_FORMS");
+    var max = document.getElementById("id_t-MAX_NUM_FORMS");
+    if (!add || !rows || !tpl || !total) return;
+    add.addEventListener("click", function () {
+      var n = parseInt(total.value, 10) || 0;
+      if (max && n >= (parseInt(max.value, 10) || 1000)) return;
+      var html = tpl.innerHTML.replace(/__prefix__/g, String(n));
+      var holder = document.createElement("tbody");
+      holder.innerHTML = html.trim();
+      var row = holder.firstElementChild;
+      rows.appendChild(row);
+      total.value = String(n + 1);
+      var first = row.querySelector("input[type=text]");
+      if (first) first.focus();
+    });
+  })();
+</script>
+{% endblock %}

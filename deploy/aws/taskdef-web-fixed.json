@@ -1,0 +1,136 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "web",
+      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 0,
+          "protocol": "tcp",
+          "name": "web-8000-tcp"
+        }
+      ],
+      "essential": true,
+      "command": [
+        "web"
+      ],
+      "environment": [
+        {
+          "name": "ONEWOOZ_MEDIA_BUCKET",
+          "value": "onewooz-media-bucket"
+        },
+        {
+          "name": "ONEWOOZ_CUSTOM_DOMAIN_A_RECORDS",
+          "value": "15.252.174.7"
+        },
+        {
+          "name": "ONEWOOZ_AWS_REGION",
+          "value": "ap-south-1"
+        },
+        {
+          "name": "ONEWOOZ_REDIS_URL",
+          "value": "redis://onewooz-redis.anbsbd.0001.aps1.cache.amazonaws.com:6379/1"
+        },
+        {
+          "name": "ONEWOOZ_DB_USER",
+          "value": "woozuser"
+        },
+        {
+          "name": "ONEWOOZ_DB_HOST",
+          "value": "onewoozdb2.c72wgcao0a70.ap-south-1.rds.amazonaws.com"
+        },
+        {
+          "name": "ONEWOOZ_DB_NAME",
+          "value": "onewooz"
+        },
+        {
+          "name": "ONEWOOZ_SMTP_PASSWORD",
+          "value": "Tanush##18"
+        },
+        {
+          "name": "ONEWOOZ_DB_PORT",
+          "value": "3306"
+        },
+        {
+          "name": "DJANGO_SETTINGS_MODULE",
+          "value": "onewooz.settings.prod"
+        },
+        {
+          "name": "ONEWOOZ_CELERY_BROKER_URL",
+          "value": "sqs://"
+        },
+        {
+          "name": "ONEWOOZ_SQS_PREFIX",
+          "value": "onewooz-"
+        },
+        {
+          "name": "ONEWOOZ_SMTP_USER",
+          "value": "hello@onewooz.com"
+        }
+      ],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "secrets": [
+        {
+          "name": "ONEWOOZ_CADDY_ASK_SECRET",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/CADDY_ASK_SECRET"
+        },
+        {
+          "name": "ONEWOOZ_DB_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/DB_PASSWORD"
+        },
+        {
+          "name": "ONEWOOZ_EMAIL_HOST",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_HOST"
+        },
+        {
+          "name": "ONEWOOZ_EMAIL_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_PASSWORD"
+        },
+        {
+          "name": "ONEWOOZ_EMAIL_USER",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_USER"
+        },
+        {
+          "name": "ONEWOOZ_FIELD_ENCRYPTION_KEY",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/FIELD_ENCRYPTION_KEY"
+        },
+        {
+          "name": "ONEWOOZ_GMAIL_APP_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GMAIL_APP_PASSWORD"
+        },
+        {
+          "name": "ONEWOOZ_GMAIL_USER",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GMAIL_USER"
+        },
+        {
+          "name": "ONEWOOZ_SECRET_KEY",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/SECRET_KEY"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "onewooz-ecs",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "web"
+        },
+        "secretOptions": []
+      },
+      "systemControls": []
+    }
+  ],
+  "family": "onewooz-web",
+  "taskRoleArn": "arn:aws:iam::521831014282:role/onewooz-task-role",
+  "executionRoleArn": "arn:aws:iam::521831014282:role/ecsTaskExecutionRole",
+  "networkMode": "bridge",
+  "volumes": [],
+  "placementConstraints": [],
+  "requiresCompatibilities": [
+    "EC2"
+  ],
+  "cpu": "512",
+  "memory": "1024"
+}

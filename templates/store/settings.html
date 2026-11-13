@@ -3,35 +3,318 @@
 {% block crumb %}Settings{% endblock %}
 
 {% block main %}
-<div class="app-page">
+<style nonce="{{ csp_nonce }}">
+  .set [hidden] { display: none !important; }
+  .set-card { background: var(--pal-panel); border: 1px solid var(--pal-line); }
+  .set-card + .set-card { margin-top: 1.25rem; }
+  .set-card__head { padding: 1.15rem 1.35rem; border-bottom: 1px solid var(--pal-line); }
+  .set-card__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.05rem; letter-spacing: -0.01em; color: var(--pal-ink); }
+  .set-card__lead { margin: 0.3rem 0 0; color: var(--pal-muted); font-size: 0.85rem; max-width: 62ch; }
+  .set-card__body { padding: 1.35rem; }
+  .set-grid { display: flex; flex-wrap: wrap; gap: 1.1rem 1.25rem; }
+  .set-field { flex: 1 1 15rem; min-width: 0; display: block; }
+  .set-field--full { flex-basis: 100%; }
+  .set-label { display: block; font-size: 0.82rem; color: var(--pal-muted); margin-bottom: 0.4rem; }
+  .set-form input:not([type="checkbox"]):not([type="radio"]),
+  .set-form select, .set-form textarea {
+    width: 100%; box-sizing: border-box; border: 1px solid var(--pal-line); border-radius: 0;
+    background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.9rem;
+    line-height: 1.4; padding: 0.6rem 0.7rem;
+  }
+  .set-form input:focus, .set-form select:focus, .set-form textarea:focus {
+    outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent);
+  }
+  .set-upper { text-transform: uppercase; }
+  .set-upper::placeholder { text-transform: none; }
+  .set-hint { display: block; margin-top: 0.3rem; font-size: 0.75rem; color: var(--pal-muted); }
+  .set-errs { margin: 0.3rem 0 0; padding-left: 1rem; color: #c0392b; font-size: 0.78rem; }
+  .set-toggle { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.75rem 0; border-top: 1px solid var(--pal-line-soft); }
+  .set-toggle:first-child { border-top: 0; }
+  .set-toggle input { margin-top: 0.15rem; width: 1.05rem; height: 1.05rem; accent-color: var(--pal-accent); flex: none; }
+  .set-toggle__t { font-size: 0.92rem; color: var(--pal-ink); }
+  .set-toggle__d { display: block; margin-top: 0.15rem; font-size: 0.78rem; color: var(--pal-muted); }
+  .set-foot { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.6rem; }
+  .set-kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1px; background: var(--pal-line); border: 1px solid var(--pal-line); }
+  .set-kv > div { background: var(--pal-panel); padding: 0.95rem 1.1rem; }
+  .set-kv dt { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-faint); }
+  .set-kv dd { margin: 0.35rem 0 0; font-size: 0.92rem; color: var(--pal-ink); }
+  /* Signature: the box opens the media library; the hint column sits on the
+     box's bottom edge (align-items: flex-end) and wraps below it on phones. */
+  .set-sig { display: flex; flex-wrap: wrap; gap: 0.85rem 1.25rem; align-items: flex-end; }
+  .set-sig__box {
+    position: relative; flex: none; width: 15rem; max-width: 100%; height: 6.5rem; box-sizing: border-box;
+    border: 1px dashed var(--pal-line); background: #fff; color: var(--pal-muted);
+    display: grid; place-items: center; padding: 0.5rem; overflow: hidden;
+    font: inherit; cursor: pointer; transition: border-color 140ms ease, background 140ms ease;
+  }
+  .set-sig__box:hover, .set-sig__box:focus-visible { border-color: var(--pal-accent); border-style: solid; outline: none; }
+  .set-sig__box:focus-visible { box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .set-sig__box img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+  .set-sig__empty { display: grid; justify-items: center; gap: 0.35rem; font-size: 0.8rem; text-align: center; }
+  .set-sig__plus { font-size: 1.35rem; line-height: 1; color: var(--pal-accent); }
+  .set-sig__change {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 0.3rem; font-size: 0.72rem;
+    background: rgb(0 0 0 / 0.6); color: #fff; text-align: center;
+    opacity: 0; transition: opacity 140ms ease;
+  }
+  .set-sig__box:hover .set-sig__change, .set-sig__box:focus-visible .set-sig__change { opacity: 1; }
+  .set-sig__side { flex: 1 1 16rem; min-width: 0; display: grid; gap: 0.55rem; justify-items: start; }
+  .set-sig__side .set-hint { margin: 0; }
+  .set-sig__remove {
+    border: 0; background: none; padding: 0; font: inherit; font-size: 0.82rem;
+    color: #c0392b; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .set-sig__note { font-size: 0.78rem; color: var(--pal-ink-2); }
+  /* Locked (before "Edit"): the signature box is fixed too. */
+  .elock-fs:disabled .set-sig__box { background: var(--pal-paper-2); }
+  .elock-fs:disabled .set-sig__box:hover { border-color: var(--pal-line); border-style: dashed; }
+  .elock-fs:disabled .set-sig__box:hover .set-sig__change { opacity: 0; }
+  .elock-fs:disabled .set-sig__remove { color: var(--pal-faint); }
+</style>
+
+<div class="app-page set">
   <div class="app-head"><div>
     <p class="pal-mono pal-mono--accent">Store</p>
     <h1 class="app-head__title pal-mt-4">Settings</h1>
-    <p class="app-head__lead">Your store’s identity, currency and store-wide controls.</p>
+    <p class="app-head__lead">Your store’s identity, where customers reach you, your business &amp; tax details, and store-wide controls.</p>
   </div></div>
 
-  <div class="app-block">
-    <form method="post" class="app-form app-card" style="padding:1.5rem;">
-      {% csrf_token %}
-      {% include "store/_form.html" %}
-      <div class="app-form__foot">
-        <button class="pal-btn" type="submit">Save settings</button>
-      </div>
-    </form>
-  </div>
+  <form method="post" enctype="multipart/form-data" class="app-form set-form app-block" style="margin-top:1.75rem;" data-edit-lock{% if form.errors or signature_error %}="open"{% endif %}>
+    {% csrf_token %}
+    {% include "store/_edit_lock_bar.html" with what="store settings" %}
+    {% if form.non_field_errors %}<div class="pal-alert" role="alert" style="margin-bottom:1rem;">{{ form.non_field_errors }}</div>{% endif %}
 
+    {# Locked until "Edit" is clicked (js/app/edit-lock.js). #}
+    <fieldset class="elock-fs" data-edit-lock-fields>
+    {# ── Identity ────────────────────────────────────────────────── #}
+    <div class="set-card">
+      <div class="set-card__head">
+        <h2 class="set-card__title">Store identity</h2>
+        <p class="set-card__lead">The name and tagline shown across your storefront.</p>
+      </div>
+      <div class="set-card__body">
+        <div class="set-grid">
+          <label class="set-field">
+            <span class="set-label">{{ form.name.label }}</span>
+            {{ form.name }}
+            {% if form.name.errors %}<ul class="set-errs">{% for e in form.name.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <label class="set-field set-field--full">
+            <span class="set-label">{{ form.tagline.label }}</span>
+            {{ form.tagline }}
+            {% if form.tagline.errors %}<ul class="set-errs">{% for e in form.tagline.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    {# ── Localization ────────────────────────────────────────────── #}
+    <div class="set-card">
+      <div class="set-card__head">
+        <h2 class="set-card__title">Currency &amp; region</h2>
+        <p class="set-card__lead">How prices are shown and which market you sell to.</p>
+      </div>
+      <div class="set-card__body">
+        <div class="set-grid">
+          <label class="set-field">
+            <span class="set-label">{{ form.currency.label }}</span>
+            {{ form.currency }}
+          </label>
+          <label class="set-field">
+            <span class="set-label">{{ form.country.label }}</span>
+            {{ form.country }}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    {# ── Contact ─────────────────────────────────────────────────── #}
+    <div class="set-card">
+      <div class="set-card__head">
+        <h2 class="set-card__title">Support contact</h2>
+        <p class="set-card__lead">Where shoppers reach you  shown on your storefront and receipts.</p>
+      </div>
+      <div class="set-card__body">
+        <div class="set-grid">
+          <label class="set-field">
+            <span class="set-label">{{ form.support_email.label }}</span>
+            {{ form.support_email }}
+            {% if form.support_email.errors %}<ul class="set-errs">{% for e in form.support_email.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <label class="set-field">
+            <span class="set-label">{{ form.support_phone.label }}</span>
+            {{ form.support_phone }}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    {# ── Business & tax ──────────────────────────────────────────── #}
+    <div class="set-card">
+      <div class="set-card__head">
+        <h2 class="set-card__title">Business &amp; tax details</h2>
+        <p class="set-card__lead">Your registered business identity. All optional; add the ones you have. A PAN left blank is filled in from your GSTIN.</p>
+      </div>
+      <div class="set-card__body">
+        <div class="set-grid">
+          <label class="set-field set-field--full">
+            <span class="set-label">{{ form.legal_name.label }}</span>
+            {{ form.legal_name }}
+            {% if form.legal_name.errors %}<ul class="set-errs">{% for e in form.legal_name.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <label class="set-field">
+            <span class="set-label">{{ form.gstin.label }}</span>
+            {{ form.gstin }}
+            {% if gstin_state %}<span class="set-hint">Registered in {{ gstin_state }}</span>{% endif %}
+            {% if form.gstin.errors %}<ul class="set-errs">{% for e in form.gstin.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <label class="set-field">
+            <span class="set-label">{{ form.pan.label }}</span>
+            {{ form.pan }}
+            {% if form.pan.errors %}<ul class="set-errs">{% for e in form.pan.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <label class="set-field">
+            <span class="set-label">{{ form.msme_number.label }}</span>
+            {{ form.msme_number }}
+            {% if form.msme_number.errors %}<ul class="set-errs">{% for e in form.msme_number.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+          </label>
+          <div class="set-field set-field--full">
+            <span class="set-label" id="sigLabel">Authorized signatory signature</span>
+            <div class="set-sig">
+              <button type="button" class="set-sig__box" id="sigBox" data-saved="{{ signature_url }}"
+                      aria-labelledby="sigLabel" aria-describedby="sigHint">
+                {% if signature_url %}
+                  <img src="{{ signature_url }}" alt="Current signature">
+                  <span class="set-sig__change" aria-hidden="true">Change signature</span>
+                {% else %}
+                  <span class="set-sig__empty"><span class="set-sig__plus" aria-hidden="true">+</span>Choose or upload a signature</span>
+                {% endif %}
+              </button>
+              <div class="set-sig__side">
+                <span class="set-sig__note" id="sigNote" hidden>New signature selected. Save settings to apply it.</span>
+                <button type="button" class="set-sig__remove" id="sigRemoveBtn"{% if not signature_url %} hidden{% endif %}>Remove signature</button>
+                <span class="set-hint" id="sigHint">Click the box to open your media library, then upload or pick the image. It prints in the “Authorized Signatory” box of every tax invoice. A signature on a plain white or transparent background prints best.</span>
+                {% if signature_error %}<ul class="set-errs"><li>{{ signature_error }}</li></ul>{% endif %}
+              </div>
+            </div>
+            <input type="hidden" name="media_signature" id="sigAsset" value="">
+            <input type="hidden" name="remove_signature" id="sigRemove" value="">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Store controls ──────────────────────────────────────────── #}
+    <div class="set-card">
+      <div class="set-card__head">
+        <h2 class="set-card__title">Store controls</h2>
+        <p class="set-card__lead">Store-wide switches that change how your storefront behaves.</p>
+      </div>
+      <div class="set-card__body">
+        <label class="set-toggle">
+          {{ form.abandoned_cart_emails_enabled }}
+          <span><span class="set-toggle__t">{{ form.abandoned_cart_emails_enabled.label }}</span><span class="set-toggle__d">Automatically remind shoppers who leave items in their cart.</span></span>
+        </label>
+        <label class="set-toggle">
+          {{ form.maintenance_mode }}
+          <span><span class="set-toggle__t">{{ form.maintenance_mode.label }}</span><span class="set-toggle__d">Temporarily take the storefront offline with a maintenance notice.</span></span>
+        </label>
+      </div>
+    </div>
+    </fieldset>
+
+    <div class="set-foot" data-edit-lock-foot>
+      <button class="pal-btn pal-btn--ghost" type="button" data-edit-lock-cancel>Cancel</button>
+      <button class="pal-btn" type="submit">Save settings</button>
+    </div>
+  </form>
+
+  {# ── Read-only store facts ─────────────────────────────────────── #}
   <div class="app-block">
-    <div class="app-card">
-      <div class="app-card__head"><h2 class="app-card__title">Store details</h2></div>
-      <div class="app-card__body">
-        <div class="app-kv">
+    <div class="set-card">
+      <div class="set-card__head"><h2 class="set-card__title">Store details</h2></div>
+      <div class="set-card__body">
+        <dl class="set-kv">
           <div><dt>Subdomain</dt><dd>{{ site.slug }}.onewooz.site</dd></div>
           <div><dt>Business model</dt><dd>{{ site.get_business_model_display }}</dd></div>
           <div><dt>Status</dt><dd>{{ site.get_status_display }}</dd></div>
           <div><dt>Created</dt><dd>{{ site.created_at|date:"d M Y" }}</dd></div>
-        </div>
+        </dl>
       </div>
     </div>
   </div>
 </div>
+<script nonce="{{ csp_nonce }}">
+  // Signature picker: the box opens the store's universal media library modal
+  // (upload or pick there). The chosen asset's id travels in a hidden field
+  // and the server copies the file on save, the same way category images do.
+  (function () {
+    var box = document.getElementById("sigBox");
+    var assetInput = document.getElementById("sigAsset");
+    var removeInput = document.getElementById("sigRemove");
+    var removeBtn = document.getElementById("sigRemoveBtn");
+    var note = document.getElementById("sigNote");
+    if (!box || !assetInput || !removeInput) return;
+    var saved = box.getAttribute("data-saved") || "";
+
+    function render(src, alt) {
+      box.textContent = "";
+      if (src) {
+        var img = document.createElement("img");
+        img.src = src;
+        img.alt = alt || "Signature";
+        box.appendChild(img);
+        var change = document.createElement("span");
+        change.className = "set-sig__change";
+        change.setAttribute("aria-hidden", "true");
+        change.textContent = "Change signature";
+        box.appendChild(change);
+      } else {
+        var empty = document.createElement("span");
+        empty.className = "set-sig__empty";
+        var plus = document.createElement("span");
+        plus.className = "set-sig__plus";
+        plus.setAttribute("aria-hidden", "true");
+        plus.textContent = "+";
+        empty.appendChild(plus);
+        empty.appendChild(document.createTextNode("Choose or upload a signature"));
+        box.appendChild(empty);
+      }
+      if (removeBtn) removeBtn.hidden = !src;
+    }
+
+    box.addEventListener("click", function () {
+      if (!window.OneWoozMedia) return;
+      window.OneWoozMedia.open({
+        kind: "image",
+        title: "Select signature image",
+        accept: "image/png,image/jpeg,image/webp",
+        onSelect: function (asset) {
+          if (!asset || !asset.id) return;
+          assetInput.value = asset.id;
+          removeInput.value = "";
+          render(asset.url, asset.alt || asset.name || "New signature");
+          if (note) {
+            note.textContent = "New signature selected. Save settings to apply it.";
+            note.hidden = false;
+          }
+        },
+      });
+    });
+
+    if (removeBtn) {
+      removeBtn.addEventListener("click", function () {
+        assetInput.value = "";
+        // Only a saved signature needs deleting on the server; dropping an
+        // unsaved pick just clears the field.
+        removeInput.value = saved ? "1" : "";
+        render("", "");
+        if (note) {
+          note.textContent = saved ? "Signature will be removed when you save settings." : "";
+          note.hidden = !saved;
+        }
+      });
+    }
+  })();
+</script>
 {% endblock %}

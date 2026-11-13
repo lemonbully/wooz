@@ -1,0 +1,151 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Audiences{% endblock %}
+{% block crumb %}Email marketing{% endblock %}
+
+{% block main %}
+<div class="app-page emx">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Email marketing</p>
+      <h1 class="app-head__title pal-mt-4">Audiences</h1>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:email_marketing' site.id %}" class="pal-btn pal-btn--ghost">Back</a>
+    </div>
+  </div>
+
+  <div class="emx-card">
+    <div class="emx-card__head">
+      <div class="emx-card__titles">
+        <h2 class="emx-card__title">Create an audience</h2>
+        <p class="emx-card__hint">Choose who the audience is built from: the people who subscribed on your website, or the customers who ordered from it. Or start an empty list to add or import recipients yourself.</p>
+      </div>
+    </div>
+    <div class="emx-card__body">
+      <form method="post" action="{% url 'store:email_audiences' site.id %}" id="aud-create">
+        {% csrf_token %}
+        <div class="emx-fields">
+          <div class="emx-field">
+            <span class="emx-label">Build from</span>
+            <div class="emx-seg emx-seg--3" role="radiogroup" aria-label="Build the audience from">
+              <label class="emx-seg__opt">
+                <input type="radio" name="source" value="subscribers" data-default-name="All subscribers" checked>
+                <span class="emx-seg__box"><strong>Website subscribers</strong><em>{{ subscriber_count }} subscriber{{ subscriber_count|pluralize }} from your newsletter forms.</em></span>
+              </label>
+              <label class="emx-seg__opt">
+                <input type="radio" name="source" value="customers" data-default-name="All customers">
+                <span class="emx-seg__box"><strong>Customers</strong><em>{{ customer_count }} customer{{ customer_count|pluralize }} who ordered from your store.</em></span>
+              </label>
+              <label class="emx-seg__opt">
+                <input type="radio" name="source" value="empty" data-default-name="">
+                <span class="emx-seg__box"><strong>Empty list</strong><em>Add people by hand or import a file.</em></span>
+              </label>
+            </div>
+          </div>
+          <div class="emx-field">
+            <label class="emx-label" for="aud-name">Audience name</label>
+            <div class="emx-inline">
+              <input class="emx-input" id="aud-name" name="name" value="All subscribers" placeholder="e.g. VIP customers" style="flex:1;min-width:12rem;">
+              <button class="pal-btn" type="submit">Create audience</button>
+            </div>
+            <p class="emx-help" id="aud-hint">Everyone who subscribed is added now. Building again with the same name adds anyone new.</p>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="emx-card">
+    <div class="emx-card__head">
+      <div class="emx-card__titles"><h2 class="emx-card__title">Lists</h2></div>
+    </div>
+    <div class="emx-card__body" style="padding:0;">
+      {% if lists %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>List</th><th class="app-table__num">Recipients</th><th>Created</th><th></th></tr></thead>
+          <tbody>
+            {% for l in lists %}
+            <tr>
+              <td><a class="app-table__strong" href="{% url 'store:email_audience_detail' site.id l.id %}">{{ l.name }}</a></td>
+              <td class="app-table__num">{{ l.members_count }}</td>
+              <td class="app-sub">{{ l.created_at|date:"d M Y" }}</td>
+              <td class="app-table__actions">
+                <a class="app-iconbtn" href="{% url 'store:email_audience_detail' site.id l.id %}">Open</a>
+                <form method="post" action="{% url 'store:email_audience_delete' site.id l.id %}" onsubmit="return confirm('Delete this list?');">{% csrf_token %}<button class="app-iconbtn app-iconbtn--danger" type="submit">Delete</button></form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="emx-help" style="padding:1.2rem;">No audiences yet. Create one above from your subscribers or customers.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="emx-card" id="suppressions">
+    <div class="emx-card__head">
+      <div class="emx-card__titles">
+        <h2 class="emx-card__title">Suppressed addresses</h2>
+        <p class="emx-card__hint">These people won’t receive any campaign  they unsubscribed or their address bounced. Removing an address lets you email them again.</p>
+      </div>
+    </div>
+    <div class="emx-card__body" style="padding:0;">
+      {% if suppressions %}
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Email</th><th>Reason</th><th>When</th><th></th></tr></thead>
+          <tbody>
+            {% for s in suppressions %}
+            <tr>
+              <td class="app-table__strong">{{ s.email }}</td>
+              <td class="app-sub">{{ s.get_reason_display }}</td>
+              <td class="app-sub">{{ s.created_at|date:"d M Y" }}</td>
+              <td class="app-table__actions">
+                <form method="post" action="{% url 'store:email_suppression_delete' site.id s.id %}" onsubmit="return confirm('Allow emails to this address again?');">{% csrf_token %}<button class="app-iconbtn" type="submit">Remove</button></form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="emx-help" style="padding:1.2rem;">No suppressed addresses.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% include "store/_email_styles.html" %}
+
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var form = document.getElementById("aud-create");
+    if (!form) return;
+    var nameInput = document.getElementById("aud-name");
+    var hint = document.getElementById("aud-hint");
+    var hints = {
+      subscribers: "Everyone who subscribed is added now. Building again with the same name adds anyone new.",
+      customers: "Every customer with an email is added now. Building again with the same name adds anyone new.",
+      empty: "Creates an empty list. You can add people or import a .csv / .xlsx next."
+    };
+    var defaults = [];
+    form.querySelectorAll('input[name="source"]').forEach(function (r) {
+      defaults.push(r.getAttribute("data-default-name") || "");
+      r.addEventListener("change", function () {
+        if (!r.checked) return;
+        // Swap the suggested name only if the owner has not typed their own.
+        var current = (nameInput.value || "").trim();
+        if (!current || defaults.indexOf(current) !== -1) {
+          nameInput.value = r.getAttribute("data-default-name") || "";
+        }
+        nameInput.required = r.value === "empty";
+        if (hint) hint.textContent = hints[r.value] || "";
+      });
+    });
+  })();
+</script>
+{% endblock %}

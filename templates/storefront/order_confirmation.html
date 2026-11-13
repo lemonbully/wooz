@@ -1,0 +1,189 @@
+{% extends store_base|default:"storefront/theme_base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% comment %}
+Order confirmation ("thank you") page. Follows the store's theme: the accent is
+the theme's --primary-color (fallback near-black) and the font is inherited
+from the theme base, so it looks native on every template and inside the UGC
+creator store. Two clear next steps: Go to my account (primary) and Continue
+shopping. Scoped .oc-* styles because the storefront Tailwind build is
+precompiled (arbitrary classes may not exist).
+{% endcomment %}
+
+{% block page_content %}
+{% with cur=website.currency %}
+<style nonce="{{ csp_nonce }}">
+  .oc{--oc-accent:var(--primary-color,#111827);--oc-ink:#111827;--oc-muted:#6b7280;--oc-line:#e5e7eb;--oc-soft:#f9fafb;max-width:68rem;margin:0 auto;padding:2rem 1rem 3.5rem;color:var(--oc-ink)}
+  .oc *{box-sizing:border-box}
+  .oc-hero{text-align:center;max-width:40rem;margin:0 auto 2rem}
+  .oc-check{width:4rem;height:4rem;margin:0 auto 1.1rem;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:#ecfdf5;color:#047857;box-shadow:0 0 0 8px #f0fdf4}
+  .oc-check svg{width:2rem;height:2rem}
+  .oc-eyebrow{font-size:.75rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#047857;margin:0}
+  .oc-title{font-size:clamp(1.6rem,1.2rem + 1.6vw,2.25rem);font-weight:700;line-height:1.15;margin:.4rem 0 .6rem;letter-spacing:-.01em}
+  .oc-lead{font-size:.95rem;line-height:1.6;color:var(--oc-muted);margin:0}
+  .oc-lead strong{color:var(--oc-ink);font-weight:600}
+  .oc-meta{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin-top:1rem}
+  .oc-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .75rem;border:1px solid var(--oc-line);border-radius:9999px;font-size:.8rem;color:#374151;background:#fff}
+  .oc-chip b{font-weight:600;color:var(--oc-ink)}
+  .oc-cancel{max-width:40rem;margin:0 auto 1.5rem;padding:.75rem 1rem;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:.75rem;font-size:.9rem;text-align:center}
+
+  .oc-track{display:flex;align-items:flex-start;max-width:44rem;margin:0 auto 2.25rem;padding:0;list-style:none}
+  .oc-step{flex:1 1 0;position:relative;text-align:center;font-size:.78rem;color:var(--oc-muted)}
+  .oc-step::before{content:"";position:absolute;top:.8rem;left:-50%;right:50%;height:2px;background:var(--oc-line)}
+  .oc-step:first-child::before{display:none}
+  .oc-step.is-done::before{background:var(--oc-accent)}
+  .oc-dot{position:relative;z-index:1;width:1.6rem;height:1.6rem;margin:0 auto .45rem;border-radius:9999px;border:2px solid var(--oc-line);background:#fff;display:flex;align-items:center;justify-content:center}
+  .oc-dot svg{width:.85rem;height:.85rem;opacity:0}
+  .oc-step.is-done .oc-dot{background:var(--oc-accent);border-color:var(--oc-accent);color:#fff}
+  .oc-step.is-done .oc-dot svg{opacity:1}
+  .oc-step.is-current .oc-dot{box-shadow:0 0 0 4px rgba(17,24,39,.08)}
+  .oc-step.is-done .oc-steplabel{color:var(--oc-ink);font-weight:600}
+  .oc-stepdate{display:block;margin-top:.1rem;font-size:.7rem;color:var(--oc-muted);font-weight:400}
+
+  .oc-grid{display:grid;gap:1.25rem;align-items:start}
+  @media (min-width:56rem){.oc-grid{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}}
+  .oc-card{border:1px solid var(--oc-line);border-radius:1rem;background:#fff;padding:1.25rem}
+  .oc-card + .oc-card{margin-top:1.25rem}
+  .oc-h{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:0 0 .9rem;font-size:1rem;font-weight:600}
+  .oc-h small{font-size:.8rem;font-weight:500;color:var(--oc-muted)}
+  .oc-items{list-style:none;margin:0;padding:0}
+  .oc-item{display:flex;align-items:center;gap:.9rem;padding:.8rem 0;border-top:1px solid var(--oc-line)}
+  .oc-item:first-child{border-top:0;padding-top:0}
+  .oc-thumb{flex:none;width:3.75rem;height:3.75rem;border-radius:.6rem;border:1px solid var(--oc-line);background:var(--oc-soft);overflow:hidden;position:relative}
+  .oc-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .oc-qty{position:absolute;top:-.1rem;right:-.1rem;min-width:1.25rem;height:1.25rem;padding:0 .3rem;border-radius:9999px;background:#374151;color:#fff;font-size:.7rem;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .oc-iname{flex:1 1 auto;min-width:0;font-size:.9rem;line-height:1.35}
+  .oc-iname span{display:block;font-size:.78rem;color:var(--oc-muted);margin-top:.15rem}
+  .oc-iprice{flex:none;font-size:.9rem;font-weight:600;white-space:nowrap}
+  .oc-two{display:grid;gap:1.25rem;margin-top:1.25rem}
+  @media (min-width:40rem){.oc-two{grid-template-columns:1fr 1fr}}
+  .oc-two .oc-card + .oc-card{margin-top:0}
+  .oc-label{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--oc-muted);margin:0 0 .5rem}
+  .oc-text{font-size:.9rem;line-height:1.55;color:#374151;margin:0}
+  .oc-text strong{color:var(--oc-ink);font-weight:600}
+  .oc-pay{margin-top:.6rem;display:grid;gap:.35rem;font-size:.85rem}
+  .oc-pay div{display:flex;justify-content:space-between;gap:.75rem}
+  .oc-pay b{font-weight:600}
+  .oc-due{color:#b45309}
+
+  .oc-sum{position:sticky;top:6rem}
+  .oc-rows{display:grid;gap:.55rem;font-size:.9rem;color:#374151}
+  .oc-rows div{display:flex;justify-content:space-between;gap:.75rem}
+  .oc-save{color:#047857}
+  .oc-total{display:flex;justify-content:space-between;gap:.75rem;margin-top:.9rem;padding-top:.9rem;border-top:1px solid var(--oc-line);font-size:1.1rem;font-weight:700}
+  .oc-actions{display:grid;gap:.6rem;margin-top:1.25rem}
+  .oc-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;min-height:2.9rem;padding:.75rem 1rem;border-radius:.7rem;font-size:.92rem;font-weight:600;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease,background-color .15s ease,border-color .15s ease}
+  .oc-btn svg{width:1.05rem;height:1.05rem;flex:none}
+  .oc-btn--primary{background:#242424;color:#fff;box-shadow:0 8px 18px -10px rgba(17,24,39,.55)}
+  .oc-btn--primary:hover{transform:translateY(-1px);box-shadow:0 12px 22px -10px rgba(17,24,39,.6);color:#fff}
+  .oc-btn--ghost{background:#fff;color:var(--oc-ink);border:1px solid #d1d5db}
+  .oc-btn--ghost:hover{border-color:var(--oc-accent);color:var(--oc-ink)}
+  .oc-btn:focus-visible{outline:2px solid var(--oc-accent);outline-offset:2px}
+  .oc-help{margin-top:1rem;font-size:.8rem;line-height:1.5;color:var(--oc-muted);text-align:center}
+  .oc-help a{color:var(--oc-ink);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+  @media (max-width:40rem){.oc-step{font-size:.7rem}.oc-stepdate{display:none}.oc-card{padding:1rem}}
+  @media (prefers-reduced-motion:reduce){.oc-btn{transition:none}.oc-btn--primary:hover{transform:none}}
+</style>
+
+<section class="oc" aria-labelledby="oc-title">
+  <header class="oc-hero">
+    <div class="oc-check" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+    </div>
+    <p class="oc-eyebrow">Order confirmed</p>
+    <h1 class="oc-title" id="oc-title">Thank you{% if confirm_first_name %}, {{ confirm_first_name }}{% endif %}!</h1>
+    <p class="oc-lead">
+      We’ve received your order and it’s being prepared.
+      {% if order.customer_email %}A confirmation has been sent to <strong>{{ order.customer_email }}</strong>.{% endif %}
+    </p>
+    <div class="oc-meta">
+      <span class="oc-chip">Order <b>#{{ order.display_number }}</b></span>
+      <span class="oc-chip">Placed <b>{{ order.created_at|date:"j M Y" }}</b></span>
+      <span class="oc-chip">Total <b>{{ cur }} {{ order.total }}</b></span>
+    </div>
+  </header>
+
+  {% if order.status == "cancelled" %}
+    <p class="oc-cancel">This order has been cancelled. If you were charged, the amount will be refunded to your original payment method.</p>
+  {% else %}
+    <ol class="oc-track" aria-label="Order progress">
+      {% for s in confirm_steps %}
+      <li class="oc-step{% if s.done %} is-done{% endif %}{% if s.current %} is-current{% endif %}"{% if s.current %} aria-current="step"{% endif %}>
+        <span class="oc-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <span class="oc-steplabel">{{ s.label }}</span>
+        {% if s.done and s.at %}<span class="oc-stepdate">{{ s.at|date:"j M" }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+  <div class="oc-grid">
+    <div>
+      <section class="oc-card" aria-labelledby="oc-items-h">
+        <h2 class="oc-h" id="oc-items-h">Items in this order <small>{{ order_items|length }} item{{ order_items|length|pluralize }}</small></h2>
+        <ul class="oc-items">
+          {% for it in order_items %}
+          <li class="oc-item">
+            <span class="oc-thumb">
+              {% if it.thumb %}<img src="{{ it.thumb.url }}" alt="" loading="lazy">{% endif %}
+              <span class="oc-qty" aria-label="Quantity {{ it.quantity }}">{{ it.quantity }}</span>
+            </span>
+            <span class="oc-iname">{{ it.title }}{% if it.variant_label %}<span>{{ it.variant_label }}</span>{% endif %}<span>{{ it.quantity }} × {{ cur }} {{ it.unit_price }}</span></span>
+            <span class="oc-iprice">{{ cur }} {{ it.line_total }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <div class="oc-two">
+        {% if order.shipping_address %}
+        <section class="oc-card" aria-labelledby="oc-ship-h">
+          <h2 class="oc-label" id="oc-ship-h">Delivering to</h2>
+          <p class="oc-text">
+            <strong>{{ order.customer_name }}</strong><br>
+            {{ order.shipping_address }}{% if order.shipping_city %}, {{ order.shipping_city }}{% endif %}{% if order.shipping_state %}, {{ order.shipping_state }}{% endif %}{% if order.shipping_pincode %} {{ order.shipping_pincode }}{% endif %}
+            {% if order.customer_phone %}<br>{{ order.customer_phone }}{% endif %}
+          </p>
+        </section>
+        {% endif %}
+        <section class="oc-card" aria-labelledby="oc-pay-h">
+          <h2 class="oc-label" id="oc-pay-h">Payment</h2>
+          <p class="oc-text"><strong>{{ confirm_payment.label|default:"Payment" }}</strong></p>
+          {% if confirm_payment.paid or confirm_payment.due %}
+          <div class="oc-pay">
+            {% if confirm_payment.paid %}<div><span>Paid</span><b>{{ cur }} {{ confirm_payment.paid }}</b></div>{% endif %}
+            {% if confirm_payment.due %}<div class="oc-due"><span>Pay on delivery</span><b>{{ cur }} {{ confirm_payment.due }}</b></div>{% endif %}
+          </div>
+          {% endif %}
+        </section>
+      </div>
+    </div>
+
+    <aside class="oc-card oc-sum" aria-labelledby="oc-sum-h">
+      <h2 class="oc-h" id="oc-sum-h">Order summary</h2>
+      <div class="oc-rows">
+        <div><span>Subtotal</span><span>{{ cur }} {{ order.subtotal }}</span></div>
+        {% if order.discount_amount %}<div class="oc-save"><span>Discount</span><span>− {{ cur }} {{ order.discount_amount }}</span></div>{% endif %}
+        {% if order.credit_discount_amount %}<div class="oc-save"><span>Store credit</span><span>− {{ cur }} {{ order.credit_discount_amount }}</span></div>{% endif %}
+        <div><span>Shipping</span><span>{% if order.shipping_amount %}{{ cur }} {{ order.shipping_amount }}{% else %}Free{% endif %}</span></div>
+        {% if order.tax_amount %}<div><span>Tax</span><span>{{ cur }} {{ order.tax_amount }}</span></div>{% endif %}
+      </div>
+      <div class="oc-total"><span>Total</span><span>{{ cur }} {{ order.total }}</span></div>
+
+      <div class="oc-actions">
+        <a class="oc-btn oc-btn--primary" href="{% url 'public_user_account' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          Go to My Account
+        </a>
+        <a class="oc-btn oc-btn--ghost" href="{% url 'public_all_products' %}">
+          Continue Shopping
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+      <p class="oc-help">Track this order and see all your orders in My Account.{% if website.support_email or website.support_phone %} Need help? {% if website.support_email %}<a href="mailto:{{ website.support_email }}">{{ website.support_email }}</a>{% endif %}{% if website.support_email and website.support_phone %} or {% endif %}{% if website.support_phone %}<a href="tel:{{ website.support_phone|cut:' ' }}">{{ website.support_phone }}</a>{% endif %}{% endif %}</p>
+    </aside>
+  </div>
+</section>
+{% endwith %}
+{% endblock %}

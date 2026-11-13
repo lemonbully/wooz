@@ -1,15 +1,74 @@
+{% load store_extras %}
 {% comment %}
-Trusted badge checkboxes (choose up to 4). `trusted_badges` is the option list,
-`prefill.trusted_icons` the already-selected ones. The view keeps the first 4.
+Trusted-badge picker (choose up to 4). `trusted_badges` comes from
+commerce.trust_badges.options: the platform set (retired badges removed) and
+the store's own badges, each {name, image, icon, svg, custom}. The value stored
+on the product is the badge NAME, so a product keeps working as the set changes.
+
+The "+" tile opens a popup to create a store badge: a name of at most two words
+and an icon chosen from the built-in set (commerce.trust_icons; no uploads). It
+is saved via store:trust_badge_create and added here already ticked. A store
+badge can be deleted with its ×. Choosing a warranty badge locks the Compliance
+step's "Guarantee / warranty" field to it. "Returnable" and "Replacement Only"
+are always offered: ticking one locks the Return policy to match, and only one
+of the two can be ticked. Wired by initBadgePicker in
+product_form.html.
 {% endcomment %}
-<div class="app-f--full">
-  <span class="pal-field__label">Trusted badges <span class="app-field-hint" style="display:inline">— up to 4</span></span>
-  <div class="app-badgeset">
+<div class="app-f--full" data-badgeset
+     data-create-url="{% url 'store:trust_badge_create' site.id %}"
+     data-delete-url="{% url 'store:trust_badge_delete' site.id %}">
+  <span class="pal-field__label">Trusted badges <span class="app-field-hint" style="display:inline"> up to 4 (<span data-badge-count>0</span> of 4 selected)</span>{% field_tip "trusted_icons" %}</span>
+  <div class="app-badgeset" data-badge-list>
     {% for badge in trusted_badges %}
-      <label class="app-badgeopt">
-        <input type="checkbox" name="trusted_icons" value="{{ badge }}"{% if badge in prefill.trusted_icons %} checked{% endif %}>
-        <span>{{ badge }}</span>
+      <label class="app-badgeopt{% if badge.custom %} is-custom{% endif %}" data-badge-opt>
+        <input type="checkbox" name="trusted_icons" value="{{ badge.name }}" data-label="{{ badge.label|default:badge.name }}"{% if badge.return_policy %} data-return-policy="{{ badge.return_policy }}"{% endif %}{% if badge.name in prefill.trusted_icons %} checked{% endif %}>
+        {% if badge.image %}<img class="app-badgeopt__img" src="{{ badge.image }}" alt="" loading="lazy">{% elif badge.svg %}<span class="app-badgeopt__ico">{{ badge.svg }}</span>{% endif %}
+        <span class="app-badgeopt__name">{{ badge.label|default:badge.name }}</span>
+        {% if badge.custom %}<button type="button" class="app-badgeopt__del" data-badge-del title="Delete this badge" aria-label="Delete badge {{ badge.name }}">&times;</button>{% endif %}
       </label>
     {% endfor %}
+    <button type="button" class="app-badgeadd" data-badge-add aria-haspopup="dialog">
+      <span class="app-badgeadd__plus" aria-hidden="true">+</span>
+      <span>Create badge</span>
+    </button>
   </div>
+
+  <div class="app-dlg app-badgedlg" data-badge-dlg hidden role="dialog" aria-modal="true" aria-labelledby="badge-dlg-title">
+    <div class="app-dlg__backdrop" data-badge-close></div>
+    <div class="app-dlg__panel">
+      <div class="app-dlg__head">
+        <div>
+          <div class="app-dlg__title" id="badge-dlg-title">Create a trust badge</div>
+          <div class="app-dlg__sub">A short name (up to 2 words) and an icon.</div>
+        </div>
+        <button type="button" class="app-dlg__x" data-badge-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="app-dlg__body">
+        <div class="app-badgedlg__top">
+          <div class="app-badgedlg__preview" aria-hidden="true">
+            <span class="app-badgedlg__pvico" data-badge-pv-ico></span>
+            <span class="app-badgedlg__pvname" data-badge-pv-name>Badge name</span>
+          </div>
+          <label class="app-dlg__field app-badgedlg__name">
+            <span>Badge name</span>
+            <input type="text" maxlength="24" autocomplete="off" placeholder="e.g. Handmade Quality" data-badge-name>
+            <span class="app-dlg__hint" data-badge-name-hint>0 / 2 words</span>
+          </label>
+        </div>
+        <div class="app-badgedlg__iconhead">
+          <span class="app-dlg__field"><span>Choose an icon</span></span>
+          <input type="search" class="app-badgedlg__search" placeholder="Search icons…" aria-label="Search icons" data-badge-icon-search>
+        </div>
+        <div class="app-badgedlg__groups" data-badge-icon-groups></div>
+        <div class="app-badgedlg__icons" data-badge-icons role="listbox" aria-label="Icons"></div>
+        <p class="app-dlg__err" data-badge-err hidden></p>
+      </div>
+      <div class="app-dlg__foot">
+        <button type="button" class="pal-btn pal-btn--ghost" data-badge-close>Cancel</button>
+        <button type="button" class="pal-btn" data-badge-save disabled>Create badge</button>
+      </div>
+    </div>
+  </div>
+  {{ trust_icon_catalog|json_script:"trust-icon-catalog" }}
+  {{ trust_icon_svgs|json_script:"trust-icon-svgs" }}
 </div>

@@ -1,0 +1,60 @@
+{% extends "web/_shell.html" %}
+{% load onewooz %}
+
+{% block title %}{% if paid %}Subscription confirmed{% else %}Payment status{% endif %} · OneWooz{% endblock %}
+
+{% block main %}
+<style nonce="{{ csp_nonce }}">
+  .ow-ret{max-width:38rem;margin:0 auto;padding:clamp(2.5rem,1.5rem+5vw,5rem) 1.25rem}
+  .ow-ret__card{border:1px solid var(--pal-line,#e5e4de);border-radius:16px;background:#fff;padding:clamp(1.5rem,1rem+2vw,2.4rem)}
+  .ow-badge{display:inline-flex;align-items:center;gap:.5rem;font-size:.8rem;font-weight:600;
+    padding:.4rem .8rem;border-radius:999px}
+  .ow-badge--ok{background:#e7f6ee;color:#1a7f4b}
+  .ow-badge--wait{background:#fdf3e3;color:#95651a}
+  .ow-ret h1{font-size:1.6rem;letter-spacing:-.02em;margin:1rem 0 .4rem}
+  .ow-ret p{color:#55554d}
+  .ow-summary{margin:1.5rem 0;font-size:.94rem}
+  .ow-summary .r{display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px dashed var(--pal-line,#ececec)}
+  .ow-summary .r:last-child{border-bottom:0}
+  .ow-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1.25rem}
+</style>
+
+<div class="ow-ret">
+  <div class="ow-ret__card">
+    {% if paid %}
+      <span class="ow-badge ow-badge--ok">● Payment received</span>
+      <h1>You’re subscribed to {{ order.plan_name }}.</h1>
+      <p>A confirmation for order <strong>{{ order.number }}</strong> has been recorded against
+         {{ order.customer_email }}. You already have a OneWooz account for this email  sign in
+         to activate your store.</p>
+    {% else %}
+      <span class="ow-badge ow-badge--wait">● Awaiting confirmation</span>
+      <h1>We’re confirming your payment.</h1>
+      <p>Order <strong>{{ order.number }}</strong> hasn’t been confirmed yet. If money has left your
+         account, it will be reconciled automatically  you don’t need to pay again. This page is safe to refresh.</p>
+    {% endif %}
+
+    <div class="ow-summary">
+      <div class="r"><span>Plan</span><span>{{ order.plan_name }} · {{ order.get_cycle_display }}</span></div>
+      <div class="r"><span>Amount</span><span>₹{{ order.base_amount|floatformat:'-2' }}</span></div>
+      {% if order.discount_amount %}
+      <div class="r"><span>Discount{% if order.discount_code %} · {{ order.discount_code }}{% endif %}</span><span>−₹{{ order.discount_amount|floatformat:'-2' }}</span></div>
+      {% endif %}
+      <div class="r"><span>GST ({{ order.gst_rate|floatformat:'0' }}%)</span><span>₹{{ order.gst_amount|floatformat:'-2' }}</span></div>
+      <div class="r"><span><strong>Total {% if paid %}paid{% endif %}</strong></span><span><strong>₹{{ order.total_amount|floatformat:'-2' }}</strong></span></div>
+      {% if paid and order.current_period_end %}
+      <div class="r"><span>Active until</span><span>{{ order.current_period_end|date:"j M Y" }}</span></div>
+      {% endif %}
+    </div>
+
+    <div class="ow-actions">
+      {% if paid %}
+        <a href="{{ sign_in_url }}" class="pal-btn">Sign in to activate &rarr;</a>
+      {% else %}
+        <a href="{{ request.get_full_path }}" class="pal-btn">Refresh status</a>
+      {% endif %}
+      <a href="{{ pricing_url }}" class="pal-btn pal-btn--ghost">Back to pricing</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

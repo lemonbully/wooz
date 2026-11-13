@@ -1,0 +1,14 @@
+{{ phrase }}  {{ site_name }}
+
+{{ line }}
+When: {{ when }}
+
+Open your dashboard to see the details:
+  {{ app_origin }}/
+
+
+You're getting this because activity notifications are on for {{ site_name }}.
+Change what you're emailed, or the address it goes to:
+  {{ app_origin }}/profile/
+
+ {{ brand }}

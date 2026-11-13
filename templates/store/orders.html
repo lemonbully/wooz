@@ -1,5 +1,5 @@
 {% extends "store/_shell.html" %}
-{% load store_extras %}
+{% load static store_extras %}
 {% block title %}{{ site.name }} · Orders{% endblock %}
 {% block crumb %}Orders{% endblock %}
 
@@ -9,67 +9,683 @@
     <div>
       <p class="pal-mono pal-mono--accent">Fulfilment</p>
       <h1 class="app-head__title pal-mt-4">Orders</h1>
-      <p class="app-head__lead">Every order across your store — filter by status, search, and open one to update it.</p>
+    </div>
+    <div class="app-head__actions">
+      <button type="button" class="pal-btn pal-btn--ghost" data-popup-open="orders-export-modal" aria-haspopup="dialog" aria-controls="orders-export-modal">Export Excel</button>
+    </div>
+  </div>
+
+  {# Monthly export: one month per download, opens on the 2nd of the next month, last 3 years. #}
+  <div class="app-modal app-modal--auto" id="orders-export-modal" role="dialog" aria-modal="true" aria-labelledby="orders-export-title" hidden>
+    <div class="app-modal__backdrop" data-popup-close></div>
+    <div class="app-modal__panel">
+      <div class="app-modal__head">
+        <div>
+          <h2 class="app-modal__title" id="orders-export-title">Export orders</h2>
+          <p class="app-sub" style="margin-top:0.25rem">One month per file. Each month is ready on the 2nd of the following month; the last 3 years are available.</p>
+        </div>
+        <button type="button" class="app-modal__x" data-popup-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="app-modal__body">
+        {% if export_states %}
+          <label class="pal-field ord-export-state">
+            <span class="pal-field__label">State</span>
+            <select class="pal-select" data-export-state aria-label="Export orders from one state">
+              <option value="">All states</option>
+              {% for st in export_states %}<option value="{{ st }}">{{ st }}</option>{% endfor %}
+            </select>
+            <span class="app-sub">Only orders shipped to this state go into the file (and its KPIs).</span>
+          </label>
+        {% endif %}
+        <div class="app-tablewrap">
+          <table class="app-table">
+            <thead><tr><th>Month</th><th class="app-table__actions"></th></tr></thead>
+            <tbody>
+              {% if export_months.next %}
+                <tr>
+                  <td>{{ export_months.next.label }}<div class="app-sub">Available on {{ export_months.next.opens|date:"j M Y" }}</div></td>
+                  <td class="app-table__actions"><span class="app-badge">Not yet</span></td>
+                </tr>
+              {% endif %}
+              {% for m in export_months.available %}
+                <tr>
+                  <td>{{ m.label }}</td>
+                  <td class="app-table__actions"><a class="app-iconbtn" data-export-link href="{% url 'store:orders_export' site.id %}?month={{ m.key }}">Download</a></td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="2" class="app-sub">No month is ready yet. Your first export opens on {{ export_months.next.opens|date:"j M Y" }}.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="app-sub" style="margin-top:0.75rem">Each file opens with a KPI summary (delivered, cancelled, RTO, replacements, store credit), then one row per product line: order ID, date, product, variation, SKU, quantity, MRP, selling price, coupon, shipping, logistics fee and the 18% tax inside it, GST (CGST / SGST / IGST), billing state and city, payment, status. The Billing state column has a filter in Excel. Replacements appear as two lines: the original order, then the replacement.</p>
+      </div>
     </div>
   </div>
 
   <div class="app-block">
-    <div class="app-tabs" role="tablist">
-      <a class="app-tab" href="?" {% if not active_status %}aria-current="true"{% endif %}>All</a>
-      {% for st in status_choices %}
-        <a class="app-tab" href="?status={{ st.value }}" {% if active_status == st.value %}aria-current="true"{% endif %}>{{ st.label }} <span class="app-tab__count">{{ counts|dictkey:st.value|default:0 }}</span></a>
-      {% endfor %}
-    </div>
 
+    {# ── Auto-create shipping toggle ─────────────────────────────────────── #}
+    {% comment %} <div class="ord-autoship">
+      <div class="ord-autoship__copy">
+        <div class="ord-autoship__title">
+          Auto-create shipping
+          {% if selected_provider %}<span class="app-chip app-chip--soft">{{ selected_provider|title }}</span>{% endif %}
+        </div>
+        <p class="ord-autoship__lead">When enabled, new orders will be created directly in your enabled courier and will skip the Pending tab.</p>
+      </div>
+      <div class="ord-autoship__ctrl">
+        <span id="autoShipMsg" class="ord-autoship__msg" hidden></span>
+        <button type="button" id="autoShipToggle" role="switch"
+                data-url="{% url 'store:orders_auto_ship' site.id %}"
+                aria-checked="{% if auto_ship_enabled %}true{% else %}false{% endif %}"
+                class="ord-switch{% if auto_ship_enabled %} is-on{% endif %}{% if not has_shipping_provider %} is-disabled{% endif %}"
+                {% if not has_shipping_provider %}disabled{% endif %}
+                title="{% if not has_shipping_provider %}Enable Delhivery or Shiprocket in Shipping settings first{% else %}Toggle auto-ship{% endif %}">
+          <span class="sr-only">Toggle auto shipping</span>
+          <span class="ord-switch__label ord-switch__on">ON</span>
+          <span class="ord-switch__label ord-switch__off">OFF</span>
+          <span class="ord-switch__knob" id="autoShipKnob"></span>
+        </button>
+      </div>
+    </div> {% endcomment %}
+
+    {% if selected_provider|lower == 'shiprocket' %}
+      <div class="ord-wallet">{% include "store/_sr_wallet.html" %}</div>
+    {% endif %}
+
+    {# ── Search ──────────────────────────────────────────────────────────── #}
     <form method="get" class="app-toolbar" style="margin-top:1rem;">
-      {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
+      <input type="hidden" name="tab" value="{{ active_tab|default:'pending' }}">
+      {% if date_range != 'all' %}<input type="hidden" name="range" value="{{ date_range }}">{% endif %}
+      {% if date_from %}<input type="hidden" name="from" value="{{ date_from }}">{% endif %}
+      {% if date_to %}<input type="hidden" name="to" value="{{ date_to }}">{% endif %}
       <div class="app-search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" name="q" value="{{ q }}" placeholder="Search name, email, phone, tracking…">
+        <input type="search" name="q" value="{{ q }}" placeholder="Search by Order ID, SKU, Date, Qty, State, PIN, Amount">
       </div>
-      {% if show_channel %}
-        <select name="channel" class="pal-select">
-          <option value="">All channels</option>
-          <option value="d2c" {% if active_channel == 'd2c' %}selected{% endif %}>Consumer</option>
-          <option value="b2b" {% if active_channel == 'b2b' %}selected{% endif %}>Business</option>
-        </select>
-      {% endif %}
-      <button class="pal-btn pal-btn--ghost" type="submit">Apply</button>
+      <button class="pal-btn" type="submit">Search</button>
     </form>
 
-    {% if orders %}
-      <div class="app-tablewrap">
-        <table class="app-table">
-          <thead>
-            <tr>
-              <th>Order</th><th>Customer</th>{% if show_channel %}<th>Channel</th>{% endif %}
-              <th>Placed</th><th>Status</th><th class="app-table__num">Total</th>
+    {# ── Status tabs (provider-conditional pills) ────────────────────────── #}
+    <div class="ord-tabs" role="tablist">
+      {% if not auto_ship_enabled or pending_total %}
+        <a class="ord-tab{% if active_tab == 'pending' %} is-active{% endif %}" href="?tab=pending{{ date_qs }}">Pending <span class="ord-tab__n">{{ counts.pending }}</span></a>
+      {% endif %}
+      <a class="ord-tab{% if active_tab == 'ready_to_pack' %} is-active{% endif %}" href="?tab=ready_to_pack{{ date_qs }}">Ready to Ship <span class="ord-tab__n">{{ counts.ready_to_pack }}</span></a>
+      {% if selected_provider|lower == 'shiprocket' %}
+        <a class="ord-tab{% if active_tab == 'pickup_scheduled' %} is-active{% endif %}" href="?tab=pickup_scheduled{{ date_qs }}">Pickup Scheduled/Generated <span class="ord-tab__n">{{ counts.pickup_scheduled }}</span></a>
+      {% else %}
+        <a class="ord-tab{% if active_tab == 'waiting_pickup' %} is-active{% endif %}" href="?tab=waiting_pickup{{ date_qs }}">Waiting For Pickup <span class="ord-tab__n">{{ counts.waiting_pickup }}</span></a>
+      {% endif %}
+      <a class="ord-tab{% if active_tab == 'shipped' %} is-active{% endif %}" href="?tab=shipped{{ date_qs }}">Shipped <span class="ord-tab__n">{{ counts.shipped }}</span></a>
+      <a class="ord-tab{% if active_tab == 'delivered' %} is-active{% endif %}" href="?tab=delivered{{ date_qs }}">Delivered <span class="ord-tab__n">{{ counts.delivered }}</span></a>
+      <a class="ord-tab{% if active_tab == 'rto' %} is-active{% endif %}" href="?tab=rto{{ date_qs }}">RTO <span class="ord-tab__n">{{ counts.rto }}</span></a>
+      <a class="ord-tab{% if active_tab == 'cancelled' %} is-active{% endif %}" href="?tab=cancelled{{ date_qs }}">Cancelled <span class="ord-tab__n">{{ counts.cancelled }}</span></a>
+    </div>
+
+    {# ── Date window (applies to the list and the pill counts above) ────── #}
+    <div class="ord-dates" aria-label="Filter orders by date">
+      <span class="ord-dates__lead">Order date</span>
+      {% for key, label in date_ranges %}
+        <a class="ord-date{% if date_range == key %} is-active{% endif %}"
+           href="?tab={{ active_tab }}{% if key != 'all' %}&range={{ key }}{% endif %}"
+           {% if date_range == key %}aria-current="true"{% endif %}>{{ label }}</a>
+      {% endfor %}
+      <details class="ord-dates__custom"{% if date_range == 'custom' %} open{% endif %}>
+        <summary class="ord-date{% if date_range == 'custom' %} is-active{% endif %}">{% if date_range == 'custom' %}{{ date_label }}{% else %}Custom date{% endif %}</summary>
+        <form method="get" class="ord-dates__form">
+          <input type="hidden" name="tab" value="{{ active_tab }}">
+          <input type="hidden" name="range" value="custom">
+          <label class="ord-dates__field">From
+            <input type="date" name="from" value="{{ date_from }}" max="{{ today_iso }}">
+          </label>
+          <label class="ord-dates__field">To
+            <input type="date" name="to" value="{{ date_to }}" max="{{ today_iso }}">
+          </label>
+          <button class="pal-btn" type="submit">Apply</button>
+          {% if date_range == 'custom' %}<a class="pal-btn pal-btn--ghost" href="?tab={{ active_tab }}">Clear</a>{% endif %}
+        </form>
+      </details>
+    </div>
+
+    {# The bulk form lives outside the table; checkboxes join it via form="". #}
+    <form id="orders-bulk-form" method="post" action="{% url 'store:orders' site.id %}" hidden>
+      {% csrf_token %}
+      <input type="hidden" name="tab" value="{{ active_tab }}">
+    </form>
+
+    <div class="app-tablewrap">
+      <table class="app-table ord-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="ordSelectAll" form="orders-bulk-form" aria-label="Select all"></th>
+            <th>Photo</th>
+            <th>SKU ID</th>
+            <th>Order ID</th>
+            <th>Order Date</th>
+            <th>Title</th>
+            <th>Quantity</th>
+            <th>State</th>
+            <th>PIN</th>
+            <th class="app-table__num">Amount</th>
+            <th>Payment</th>
+            <th class="app-table__actions">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in orders %}
+            {% with fi=o.items.all|first %}
+            <tr class="{% if o.has_paid_txn and o.status == 'created' %}ord-row--paid{% endif %}">
+              <td>
+                {% if o.status == 'created' or o.status == 'paid' or active_tab == 'waiting_pickup' or active_tab == 'ready_to_pack' or active_tab == 'pickup_scheduled' %}
+                  <input type="checkbox" name="selected_orders" value="{{ o.id }}" class="ord-row-check" form="orders-bulk-form">
+                {% endif %}
+              </td>
+              <td>
+                {% if fi.product.images.first %}
+                  <img class="ord-thumb" src="{{ fi.product.images.first.image.url }}" alt="">
+                {% else %}
+                  <span class="ord-thumb ord-thumb--empty"></span>
+                {% endif %}
+              </td>
+              <td>{{ fi.sku|default:fi.product.sku|default:'' }}</td>
+              <td class="app-table__strong">
+                #{{ o.display_number }}
+                {% if o.has_paid_txn and o.status == 'created' %}<span class="app-badge app-badge--paid">Paid</span>{% endif %}
+                {% if o.pickup_on %}<span class="ord-pickup-on" title="Courier pickup date">Pickup {{ o.pickup_on|date:'d M Y' }}</span>{% endif %}
+                {% if o.collaboration_id %}<span class="app-badge app-badge--ugc" title="From collaborator: {{ o.collaboration.name }} ({{ o.collaboration.subdomain }}.myugcstore.com)">UGC</span>{% endif %}
+                {% if o.replacement_seq %}<span class="app-badge app-badge--warn" title="Replacement for order #{{ o.number }}: nothing is collected from the customer">Replacement</span>{% endif %}
+              </td>
+              <td>{{ o.created_at|date:'Y-m-d' }}</td>
+              <td class="ord-titles">
+                {# Every product on the order; each opens its page on the store in a new tab. #}
+                {% for it in o.items.all %}
+                  <div class="ord-titles__item">
+                    {% if it.product.slug %}
+                      <a class="ord-title-link" href="{{ site.storefront_url }}products/{{ it.product.slug }}/" target="_blank" rel="noopener" title="Open {{ it.title }} on your store">{{ it.title }}</a>
+                    {% else %}
+                      <span>{{ it.title }}</span>
+                    {% endif %}
+                    {% if it.variant_label %}<span class="ord-titles__var">{{ it.variant_label }}</span>{% endif %}
+                  </div>
+                {% endfor %}
+              </td>
+              <td>
+                {% for it in o.items.all %}<div class="ord-titles__qty">{{ it.quantity }}</div>{% endfor %}
+              </td>
+              <td>{{ o.shipping_state|default:'' }}</td>
+              <td>{{ o.shipping_pincode|default:'' }}</td>
+              <td class="app-table__num">{{ currency }} {{ o.total }}</td>
+              <td>{% with pm=o|payment_tag %}<span class="ord-pay ord-pay--{{ pm.kind }}">{{ pm.label }}</span>{% endwith %}</td>
+              <td class="app-table__actions">
+                {% if o.status == 'created' or o.status == 'paid' %}
+                  <form method="post" action="{% url 'store:orders' site.id %}" class="ord-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="order_id" value="{{ o.id }}">
+                    <button type="submit" name="action" value="accept" class="ord-link ord-link--accept" title="Accept order">Accept</button>
+                  </form>
+                  <form method="post" action="{% url 'store:orders' site.id %}" class="ord-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="order_id" value="{{ o.id }}">
+                    <button type="submit" name="action" value="reject" class="ord-link ord-link--reject" title="Reject order">Reject</button>
+                  </form>
+                {% else %}
+                  <span class="ord-acts">
+                    <a href="{% url 'store:order_edit' site.id o.id %}?back={{ return_qs|urlencode }}" class="ord-actbtn" title="Edit order" aria-label="Edit order">{% include "store/_icons.html" with icon="pencil" %}</a>
+                    <button type="button" class="ord-actbtn" data-track-order="{{ o.display_number }}"
+                            data-tracking-url="{% url 'store:order_tracking_json' site.id o.id %}"
+                            title="Track shipment" aria-label="Track shipment">{% include "store/_icons.html" with icon="truck" %}</button>
+                    {% if active_tab == 'pickup_scheduled' or active_tab == 'waiting_pickup' or active_tab == 'shipped' %}
+                      <button type="button" class="ord-actbtn ord-actbtn--dark" data-label-open data-order-id="{{ o.id }}"
+                              title="Reprint label" aria-label="Reprint label">{% include "store/_icons.html" with icon="printer" %}</button>
+                    {% endif %}
+                    {% if active_tab == 'pickup_scheduled' or active_tab == 'shipped' and selected_provider|lower == 'shiprocket' %}
+                      <button type="button" class="ord-actbtn ord-actbtn--accent" data-sync-order
+                              data-sync-url="{% url 'store:order_sync_status' site.id o.id %}"
+                              title="Sync status from courier" aria-label="Sync status">{% include "store/_icons.html" with icon="refresh" %}</button>
+                    {% endif %}
+                  </span>
+                {% endif %}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {% for order in orders %}
-              <tr>
-                <td class="app-table__id"><a href="{% url 'store:order_detail' site.id order.id %}">#{{ order.number }}</a></td>
-                <td>
-                  <span class="app-table__strong">{{ order.customer_name|default:"—" }}</span>
-                  {% if order.customer_email %}<div class="app-sub">{{ order.customer_email }}</div>{% endif %}
-                </td>
-                {% if show_channel %}<td>{{ order.get_channel_display }}</td>{% endif %}
-                <td>{{ order.created_at|date:"d M Y" }}</td>
-                <td><span class="app-badge app-badge--{{ order.status }}">{{ order.get_status_display }}</span></td>
-                <td class="app-table__num">{{ site.currency }} {{ order.total }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% include "store/_pagination.html" with page=orders %}
-    {% else %}
-      <div class="app-empty">
-        <h2 class="app-empty__title">No orders here</h2>
-        <p class="app-empty__text">Nothing matches this filter yet. Orders appear as customers check out on your storefront.</p>
-      </div>
-    {% endif %}
+            {% endwith %}
+          {% empty %}
+            <tr><td colspan="12" class="ord-empty">No orders found{% if date_range == 'custom' %} in this date range{% elif date_range != 'all' %} for {{ date_label|lower }}{% endif %}.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# ── Bulk action bar ─────────────────────────────────────────────────── #}
+    <div class="ord-bulkbar">
+      {% if active_tab == 'waiting_pickup' or active_tab == 'pickup_scheduled' %}
+        <button type="submit" form="orders-bulk-form" name="action" value="cancel_selected" class="pal-btn pal-btn--danger">Cancel Selected</button>
+      {% elif active_tab == 'ready_to_pack' %}
+        {% if selected_provider|lower == 'shiprocket' or selected_provider|lower == 'delhivery' %}
+          {# One action: request the courier pickup and generate the labels together. #}
+          <button type="button" class="pal-btn" data-ship-open data-provider="{{ selected_provider|lower }}"
+                  data-warehouse="{{ default_warehouse_name }}"
+                  {% if selected_provider|lower == 'delhivery' %}title="Delhivery pickups can be requested 12:00 AM–11:00 AM"{% endif %}>Generate &amp; Request Pickup</button>
+        {% else %}
+          <button type="button" class="pal-btn" data-label-open>Generate Label</button>
+        {% endif %}
+      {% elif active_tab == 'pending' %}
+        <button type="submit" form="orders-bulk-form" name="action" value="accept_selected" class="pal-btn pal-btn--ok">Accept Selected</button>
+      {% endif %}
+    </div>
+
+    {% include "store/_pagination.html" with page=page_obj %}
   </div>
 </div>
+
+{# ── Shipment tracking modal ───────────────────────────────────────────── #}
+<div class="app-dlg" id="ordTrackModal" hidden>
+  <div class="app-dlg__backdrop" data-track-close></div>
+  <div class="app-dlg__panel">
+    <header class="app-dlg__head">
+      <div>
+        <h3 class="app-dlg__title">Shipment Tracking</h3>
+        <p class="app-dlg__sub">Order #<span id="trkOrderId"></span></p>
+      </div>
+      <button type="button" class="app-dlg__x" data-track-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+    </header>
+    <div class="app-dlg__body">
+      <div id="trkLoader" class="ord-trk-loader">
+        <div class="ord-trk-skel ord-trk-skel--card"></div>
+        <div class="ord-trk-skel ord-trk-skel--line"></div>
+        <div class="ord-trk-skel ord-trk-skel--line"></div>
+      </div>
+      <div id="trkError" class="ord-trk-error" hidden>
+        <p class="ord-trk-error__title">No tracking data yet</p>
+        <p id="trkErrorMsg" class="ord-trk-error__msg"></p>
+      </div>
+      <div id="trkContent" hidden>
+        <div class="ord-trk-summary">
+          <div class="ord-trk-summary__top">
+            <div>
+              <p class="ord-trk-k">Current status</p>
+              <p id="trkStatus" class="ord-trk-status"></p>
+            </div>
+            <span id="trkBadge" class="app-badge"></span>
+          </div>
+          <div class="ord-trk-grid">
+            <div><p class="ord-trk-k">AWB / Tracking No.</p><p id="trkAwb" class="ord-trk-v ord-trk-v--mono"></p></div>
+            <div><p class="ord-trk-k">Courier</p><p id="trkCourier" class="ord-trk-v"></p></div>
+            <div><p class="ord-trk-k">Est. delivery</p><p id="trkEtd" class="ord-trk-v"></p></div>
+            <div><p class="ord-trk-k">Last updated</p><p id="trkUpdated" class="ord-trk-v"></p></div>
+          </div>
+        </div>
+        <p class="ord-trk-k ord-trk-k--section">Delivery journey</p>
+        <ol id="trkTimeline" class="ord-trk-timeline"></ol>
+      </div>
+    </div>
+    <footer class="app-dlg__foot">
+      <a id="trkLink" class="pal-btn pal-btn--ghost" href="#" target="_blank" rel="noopener noreferrer" hidden>Courier tracking page</a>
+      <button type="button" class="pal-btn pal-btn--ghost" data-track-close>Close</button>
+    </footer>
+  </div>
+</div>
+
+{% comment %}
+  Ready to Ship → "Generate & Request Pickup": one modal asks for the courier's
+  pickup details and the label format, and one submit schedules the pickup and
+  downloads the labels (orders.js posts it and follows X-Redirect).
+{% endcomment %}
+<div class="app-dlg" id="ordShipModal" hidden>
+  <div class="app-dlg__backdrop" data-ship-close></div>
+  <div class="app-dlg__panel app-dlg__panel--wide">
+    <form method="post" action="{% url 'store:orders' site.id %}" id="ordShipForm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="generate_and_pickup">
+      <input type="hidden" name="tab" value="{{ active_tab }}">
+      {# JS copies the checked order rows in here. #}
+      <span id="ordShipSelected"></span>
+      <header class="app-dlg__head">
+        <div>
+          <h3 class="app-dlg__title">{% if selected_provider|lower == 'delhivery' %}Delhivery{% else %}Shiprocket{% endif %} · Generate &amp; Request Pickup</h3>
+          <p class="app-dlg__sub" id="ordShipCount"></p>
+        </div>
+        <button type="button" class="app-dlg__x" data-ship-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+      </header>
+      <div class="app-dlg__body">
+        <p class="ord-ship-step">1 · Pickup details</p>
+        <div class="ord-pickup-grid">
+          {% if selected_provider|lower == 'delhivery' %}
+            <label class="ord-pickup-field">
+              <span class="ord-pickup-label">Pickup date</span>
+              <input type="date" name="pickup_date" id="ordShipDate" min="{{ pickup_date_min }}" max="{{ pickup_date_max }}" value="{{ pickup_date_min }}" required>
+            </label>
+            <label class="ord-pickup-field">
+              <span class="ord-pickup-label">Pickup time</span>
+              <input type="time" name="pickup_time" value="14:00" required>
+            </label>
+            <label class="ord-pickup-field ord-pickup-field--full">
+              <span class="ord-pickup-label">Pickup warehouse name</span>
+              <input type="text" name="pickup_location" id="ordShipLocation" autocomplete="off" required>
+            </label>
+            <label class="ord-pickup-field">
+              <span class="ord-pickup-label">Expected packages</span>
+              <input type="number" name="expected_package_count" id="ordShipPackages" min="1" step="1" value="1">
+            </label>
+          {% else %}
+            {# Pickup date first: it applies to every order, before choosing couriers. #}
+            <label class="ord-pickup-field ord-pickup-field--full">
+              <span class="ord-pickup-label">Pickup date</span>
+              <input type="date" name="pickup_date" id="ordShipDate" min="{{ pickup_date_min }}" max="{{ pickup_date_max }}" value="{{ pickup_date_min }}" required>
+              <span class="ord-pickup-subhint" id="ordShipDateHint">{% if pickup_after_noon %}It's past 12:00 noon, so the earliest pickup is tomorrow.{% else %}Requests made before 12:00 noon can be picked up today; after noon, the earliest pickup is tomorrow.{% endif %} Pickups can be scheduled up to 7 days ahead.</span>
+            </label>
+            {% if not shiprocket_courier_set %}
+              {% comment %}
+                Every selected order is priced on its own route, weight and
+                payment type (orders.js fills the rows from orders_rate_quotes),
+                and each gets its own courier: one destination's couriers and
+                prices say nothing about another's.
+              {% endcomment %}
+              <div class="ord-pickup-field--full ord-rates" id="ordRates" data-quotes-url="{% url 'store:orders_rate_quotes' site.id %}">
+                <div class="ord-rates__head">
+                  <span class="ord-pickup-label">Courier &amp; rate for each order</span>
+                  <span class="ord-rates__origin" id="ordRatesOrigin"></span>
+                </div>
+                <div class="ord-rates__modes" role="radiogroup" aria-label="Choose couriers">
+                  <label class="ord-rates__mode"><input type="radio" name="courier_mode" value="cheapest" checked><span>Cheapest</span></label>
+                  <label class="ord-rates__mode"><input type="radio" name="courier_mode" value="fastest"><span>Fastest</span></label>
+                  <label class="ord-rates__mode"><input type="radio" name="courier_mode" value="auto"><span>Shiprocket recommended</span></label>
+                  <label class="ord-rates__mode" id="ordRatesSameMode"><input type="radio" name="courier_mode" value="same"><span>One courier for all</span></label>
+                </div>
+                <div class="ord-rates__same" id="ordRatesSame" hidden>
+                  <select id="ordRatesSameSel" class="pal-select pal-select--sm" aria-label="Courier for every order"></select>
+                  <span class="ord-pickup-subhint" id="ordRatesSameNote"></span>
+                </div>
+                <div class="ord-rates__list" id="ordRatesList" aria-live="polite"></div>
+                <div class="ord-rates__total" id="ordRatesTotal" hidden>
+                  <span class="ord-rates__total-k">Estimated shipping</span>
+                  <span class="ord-rates__total-v" id="ordRatesTotalValue"></span>
+                  <span class="ord-rates__total-note" id="ordRatesTotalNote"></span>
+                </div>
+              </div>
+            {% endif %}
+          {% endif %}
+        </div>
+        <p class="ord-pickup-hint">
+          {% if selected_provider|lower == 'delhivery' %}
+            The warehouse name must exactly match a registered Pickup Address in your Delhivery account. Delhivery accepts pickup requests only between 12:00 AM and 11:00 AM, once per day.
+          {% else %}
+            {% if shiprocket_courier_set %}Your preferred courier (set in Shipping settings) is assigned to every order. Orders it can't carry stay in Ready to Ship with the reason.{% else %}Rates are live from Shiprocket for each order's own destination, weight and payment type. COD orders include the courier's COD charge and only list couriers that collect cash.{% endif %}
+          {% endif %}
+        </p>
+
+        {% if selected_provider|lower == 'delhivery' %}
+        <p class="ord-pickup-hint" id="ordShipDateHint">
+          {% if pickup_after_noon %}It's past 12:00 noon, so the earliest pickup is tomorrow.{% else %}Requests made before 12:00 noon can be picked up today; after noon, the earliest pickup is tomorrow.{% endif %}
+          Pickups can be scheduled up to 7 days ahead.
+        </p>
+        {% endif %}
+
+        <p class="ord-ship-step">2 · Label format</p>
+        <div class="ord-lblfmt">
+          <label class="ord-lblfmt__opt">
+            <input type="radio" name="label_format" value="4x6" checked>
+            <span class="ord-lblfmt__card">
+              <span class="ord-lblfmt__top">
+                <span class="ord-lblfmt__name">4×6 (Thermal)</span>
+                <span class="ord-lblfmt__badge ord-lblfmt__badge--alt">Industry standard</span>
+              </span>
+              <span class="ord-lblfmt__dim">102 × 152 mm · Shipping label standard</span>
+              <span class="ord-lblfmt__pt">Separate pages for label and invoice</span>
+              <span class="ord-lblfmt__pt">Ideal for thermal printers</span>
+            </span>
+          </label>
+          <label class="ord-lblfmt__opt">
+            <input type="radio" name="label_format" value="a4">
+            <span class="ord-lblfmt__card">
+              <span class="ord-lblfmt__top">
+                <span class="ord-lblfmt__name">A4 (2-up)</span>
+                <span class="ord-lblfmt__badge">Office printer</span>
+              </span>
+              <span class="ord-lblfmt__dim">210 × 297 mm · Standard printer</span>
+              <span class="ord-lblfmt__pt">Two orders per page (label + invoice)</span>
+              <span class="ord-lblfmt__pt">Best for bulk dispatch</span>
+            </span>
+          </label>
+          {% comment %}
+            Shiprocket "Courier label" option: switched off for now. Remove
+            this comment block to offer it again (the server still accepts it).
+          {% if selected_provider|lower == 'shiprocket' %}
+          <label class="ord-lblfmt__opt">
+            <input type="radio" name="label_format" value="courier">
+            <span class="ord-lblfmt__card">
+              <span class="ord-lblfmt__top">
+                <span class="ord-lblfmt__name">Courier label</span>
+                <span class="ord-lblfmt__badge ord-lblfmt__badge--alt">From Shiprocket</span>
+              </span>
+              <span class="ord-lblfmt__dim">The assigned courier's own label</span>
+              <span class="ord-lblfmt__pt">Printed by Shiprocket with the courier's routing codes</span>
+              <span class="ord-lblfmt__pt">Falls back to 4×6 if Shiprocket can't provide it</span>
+            </span>
+          </label>
+          {% endif %}
+          {% endcomment %}
+        </div>
+        <p class="ord-ship-error" id="ordShipError" role="alert" hidden></p>
+      </div>
+      <footer class="app-dlg__foot">
+        <button type="button" class="pal-btn pal-btn--ghost" data-ship-close>Cancel</button>
+        <button type="submit" class="pal-btn" id="ordShipSubmit">Generate &amp; Request Pickup</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+{# ── Label & Invoice format modal (reprint / self-ship) ────────────────── #}
+<div class="app-dlg" id="ordLabelModal" hidden>
+  <div class="app-dlg__backdrop" data-label-close></div>
+  <div class="app-dlg__panel app-dlg__panel--wide">
+    <form method="post" action="{% url 'store:orders' site.id %}" id="ordLabelForm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delhivery_generate_labels">
+      <input type="hidden" name="tab" value="{{ active_tab }}">
+      {# JS injects the chosen order rows here. #}
+      <span id="ordLabelSelected"></span>
+      <header class="app-dlg__head">
+        <div>
+          <h3 class="app-dlg__title">Label &amp; Invoice Format</h3>
+          <p class="app-dlg__sub" id="ordLabelCount">Choose how labels and invoices are generated for the selected orders.</p>
+        </div>
+        <button type="button" class="app-dlg__x" data-label-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+      </header>
+      <div class="app-dlg__body">
+        <div class="ord-lblfmt">
+          <label class="ord-lblfmt__opt">
+            <input type="radio" name="label_format" value="a4">
+            <span class="ord-lblfmt__card">
+              <span class="ord-lblfmt__top">
+                <span class="ord-lblfmt__name">A4 (2-up)</span>
+                <span class="ord-lblfmt__badge">Recommended</span>
+              </span>
+              <span class="ord-lblfmt__dim">210 × 297 mm · Standard printer</span>
+              <span class="ord-lblfmt__pt">Two orders per page (label + invoice grouped)</span>
+              <span class="ord-lblfmt__pt">Best for office printers and bulk dispatch</span>
+            </span>
+          </label>
+          <label class="ord-lblfmt__opt">
+            <input type="radio" name="label_format" value="4x6" checked>
+            <span class="ord-lblfmt__card">
+              <span class="ord-lblfmt__top">
+                <span class="ord-lblfmt__name">4×6 (Thermal)</span>
+                <span class="ord-lblfmt__badge ord-lblfmt__badge--alt">Industry standard</span>
+              </span>
+              <span class="ord-lblfmt__dim">102 × 152 mm · Shipping label standard</span>
+              <span class="ord-lblfmt__pt">Separate pages for label and invoice</span>
+              <span class="ord-lblfmt__pt">Ideal for thermal printers and courier workflows</span>
+            </span>
+          </label>
+          {% comment %}
+            Shiprocket "Courier label" option: switched off for now. Remove
+            this comment block to offer it again (the server still accepts it).
+          {% if selected_provider|lower == 'shiprocket' and active_tab != 'ready_to_pack' %}
+          <label class="ord-lblfmt__opt">
+            <input type="radio" name="label_format" value="courier">
+            <span class="ord-lblfmt__card">
+              <span class="ord-lblfmt__top">
+                <span class="ord-lblfmt__name">Courier label</span>
+                <span class="ord-lblfmt__badge ord-lblfmt__badge--alt">From Shiprocket</span>
+              </span>
+              <span class="ord-lblfmt__dim">The assigned courier's own label</span>
+              <span class="ord-lblfmt__pt">Printed by Shiprocket with the courier's routing codes</span>
+            </span>
+          </label>
+          {% endif %}
+          {% endcomment %}
+        </div>
+      </div>
+      <footer class="app-dlg__foot">
+        <button type="button" class="pal-btn pal-btn--ghost" data-label-close>Cancel</button>
+        <button type="submit" class="pal-btn" id="ordLabelGenerate">Generate</button>
+      </footer>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}{{ block.super }}
+<style nonce="{{ csp_nonce }}">
+  .ord-ship-step { margin: 0 0 0.7rem; font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
+  .ord-ship-step:not(:first-child) { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px solid var(--pal-line-soft); }
+  .ord-ship-error { margin: 1rem 0 0; padding: 0.65rem 0.8rem; border: 1px solid #e6b3ad; background: #fbefed; color: #9b2c1f; font-size: 0.84rem; }
+  .ord-ship-error[hidden], #trkLink[hidden] { display: none; }
+  .ord-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: -0.25rem 0 1rem; }
+  .ord-dates__lead { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); margin-right: 0.25rem; }
+  .ord-date { display: inline-flex; align-items: center; padding: 0.3rem 0.7rem; border: 1px solid var(--pal-line-soft); color: var(--pal-muted); font-size: 0.76rem; cursor: pointer; transition: border-color 140ms ease, color 140ms ease, background 140ms ease; }
+  .ord-date:hover { color: var(--pal-ink); border-color: var(--pal-ink); }
+  .ord-date.is-active { color: var(--pal-accent); border-color: var(--pal-accent); background: rgb(75 43 245 / 0.06); }
+  .ord-dates__custom { position: relative; }
+  .ord-dates__custom > summary { list-style: none; }
+  .ord-dates__custom > summary::-webkit-details-marker { display: none; }
+  .ord-dates__form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.6rem; margin-top: 0.6rem; padding: 0.75rem; border: 1px solid var(--pal-line); background: var(--pal-paper, #fff); }
+  .ord-dates__field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.72rem; color: var(--pal-muted); }
+  .ord-dates__field input { padding: 0.4rem 0.5rem; border: 1px solid var(--pal-line); background: transparent; color: var(--pal-ink); font: inherit; font-size: 0.82rem; }
+  .ord-dates__custom[open] { flex-basis: 100%; }
+  /* Product titles: every line of the order, each a link to its store page. */
+  .ord-titles { min-width: 11rem; max-width: 20rem; }
+  .ord-titles__item + .ord-titles__item, .ord-titles__qty + .ord-titles__qty { margin-top: 0.35rem; }
+  .ord-title-link { color: var(--pal-ink); text-decoration: underline; text-decoration-color: var(--pal-line); text-underline-offset: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ord-title-link:hover { color: var(--pal-accent); text-decoration-color: currentColor; }
+  .ord-titles__var { display: block; font-size: 0.72rem; color: var(--pal-muted); }
+  /* Payment method tag. */
+  .ord-pay { display: inline-flex; align-items: center; padding: 0.18rem 0.5rem; border: 1px solid var(--pal-line); font-size: 0.7rem; line-height: 1.3; white-space: nowrap; color: var(--pal-ink-2); background: var(--pal-paper-2, transparent); }
+  .ord-pay--cod { color: #8a5a00; border-color: rgb(180 120 0 / 0.30); background: rgb(180 120 0 / 0.07); }
+  .ord-pay--partial { color: #1d4f91; border-color: rgb(29 79 145 / 0.28); background: rgb(29 79 145 / 0.07); }
+  .ord-pay--prepaid { color: #0f7a53; border-color: rgb(15 122 83 / 0.28); background: rgb(15 122 83 / 0.07); }
+  .ord-pay--credit { color: var(--pal-accent); border-color: rgb(75 43 245 / 0.25); background: rgb(75 43 245 / 0.06); }
+  .ord-pay--free, .ord-pay--none { color: var(--pal-muted); }
+  .ord-export-state { display: grid; gap: 0.3rem; margin-bottom: 0.9rem; }
+  /* Pickup popup: per-order courier & rate picker. */
+  .ord-rates { grid-column: 1 / -1; display: grid; gap: 0.7rem; min-width: 0; }
+  .ord-rates__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.3rem 1rem; }
+  .ord-rates__origin { font-size: 0.72rem; color: var(--pal-muted); }
+  .ord-rates__modes { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .ord-rates__mode { position: relative; cursor: pointer; }
+  .ord-rates__mode input { position: absolute; opacity: 0; pointer-events: none; }
+  .ord-rates__mode span { display: inline-flex; align-items: center; padding: 0.32rem 0.75rem; border: 1px solid var(--pal-line); font-size: 0.76rem; color: var(--pal-ink-2, var(--pal-ink)); transition: border-color 140ms ease, color 140ms ease, background 140ms ease; }
+  .ord-rates__mode:hover span { border-color: var(--pal-ink); }
+  .ord-rates__mode input:checked + span { color: var(--pal-accent); border-color: var(--pal-accent); background: rgb(75 43 245 / 0.06); }
+  .ord-rates__mode input:focus-visible + span { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
+  .ord-rates__mode input:disabled + span { opacity: 0.45; cursor: not-allowed; border-color: var(--pal-line-soft); }
+  .ord-rates__same { display: grid; gap: 0.3rem; }
+  .ord-rates__same[hidden], .ord-rates__total[hidden] { display: none; }
+  .ord-rates__list { display: grid; border: 1px solid var(--pal-line); max-height: 19rem; overflow-y: auto; }
+  .ord-rate { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 0.5rem 1rem; align-items: center; padding: 0.7rem 0.8rem; }
+  .ord-rate + .ord-rate { border-top: 1px solid var(--pal-line-soft); }
+  .ord-rate__who { display: grid; gap: 0.2rem; min-width: 0; }
+  .ord-rate__line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; min-width: 0; }
+  .ord-rate__num { font-weight: 600; font-size: 0.84rem; color: var(--pal-ink); }
+  .ord-rate__dest { font-size: 0.8rem; color: var(--pal-ink-2, var(--pal-ink)); overflow-wrap: anywhere; }
+  .ord-rate__meta { font-size: 0.72rem; color: var(--pal-muted); }
+  .ord-rate__pick { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6rem; align-items: center; min-width: 0; }
+  .ord-rate__price { font-family: var(--pal-font-mono); font-size: 0.82rem; color: var(--pal-ink); white-space: nowrap; text-align: right; min-width: 4.5rem; }
+  .ord-rate__price small { display: block; font-family: inherit; font-size: 0.66rem; color: var(--pal-muted); }
+  .ord-rate__note { font-size: 0.74rem; color: var(--pal-muted); line-height: 1.45; }
+  .ord-rate__note--warn { color: #8a5a00; }
+  .ord-rate__note--ok { color: #0f7a53; }
+  .ord-rate__msg { margin: 0; padding: 0.7rem 0.8rem; }
+  .ord-rate--skel .ord-rate__bar { height: 0.7rem; background: var(--pal-line-soft); animation: ordRatePulse 1.2s ease-in-out infinite; }
+  .ord-rate--skel .ord-rate__bar--short { width: 55%; }
+  @keyframes ordRatePulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .ord-rate--skel .ord-rate__bar { animation: none; } }
+  .ord-rates__total { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; padding: 0.65rem 0.8rem; background: rgb(75 43 245 / 0.05); border: 1px solid rgb(75 43 245 / 0.18); }
+  .ord-rates__total-k { font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
+  .ord-rates__total-v { font-family: var(--pal-font-mono); font-size: 0.98rem; font-weight: 600; color: var(--pal-ink); }
+  .ord-rates__total-note { flex-basis: 100%; font-size: 0.72rem; color: var(--pal-muted); line-height: 1.45; }
+  @media (max-width: 640px) {
+    .ord-rate { grid-template-columns: 1fr; }
+  }
+  /* The pickup popup runs one step smaller than the shared dialog/picker
+     styles (scoped here so the label-format popup keeps its own sizes). */
+  #ordShipModal .app-dlg__panel--wide { width: min(42rem, calc(100vw - 2rem)); max-width: 42rem; }
+  #ordShipModal .app-dlg__head { padding: 0.75rem 1rem; }
+  #ordShipModal .app-dlg__title { font-size: 0.87rem; }
+  #ordShipModal .app-dlg__sub { font-size: 0.53rem; }
+  #ordShipModal .app-dlg__x { width: 1.7rem; height: 1.7rem; }
+  #ordShipModal .app-dlg__body { padding: 0.95rem 1rem; gap: 0.7rem; }
+  #ordShipModal .app-dlg__foot { padding: 0.7rem 1rem; }
+  #ordShipModal .app-dlg__foot .pal-btn { font-size: 0.61rem; padding: 0.6rem 1.1rem; }
+  #ordShipModal .ord-ship-step { margin-bottom: 0.55rem; font-size: 0.55rem; }
+  #ordShipModal .ord-ship-step:not(:first-child) { margin-top: 1.1rem; padding-top: 0.9rem; }
+  #ordShipModal .ord-pickup-grid { gap: 0.7rem; }
+  #ordShipModal .ord-pickup-label { font-size: 0.68rem; }
+  #ordShipModal .ord-pickup-field input,
+  #ordShipModal .ord-pickup-field select { padding: 0.42rem 0.55rem; font-size: 0.74rem; }
+  #ordShipModal .ord-pickup-subhint { font-size: 0.61rem; }
+  #ordShipModal .ord-pickup-hint { margin-top: 0.7rem; font-size: 0.64rem; }
+  #ordShipModal .ord-ship-error { font-size: 0.7rem; padding: 0.55rem 0.7rem; }
+  #ordShipModal .ord-rates { gap: 0.55rem; }
+  #ordShipModal .ord-rates__origin { font-size: 0.61rem; }
+  #ordShipModal .ord-rates__mode span { padding: 0.26rem 0.6rem; font-size: 0.64rem; }
+  #ordShipModal .ord-rates__list { max-height: 17rem; }
+  #ordShipModal .ord-rate { padding: 0.55rem 0.7rem; gap: 0.4rem 0.8rem; }
+  #ordShipModal .ord-rate__num { font-size: 0.72rem; }
+  #ordShipModal .ord-rate__dest { font-size: 0.68rem; }
+  #ordShipModal .ord-rate__meta, #ordShipModal .ord-rate__note { font-size: 0.63rem; }
+  #ordShipModal .ord-rate__price { font-size: 0.7rem; min-width: 4rem; }
+  #ordShipModal .ord-rate__price small { font-size: 0.57rem; }
+  #ordShipModal .ord-pay { font-size: 0.59rem; padding: 0.12rem 0.42rem; }
+  /* Row pickers fill their column (the compact select is inline by default). */
+  #ordShipModal .ord-rate__pick .ow-cs,
+  #ordShipModal .ord-rates__same .ow-cs { display: block; width: 100%; }
+  #ordShipModal .ow-cs__btn { font-size: 0.68rem; }
+  #ordShipModal .ow-cs__opt { font-size: 0.68rem; }
+  #ordShipModal .ord-rates__total { padding: 0.55rem 0.7rem; }
+  #ordShipModal .ord-rates__total-k { font-size: 0.53rem; }
+  #ordShipModal .ord-rates__total-v { font-size: 0.81rem; }
+  #ordShipModal .ord-rates__total-note { font-size: 0.61rem; }
+  #ordShipModal .ord-lblfmt { gap: 0.7rem; }
+  #ordShipModal .ord-lblfmt__card { padding: 0.75rem 0.85rem; gap: 0.3rem; }
+  #ordShipModal .ord-lblfmt__name { font-size: 0.81rem; }
+  #ordShipModal .ord-lblfmt__badge { font-size: 0.48rem; }
+  #ordShipModal .ord-lblfmt__dim { font-size: 0.64rem; }
+  #ordShipModal .ord-lblfmt__pt { font-size: 0.66rem; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/app/orders.js' %}" defer></script>
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  // Export modal: the State picker narrows every month's download link.
+  var pick = document.querySelector("[data-export-state]");
+  if (!pick) return;
+  var links = document.querySelectorAll("[data-export-link]");
+  links.forEach(function (a) { a.setAttribute("data-base-href", a.getAttribute("href")); });
+  pick.addEventListener("change", function () {
+    links.forEach(function (a) {
+      var href = a.getAttribute("data-base-href");
+      a.setAttribute("href", pick.value ? href + "&state=" + encodeURIComponent(pick.value) : href);
+    });
+  });
+})();
+</script>
+{% if selected_provider|lower == 'shiprocket' %}<script src="{% static 'js/app/sr-wallet.js' %}" defer></script>{% endif %}
 {% endblock %}

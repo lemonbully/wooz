@@ -1,0 +1,53 @@
+{% extends "admin/base.html" %}
+{% load static onewooz %}
+
+{% comment %}
+OneWooz admin shell (arcane.onewooz.com). Overrides Django's base_site so the
+model admin (/db/) and our own admin pages (custom_admin/_shell.html) share one
+chrome: an ink top bar with the OneWooz mark, admin tools and the staff account,
+then Django's breadcrumbs / sidebar / content, all restyled by
+css/admin/onewooz-admin.css. Dark mode is switched off: one consistent theme.
+{% endcomment %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{% if title %}{{ title }} | {% endif %}OneWooz Admin{% endblock %}
+
+{% block dark-mode-vars %}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/admin/onewooz-admin.css' %}">
+{% brand_favicon_links False %}
+{% endblock %}
+
+{% block blockbots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+
+{% block branding %}
+<a href="{% url 'custom_admin:overview' %}" class="owa-brand" aria-label="OneWooz Admin: overview">
+  <span class="owa-brand__mark"><img src="{% brand_logo_url %}" alt="" width="20" height="20"></span>
+  OneWooz
+</a>
+<span class="owa-tag"><span class="owa-tag__dot" aria-hidden="true"></span>Admin</span>
+{% endblock %}
+
+{% block usertools %}
+{% if user.is_authenticated and user.is_staff %}
+<div id="user-tools">
+  <span class="owa-user">
+    <span class="owa-user__av" aria-hidden="true">{{ user.email|first|default:"A" }}</span>
+    {{ user.email }}
+  </span>
+  <a href="{% url 'custom_admin:overview' %}"{% if owa_nav == 'overview' %} class="is-active"{% endif %}>Overview</a>
+  <a href="{% url 'admin:index' %}"{% if not owa_nav %} class="is-active"{% endif %}>Database</a>
+  <a href="{% url 'custom_admin:email_templates' %}"{% if owa_nav == 'email' %} class="is-active"{% endif %}>Email templates</a>
+  <a href="{% surface_url 'marketing' '/' %}" target="_blank" rel="noopener">View site ↗</a>
+  <form method="post" action="{% url 'custom_admin:sign_out' %}" class="owa-signout-form">
+    {% csrf_token %}
+    <button type="submit" class="owa-signout">Sign out</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

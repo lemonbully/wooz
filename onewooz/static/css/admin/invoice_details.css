@@ -1,0 +1,17 @@
+/* "Invoice details" admin: GSTIN detection note + Terms & Conditions editor. */
+.ow-inv-detect { margin-top: 6px; font-size: 12px; color: var(--body-quiet-color, #666); min-height: 1em; }
+.ow-inv-detect.is-ok { color: #1f8a4c; }
+.ow-inv-detect.is-error { color: #b42318; }
+
+.ow-terms { max-width: 760px; }
+.ow-terms__list { list-style: none; margin: 0; padding: 0; }
+.ow-terms__item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--hairline-color, #eee); }
+.ow-terms__num { flex: none; width: 1.8em; padding-top: 7px; font-weight: 600; color: var(--body-quiet-color, #666); text-align: right; }
+.ow-terms__text { flex: 1 1 auto; min-width: 0; width: 100% !important; resize: vertical; line-height: 1.45; overflow: hidden; }
+.ow-terms__acts { flex: none; display: inline-flex; gap: 4px; padding-top: 3px; }
+.ow-terms__btn { width: 28px; height: 28px; padding: 0; border: 1px solid var(--border-color, #ccc); border-radius: 4px;
+  background: var(--body-bg, #fff); color: var(--body-fg, #333); cursor: pointer; line-height: 1; }
+.ow-terms__btn:hover:not(:disabled) { border-color: var(--link-fg, #417690); color: var(--link-fg, #417690); }
+.ow-terms__btn:disabled { opacity: 0.35; cursor: default; }
+.ow-terms__add { margin-top: 10px; }
+.ow-terms__empty { margin: 6px 0 0; color: var(--body-quiet-color, #666); font-size: 13px; }

@@ -1,0 +1,16 @@
+{
+  "Comment": "UGC collaborator portal: myugcstore.com apex -> Caddy on-demand-TLS edge",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "myugcstore.com",
+        "Type": "A",
+        "TTL": 300,
+        "ResourceRecords": [
+          { "Value": "15.252.174.7" }
+        ]
+      }
+    }
+  ]
+}

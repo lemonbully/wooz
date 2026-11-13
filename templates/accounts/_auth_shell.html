@@ -2,12 +2,12 @@
 {% load static onewooz %}
 
 {% comment %}
-Shared frame for every authentication screen — "Palantir" direction. A split
+Shared frame for every authentication screen  "" direction. A split
 console: a dark technical brand panel on the left, the form on paper on the
 right. The block contract (auth_title, auth_subtitle, auth_body, auth_footer)
 is unchanged, so sign-in, sign-up, the MFA challenge, magic link and TOTP
 enrolment keep working untouched; only their look changes, via the .pal wrapper
-and onewooz-pal.css. No entrance-animation flag is set here — the form must be
+and onewooz-pal.css. No entrance-animation flag is set here  the form must be
 present and usable the instant the page loads.
 {% endcomment %}
 
@@ -26,7 +26,7 @@ present and usable the instant the page loads.
         <span class="pal-mono pal-auth__kicker">OneWooz · Commerce OS</span>
         <h2 class="pal-auth__headline">Your storefront and back office, one system.</h2>
         <ul class="pal-auth__stack">
-          <li><span>01</span> Storefront — live on your own domain</li>
+          <li><span>01</span> Storefront  live on your own domain</li>
           <li><span>02</span> Orders, payments &amp; shipping</li>
           <li><span>03</span> Inventory, customers &amp; analytics</li>
         </ul>
@@ -43,11 +43,11 @@ present and usable the instant the page loads.
 
       {% comment %}
       The wordmark leaves the dashboard for the marketing site, so it needs a
-      built origin — "/" here would land on the dashboard and bounce an
+      built origin  "/" here would land on the dashboard and bounce an
       unauthenticated visitor straight back to this page.
       {% endcomment %}
       <a href="{% surface_url 'marketing' '/' %}" class="pal-brand pal-auth__brand">
-        <img class="pal-brand__img" src="{% static 'img/Icon_main.png' %}" alt="" width="26" height="26">
+        <img class="pal-brand__img" src="{% brand_logo_url %}" alt="" width="26" height="26">
       </a>
 
       <h1 class="auth__title">{% block auth_title %}{% endblock %}</h1>

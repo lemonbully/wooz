@@ -1,0 +1,35 @@
+{{ brand }} - Order #{{ order_number }} {% if kind == 'updated' %}updated{% elif kind == 'cancelled' %}cancelled{% elif kind == 'shipped' %}shipped{% elif kind == 'delivered' %}delivered{% else %}returned to the store{% endif %}
+
+Hi{% if customer_name %} {{ customer_name }}{% endif %},
+
+{% if kind == 'updated' %}{{ brand }} has updated your order #{{ order_number }}. Here's what changed:
+{% for c in changes %}
+- {{ c.label }}: {% if c.before %}{{ c.before }} -> {% endif %}{{ c.after|default:"(removed)" }}{% endfor %}
+{% elif kind == 'cancelled' %}Your order #{{ order_number }} from {{ brand }} has been cancelled and won't be delivered.
+{% elif kind == 'shipped' %}Good news: your order #{{ order_number }} from {{ brand }} has been handed to the courier and is on its way to you.
+{% if tracking.courier %}Courier: {{ tracking.courier }}
+{% endif %}{% if tracking.awb %}Tracking number: {{ tracking.awb }}
+{% endif %}{% if tracking.etd %}Expected delivery: {{ tracking.etd }}
+{% endif %}{% if tracking.url %}Track your order: {{ tracking.url }}
+{% endif %}{% elif kind == 'delivered' %}Your order #{{ order_number }} from {{ brand }} has been delivered. We hope you love it!
+Something not right? {% if reply_to %}Reply to this email{% else %}Contact {{ brand }}{% endif %} and we'll help.
+{% else %}The courier couldn't deliver your order #{{ order_number }}, so the parcel has been returned to {{ brand }}.
+{% endif %}
+{% if items %}{% if kind == 'updated' %}Your order now:{% else %}Order details:{% endif %}
+{% for it in items %}- {{ it.title }}{% if it.variant_label %} ({{ it.variant_label }}){% endif %} | Qty {{ it.quantity }} x {{ sym }}{{ it.unit_price }} | {{ sym }}{{ it.line_total }}
+{% endfor %}
+Subtotal: {{ sym }}{{ subtotal }}
+{% if discount %}Discount: -{{ sym }}{{ discount }}
+{% endif %}{% if credit %}Store credit: -{{ sym }}{{ credit }}
+{% endif %}{% if tax %}GST: {{ sym }}{{ tax }}
+{% endif %}{% if shipping %}Shipping: {{ sym }}{{ shipping }}
+{% endif %}Total: {{ sym }}{{ total }}
+{% endif %}{% if kind == 'cancelled' or kind == 'returned' %}
+{% if paid_online %}You paid {{ sym }}{{ paid_online }} online for this order. {% if reply_to %}Reply to this email{% else %}Contact {{ brand }}{% endif %} about your refund.
+{% endif %}{% if kind == 'returned' %}{% if reply_to %}Reply to this email{% else %}Contact {{ brand }}{% endif %} if you'd still like to receive it.
+{% endif %}{% if not paid_online and kind == 'cancelled' %}If you didn't expect this, {% if reply_to %}reply to this email{% else %}contact {{ brand }}{% endif %}.
+{% endif %}{% if support_phone %}Phone: {{ support_phone }}
+{% endif %}{% endif %}{% if order_url %}
+View your order: {{ order_url }}
+{% endif %}
+{% if reply_to %}Reply to this email to reach {{ brand }}.{% else %}This is an automated update from {{ brand }}.{% endif %}

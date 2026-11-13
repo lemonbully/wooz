@@ -76,11 +76,11 @@
       <div class="pl-2 md:pl-0 flex flex-wrap items-center">
         <a href="{{ website_base }}" class="hover:text-gray-900 transition-colors">Home</a>
         <span class="mx-1 sm:mx-2">/</span>
-        {% if product.category %}
-        <a href="{{ website_base }}category/{{ product.category.slug }}/" class="hover:text-gray-900 transition-colors truncate max-w-[40%] sm:max-w-none">{{ product.category.name }}</a>
+        <span data-vp-cat-slot data-vp-cat-base="{{ website_base }}category/"{% if not product.category %} hidden{% endif %}>
+        <a href="{% if product.category %}{{ website_base }}category/{{ product.category.slug }}/{% endif %}" class="hover:text-gray-900 transition-colors truncate max-w-[40%] sm:max-w-none" data-vp-cat-link>{{ product.category.name }}</a>
         <span class="mx-1 sm:mx-2">/</span>
-        {% endif %}
-        <span class="text-gray-900 truncate max-w-[50%] sm:max-w-none">{{ product.title }}</span>
+        </span>
+        <span class="text-gray-900 truncate max-w-[50%] sm:max-w-none" data-vp-title-slot>{{ product.title }}</span>
       </div>
     </nav>
 
@@ -146,8 +146,8 @@
               <p id="service-pincode-msg" class="mt-2 text-xs hidden"></p>
             </div>
             {% endif %}
-            <div class="mt-4 text-[18px] font-semibold {% if product.in_stock|default:True %}text-green-600{% else %}text-red-600{% endif %}">
-              {% if product.in_stock|default:True %}In stock{% else %}Out of stock{% endif %}
+            <div class="mt-4 text-[18px] font-semibold {% if product.in_stock|default_if_none:True %}text-green-600{% else %}text-red-600{% endif %}">
+              {% if product.in_stock|default_if_none:True %}In stock{% else %}Out of stock{% endif %}
             </div>
             <div class="mt-3 space-y-2 text-[13px]">
               {% if specs and specs.ships_from %}
@@ -262,22 +262,23 @@
               <!-- Dots will be added dynamically via JS -->
             </div>
 
-            {% if product_video and product_video.url %}
-            <!-- Main image play button: bottom-right of the image stage -->
+            <!-- Main image play button: bottom-right of the image stage. Always in
+                 the page (hidden without a video) so a picked variation's own
+                 video can take its place (storefront/_variant_profiles.html). -->
             <button
               id="pdp-main-play"
               type="button"
               class="absolute right-2 bottom-2 sm:right-3 sm:bottom-3 z-20 inline-flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-black text-white hover:bg-black focus:outline-none focus:ring-2 focus:ring-white transition shadow-lg"
               aria-label="Play product video"
-              data-video-type="{{ product_video.type }}"
-              data-video-url="{{ product_video.url }}"
+              {% if not product_video or not product_video.url %}hidden style="display:none"{% endif %}
+              data-video-type="{{ product_video.type|default:'' }}"
+              data-video-url="{{ product_video.url|default:'' }}"
               data-video-orientation="{{ product_video.orientation|default:'landscape' }}"
-              {% if product_video.embed_url %}data-video-embed="{{ product_video.embed_url }}"{% endif %}>
+              data-video-embed="{{ product_video.embed_url|default:'' }}">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 sm:h-6 sm:w-6" fill="white" aria-hidden="true">
                 <path d="M8 5v14l11-7z"/>
               </svg>
             </button>
-            {% endif %}
             <!-- Badges -->
             <div class="absolute top-3 right-3 space-y-1.5 flex flex-col items-end">
               {% with specs=product.specifications %}
@@ -367,8 +368,17 @@
 
       <!-- Details -->
       <div class="ml-[1rem] mt-[1rem] md:mt-0 md:ml-2 lg:ml-0 lg:pr-2">
-        <h1 class="text-2xl sm:text-3xl md:text-2xl font-normal text-gray-900">{{ product.title }}</h1>
-        <div class="mt-2 flex items-center">
+        <div class="flex items-start justify-between gap-3">
+          <h1 class="text-2xl sm:text-3xl md:text-2xl font-normal text-gray-900"><span id="pdp-title-base" data-vp-title-slot>{{ product.title }}</span><span id="pdp-title-variant"></span></h1>
+          <button type="button" id="pdp-share"
+                  class="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  aria-label="Share this product" title="Share">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+            </svg>
+          </button>
+        </div>
+        <div class="mt-2 flex flex-wrap items-center gap-y-2">
           <div class="flex items-center">
             <a href="#reviews-section" class="flex items-center">
             {% num_range 0 rating_full as full_range %}
@@ -400,127 +410,68 @@
               <span class="ml-2 text-sm text-gray-500">No ratings yet</span>
             {% endif %}
           {% endwith %}
+          {# Ask ChatGPT: a compact pill beside the rating (one button for desktop and mobile), out of the purchase box. #}
+          <button type="button" class="js-ask-gpt pdp-gpt-pill"
+                  title="Ask ChatGPT about this product">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5 fill-current" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm1.07-7.75-.9.92A2.5 2.5 0 0 0 13 12h-2v-.5a3.5 3.5 0 0 1 1.05-2.5l1.24-1.26a1.5 1.5 0 1 0-2.56-1.06H8.73a3.5 3.5 0 1 1 6.34 2.07z"/></svg>
+            <span>Ask ChatGPT</span>
+          </button>
         </div>
-        <div class="mt-4 flex items-center space-x-3">
-          {% with specs=product.specifications %}
-            {% if specs and specs.mrp %}
-              <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
-              <span id="product-mrp" class="text-gray-400 line-through">₹{{ specs.mrp }}</span>
-            {% elif specs and specs.original_price %}
-              <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
-              <span id="product-mrp" class="text-gray-400 line-through">₹{{ specs.original_price }}</span>
-            {% elif product.mrp %}
-              <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
-              <span id="product-mrp" class="text-gray-400 line-through">₹{{ product.mrp }}</span>
-            {% else %}
-              <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
-              <span id="product-mrp" class="text-gray-400 line-through hidden"></span>
+        {% comment %}
+        Price block: selling price with the "Price history" tag on its right (D2C),
+        and the struck-through MRP on its own line just below. #product-price /
+        #product-mrp are what the variant scripts update for a chosen variation.
+        {% endcomment %}
+        <div class="mt-4 pdp-priceblock">
+          {% if is_d2c %}
+          {# Shown only when the current price (of the selected variation) is the lowest of the last 30 days after a drop. #}
+          <p class="pdp-lowest" id="pdp-lowest" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></svg>
+            <span>This was the lowest price in over 30 days</span>
+          </p>
+          {% endif %}
+          <div class="pdp-priceblock__row">
+            <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
+            {% if is_d2c %}
+            <button type="button" class="pdp-ph-tag" id="pdp-ph-open" aria-haspopup="dialog" aria-controls="pdp-ph"
+                    data-url="{% url 'public_product_price_history' product.product_id %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/></svg>
+              <span>Price history</span>
+            </button>
             {% endif %}
+          </div>
+          {% with specs=product.specifications %}
+            {% firstof specs.mrp specs.original_price product.mrp as pdp_mrp %}
+            <div class="pdp-priceblock__mrp">
+              {% if pdp_mrp %}
+              <span id="product-mrp" class="text-gray-400 line-through">₹{{ pdp_mrp }}</span>
+              {% else %}
+              <span id="product-mrp" class="text-gray-400 line-through hidden"></span>
+              {% endif %}
+            </div>
           {% endwith %}
         </div>
-        {% if product.trusted_icons %}
-        <div class="mt-6 md:mt-5 flex flex-wrap gap-[1.5rem] md:gap-5">
-          <style>
-            @media (max-width: 640px) {
-              .trusted-row-mobile { flex-wrap: nowrap; overflow-x: auto; gap: 2rem; }
-              .trusted-row-mobile > div { flex: 0 0 auto; }
-            }
-          </style>
-          <div class="py-2 sm:py-0 w-full flex trusted-row-mobile gap-[2rem] sm:gap-6 items-center">
-          {% for badge in product.trusted_icons %}
-          <div class="flex flex-col items-center">
-            <span class="inline-flex h-12 w-12 sm:h-11 sm:w-11 items-center justify-center gap-3 rounded-full bg-gray-100 text-gray-700 ring-1 ring-gray-400" title="{{ badge }}" aria-label="{{ badge }}">
-              {% if 'Delivery' in badge or 'Shipping' in badge %}
-                <!-- Truck icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
-                  <rect x="2" y="9" width="10" height="6" rx="1"></rect>
-                  <path d="M12 10h4l3 3v2h-3.5"></path>
-                  <circle cx="6" cy="17" r="1.5" fill="currentColor"></circle>
-                  <circle cx="16" cy="17" r="1.5" fill="currentColor"></circle>
-                </svg>
-              {% elif 'warranty' in badge|lower %}
-                <!-- Shield check icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
-                  <path d="M12 3l7 3v6c0 4.418-3.582 7-7 9-3.418-2-7-4.582-7-9V6l7-3z"></path>
-                  <path d="M9 12l2 2 4-4"></path>
-                </svg>
-              {% elif badge == 'Non returnable' %}
-                <!-- Prohibited icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
-                  <circle cx="12" cy="12" r="7"></circle>
-                  <path d="M8.5 8.5l7 7"></path>
-                </svg>
-              {% elif badge == 'Cash On Delivery' %}
-                <!-- Rupee symbol -->
-                <span class="text-lg font-semibold leading-none">₹</span>
-              {% elif badge == 'Secure Payment' %}
-                <!-- Lock icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
-                  <rect x="6" y="10" width="12" height="9" rx="2"></rect>
-                  <path d="M8 10V8a4 4 0 118 0v2"></path>
-                </svg>
-              {% elif 'Return' in badge %}
-                <!-- Rotate/return arrow icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
-                  <path d="M16 8a6 6 0 10.2 8.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                  <path d="M16 4v4h-4" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-              {% elif badge == 'Fast Delivery' %}
-                <!-- Bolt icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
-                  <path d="M13 3L6 14h5l-1 7 7-11h-5l1-7z" stroke-linejoin="round"></path>
-                </svg>
-              {% elif badge == 'Secure Packaging' %}
-                <!-- Box/cube icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
-                  <path d="M3 7l9-4 9 4-9 4-9-4z"></path>
-                  <path d="M3 7v10l9 4 9-4V7"></path>
-                  <path d="M12 11v10"></path>
-                </svg>
-              {% else %}
-                <!-- Generic check circle -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 sm:w-5 sm:h-5">
-                  <circle cx="12" cy="12" r="7"></circle>
-                  <path d="M9 12l2 2 4-4"></path>
-                </svg>
-              {% endif %}
-            </span>
-            <span class="mt-1.5 text-[11px] text-gray-700 text-center">
-              {% with words=badge|split:" " %}
-                {% if words|length > 1 %}
-                  {{ words.0 }}<br>
-                  {% for word in words|slice:"1:" %}
-                    {{ word }}{% if not forloop.last %} {% endif %}
-                  {% endfor %}
-                {% else %}
-                  {{ badge }}
-                {% endif %}
-              {% endwith %}
-            </span>
-          </div>
-          {% endfor %}
-          </div>
-        </div>
-        {% endif %}
+        <div data-vp-slot="badges">{% include "storefront/_pdp_badges.html" %}</div>
         <!-- Product Variations -->
         {% if product.variants %}
         <div class="mt-5">
             <div class="grid grid-cols-1 md:flex md:flex-col gap-1.5">
                 {% for variant_type in product.variants %}
-                <div class="bg-white shadow-xs {% if not forloop.first %}mt-2{% endif %}" data-variant-type="{{ variant_type.name|lower }}">
+                <div class="bg-white shadow-xs {% if not forloop.first %}mt-2{% endif %}" data-variant-type="{{ variant_type.name|lower }}" data-variant-label="{{ variant_type.name }}">
                     <h4 class="font-medium text-gray-900 mb-1.5 text-sm md:text-xs">{{ variant_type.name }}</h4>
                     <div class="flex flex-wrap gap-1.5 md:gap-2 gap-2 variant-options">
                         {% for value in variant_type.values %}
                         {% if variant_type.name|lower == 'color' or variant_type.name|lower == 'colour' %}
-                        <div class="flex items-center px-2.5 py-1.5 text-sm md:text-xs md:px-2.5 md:py-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 ring-1 ring-gray-400 rounded cursor-pointer transition-colors variant-option {% if forloop.first %}selected{% endif %}" 
-                             data-variant-type="{{ variant_type.name|lower }}" 
+                        <div class="flex items-center px-2.5 py-1.5 text-sm md:text-xs md:px-2.5 md:py-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 ring-1 ring-gray-400 rounded cursor-pointer transition-colors variant-option"
+                             data-variant-type="{{ variant_type.name|lower }}"
                              data-variant-value="{{ value.value }}">
-                            <span class="md:w-3.5 md:h-3.5 w-4 h-4 rounded-full md:mr-1.5 mr-2" style="background-color: {{ value.value }}"></span>
+                            {# Dot colour: the owner's picked swatch for this colour (Variations step), else the value as a CSS colour name. #}
+                            <span class="md:w-3.5 md:h-3.5 w-4 h-4 rounded-full md:mr-1.5 mr-2 pdp-swatch-dot shrink-0" style="background-color: {{ product.variant_combinations|variant_swatch:value.value }}"></span>
                             {{ value.value }}
                         </div>
                         {% else %}
-                        <div class="md:px-2.5 md:py-1.5 px-3 py-2 text-sm md:text-xs bg-gray-50 hover:bg-gray-100 ring-1 ring-gray-400 rounded cursor-pointer transition-colors variant-option {% if forloop.first %}selected{% endif %}" 
-                             data-variant-type="{{ variant_type.name|lower }}" 
+                        <div class="md:px-2.5 md:py-1.5 px-3 py-2 text-sm md:text-xs bg-gray-50 hover:bg-gray-100 ring-1 ring-gray-400 rounded cursor-pointer transition-colors variant-option"
+                             data-variant-type="{{ variant_type.name|lower }}"
                              data-variant-value="{{ value.value }}">
                             {{ value.value }}
                         </div>
@@ -530,40 +481,13 @@
                 </div>
                 {% endfor %}
             </div>
+            {# Shown until a full variation is chosen (when none is the owner's default). #}
+            <p id="pdp-variant-hint" class="mt-2 text-xs text-red-600" hidden>Please select an option to continue.</p>
         </div>
+        {{ product.variant_combinations|json_script:"pdp-variant-combos" }}
         {% endif %}
-        <!-- Product Features Section -->
-        {% if d2c_details and d2c_details.features %}
-        <div class="w-full">
-          <div class="bg-white overflow-hidden">
-            <div class="py-6">
-              <h3 class="text-base font-semibold text-gray-900 mb-4">Features</h3>
-              <div class="flex">
-                <div class="flex-1">
-                  {% for feature in d2c_details.features|slice:":2" %}
-                  <div class="flex items-start mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500 mt-0.5 mr-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span class="text-sm text-gray-700">{{ feature }}</span>
-                  </div>
-                  {% endfor %}
-                </div>
-                <div class="flex-1">
-                  {% for feature in d2c_details.features|slice:"2:4" %}
-                  <div class="flex items-start mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500 mt-0.5 mr-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span class="text-sm text-gray-700">{{ feature }}</span>
-                  </div>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endif %}
+        {# data-vp-slot: swapped for the picked variation's own details (storefront/_variant_profiles.html). #}
+        <div data-vp-slot="features">{% include "storefront/_pdp_features.html" %}</div>
         {% block pdp_mobile_purchase_actions %}
         <!-- Mobile purchase actions (visible when sticky sidebar is hidden) -->
         <div class="lg:hidden">
@@ -620,8 +544,8 @@
                 {% endif %}
                 {% endwith %}
               </div>
-              <div class="text-[18px] font-semibold {% if product.in_stock|default:True %}text-green-600{% else %}text-red-600{% endif %}">
-                {% if product.in_stock|default:True %}In stock{% else %}Out of stock{% endif %}
+              <div class="text-[18px] font-semibold {% if product.in_stock|default_if_none:True %}text-green-600{% else %}text-red-600{% endif %}">
+                {% if product.in_stock|default_if_none:True %}In stock{% else %}Out of stock{% endif %}
               </div>
             </div>
             <div>
@@ -649,26 +573,7 @@
           </div>
         </div>
         {% endblock %}
-        {% if d2c_details and d2c_details.bullets %}
-        <div class="w-full">
-          <div class="bg-white overflow-hidden">
-            <div class="py-6">
-              <h3 class="text-base font-semibold text-gray-900 mb-3">About this item</h3>
-              <ul id="bullets-list" class="list-disc list-outside ml-5 space-y-2 text-sm text-gray-800 leading-6 marker:text-gray-700">
-                {% for point in d2c_details.bullets %}
-                <li class="{% if forloop.counter > 3 %}hidden sm:list-item{% endif %}">{{ point }}</li>
-                {% endfor %}
-              </ul>
-              {% if d2c_details.bullets|length > 3 %}
-              <div class="mt-3 sm:hidden">
-                <button type="button" id="bullets-read-more" class="inline-flex items-center rounded-full border border-gray-400 bg-white px-3 py-1.5 ml-5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600">Read more</button>
-                <button type="button" id="bullets-read-less" class="inline-flex items-center rounded-full border border-gray-400 bg-white px-3 py-1.5 ml-5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 hidden">Read less</button>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        {% endif %}
+        <div data-vp-slot="bullets">{% include "storefront/_pdp_bullets.html" %}</div>
       </div>
     </div>
 
@@ -679,274 +584,19 @@
           <nav id="tabs-nav" class="flex items-center overflow-x-auto scrollbar-hide md:overflow-visible gap-6 md:gap-10 pb-2 -mb-2">
             <button type="button" id="tab-desc" class="py-3 -mb-px uppercase tracking-[0.2em] text-[13px] md:text-xs font-medium border-b-2 border-gray-900 text-gray-900 whitespace-nowrap">Description</button>
             <button type="button" id="tab-addl" class="py-3 -mb-px uppercase tracking-[0.2em] text-[13px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Item Details</button>
-            <button type="button" id="tab-manufacturer" class="py-3 -mb-px uppercase tracking-[0.2em] text-[13px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Manufacturer & Packer</button>
+            <button type="button" id="tab-manufacturer" class="py-3 -mb-px uppercase tracking-[0.2em] text-[13px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Origin, Manufacturer & Packer</button>
             <button type="button" id="tab-others" class="py-3 -mb-px uppercase tracking-[0.2em] text-[13px] md:text-xs font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">Others</button>
           </nav>
         </div>
         <div class="pt-6">
-          <!-- Description Content -->
-          <div id="panel-desc">
-            {% if product.description %}
-            <div class="text-justify text-sm md:text-sm max-w-none text-gray-700">
-              {{ product.description|linebreaks }}
-            </div>
-            {% else %}
-            <div class="text-xs text-gray-500">No description available.</div>
-            {% endif %}
-          </div>
-          <!-- Additional Information (Specifications) Content -->
-          <div id="panel-addl" class="hidden">
-            {% with d=d2c_details %}
-            {% if d %}
-            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {% if d.material %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Material</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.material }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if d.colour %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Colour</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.colour }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if d.recommended_use %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Recommended Use</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.recommended_use }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if d.handling_time %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Handling Time</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.handling_time }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if d.accessories %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Accessories</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">
-                    <ul class="list-disc list-inside space-y-1">
-                      {% for a in d.accessories %}
-                      <li>{{ a }}</li>
-                      {% endfor %}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              {% endif %}
-              {% if d.includes %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Includes</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">
-                    <ul class="list-disc list-inside space-y-1">
-                      {% for inc in d.includes %}
-                      <li>{{ inc }}</li>
-                      {% endfor %}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              {% endif %}
-              {% if product.product_length and product.product_breadth and product.product_height %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Product Dimensions</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.product_length }} x {{ product.product_breadth }} x {{ product.product_height }} {{ product.product_unit }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if product.package_length and product.package_breadth and product.package_height %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Package Dimensions</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.package_length }} x {{ product.package_breadth }} x {{ product.package_height }} {{ product.package_unit }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if product.weight_value %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Product Weight</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.weight_value }} {{ product.weight_unit }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if product.package_weight_value %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Package Weight</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.package_weight_value }} {{ product.package_weight_unit }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if product.country_of_origin %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Country of Origin</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.country_of_origin }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if product.return_type %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Return Type</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.return_type }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if product.dangerous_good %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Dangerous Good</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.dangerous_good }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if product.guarantee_warranty %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Guarantee/Warranty</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.guarantee_warranty }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if d.warning %}
-              <div class="rounded-xl bg-red-50 ring-1 ring-red-100 shadow-sm hover:bg-red-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-red-600">Warning</h4>
-                  </div>
-                  <div class="text-red-600 text-[14px] md:text-sm break-words">{{ d.warning }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if d.support and d.support.phone %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Customer Support Number</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.support.phone }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if d.support and d.support.email %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500 break-words">Customer Support Email</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ d.support.email }}</div>
-                </div>
-              </div>
-              {% endif %}
-            </div>
-            {% else %}
-            <div class="text-center py-8"><div class="text-xs text-gray-500">No additional information available.</div></div>
-            {% endif %}
-            {% endwith %}
-          </div>
-          
-          <!-- Manufacturer & Packer Content -->
-          <div id="panel-manufacturer" class="hidden">
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {% if product.manufacturer_contact %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Manufacturer Contact</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.manufacturer_contact }}</div>
-                </div>
-              </div>
-              {% endif %}
-              {% if product.packer_contact %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">Packer Contact</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ product.packer_contact }}</div>
-                </div>
-              </div>
-              {% endif %}
-            </div>
-            {% if not product.manufacturer_contact and not product.packer_contact %}
-            <div class="text-center py-8">
-              <div class="text-xs text-gray-500">No manufacturer or packer details available.</div>
-            </div>
-            {% endif %}
-          </div>
-
-          <!-- Others Content (only extras) -->
-          <div id="panel-others" class="hidden">
-            {% if d2c_details and d2c_details.extras %}
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {% for extra in d2c_details.extras %}
-              <div class="rounded-xl bg-gray-50 ring-1 ring-gray-100 shadow-sm hover:bg-gray-100 transition-colors duration-300">
-                <div class="flex flex-col p-4">
-                  <div class="mb-2">
-                    <h4 class="text-[12px] md:text-xs uppercase tracking-[0.15em] font-medium text-gray-500">{{ extra.name|default:extra.type|capfirst }}</h4>
-                  </div>
-                  <div class="text-gray-900 text-[14px] md:text-sm break-words">{{ extra.text }}</div>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-            {% else %}
-            <div class="text-center py-8">
-              <div class="text-xs text-gray-500">No other details available.</div>
-            </div>
-            {% endif %}
-          </div>
+          {% include "storefront/_pdp_detail_panels.html" with pfx="" %}
           <!-- Reviews Content (removed; see dedicated section below FAQs) -->
         </div>
       </div>
     </section>
 
     <div class="mt-[5rem] w-full">
-      {% include 'storefront/template1/components/product_faq.html' %}
+      <div data-vp-slot="faqs">{% include 'storefront/template2/components/faq.html' with faqs=product_faqs faqs_subtitle=product_faqs_subtitle %}</div>
     </div>
     <!-- Reviews Section (Below FAQs) -->
     <section id="reviews-section" class="mt-10 md:mt-14 bg-white px-4 md:px-0">
@@ -1127,98 +777,11 @@
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5 text-gray-800"><path d="M9 5l7 7-7 7"/></svg>
         </button>
         <div id="related-viewport" class="overflow-hidden">
+          {% include "storefront/template2/components/product_card_styles.html" %}
           <div id="related-track" class="flex mx-auto sm:max-w-[90%] transition-transform duration-500 ease-out will-change-transform">
             {% for item in related_products %}
               <div class="related-slide box-border flex-none basis-1/2 lg:basis-1/4 px-0 md:px-3">
-                <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] m-4" style="border-radius: 8px;">
-                  <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
-                    {% if item.image1 %}
-                    <a href="{% url 'public_product_detail' product_slug=item.slug|default:'_' %}" class="group relative flex items-center justify-center flex-shrink-0 related-product-image-link">
-                      <span class="relative w-full h-full flex items-center justify-center">
-                        {% if website.content.enable_product_hover_swap and item.image2 %}
-                        <img src="{{ item.image1.url }}" {% media_attrs website item.image1.url item.title %} class="block w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0" data-no-srcset="true"/>
-                        <img src="{{ item.image2.url }}" {% media_attrs website item.image2.url item.title %} class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100" data-no-srcset="true"/>
-                        {% else %}
-                        <img src="{{ item.image1.url }}" {% media_attrs website item.image1.url item.title %} class="block w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" data-no-srcset="true"/>
-                        {% endif %}
-                      </span>
-                    </a>
-                    {% else %}
-                    <div class="absolute inset-0 flex items-center justify-center bg-gray-100"></div>
-                    {% endif %}
-                    {% if item.specifications %}
-                    <div class="absolute top-2 right-2 flex flex-col items-end space-y-1.5 pointer-events-none">
-                      {% with specs=item.specifications %}
-                        {% if specs.discount %}
-                          <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount }}%</span>
-                        {% elif specs.discount_percentage %}
-                          <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount_percentage }}%</span>
-                        {% endif %}
-                      {% endwith %}
-                    </div>
-                    {% endif %}
-                  </div>
-                  <div class="px-2 sm:px-3 md:px-4 py-4 text-left related-bs-content">
-                    <a href="{% url 'public_product_detail' product_slug=item.slug|default:'_' %}"
-                       class="block text-[12px] sm:text-[15px] font-normal uppercase leading-tight text-gray-900 hover:text-black transition-colors break-words related-bs-title">
-                      {{ item.title }}
-                    </a>
-                    {% if show_price_in_lists %}
-                    <div class="mt-1 text-gray-700">
-                      <a href="{% url 'public_product_detail' product_slug=item.slug|default:'_' %}"
-                         class="inline-flex items-baseline justify-start gap-1.5 hover:text-black transition-colors max-w-full">
-                        {% with specs=item.specifications %}
-                          <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words">{{ item.currency|currency_symbol }}{{ item.price }}</span>
-                          {% if specs and specs.mrp %}
-                            <span class="text-[15px] text-gray-400 line-through break-words">{{ item.currency|currency_symbol }}{{ specs.mrp }}</span>
-                          {% elif specs and specs.original_price %}
-                            <span class="text-[15px] text-gray-400 line-through break-words">{{ item.currency|currency_symbol }}{{ specs.original_price }}</span>
-                          {% endif %}
-                        {% endwith %}
-                      </a>
-                    </div>
-                    {% endif %}
-                    <div class="mt-1.5 related-bs-actions">
-                      {% if is_b2b %}
-                      <button type="button"
-                         class="inline-flex items-center justify-center gap-1 w-full h-7 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
-                         style="border: 1px solid #888888;"
-                         onclick="openRelatedEnquiryModal('{{ item.product_id }}')"
-                         aria-label="Send enquiry for {{ item.title }}">
-                        <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Send Enquiry</span>
-                      </button>
-                      <a href="{% url 'public_product_whatsapp' product_id=item.product_id|default:'0' %}"
-                         class="w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-[#25D366] bg-white hover:bg-gray-50 transition"
-                         style="border: 1px solid #888888;"
-                         aria-label="Share {{ item.title }} on WhatsApp">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-4 h-4" fill="currentColor" aria-hidden="true">
-                          <path d="M16.02 3.2c-7.07 0-12.8 5.73-12.8 12.8 0 2.26.6 4.48 1.74 6.43L3.2 28.8l6.53-1.72a12.75 12.75 0 0 0 6.29 1.64h.01c7.07 0 12.8-5.73 12.8-12.8 0-3.42-1.33-6.63-3.75-9.05a12.7 12.7 0 0 0-9.06-3.67Zm0 23.31h-.01a10.5 10.5 0 0 1-5.35-1.46l-.38-.23-3.88 1.02 1.04-3.78-.24-.39a10.54 10.54 0 1 1 18.81-5.67c0 5.8-4.72 10.51-10.49 10.51Zm5.76-7.85c-.31-.15-1.83-.9-2.12-1-.28-.1-.49-.15-.69.16-.2.3-.79 1-.97 1.2-.18.2-.36.22-.67.07-.31-.15-1.3-.48-2.48-1.54-.92-.82-1.54-1.84-1.72-2.15-.18-.31-.02-.48.13-.63.14-.14.31-.36.46-.54.15-.18.2-.31.31-.51.1-.2.05-.38-.03-.54-.08-.15-.69-1.67-.95-2.28-.25-.6-.5-.52-.69-.53-.18-.01-.38-.01-.59-.01-.2 0-.54.08-.82.38-.28.31-1.08 1.06-1.08 2.58 0 1.52 1.11 2.99 1.26 3.2.15.2 2.18 3.33 5.27 4.67.74.32 1.32.51 1.77.66.74.24 1.41.2 1.94.12.59-.09 1.83-.75 2.09-1.47.26-.72.26-1.33.18-1.47-.08-.13-.28-.2-.59-.36Z"/>
-                        </svg>
-                      </a>
-                      {% else %}
-                      <a href="{{ website_base }}cart/add/{{ item.product_id }}/?qty=1"
-                         class="inline-flex items-center justify-center gap-1 w-full h-7 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
-                         style="border: 1px solid #888888;"
-                         aria-label="Add {{ item.title }} to cart">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7">
-                          <circle cx="9" cy="20" r="1.6"></circle><circle cx="18" cy="20" r="1.6"></circle>
-                          <path d="M3 4h2l2.1 10.2a1 1 0 0 0 1 .8h9.9a1 1 0 0 0 1-.8L21 8H7.2"></path>
-                        </svg>
-                        <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Add To Cart</span>
-                      </a>
-                      <button type="button"
-                         class="js-related-wishlist w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-gray-700 bg-white hover:bg-gray-50 transition"
-                         style="border: 1px solid #888888;"
-                         data-wishlist-url="{% url 'public_wishlist_add' product_id=item.product_id|default:'0' %}"
-                         aria-label="Add {{ item.title }} to wishlist">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" stroke-width="1.7">
-                          <path d="M12 21s-6.7-4.35-9.2-8.07C.87 10.13 1.5 6.7 4.4 5.2a5 5 0 0 1 5.6.77L12 7.7l2-1.73a5 5 0 0 1 5.6-.77c2.9 1.5 3.53 4.93 1.6 7.73C18.7 16.65 12 21 12 21z"></path>
-                        </svg>
-                      </button>
-                      {% endif %}
-                    </div>
-                  </div>
-                </div>
+                {% include "storefront/template2/components/product_card.html" with product=item wish_class="js-related-wishlist" %}
               </div>
             {% empty %}
               <div class="w-full text-center text-gray-500 py-6">No related products available.</div>
@@ -1894,7 +1457,7 @@
       });
     }
 
-    // Tabs logic (Description, Item Details, Manufacturer & Packer, Others)
+    // Tabs logic (Description, Item Details, Origin, Manufacturer & Packer, Others)
     const tabDesc = document.getElementById('tab-desc');
     const tabAddl = document.getElementById('tab-addl');
     const tabManufacturer = document.getElementById('tab-manufacturer');
@@ -2080,7 +1643,7 @@
           var res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' } });
           var data = await res.json();
           if(res.ok && data && data.success){
-            btn.classList.add('text-red-500', 'border-red-200', 'bg-red-50');
+            { btn.classList.remove('text-gray-700', 'bg-white'); btn.classList.add('text-red-500', 'bg-red-50', 'is-wishlisted'); btn.setAttribute('aria-pressed', 'true'); var heartSvg = btn.querySelector('svg'); if (heartSvg) heartSvg.setAttribute('fill', 'currentColor'); }
           } else if(data && data.login_required){
             window.location.href = '{% url "public_user_account" %}';
             return;
@@ -2464,25 +2027,15 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Get all variation option elements
   const variantOptions = document.querySelectorAll('.variant-option');
-  
-  // Initialize with default selections (first option of each type)
+
+  // No variation is auto-selected on load. The owner's chosen "default" (if any)
+  // is applied by the variant gate script further down; otherwise nothing is
+  // selected and the shopper must pick a combination before buying.
   const selectedVariants = {};
-  document.querySelectorAll('[data-variant-type]').forEach(variantTypeEl => {
-    const type = variantTypeEl.dataset.variantType;
-    const firstOption = variantTypeEl.querySelector('.variant-option');
-    if (firstOption) {
-      // Store type in lowercase for consistent matching
-      // For the format [{"name": "Color", "value": "red"}, ...], we need to match by name
-      // So we'll store the type with proper capitalization as in the data
-      selectedVariants[type.toLowerCase()] = firstOption.dataset.variantValue;
-      firstOption.classList.add('selected');
-      // Add visual styling to selected options
-      firstOption.classList.add('bg-gray-200');
-      firstOption.classList.remove('bg-gray-50');
-    }
+  document.querySelectorAll('.variant-option.selected').forEach(opt => {
+    const t = (opt.dataset.variantType || '').toLowerCase();
+    if (t) selectedVariants[t] = opt.dataset.variantValue;
   });
-  
-  console.log('Initial selected variants:', {...selectedVariants});
   
   // Fetch variant data from API
   async function fetchVariantData() {
@@ -2817,25 +2370,1116 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!isFinite(n) || n < 1) n = 1;
       return String(n);
     }
-    function setLink(a, { qty, buy, variantKey }) {
+    function setLink(a, { qty, buy }) {
       if (!a || !a.href) return;
       const url = new URL(a.href, window.location.origin);
       url.searchParams.set('qty', qty);
       if (buy) url.searchParams.set('buy', '1'); else url.searchParams.delete('buy');
-      if (variantKey) url.searchParams.set('variant_key', variantKey); else url.searchParams.delete('variant_key');
       a.href = url.pathname + '?' + url.searchParams.toString();
     }
 
+    // The variant gate script (below) is the single authority for the chosen
+    // variation's ``variant_key`` / ``variant_attrs`` on these links; only the
+    // quantity and buy flag are refreshed here so the two scripts never race.
     const qty = getSelectedQty();
-    const variantKey = (variant && variant.key) ? String(variant.key) : '';
-    setLink(addToCartBtn, { qty, buy: false, variantKey });
-    setLink(addToCartBtnM, { qty, buy: false, variantKey });
-    setLink(buyNowBtn, { qty, buy: true, variantKey });
-    setLink(buyNowBtnM, { qty, buy: true, variantKey });
+    setLink(addToCartBtn, { qty, buy: false });
+    setLink(addToCartBtnM, { qty, buy: false });
+    setLink(buyNowBtn, { qty, buy: true });
+    setLink(buyNowBtnM, { qty, buy: true });
   }
   
   // Fetch variant data and initialize
   fetchVariantData();
 });
 </script>
-{% endblock %} 
+
+<script nonce="{{ csp_nonce }}">
+/* Variation image swapping: when a variation combination that has its own
+   uploaded images is selected, the product gallery (main image + thumbnails)
+   switches to those images. Selecting a combination without images restores the
+   product's default gallery. Self-contained  reads the combinations embedded in
+   #pdp-variant-combos and drives #active-image / #desktop-thumbs / #mobile-thumbs
+   directly, so it works alongside the existing gallery and price scripts. */
+function pdpVariantImagesInit() {
+  "use strict";
+  var dataEl = document.getElementById("pdp-variant-combos");
+  if (!dataEl) return;
+  var combos;
+  try { combos = JSON.parse(dataEl.textContent || "null"); } catch (e) { combos = null; }
+  if (Array.isArray(combos) && !combos.length) return;
+  if (combos && !Array.isArray(combos) && typeof combos === "object") combos = Object.values(combos);
+  if (!Array.isArray(combos) || !combos.length) return;
+
+  // Only proceed if at least one combination actually carries images.
+  var anyImages = combos.some(function (c) { return c && Array.isArray(c.images) && c.images.length; });
+  if (!anyImages) return;
+
+  var main = document.getElementById("active-image");
+  var desktopThumbs = document.getElementById("desktop-thumbs");
+  var mobileThumbs = document.getElementById("mobile-thumbs");
+  if (!main) return;
+
+  // Snapshot the product's default gallery so a variation without its own images
+  // (or deselecting) restores it exactly. Nodes are kept (not innerHTML) so the
+  // original thumbnails keep their existing click handlers when restored.
+  var origMain = main.getAttribute("src");
+  var origDesktop = desktopThumbs ? Array.prototype.slice.call(desktopThumbs.children) : null;
+  var origMobile = mobileThumbs ? Array.prototype.slice.call(mobileThumbs.children) : null;
+  var showingVariant = false;
+
+  function norm(v) { return String(v == null ? "" : v).trim().toLowerCase(); }
+
+  function comboAttrs(combo) {
+    var map = {};
+    (combo.attributes || []).forEach(function (a) {
+      if (a && a.name != null) map[norm(a.name)] = norm(a.value);
+    });
+    return map;
+  }
+
+  // The currently-selected value for each variation axis.
+  function selectedMap() {
+    var sel = {};
+    document.querySelectorAll("[data-variant-type]").forEach(function (grp) {
+      var type = grp.getAttribute("data-variant-type");
+      if (!type || !grp.querySelector) return;
+      var chosen = grp.querySelector(".variant-option.selected") || grp.querySelector(".variant-option");
+      if (chosen) sel[norm(type)] = norm(chosen.getAttribute("data-variant-value"));
+    });
+    return sel;
+  }
+
+  function findCombo(sel) {
+    var keys = Object.keys(sel);
+    if (!keys.length) return null;
+    // Prefer a combination that matches every selected axis.
+    var exact = combos.find(function (c) {
+      if (!c) return false;
+      var attrs = comboAttrs(c);
+      return keys.every(function (k) { return attrs[k] === sel[k]; });
+    });
+    if (exact) return exact;
+    // Otherwise, the first combination (with images) that contains all selected
+    // values  covers partial matches across multi-axis products.
+    return combos.find(function (c) {
+      if (!c || !(Array.isArray(c.images) && c.images.length)) return false;
+      var attrs = comboAttrs(c);
+      return keys.every(function (k) { return attrs[k] === sel[k]; });
+    }) || null;
+  }
+
+  function setActive(url) {
+    if (!url) return;
+    main.setAttribute("src", url);
+    // Reset any active zoom/pan so the swapped image shows fully.
+    try {
+      main.style.setProperty("--pdp-scale", "1");
+      main.style.setProperty("--pdp-tx", "0px");
+      main.style.setProperty("--pdp-ty", "0px");
+    } catch (e) {}
+  }
+
+  function buildThumb(url, desktop) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = desktop
+      ? "thumb overflow-hidden bg-white flex-shrink-0 w-full"
+      : "thumb overflow-hidden bg-white";
+    btn.setAttribute("data-type", "image");
+    btn.setAttribute("data-url", url);
+    var img = document.createElement("img");
+    img.src = url; img.alt = "";
+    if (desktop) { img.className = "w-full object-contain"; img.style.height = "80px"; }
+    else { img.className = "!h-20 !md:h-24 w-full object-cover"; }
+    btn.appendChild(img);
+    btn.addEventListener("click", function () { setActive(url); });
+    return btn;
+  }
+
+  function showImages(urls) {
+    setActive(urls[0]);
+    if (desktopThumbs) {
+      desktopThumbs.replaceChildren.apply(desktopThumbs, urls.map(function (u) { return buildThumb(u, true); }));
+    }
+    if (mobileThumbs) {
+      mobileThumbs.replaceChildren.apply(mobileThumbs, urls.map(function (u) { return buildThumb(u, false); }));
+    }
+    showingVariant = true;
+  }
+
+  function restore() {
+    if (!showingVariant) return;
+    setActive(origMain);
+    if (desktopThumbs && origDesktop) desktopThumbs.replaceChildren.apply(desktopThumbs, origDesktop);
+    if (mobileThumbs && origMobile) mobileThumbs.replaceChildren.apply(mobileThumbs, origMobile);
+    showingVariant = false;
+  }
+
+  function refresh() {
+    var combo = findCombo(selectedMap());
+    if (combo && Array.isArray(combo.images) && combo.images.length) showImages(combo.images.slice());
+    else restore();
+  }
+
+  // React to every variation click. The existing selection script toggles the
+  // ".selected" class synchronously on click, so a click listener here (added
+  // after, bubbling) reads the updated selection.
+  document.querySelectorAll(".variant-option").forEach(function (opt) {
+    opt.addEventListener("click", function () { setTimeout(refresh, 0); });
+  });
+
+  // Apply the initial selection's images on load, if it has any.
+  refresh();
+}
+// Run after the gallery script has bound its own thumbnail handlers (its
+// DOMContentLoaded listener is registered earlier in the document, so it fires
+// first), so the snapshotted original thumbnails keep those handlers on restore.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", pdpVariantImagesInit);
+} else {
+  pdpVariantImagesInit();
+}
+</script>
+
+
+{% if is_d2c %}
+{% comment %}
+Price history drawer: slides in from the left  full screen on phones, a
+narrow panel (about a fifth of the screen) on desktop. It fetches the last 30
+days for the product (or the selected variation) from
+public_product_price_history and draws a stepped trend: the price holds flat
+until the day it changed, then steps to the new price, with each change
+labelled with its price and date.
+{% endcomment %}
+<div class="pdp-ph" id="pdp-ph" hidden role="dialog" aria-modal="true" aria-labelledby="pdp-ph-title">
+  <div class="pdp-ph__backdrop" data-ph-close></div>
+  <aside class="pdp-ph__panel">
+    <header class="pdp-ph__head">
+      <div>
+        <h2 class="pdp-ph__title" id="pdp-ph-title">Price history</h2>
+        <p class="pdp-ph__sub">Last 30 days<span data-ph-variant></span></p>
+      </div>
+      <button type="button" class="pdp-ph__close" data-ph-close aria-label="Close price history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+    <div class="pdp-ph__body">
+      <label class="pdp-ph__variant" data-ph-variant-wrap hidden>
+        <span>Variation</span>
+        <select data-ph-variant-select aria-label="Variation to show price history for"></select>
+      </label>
+      <div class="pdp-ph__stats" data-ph-stats hidden>
+        <div class="pdp-ph__stat"><span>Current</span><strong data-ph-current></strong></div>
+        <div class="pdp-ph__stat pdp-ph__stat--low"><span>Lowest</span><strong data-ph-lowest></strong><em data-ph-lowest-at></em></div>
+        <div class="pdp-ph__stat"><span>Highest</span><strong data-ph-highest></strong></div>
+      </div>
+      <div class="pdp-ph__chart" data-ph-chart aria-live="polite">
+        <p class="pdp-ph__msg">Loading price history…</p>
+      </div>
+      <ol class="pdp-ph__list" data-ph-list></ol>
+      <p class="pdp-ph__note">Prices shown are this store's selling prices. A price holds until the next change.</p>
+    </div>
+  </aside>
+</div>
+{% endif %}
+<style>
+  /* Price block + price-history drawer (scoped; the compiled Tailwind lacks these). */
+  .pdp-priceblock__row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+  .pdp-priceblock__mrp { margin-top: 0.2rem; font-size: 0.8rem; line-height: 1.3; min-height: 0; }
+  /* MRP: a plain "MRP: ₹x" label, not struck through (the variant scripts only
+     ever replace the number, so the label lives in ::before). */
+  #product-mrp, #sidebar-mrp, #mobile-mrp { text-decoration: none !important; color: #6b7280 !important; }
+  #product-mrp { font-size: 0.8rem; }
+  #sidebar-mrp, #mobile-mrp { font-size: 0.8rem; }
+  #product-mrp::before, #sidebar-mrp::before, #mobile-mrp::before { content: "MRP: "; }
+  .pdp-lowest[hidden] { display: none; }
+  .pdp-lowest { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0 0 0.3rem; padding: 0.15rem 0.5rem; border-radius: 9999px; background: #ecfdf5; color: #047857; font-size: 0.72rem; font-weight: 600; line-height: 1.35; }
+  .pdp-lowest svg { width: 0.85rem; height: 0.85rem; flex: none; }
+  .pdp-ph-tag { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.7rem; border: 1px solid #d1d5db; border-radius: 9999px; background: #fff; color: #111827; font-size: 0.75rem; font-weight: 500; line-height: 1; cursor: pointer; transition: border-color .15s, background .15s; }
+  .pdp-ph-tag:hover { border-color: #111827; background: #f9fafb; }
+  .pdp-ph-tag svg { width: 0.9rem; height: 0.9rem; }
+  /* Ask ChatGPT: floats at the bottom-right of the screen on every size. */
+  .pdp-gpt-pill { position: fixed; right: 1rem; bottom: 1rem; z-index: 900; display: inline-flex; align-items: center; gap: 0.45rem; border-radius: 9999px; border: 0; background: #10a37f; padding: 0.7rem 1.05rem; font-size: 0.85rem; font-weight: 600; color: #fff; cursor: pointer; box-shadow: 0 8px 24px rgba(16,163,127,.35), 0 2px 6px rgba(0,0,0,.12); transition: background .15s, transform .15s; }
+  .pdp-gpt-pill:hover { background: #0e8f6f; transform: translateY(-1px); }
+  .pdp-gpt-pill svg { width: 1.05rem; height: 1.05rem; }
+  @media (max-width: 640px) { .pdp-gpt-pill { right: 0.75rem; bottom: 0.75rem; padding: 0.6rem 0.9rem; font-size: 0.8rem; } }
+  .pdp-swatch-dot { box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
+
+  .pdp-ph[hidden] { display: none; }
+  .pdp-ph { position: fixed; inset: 0; z-index: 1000; }
+  .pdp-ph__backdrop { position: absolute; inset: 0; background: rgba(17,24,39,.35); opacity: 0; transition: opacity .25s ease; }
+  .pdp-ph__panel { position: absolute; top: 0; bottom: 0; left: 0; width: 100vw; max-width: 100vw; background: #fff; display: flex; flex-direction: column; box-shadow: 8px 0 30px rgba(0,0,0,.12); transform: translateX(-100%); transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+  .pdp-ph.is-open .pdp-ph__backdrop { opacity: 1; }
+  .pdp-ph.is-open .pdp-ph__panel { transform: translateX(0); }
+  @media (min-width: 768px) {
+    /* Desktop / tablet: covers about a fifth of the screen (never so narrow the chart can't be read). */
+    .pdp-ph__panel { width: max(20vw, 360px); }
+  }
+  @media (prefers-reduced-motion: reduce) { .pdp-ph__panel, .pdp-ph__backdrop { transition: none; } }
+  .pdp-ph__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.1rem 0.9rem; border-bottom: 1px solid #e5e7eb; }
+  .pdp-ph__title { font-size: 1.05rem; font-weight: 600; color: #111827; margin: 0; }
+  .pdp-ph__sub { font-size: 0.75rem; color: #6b7280; margin: 0.15rem 0 0; }
+  .pdp-ph__close { flex: none; width: 2.1rem; height: 2.1rem; display: grid; place-items: center; border: 1px solid #e5e7eb; border-radius: 9999px; background: #fff; color: #374151; cursor: pointer; }
+  .pdp-ph__close:hover { border-color: #111827; }
+  .pdp-ph__close svg { width: 1rem; height: 1rem; }
+  .pdp-ph__body { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.1rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .pdp-ph__variant[hidden] { display: none; }
+  .pdp-ph__variant { display: flex; flex-direction: column; gap: 0.3rem; }
+  .pdp-ph__variant span { font-size: 0.65rem; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; }
+  .pdp-ph__variant select { width: 100%; padding: 0.55rem 0.7rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: #fff; font-size: 0.85rem; color: #111827; }
+  .pdp-ph__variant select:focus { outline: none; border-color: #111827; }
+  .pdp-ph__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+  .pdp-ph__stats[hidden] { display: none; }
+  .pdp-ph__stat { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.55rem 0.6rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; min-width: 0; }
+  .pdp-ph__stat span { font-size: 0.65rem; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; }
+  .pdp-ph__stat strong { font-size: 0.95rem; color: #111827; font-weight: 600; overflow-wrap: anywhere; }
+  .pdp-ph__stat em { font-style: normal; font-size: 0.65rem; color: #6b7280; }
+  .pdp-ph__stat--low strong { color: #047857; }
+  .pdp-ph__chart { border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 0.5rem 0.25rem 0.25rem; background: #fcfcfd; }
+  .pdp-ph__chart svg { display: block; width: 100%; height: auto; }
+  .pdp-ph__msg { font-size: 0.85rem; color: #6b7280; padding: 2rem 0.75rem; text-align: center; margin: 0; }
+  .pdp-ph__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .pdp-ph__list li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.55rem 0.1rem; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; }
+  .pdp-ph__list li:last-child { border-bottom: 0; }
+  .pdp-ph__when { color: #4b5563; }
+  .pdp-ph__price { font-weight: 600; color: #111827; white-space: nowrap; }
+  .pdp-ph__delta { font-size: 0.72rem; font-weight: 600; margin-left: 0.35rem; }
+  .pdp-ph__delta--down { color: #047857; }
+  .pdp-ph__delta--up { color: #b91c1c; }
+  .pdp-ph__note { font-size: 0.72rem; color: #9ca3af; margin: 0; }
+</style>
+{% if is_d2c %}
+<script nonce="{{ csp_nonce }}">
+/* Price history drawer. Opens from the left, fetches the last 30 days for the
+   product (or the variation currently selected: its variant_key is read from the
+   Add-to-cart link the variant gate stamps), and draws a stepped trend chart:
+   each price holds flat until the day it changed, then steps to the new price,
+   with every change point marked and labelled with its price. */
+(function () {
+  "use strict";
+  var btn = document.getElementById("pdp-ph-open");
+  var root = document.getElementById("pdp-ph");
+  if (!btn || !root) return;
+  var CUR = "{{ product.currency|currency_symbol|escapejs }}" || "₹";
+  var chartEl = root.querySelector("[data-ph-chart]");
+  var listEl = root.querySelector("[data-ph-list]");
+  var statsEl = root.querySelector("[data-ph-stats]");
+  var variantEl = root.querySelector("[data-ph-variant]");
+  var lastFocus = null, closeTimer = null, reqId = 0;
+  var SVGNS = "http://www.w3.org/2000/svg";
+
+  function money(n) {
+    if (n === null || n === undefined || isNaN(n)) return "";
+    var whole = Math.round(n * 100) % 100 === 0;
+    return CUR + Number(n).toLocaleString(undefined, { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2 });
+  }
+  function shortDate(d) { return d.toLocaleDateString(undefined, { day: "numeric", month: "short" }); }
+  function longDate(d) { return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); }
+  // ---- Variations: every combination has its own price track. ----------
+  // The drawer always opens on the combination currently selected on the page
+  // (the owner's default on load), and the picker inside it switches to any
+  // other combination's own 30-day trend.
+  var variantWrap = root.querySelector("[data-ph-variant-wrap]");
+  var variantSel = root.querySelector("[data-ph-variant-select]");
+  function norm(v) { return String(v == null ? "" : v).replace(/\s+/g, " ").trim().toLowerCase(); }
+  function attrList(c) {
+    var a = c && c.attributes;
+    if (Array.isArray(a)) return a.filter(function (x) { return x && x.name != null; });
+    if (a && typeof a === "object") return Object.keys(a).map(function (k) { return { name: k, value: a[k] }; });
+    return [];
+  }
+  // Same key rule as the server (commerce.price_history.combo_key).
+  function keyOf(c) {
+    if (c && c.key) return String(c.key);
+    return attrList(c).map(function (a) { return a.name + "-" + a.value; }).join("__");
+  }
+  var COMBOS = [];
+  (function () {
+    var el = document.getElementById("pdp-variant-combos");
+    if (!el) return;
+    var raw = null;
+    try { raw = JSON.parse(el.textContent || "null"); } catch (e) { raw = null; }
+    if (raw && !Array.isArray(raw) && typeof raw === "object") raw = Object.values(raw);
+    (Array.isArray(raw) ? raw : []).forEach(function (c) {
+      if (!c || typeof c !== "object") return;
+      var attrs = attrList(c);
+      if (!attrs.length) return;
+      var map = {};
+      attrs.forEach(function (a) { map[norm(a.name)] = norm(a.value); });
+      COMBOS.push({
+        key: keyOf(c),
+        map: map,
+        label: attrs.map(function (a) { return a.name + ": " + a.value; }).join(", "),
+        isDefault: c.default_selected === true || c.default_selected === "true" || c.default_selected === 1 || c.default_selected === "1"
+      });
+    });
+  })();
+  // The combination the shopper has selected on the page (all axes picked).
+  function selectedCombo() {
+    if (!COMBOS.length) return null;
+    var chosen = {};
+    var any = false;
+    Array.prototype.forEach.call(document.querySelectorAll(".variant-option.selected"), function (o) {
+      var t = norm(o.getAttribute("data-variant-type"));
+      if (t) { chosen[t] = norm(o.getAttribute("data-variant-value")); any = true; }
+    });
+    if (!any) return null;
+    return COMBOS.filter(function (c) {
+      var keys = Object.keys(c.map);
+      return keys.length && keys.every(function (k) { return chosen[k] === c.map[k]; });
+    })[0] || null;
+  }
+  function fillPicker(activeKey) {
+    variantSel.innerHTML = "";
+    if (!activeKey) {
+      var ph = document.createElement("option");
+      ph.value = ""; ph.textContent = "Choose a variation\u2026"; ph.disabled = true; ph.selected = true;
+      variantSel.appendChild(ph);
+    }
+    COMBOS.forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c.key; o.textContent = c.label + (c.isDefault ? " (default)" : "");
+      if (c.key === activeKey) o.selected = true;
+      variantSel.appendChild(o);
+    });
+  }
+  function labelFor(key) {
+    var c = COMBOS.filter(function (x) { return x.key === key; })[0];
+    return c ? c.label : "";
+  }
+  function node(tag, attrs, text) {
+    var n = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function drawChart(data) {
+    chartEl.innerHTML = "";
+    var pts = (data.points || []).map(function (p) { return { t: new Date(p.at), price: p.price, kind: p.kind }; });
+    if (!pts.length) { chartEl.innerHTML = '<p class="pdp-ph__msg">No price data yet.</p>'; return; }
+
+    var W = 360, H = 230, L = 50, R = 16, T = 30, B = 30;
+    var t0 = new Date(data.window_start).getTime(), t1 = new Date(data.now).getTime();
+    t0 = Math.min(t0, pts[0].t.getTime());
+    var span = Math.max(t1 - t0, 1);
+    var lo = Math.min.apply(null, pts.map(function (p) { return p.price; }));
+    var hi = Math.max.apply(null, pts.map(function (p) { return p.price; }));
+    if (hi === lo) { var pad0 = Math.max(hi * 0.1, 1); lo -= pad0; hi += pad0; }
+    else { var pad = (hi - lo) * 0.18; lo = Math.max(0, lo - pad); hi += pad; }
+    function X(t) { return L + (t - t0) / span * (W - L - R); }
+    function Y(v) { return T + (1 - (v - lo) / (hi - lo)) * (H - T - B); }
+
+    var svg = node("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Price trend over the last " + (data.days || 30) + " days" });
+    // Grid + y labels (3 levels).
+    [hi, (hi + lo) / 2, lo].forEach(function (v) {
+      var y = Y(v);
+      svg.appendChild(node("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#eef0f3", "stroke-width": 1 }));
+      svg.appendChild(node("text", { x: L - 6, y: y + 3.5, "text-anchor": "end", "font-size": 10, fill: "#9ca3af" }, money(v)));
+    });
+    // x labels: window start and today.
+    svg.appendChild(node("text", { x: L, y: H - 8, "font-size": 10, fill: "#9ca3af" }, shortDate(new Date(t0))));
+    svg.appendChild(node("text", { x: W - R, y: H - 8, "text-anchor": "end", "font-size": 10, fill: "#9ca3af" }, "Today"));
+
+    // Stepped path: flat until the next change, then a vertical step.
+    var d = "M" + X(pts[0].t.getTime()).toFixed(1) + " " + Y(pts[0].price).toFixed(1);
+    for (var i = 1; i < pts.length; i++) {
+      d += " H" + X(pts[i].t.getTime()).toFixed(1) + " V" + Y(pts[i].price).toFixed(1);
+    }
+    var area = d + " V" + (H - B) + " H" + X(pts[0].t.getTime()).toFixed(1) + " Z";
+    svg.appendChild(node("path", { d: area, fill: "rgba(17,24,39,0.05)", stroke: "none" }));
+    svg.appendChild(node("path", { d: d, fill: "none", stroke: "#111827", "stroke-width": 2, "stroke-linejoin": "round" }));
+
+    // Change markers + price labels (skipping labels that would collide).
+    var minPrice = Math.min.apply(null, pts.map(function (p) { return p.price; }));
+    var marks = pts.filter(function (p) { return p.kind !== "now"; });
+    var lastLabelX = -1e9, lastLabelUp = true;
+    marks.forEach(function (p, idx) {
+      var x = X(p.t.getTime()), y = Y(p.price);
+      var isLow = p.price === minPrice;
+      svg.appendChild(node("circle", { cx: x, cy: y, r: 4, fill: isLow ? "#047857" : "#fff", stroke: isLow ? "#047857" : "#111827", "stroke-width": 2 }));
+      // Dashed drop line + date tick for real changes.
+      if (p.kind === "change") {
+        svg.appendChild(node("line", { x1: x, x2: x, y1: y + 5, y2: H - B, stroke: "#d1d5db", "stroke-dasharray": "2 3" }));
+      }
+      var up = true;
+      if (x - lastLabelX < 46) up = !lastLabelUp;           // alternate when crowded
+      var ly = up ? y - 9 : y + 17;
+      if (ly < 11) ly = y + 17;
+      if (ly > H - B - 2) ly = y - 9;
+      var anchor = x < L + 24 ? "start" : (x > W - R - 24 ? "end" : "middle");
+      var label = node("text", { x: x, y: ly, "text-anchor": anchor, "font-size": 10.5, "font-weight": 600, fill: isLow ? "#047857" : "#111827" }, money(p.price));
+      svg.appendChild(label);
+      if (p.kind === "change" && x - lastLabelX >= 46) {
+        svg.appendChild(node("text", { x: x, y: H - B + 12, "text-anchor": anchor, "font-size": 9, fill: "#6b7280" }, shortDate(p.t)));
+      }
+      lastLabelX = x; lastLabelUp = up;
+    });
+    // "Now" dot at today's price.
+    var last = pts[pts.length - 1];
+    svg.appendChild(node("circle", { cx: X(last.t.getTime()), cy: Y(last.price), r: 3, fill: "#111827" }));
+    chartEl.appendChild(svg);
+  }
+
+  function drawList(data) {
+    listEl.innerHTML = "";
+    var pts = (data.points || []).filter(function (p) { return p.kind !== "now"; });
+    var rows = [];
+    pts.forEach(function (p, i) {
+      var prev = i > 0 ? pts[i - 1].price : null;
+      rows.push({ p: p, prev: prev, i: i });
+    });
+    rows.reverse().forEach(function (r) {
+      var li = document.createElement("li");
+      var when = document.createElement("span"); when.className = "pdp-ph__when";
+      var d = new Date(r.p.at);
+      if (r.p.kind === "start") when.textContent = (r.i === 0 && rows.length === 1 ? "Since " : "From ") + longDate(d);
+      else when.textContent = "Changed " + longDate(d);
+      var price = document.createElement("span"); price.className = "pdp-ph__price";
+      price.textContent = money(r.p.price);
+      if (r.prev !== null && r.prev !== r.p.price) {
+        var delta = document.createElement("span");
+        var down = r.p.price < r.prev;
+        delta.className = "pdp-ph__delta " + (down ? "pdp-ph__delta--down" : "pdp-ph__delta--up");
+        delta.textContent = (down ? "↓ " : "↑ ") + money(Math.abs(r.p.price - r.prev));
+        price.appendChild(delta);
+      }
+      li.appendChild(when); li.appendChild(price);
+      listEl.appendChild(li);
+    });
+  }
+
+  function load(key) {
+    var my = ++reqId;
+    statsEl.hidden = true; listEl.innerHTML = "";
+    if (COMBOS.length && !key) {
+      // A product with variations: its history is per variation, so one must
+      // be chosen (nothing is pre-selected when the owner set no default).
+      variantEl.textContent = "";
+      chartEl.innerHTML = '<p class="pdp-ph__msg">Choose a variation above to see its price history.</p>';
+      return;
+    }
+    chartEl.innerHTML = '<p class="pdp-ph__msg">Loading price history\u2026</p>';
+    var lbl = key ? labelFor(key) : "";
+    variantEl.textContent = lbl ? " \u00b7 " + lbl : "";
+    var url = btn.getAttribute("data-url") + (key ? "?variant_key=" + encodeURIComponent(key) : "");
+    fetch(url, { credentials: "same-origin", headers: { "Accept": "application/json" } })
+      .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function (data) {
+        if (my !== reqId) return;
+        root.querySelector("[data-ph-current]").textContent = money(data.current);
+        root.querySelector("[data-ph-lowest]").textContent = money(data.lowest);
+        root.querySelector("[data-ph-lowest-at]").textContent = data.lowest_at ? shortDate(new Date(data.lowest_at)) : "";
+        root.querySelector("[data-ph-highest]").textContent = money(data.highest);
+        statsEl.hidden = false;
+        drawChart(data);
+        drawList(data);
+      })
+      .catch(function () {
+        if (my !== reqId) return;
+        chartEl.innerHTML = '<p class="pdp-ph__msg">Couldn’t load the price history. Please try again.</p>';
+      });
+  }
+
+  function open() {
+    clearTimeout(closeTimer);
+    lastFocus = document.activeElement;
+    root.hidden = false;
+    document.documentElement.style.overflow = "hidden";
+    requestAnimationFrame(function () { requestAnimationFrame(function () { root.classList.add("is-open"); }); });
+    var c = root.querySelector(".pdp-ph__close"); if (c) setTimeout(function () { c.focus(); }, 60);
+    var key = "";
+    if (COMBOS.length) {
+      var sel = selectedCombo();
+      key = sel ? sel.key : "";
+      fillPicker(key);
+      variantWrap.hidden = false;
+    } else {
+      variantWrap.hidden = true;
+    }
+    load(key);
+  }
+  if (variantSel) variantSel.addEventListener("change", function () { load(variantSel.value); });
+  function close() {
+    root.classList.remove("is-open");
+    document.documentElement.style.overflow = "";
+    closeTimer = setTimeout(function () { root.hidden = true; }, 300);
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  btn.addEventListener("click", open);
+  Array.prototype.forEach.call(root.querySelectorAll("[data-ph-close]"), function (b) { b.addEventListener("click", close); });
+
+  // ---- "This was the lowest price in over 30 days" (above the price) ----
+  // For the selected variation (the owner's default on load): shown when its
+  // current price is the lowest of the last 30 days AND the price was higher at
+  // some point in that window (a real drop, not a price that never moved).
+  var lowestEl = document.getElementById("pdp-lowest");
+  var lowCache = {}, lowReq = 0, lowTimer = null;
+  function applyLowest(data) {
+    if (!lowestEl) return;
+    var show = !!data && data.current != null && data.lowest != null && data.highest != null &&
+      data.current <= data.lowest && data.highest > data.lowest;
+    lowestEl.hidden = !show;
+  }
+  function refreshLowest() {
+    if (!lowestEl) return;
+    var key = "";
+    if (COMBOS.length) {
+      var sel = selectedCombo();
+      if (!sel) { lowestEl.hidden = true; return; }
+      key = sel.key;
+    }
+    if (Object.prototype.hasOwnProperty.call(lowCache, key)) { applyLowest(lowCache[key]); return; }
+    var my = ++lowReq;
+    fetch(btn.getAttribute("data-url") + (key ? "?variant_key=" + encodeURIComponent(key) : ""), {
+      credentials: "same-origin", headers: { "Accept": "application/json" }
+    }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function (data) { lowCache[key] = data; if (my === lowReq) applyLowest(data); })
+      .catch(function () { if (my === lowReq) lowestEl.hidden = true; });
+  }
+  function scheduleLowest() { clearTimeout(lowTimer); lowTimer = setTimeout(refreshLowest, 120); }
+  if (lowestEl) {
+    var swatches = document.querySelectorAll(".variant-option");
+    if (window.MutationObserver && swatches.length) {
+      var mo = new MutationObserver(scheduleLowest);
+      Array.prototype.forEach.call(swatches, function (o) { mo.observe(o, { attributes: true, attributeFilter: ["class"] }); });
+    }
+    // After the variant gate has applied the owner's default selection.
+    if (document.readyState === "complete") scheduleLowest();
+    else window.addEventListener("load", scheduleLowest);
+  }
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !root.hidden) close(); });
+})();
+</script>
+{% endif %}
+
+<!-- Ask ChatGPT: source data for the product, read by the wiring script below. -->
+<div id="pdp-gpt-src" hidden
+     data-title="{{ product.title }}"
+     data-price="{{ product.price }}"
+     data-mrp="{{ product.mrp|default:'' }}"
+     data-currency="{{ product.currency|currency_symbol }}"
+     data-url="{{ request.build_absolute_uri }}"
+     data-desc="{{ product.description|striptags|truncatewords:80 }}"></div>
+<script nonce="{{ csp_nonce }}">
+/* "Ask ChatGPT" button: builds a prompt from this product's data and opens
+   ChatGPT with it pre-filled (and auto-submitted via the ?q= parameter) in a
+   new tab. Wires every .js-ask-gpt button on the page (desktop + mobile). */
+(function () {
+  "use strict";
+  var src = document.getElementById("pdp-gpt-src");
+  var btns = document.querySelectorAll(".js-ask-gpt");
+  if (!src || !btns.length) return;
+  function get(k) { return src.getAttribute(k) || ""; }
+  function buildPrompt() {
+    var cur = get("data-currency"), price = get("data-price"), mrp = get("data-mrp");
+    var lines = ["I am considering buying this product and want your help deciding.", ""];
+    var chosen = document.getElementById("pdp-title-variant");
+    // The heading as shown: a picked variation's own title when it has one.
+    var shownTitle = document.getElementById("pdp-title-base");
+    var title = (shownTitle && shownTitle.textContent.trim()) || get("data-title");
+    lines.push("Product: " + title + (chosen && !chosen.hidden ? chosen.textContent : ""));
+    if (price) lines.push("Price: " + cur + price + (mrp ? (" (MRP " + cur + mrp + ")") : ""));
+    // The description as shown (a variation's own one when picked).
+    var descPanel = document.getElementById("panel-desc");
+    var shownDesc = descPanel ? descPanel.textContent.replace(/\s+/g, " ").trim() : "";
+    if (shownDesc === "No description available.") shownDesc = "";
+    var desc = shownDesc ? shownDesc.split(" ").slice(0, 80).join(" ") : get("data-desc");
+    if (desc) lines.push("Description: " + desc);
+    var url = get("data-url");
+    if (url) lines.push("Link: " + url);
+    lines.push("");
+    lines.push("Please summarise what it is, its likely pros and cons, who it suits, and any questions I should ask the seller before buying.");
+    return lines.join("\n");
+  }
+  btns.forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      e.preventDefault();
+      var target = "https://chatgpt.com/?q=" + encodeURIComponent(buildPrompt());
+      window.open(target, "_blank", "noopener");
+    });
+  });
+})();
+</script>
+
+<script nonce="{{ csp_nonce }}">
+/* Selected variation in the title: appends ", Size M, Color Black" (each
+   variation type's label and the chosen value, comma-separated, in the order
+   the types are shown) to the product heading. Follows the selection wherever
+   it comes from (the owner's default applied on load, or a shopper's click) by
+   watching the swatches' `.selected` class, so it needs no hooks into the
+   price / image / gate scripts. Blank while nothing is selected. */
+(function () {
+  "use strict";
+  var out = document.getElementById("pdp-title-variant");
+  if (!out) return;
+  var groups = Array.prototype.slice.call(document.querySelectorAll("[data-variant-label]"));
+  if (!groups.length) return;
+  function render() {
+    var parts = [];
+    groups.forEach(function (g) {
+      var opt = g.querySelector(".variant-option.selected");
+      if (!opt) return;
+      var label = (g.getAttribute("data-variant-label") || "").trim();
+      var value = (opt.getAttribute("data-variant-value") || "").trim();
+      if (label && value) parts.push(label + " " + value);
+    });
+    out.textContent = parts.length ? ", " + parts.join(", ") : "";
+  }
+  var pending = false;
+  function schedule() {
+    if (pending) return;
+    pending = true;
+    setTimeout(function () { pending = false; render(); }, 0);
+  }
+  if (window.MutationObserver) {
+    var mo = new MutationObserver(schedule);
+    groups.forEach(function (g) {
+      mo.observe(g, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    });
+  }
+  groups.forEach(function (g) { g.addEventListener("click", schedule); });
+  render();
+})();
+</script>
+
+<script nonce="{{ csp_nonce }}">
+/* Variant gate  the single authority for the "default selected" behaviour.
+
+   The owner may mark ONE variation combination as "Default selected" in the
+   dashboard. On this page:
+     - if a default exists, that combination is pre-selected on load;
+     - if none is marked default, nothing is pre-selected, and Add to Cart /
+       Buy Now stay locked until the shopper picks a full combination.
+   It also stamps the chosen combination's ``variant_key`` onto the cart links.
+   Self-contained: it reads the combinations embedded in #pdp-variant-combos and
+   drives the existing .variant-option swatches, so it composes with the price
+   and image-swap scripts above (selecting a swatch triggers their handlers). */
+(function () {
+  "use strict";
+  var dataEl = document.getElementById("pdp-variant-combos");
+  if (!dataEl) return;
+  var combos;
+  try { combos = JSON.parse(dataEl.textContent || "null"); } catch (e) { combos = null; }
+  if (combos && !Array.isArray(combos) && typeof combos === "object") combos = Object.values(combos);
+  // A product may have variation types but no stored combination rows; the
+  // shopper's pick is then still sent (as ``variant_attrs``) so the cart line
+  // carries the chosen variation.
+  if (!Array.isArray(combos)) combos = [];
+  combos = combos.filter(function (c) { return c && typeof c === "object"; });
+
+  var options = Array.prototype.slice.call(document.querySelectorAll(".variant-option"));
+  if (!options.length) return;
+
+  // Case- and whitespace-insensitive (matches the server's comparison), so a
+  // value saved as "Navy  Blue" still matches the "Navy Blue" swatch.
+  function norm(v) { return String(v == null ? "" : v).replace(/\s+/g, " ").trim().toLowerCase(); }
+
+  // Distinct variation axes (Size, Colour, …), in the order they appear.
+  var types = [];
+  options.forEach(function (o) {
+    var t = norm(o.dataset.variantType);
+    if (t && types.indexOf(t) === -1) types.push(t);
+  });
+
+  // A combination's attributes as [{name, value}], whether stored as a list or
+  // as an object ({"Size": "M"}).
+  function attrList(c) {
+    var a = c && c.attributes;
+    if (Array.isArray(a)) return a.filter(function (x) { return x && x.name != null; });
+    if (a && typeof a === "object") return Object.keys(a).map(function (k) { return { name: k, value: a[k] }; });
+    return [];
+  }
+  function comboMap(c) {
+    var m = {};
+    attrList(c).forEach(function (a) { m[norm(a.name)] = norm(a.value); });
+    return m;
+  }
+  // The shopper's current pick: one chosen swatch per axis, or null while any
+  // axis is still unpicked. Read straight off the swatches (no attribute
+  // selector), so axis names with quotes or odd characters still work.
+  function currentSelection() {
+    var attrs = [], map = {};
+    for (var i = 0; i < types.length; i++) {
+      var chosen = null;
+      for (var j = 0; j < options.length; j++) {
+        var o = options[j];
+        if (o.classList.contains("selected") && norm(o.dataset.variantType) === types[i]) { chosen = o; break; }
+      }
+      if (!chosen) return null;
+      var value = chosen.dataset.variantValue;
+      attrs.push({ name: chosen.dataset.variantType, value: value });
+      map[types[i]] = norm(value);
+    }
+    return { attrs: attrs, map: map };
+  }
+  // The stored combination matching the pick, or null (none picked yet, or the
+  // pick has no stored row; it is still purchasable at the base price).
+  function comboFor(sel) {
+    if (!sel) return null;
+    for (var j = 0; j < combos.length; j++) {
+      var m = comboMap(combos[j]);
+      var ok = true;
+      for (var k = 0; k < types.length; k++) { if (m[types[k]] !== sel.map[types[k]]) { ok = false; break; } }
+      if (ok) return combos[j];
+    }
+    return null;
+  }
+
+  var btnIds = ["purch-add", "purch-buy", "purch-add-m", "purch-buy-m"];
+  var hint = document.getElementById("pdp-variant-hint");
+  // On a B2B storefront the purchase actions are an enquiry form, not cart
+  // buttons, so there is nothing to lock  the gate then only pre-selects the
+  // owner's default variation for display.
+  var hasCart = btnIds.some(function (id) { return !!document.getElementById(id); });
+
+  function eachBtn(fn) {
+    btnIds.forEach(function (id) { var b = document.getElementById(id); if (b) fn(b); });
+  }
+  // The canonical key for a combination: its stored key, or the same value
+  // derived from its attributes (matches the dashboard + server derivation), so
+  // the cart never receives an empty key for a validly chosen combination.
+  function keyOf(attrs) {
+    return attrs.map(function (a) {
+      return (a && a.name != null ? a.name : "") + "-" + (a && a.value != null ? a.value : "");
+    }).join("__");
+  }
+  // Stamp the pick onto the cart links: the stored combination's key when one
+  // matches, plus the selection itself (``variant_attrs``) so the server can
+  // resolve the variation even when no stored key matches it exactly.
+  function setVariant(sel, combo) {
+    var key = "";
+    if (combo) key = combo.key ? String(combo.key) : keyOf(attrList(combo));
+    else if (sel) key = keyOf(sel.attrs);
+    var attrs = sel ? JSON.stringify(sel.attrs) : "";
+    eachBtn(function (b) {
+      if (!b.href) return;
+      var u;
+      try { u = new URL(b.href, window.location.origin); } catch (e) { return; }
+      if (key) u.searchParams.set("variant_key", key); else u.searchParams.delete("variant_key");
+      if (attrs) u.searchParams.set("variant_attrs", attrs); else u.searchParams.delete("variant_attrs");
+      b.href = u.pathname + "?" + u.searchParams.toString();
+    });
+  }
+  function setLocked(locked) {
+    eachBtn(function (b) {
+      if (locked) {
+        b.classList.add("pdp-locked", "opacity-50", "cursor-not-allowed");
+        b.setAttribute("aria-disabled", "true");
+      } else {
+        b.classList.remove("pdp-locked", "opacity-50", "cursor-not-allowed");
+        b.removeAttribute("aria-disabled");
+      }
+    });
+    if (hint) hint.hidden = !(locked && hasCart);
+  }
+
+  // Live price: the chosen combination's price/MRP (falling back to the product's
+  // base when the combination leaves them blank). With nothing chosen, the base
+  // price shows. The same combination price is what the cart and checkout charge.
+  var BASE_PRICE = {{ product.price|default_if_none:"null" }};
+  var BASE_MRP = {{ product.mrp|default_if_none:"null" }};
+  var CUR = "₹";
+  function fmtMoney(n) { return (Math.round(n * 100) / 100).toFixed(2); }
+  function pick(comboVal, base) {
+    if (comboVal !== null && comboVal !== undefined && comboVal !== "") {
+      var n = parseFloat(comboVal);
+      if (!isNaN(n)) return n;
+    }
+    return (base === null || base === undefined) ? null : parseFloat(base);
+  }
+  function setPrice(combo) {
+    var price = pick(combo ? combo.price : null, BASE_PRICE);
+    var mrp = pick(combo ? combo.mrp : null, BASE_MRP);
+    if (price !== null && !isNaN(price)) {
+      document.querySelectorAll("#product-price, #sidebar-price, #mobile-price").forEach(function (el) {
+        el.textContent = CUR + fmtMoney(price);
+      });
+    }
+    var showMrp = mrp !== null && !isNaN(mrp) && price !== null && mrp > price;
+    document.querySelectorAll("#product-mrp, #sidebar-mrp, #mobile-mrp").forEach(function (el) {
+      if (showMrp) { el.textContent = CUR + fmtMoney(mrp); el.classList.remove("hidden"); }
+      else { el.classList.add("hidden"); }
+    });
+  }
+
+  // Tells the page which stored variation is showing ("" = none / the
+  // product itself), so the variation's own details can be swapped in
+  // (storefront/_variant_profiles.html). Fired only when it changes.
+  var shownKey = null;
+  function announce(combo) {
+    var key = combo ? (combo.key ? String(combo.key) : keyOf(attrList(combo))) : "";
+    if (key === shownKey) return;
+    shownKey = key;
+    try { document.dispatchEvent(new CustomEvent("pdp:variant", { detail: { key: key } })); } catch (e) {}
+  }
+
+  function refresh() {
+    var sel = currentSelection();
+    var combo = comboFor(sel);
+    setPrice(combo);
+    setVariant(sel, combo);
+    announce(combo);
+    // Unlocked as soon as every axis is picked, whether or not that pick has a
+    // stored combination row.
+    setLocked(!sel);
+  }
+
+  // Block a locked Add to Cart / Buy Now and nudge the shopper to choose. Capture
+  // phase + stopImmediatePropagation so it beats the delegated AJAX-cart handler.
+  // Before that, re-stamp the links from the swatches as they are right now, so
+  // the request always carries the combination actually shown as selected.
+  eachBtn(function (b) {
+    b.addEventListener("click", function (e) {
+      refresh();
+      if (!b.classList.contains("pdp-locked")) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (hint) hint.hidden = false;
+      var box = document.querySelector(".variant-options");
+      if (box && box.scrollIntoView) box.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, true);
+  });
+
+  // Re-evaluate after each swatch click (the selection/price/image scripts above
+  // toggle `.selected` synchronously; the 0ms defer lets them finish first).
+  options.forEach(function (o) {
+    o.addEventListener("click", function () { setTimeout(refresh, 0); });
+  });
+
+  function start() {
+    // Clear any stray pre-selection, then apply the owner's default if set.
+    options.forEach(function (o) {
+      o.classList.remove("selected", "bg-gray-200");
+      o.classList.add("bg-gray-50");
+    });
+    // A ?variant=<key> link (e.g. from a Google Shopping listing) opens with
+    // that exact variation selected; otherwise the owner's default applies.
+    var wanted = "";
+    try { wanted = new URLSearchParams(window.location.search).get("variant") || ""; } catch (e) {}
+    var def = null;
+    if (wanted) {
+      def = combos.find(function (c) {
+        if (!c) return false;
+        if (String(c.key || "") === wanted) return true;
+        var attrs = Array.isArray(c.attributes) ? c.attributes : [];
+        return attrs.map(function (a) { return (a.name || "") + "-" + (a.value || ""); }).join("__") === wanted;
+      }) || null;
+    }
+    if (!def) def = combos.find(function (c) {
+      var v = c && c.default_selected;
+      return v === true || v === "true" || v === 1 || v === "1";
+    });
+    if (def) {
+      var m = comboMap(def);
+      // Click the swatch for each axis so the price and image-swap scripts react.
+      types.forEach(function (t) {
+        var want = m[t];
+        var opt = options.filter(function (o) {
+          return norm(o.dataset.variantType) === t && norm(o.dataset.variantValue) === want;
+        })[0];
+        if (opt) opt.click();
+      });
+    }
+    setTimeout(refresh, 0);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
+})();
+</script>
+
+<script nonce="{{ csp_nonce }}">
+/* Share button. Phones / tablets (a coarse pointer, i.e. a finger) open the
+   device's native share sheet. Desktops and laptops (mouse / trackpad, even
+   touch-screen laptops) copy the product link and confirm it in a small
+   popover under the button. If the browser blocks clipboard access, the popover
+   shows the link already selected so it can be copied with Ctrl/Cmd+C. */
+(function () {
+  "use strict";
+  var btn = document.getElementById("pdp-share");
+  if (!btn) return;
+  var title = "{{ product.title|escapejs }}";
+  var pop = null, hideT = null;
+
+  function shareUrl() {
+    // The clean page link (no #fragment) is what should be shared.
+    return window.location.href.split("#")[0];
+  }
+  function isMobile() {
+    var coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    var hover = window.matchMedia && window.matchMedia("(hover: hover)").matches;
+    var ua = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent || "");
+    return (coarse && !hover) || ua;
+  }
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", "");
+      ta.style.position = "fixed"; ta.style.top = "-1000px"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) { return false; }
+  }
+  function copyLink(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(
+        function () { return true; },
+        function () { return legacyCopy(text); }
+      );
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  function closePop() {
+    clearTimeout(hideT);
+    if (pop && pop.parentNode) pop.parentNode.removeChild(pop);
+    pop = null;
+    document.removeEventListener("click", outside, true);
+    document.removeEventListener("keydown", onKey);
+  }
+  function outside(e) { if (pop && !pop.contains(e.target) && e.target !== btn && !btn.contains(e.target)) closePop(); }
+  function onKey(e) { if (e.key === "Escape") closePop(); }
+
+  function showPop(copied, url) {
+    closePop();
+    pop = document.createElement("div");
+    pop.setAttribute("role", "status");
+    pop.setAttribute("aria-live", "polite");
+    pop.style.cssText = "position:absolute;z-index:60;width:min(20rem,calc(100vw - 2rem));" +
+      "padding:.6rem .7rem;background:#111;color:#fff;border-radius:.6rem;font-size:.8rem;" +
+      "line-height:1.35;box-shadow:0 10px 30px rgba(0,0,0,.2)";
+    var msg = document.createElement("div");
+    msg.style.cssText = "display:flex;align-items:center;gap:.4rem;font-weight:500";
+    msg.textContent = copied ? "✓ Link copied to clipboard" : "Press Ctrl+C (Cmd+C on Mac) to copy the link";
+    pop.appendChild(msg);
+    var field = document.createElement("input");
+    field.type = "text"; field.readOnly = true; field.value = url;
+    field.setAttribute("aria-label", "Product link");
+    field.style.cssText = "margin-top:.45rem;width:100%;padding:.35rem .5rem;border:0;border-radius:.35rem;" +
+      "background:rgba(255,255,255,.12);color:#fff;font-size:.75rem;outline:none";
+    field.addEventListener("focus", function () { field.select(); });
+    pop.appendChild(field);
+    document.body.appendChild(pop);
+
+    // Below the button, kept inside the viewport on both edges.
+    var r = btn.getBoundingClientRect();
+    var w = pop.offsetWidth;
+    var left = Math.min(Math.max(8, r.right - w), document.documentElement.clientWidth - w - 8);
+    pop.style.left = (left + window.scrollX) + "px";
+    pop.style.top = (r.bottom + window.scrollY + 8) + "px";
+
+    if (!copied) { field.focus(); field.select(); }
+    setTimeout(function () {
+      document.addEventListener("click", outside, true);
+      document.addEventListener("keydown", onKey);
+    }, 0);
+    hideT = setTimeout(closePop, copied ? 2500 : 8000);
+  }
+
+  btn.addEventListener("click", function (e) {
+    e.preventDefault();
+    var url = shareUrl();
+    if (navigator.share && isMobile()) {
+      navigator.share({ title: title, text: title, url: url }).catch(function (err) {
+        // Cancelled by the shopper → nothing to do; any other failure → copy.
+        if (!err || err.name !== "AbortError") copyLink(url).then(function (ok) { showPop(ok, url); });
+      });
+      return;
+    }
+    copyLink(url).then(function (ok) { showPop(ok, url); });
+  });
+})();
+</script>
+<script nonce="{{ csp_nonce }}">
+/* Stock gate: Add to Cart / Buy Now are disabled for an out-of-stock product,
+   or for a chosen variation whose own stock is 0, and read "Out of stock".
+   The server refuses such adds and checkout re-checks, so this is the
+   shopper-facing half of the same rule. Capture-phase click blocking beats the
+   delegated AJAX-cart handler. */
+(function () {
+  "use strict";
+  var PRODUCT_IN_STOCK = {% if product.in_stock is False %}false{% else %}true{% endif %};
+  var ids = ["purch-add", "purch-buy", "purch-add-m", "purch-buy-m"];
+  var btns = ids.map(function (id) { return document.getElementById(id); }).filter(Boolean);
+  if (!btns.length) return;
+  btns.forEach(function (b) { b.setAttribute("data-label", b.textContent); });
+
+  var combos = [];
+  var dataEl = document.getElementById("pdp-variant-combos");
+  if (dataEl) {
+    try { combos = JSON.parse(dataEl.textContent || "null"); } catch (e) { combos = null; }
+    if (combos && !Array.isArray(combos) && typeof combos === "object") combos = Object.values(combos);
+    if (!Array.isArray(combos)) combos = [];
+    combos = combos.filter(function (c) { return c && typeof c === "object"; });
+  }
+  var options = Array.prototype.slice.call(document.querySelectorAll(".variant-option"));
+  function norm(v) { return String(v == null ? "" : v).replace(/\s+/g, " ").trim().toLowerCase(); }
+  var types = [];
+  options.forEach(function (o) {
+    var t = norm(o.dataset.variantType);
+    if (t && types.indexOf(t) === -1) types.push(t);
+  });
+  function comboMap(c) {
+    var a = c && c.attributes, m = {};
+    if (a && !Array.isArray(a) && typeof a === "object") a = Object.keys(a).map(function (k) { return { name: k, value: a[k] }; });
+    (Array.isArray(a) ? a : []).forEach(function (x) { if (x && x.name != null) m[norm(x.name)] = norm(x.value); });
+    return m;
+  }
+  function selection() {
+    var map = {};
+    for (var i = 0; i < types.length; i++) {
+      var chosen = options.filter(function (o) {
+        return o.classList.contains("selected") && norm(o.dataset.variantType) === types[i];
+      })[0];
+      if (!chosen) return null;
+      map[types[i]] = norm(chosen.dataset.variantValue);
+    }
+    return map;
+  }
+  function soldOut() {
+    if (!types.length || !combos.length) return !PRODUCT_IN_STOCK;
+    var sel = selection();
+    if (!sel) return !PRODUCT_IN_STOCK; // nothing picked yet: the variant gate locks
+    for (var j = 0; j < combos.length; j++) {
+      var m = comboMap(combos[j]), ok = true;
+      for (var k = 0; k < types.length; k++) { if (m[types[k]] !== sel[types[k]]) { ok = false; break; } }
+      if (ok) return !((parseInt(combos[j].inventory, 10) || 0) > 0);
+    }
+    return !PRODUCT_IN_STOCK; // a pick with no stored row uses the product total
+  }
+  function apply() {
+    var out = soldOut();
+    btns.forEach(function (b) {
+      b.classList.toggle("pdp-soldout", out);
+      if (out) {
+        b.setAttribute("aria-disabled", "true");
+        b.classList.add("opacity-50", "cursor-not-allowed");
+        b.textContent = "Out of stock";
+      } else {
+        if (!b.classList.contains("pdp-locked")) {
+          b.removeAttribute("aria-disabled");
+          b.classList.remove("opacity-50", "cursor-not-allowed");
+        }
+        b.textContent = b.getAttribute("data-label") || b.textContent;
+      }
+    });
+  }
+  btns.forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      if (!soldOut()) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      apply();
+    }, true);
+  });
+  options.forEach(function (o) { o.addEventListener("click", function () { setTimeout(apply, 10); }); });
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(apply, 20); });
+  else setTimeout(apply, 20);
+})();
+</script>
+{% include "storefront/_variant_profiles.html" with vp_pfx="" vp_bullets=True vp_faqs=True vp_badges=True %}
+{% endblock %}

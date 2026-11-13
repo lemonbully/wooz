@@ -41,6 +41,7 @@
                     <ul class="mt-6 space-y-4 text-sm">
                         <li><a href="{{ website_base }}core-pages/" class="text-gray-400 hover:text-white">Core Pages</a></li>
                         <li><a href="{{ website_base }}blogs/" class="text-gray-400 hover:text-white">Blogs</a></li>
+                        {% if has_certificates %}<li><a href="{% url 'public_certificates' %}" class="text-gray-400 hover:text-white">Certificates</a></li>{% endif %}
                     </ul>
                 </div>
 
@@ -137,7 +138,7 @@
                         {% endif %}
                     </div>
                     <p class="text-sm text-gray-400">
-                        Created At <a href="https://1matrix.io" class="text-gray-400 hover:text-white font-bold">1Matrix.io</a>
+                        Created At <a href="https://onewooz.com" class="text-gray-400 hover:text-white font-bold">onewooz.com</a>
                     </p>
                 </div>
             </div>
@@ -163,10 +164,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if(!email){ showToast('Please enter your email', false); return; }
         try{
             const action = form.getAttribute('action');
+            const csrf = '{{ csrf_token }}';
             const res = await fetch(action, {
                 method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                body: new URLSearchParams({ email })
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf },
+                body: new URLSearchParams({ email, csrfmiddlewaretoken: csrf })
             });
             const data = await res.json();
             if(res.ok && data.status === 'success'){

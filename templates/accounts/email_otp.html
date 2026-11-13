@@ -1,4 +1,5 @@
 {% extends "accounts/_auth_shell.html" %}
+{% load static %}
 
 {% block title %}Enter your code · OneWooz{% endblock %}
 {% block auth_title %}Check your email{% endblock %}
@@ -10,12 +11,7 @@
   <form method="post" action="{% url 'accounts:email_otp' %}" class="auth__form">
     {% csrf_token %}
 
-    <div class="field">
-      <label class="sr-only" for="code">Six-digit code</label>
-      <input class="input input--code" type="text" name="code" id="code"
-             inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
-             autocomplete="one-time-code" required autofocus>
-    </div>
+    {% include "accounts/_otp_field.html" %}
 
     <button type="submit" class="btn btn--primary btn--block mt-6">Continue</button>
   </form>
@@ -25,4 +21,8 @@
   <p class="auth__footer">
     Didn't get it? Check spam, or <a href="{% url 'accounts:sign_in' %}">start again</a>.
   </p>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{% static 'js/otp-boxes.js' %}"></script>
 {% endblock %}

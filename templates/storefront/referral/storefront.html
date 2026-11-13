@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{ site_title }} - Storefront</title>
+	{% if website.content.favicon %}
+	<link rel="icon" href="{{ website.content.favicon }}" type="image/x-icon">
+	{% endif %}
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<style>
+		body, html { font-family: 'Poppins', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; }
+		* { font-family: inherit; }
+	</style>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script>
+		tailwind.config = {
+			theme: {
+				extend: {
+					colors: { ivory: '#f5f2ec', textMuted: 'rgba(0,0,0,0.60)', tile: '#e5e5e5', peach: '#f7a65a' },
+					boxShadow: { phone: '0 30px 80px -30px rgba(0,0,0,0.45)' },
+					borderRadius: { phone: '32px' }
+				}
+			}
+		};
+	</script>
+	<style>
+		.card-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+		.card-scroll::-webkit-scrollbar { width: 0px; height: 0px; }
+		.h-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+		.h-scroll::-webkit-scrollbar { display: none; }
+		.sticky-guard { transform: translateZ(0); will-change: transform; }
+		.safe-pb { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+		.aspect-3-4{ aspect-ratio: 3/4; }
+		.aspect-4-3{ aspect-ratio: 4/3; }
+		.aspect-1-1{ aspect-ratio: 1/1; }
+	</style>
+	<meta name="color-scheme" content="light only">
+</head>
+<body class="bg-ivory flex items-center justify-center h-[100svh] overflow-hidden px-0 py-0 sm:min-h-screen sm:overflow-visible sm:px-6 sm:py-6">
+	<div class="w-[100vw] sm:w-[92vw] sm:max-w-[420px] sm:min-w-[320px] h-[100svh] sm:h-[88vh] sm:max-h-[860px] sm:min-h-[560px] bg-white rounded-none sm:rounded-phone shadow-none sm:shadow-phone ring-0 sm:ring-1 sm:ring-black/10 overflow-hidden relative">
+		<div class="absolute inset-0 flex flex-col">
+			<div class="flex-1 overflow-y-auto card-scroll" data-ptr-scroll>
+				<div id="ptr-indicator" class="hidden">
+					<div class="h-0 overflow-hidden transition-all duration-150" id="ptr-bar">
+						<div class="h-12 flex items-center justify-center text-[12px] text-black/70 bg-white border-b border-black/5">
+							<div class="flex items-center gap-2">
+								<span id="ptr-text">Pull to refresh</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!-- Top hero block -->
+				<div class="px-6 pt-3">
+					<div class="relative">
+						<div class="rounded-[18px] bg-tile h-[180px] overflow-hidden">
+							{% if cover_image %}
+							<img src="{{ cover_image }}" alt="{{ site_title }} storefront cover" class="absolute inset-0 w-full h-full object-cover rounded-[18px]">
+							{% else %}
+							<div class="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-200 to-slate-100"></div>
+							{% endif %}
+						</div>
+						<div class="absolute -bottom-14 right-6 w-[135px] h-[135px] rounded-full overflow-hidden bg-white ring-4 ring-white shadow-lg">
+							{% if profile_image %}
+							<img src="{{ profile_image }}" alt="{{ site_title }} profile photo" class="w-full h-full object-cover">
+							{% else %}
+							<div class="w-full h-full flex items-center justify-center bg-slate-200 text-slate-500 text-4xl font-semibold uppercase">{{ site_title|slice:":1" }}</div>
+							{% endif %}
+						</div>
+					</div>
+				</div>
+
+				<!-- About block -->
+				<div class="px-6 pt-8">
+					<h2 class="text-[22px] leading-6 font-semibold text-black tracking-tight">About my store</h2>
+					<p class="mt-3 text-[12px] leading-5 text-textMuted">
+						{% if referral.about_storefront %}
+							{{ referral.about_storefront }}
+						{% else %}
+							Discover hand-picked products curated just for you. Follow this store for my latest finds and honest recommendations.
+						{% endif %}
+					</p>
+				</div>
+
+				<!-- Reels section -->
+				<div class="mt-6">
+					<div class="px-6">
+						<h3 class="text-[14px] font-semibold text-black">Videos</h3>
+					</div>
+					<div class="mt-3 px-6">
+						{% if video_media %}
+						<div class="h-[260px] sm:h-[300px] flex gap-4 overflow-x-auto h-scroll snap-x snap-mandatory pr-6">
+							{% for media in video_media %}
+							<div class="relative shrink-0 h-full aspect-[9/16] snap-start rounded-2xl overflow-hidden bg-black">
+								<video class="reel-video absolute inset-0 w-full h-full object-cover" autoplay loop muted playsinline webkit-playsinline preload="metadata" poster="{{ media.thumbnail_url|default:'' }}" controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture>
+									<source src="{{ media.file.url }}" type="video/mp4">
+								</video>
+							</div>
+							{% endfor %}
+						</div>
+						{% else %}
+						<div class="h-[200px] flex items-center justify-center rounded-2xl border border-dashed border-black/10 bg-white/50 text-[12px] text-black/60">
+							No videos have been shared yet.
+						</div>
+						{% endif %}
+					</div>
+				</div>
+
+				<!-- Sticky search + filter bar -->
+				<div class="sticky top-0 z-20 sticky-guard">
+					<div class="bg-white border-b border-black/5">
+						<div class="px-6 pt-5">
+							<div class="grid grid-cols-[1fr_auto] gap-3 items-center">
+								<form method="get" class="flex items-center gap-3 h-11 px-3 rounded-xl bg-gray-100 text-gray-500 border border-black/5 w-full">
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="shrink-0">
+										<path d="M21 21l-3.9-3.9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+										<circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/>
+									</svg>
+									<input type="search" name="q" value="{{ query }}" placeholder="Search products" class="text-[13px] text-black/80 bg-transparent outline-none w-full"/>
+									{% if active_category %}
+										<input type="hidden" name="category" value="{{ active_category }}">
+									{% endif %}
+								</form>
+								<div class="relative">
+									<button type="button" id="storefront-menu-toggle" class="h-11 w-11 rounded-xl bg-black grid place-items-center text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black/50">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+											<circle cx="5" cy="12" r="1.8" fill="currentColor" />
+											<circle cx="12" cy="12" r="1.8" fill="currentColor" />
+											<circle cx="19" cy="12" r="1.8" fill="currentColor" />
+										</svg>
+									</button>
+									<div id="storefront-menu" class="hidden absolute right-0 mt-2 w-40 rounded-xl border border-black/10 bg-white shadow-lg shadow-black/10 py-1 z-30">
+										<a href="{% url 'public_about' %}" class="flex items-center gap-2 px-3 py-2 text-[13px] text-black/80 hover:bg-gray-100">
+											<span>About us</span>
+										</a>
+										<a href="{% url 'public_user_account' %}" class="flex items-center gap-2 px-3 py-2 text-[13px] text-black/80 hover:bg-gray-100 border-t border-black/5">
+											<span>Customer login</span>
+										</a>
+									</div>
+								</div>
+							</div>
+							<div id="category-row" class="mt-4 flex items-center gap-3 pb-4 overflow-x-auto h-scroll">
+								{% for tab in category_tabs %}
+									{% if tab.slug %}
+										<a data-category="{{ tab.slug }}" href="?category={{ tab.slug }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}" class="category-tab px-3 py-2 rounded-lg text-[12px] {% if tab.active %}bg-black text-white{% else %}border border-black/10 text-black/70{% endif %}">{{ tab.name }}</a>
+									{% else %}
+										<a data-category="" href="{% if query %}?q={{ query|urlencode }}{% else %}.{% endif %}" class="category-tab px-3 py-2 rounded-lg text-[12px] {% if tab.active %}bg-black text-white{% else %}border border-black/10 text-black/70{% endif %}">{{ tab.name }}</a>
+									{% endif %}
+								{% endfor %}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Product grid -->
+				<div class="px-6 pb-6">
+					<div id="products-grid" class="grid grid-cols-2 gap-4">
+						{% for product in products_page %}
+							<a href="{% url 'public_product_detail' product.slug %}" class="block group" aria-label="{{ product.title }}">
+								<article class="cursor-pointer">
+									<div class="overflow-hidden rounded-xl bg-gray-200 aspect-3-4">
+										{% if product.image %}
+											<img src="{{ product.image }}" alt="{{ product.title }}" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform">
+										{% endif %}
+									</div>
+									<div class="mt-2 flex items-center gap-2">
+										<h3 class="text-[13px] font-medium text-black">{{ product.title }}</h3>
+									</div>
+									<p class="text-[12px] text-black">{{ product.price_display }}</p>
+								</article>
+							</a>
+						{% empty %}
+							<div class="col-span-2 text-center text-black/60 py-8">
+								No products available right now. Please check back soon.
+							</div>
+						{% endfor %}
+					</div>
+					{% if paginator.num_pages > 1 %}
+						<div id="pagination" class="mt-6 flex items-center justify-between">
+							{% if page_obj.has_previous %}
+								<a href="?page={{ page_obj.previous_page_number }}{% if active_category %}&category={{ active_category }}{% endif %}{% if query %}&q={{ query|urlencode }}{% endif %}" class="h-10 px-4 rounded-xl bg-black text-white text-sm inline-flex items-center">
+									Prev
+								</a>
+							{% else %}
+								<span class="h-10 px-4 rounded-xl bg-gray-100 text-black/40 text-sm inline-flex items-center cursor-not-allowed">Prev</span>
+							{% endif %}
+							<span class="text-sm text-black/70">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+							{% if page_obj.has_next %}
+								<a href="?page={{ page_obj.next_page_number }}{% if active_category %}&category={{ active_category }}{% endif %}{% if query %}&q={{ query|urlencode }}{% endif %}" class="h-10 px-4 rounded-xl bg-black text-white text-sm inline-flex items-center">
+									Next
+								</a>
+							{% else %}
+								<span class="h-10 px-4 rounded-xl bg-gray-100 text-black/40 text-sm inline-flex items-center cursor-not-allowed">Next</span>
+							{% endif %}
+						</div>
+					{% endif %}
+				</div>
+				{% include 'storefront/referral/_footer.html' %}
+			</div>
+		</div>
+
+		{% include 'storefront/referral/_cart_drawer.html' %}
+	</div>
+</body>
+<script>
+	// Auto-play reels
+	(function () {
+		const videos = document.querySelectorAll('.reel-video');
+		if (!videos.length) return;
+		function muteAllExcept(active) { videos.forEach(other => { try { if (!active || other !== active) { other.muted = true; } } catch (_) {} }); }
+		videos.forEach(v => {
+			try {
+				v.muted = true;
+				const p = v.play();
+				if (p && typeof p.then === 'function') { p.catch(() => {}); }
+				v.addEventListener('click', function () {
+					try { if (v.muted) { muteAllExcept(v); v.muted = false; } else { v.muted = true; } } catch (_) {}
+				});
+			} catch (_) {}
+		});
+	})();
+</script>
+<script>
+	// Header quick menu
+	document.addEventListener('DOMContentLoaded', function () {
+		const toggle = document.getElementById('storefront-menu-toggle');
+		const menu = document.getElementById('storefront-menu');
+		if (!toggle || !menu) return;
+		function closeMenu() { menu.classList.add('hidden'); }
+		toggle.addEventListener('click', function (e) { e.stopPropagation(); menu.classList.toggle('hidden'); });
+		document.addEventListener('click', function (e) { if (!menu.classList.contains('hidden')) { if (!menu.contains(e.target) && e.target !== toggle) { closeMenu(); } } });
+	});
+</script>
+<script>
+	// Category filtering + pagination via AJAX
+	(function(){
+		function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c] || c); }); }
+		function qs(sel, root){ return (root||document).querySelector(sel); }
+		function qsa(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+		var catRow = qs('#category-row');
+		var grid = qs('#products-grid');
+		var pagination = qs('#pagination');
+		var searchInput = document.querySelector('input[name="q"]');
+		if (!catRow || !grid) return;
+		function setActiveTab(category){
+			qsa('.category-tab', catRow).forEach(function(a){
+				var slug = a.getAttribute('data-category') || '';
+				var on = String(slug) === String(category||'');
+				a.classList.toggle('bg-black', on);
+				a.classList.toggle('text-white', on);
+				a.classList.toggle('border', !on);
+				a.classList.toggle('border-black/10', !on);
+				a.classList.toggle('text-black/70', !on);
+			});
+			try{
+				var hidden = document.querySelector('input[name="category"][type="hidden"]');
+				if (!hidden) return;
+				if (category){ hidden.value = category; } else { hidden.parentNode && hidden.parentNode.removeChild(hidden); }
+			}catch(_){}
+		}
+		function buildParams(state){
+			var p = new URLSearchParams();
+			if (state.category) p.set('category', state.category);
+			if (state.q) p.set('q', state.q);
+			if (state.page && state.page > 1) p.set('page', String(state.page));
+			return p;
+		}
+		function updateGrid(products){
+			if (!products || !products.length){
+				grid.innerHTML = '<div class="col-span-2 text-center text-black/60 py-8">No products available right now. Please check back soon.</div>';
+				return;
+			}
+			var html = '';
+			products.forEach(function(p){
+				html += '' +
+					'<a href="' + esc(p.url) + '" class="block group" aria-label="' + esc(p.title) + '">' +
+					'  <article class="cursor-pointer">' +
+					'    <div class="overflow-hidden rounded-xl bg-gray-200 aspect-3-4">' +
+					(p.image ? ('      <img src="' + esc(p.image) + '" alt="' + esc(p.title) + '" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform">') : '') +
+					'    </div>' +
+					'    <div class="mt-2 flex items-center gap-2">' +
+					'      <h3 class="text-[13px] font-medium text-black">' + esc(p.title) + '</h3>' +
+					'    </div>' +
+					'    <p class="text-[12px] text-black">' + esc(p.price_display) + '</p>' +
+					'  </article>' +
+					'</a>';
+			});
+			grid.innerHTML = html;
+		}
+		function updatePagination(meta){
+			if (!pagination) return;
+			var num = meta.num_pages || 1;
+			if (num <= 1){ pagination.innerHTML = ''; pagination.classList.add('hidden'); return; }
+			pagination.classList.remove('hidden');
+			var prevPage = meta.previous_page || 1;
+			var nextPage = meta.next_page || num;
+			pagination.innerHTML =
+				(!meta.has_previous
+					? '<span class="h-10 px-4 rounded-xl bg-gray-100 text-black/40 text-sm inline-flex items-center cursor-not-allowed">Prev</span>'
+					: '<a data-page="' + prevPage + '" href="#" class="pager-link h-10 px-4 rounded-xl bg-black text-white text-sm inline-flex items-center">Prev</a>') +
+				'<span class="text-sm text-black/70">Page ' + (meta.page || 1) + ' of ' + num + '</span>' +
+				(!meta.has_next
+					? '<span class="h-10 px-4 rounded-xl bg-gray-100 text-black/40 text-sm inline-flex items-center cursor-not-allowed">Next</span>'
+					: '<a data-page="' + nextPage + '" href="#" class="pager-link h-10 px-4 rounded-xl bg-black text-white text-sm inline-flex items-center">Next</a>');
+		}
+		function setLoading(on){ try{ grid.style.opacity = on ? '0.55' : '1'; grid.style.pointerEvents = on ? 'none' : 'auto'; }catch(_){} }
+		async function load(state, push){
+			setLoading(true);
+			try{
+				var params = buildParams(state);
+				var url = window.location.pathname + (params.toString() ? ('?' + params.toString()) : '');
+				var res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+				var data = await res.json();
+				if (!res.ok || !data || !data.success) throw new Error('bad');
+				setActiveTab(data.active_category || '');
+				updateGrid(data.products || []);
+				updatePagination(data);
+				if (push){ try { history.pushState(state, '', url); } catch(_){} }
+			}catch(_){
+				window.location.href = (window.location.pathname + (buildParams(state).toString() ? ('?' + buildParams(state).toString()) : ''));
+			}finally{ setLoading(false); }
+		}
+		catRow.addEventListener('click', function(e){
+			var a = e.target && e.target.closest ? e.target.closest('a.category-tab') : null;
+			if (!a) return;
+			e.preventDefault();
+			var category = a.getAttribute('data-category') || '';
+			var q = (searchInput && searchInput.value ? searchInput.value.trim() : '');
+			load({ category: category, q: q, page: 1 }, true);
+		});
+		document.addEventListener('click', function(e){
+			var a = e.target && e.target.closest ? e.target.closest('a.pager-link') : null;
+			if (!a) return;
+			e.preventDefault();
+			var page = parseInt(a.getAttribute('data-page') || '1', 10) || 1;
+			var active = (qs('.category-tab.bg-black', catRow) && qs('.category-tab.bg-black', catRow).getAttribute('data-category')) || '';
+			var q = (searchInput && searchInput.value ? searchInput.value.trim() : '');
+			load({ category: active || '', q: q, page: page }, true);
+		});
+		// Live search  filter the grid as the shopper types (debounced). No
+		// manual submit button; Enter never reloads the whole page.
+		if (searchInput){
+			var searchForm = searchInput.closest('form');
+			if (searchForm){ searchForm.addEventListener('submit', function(e){ e.preventDefault(); }); }
+			function currentCategory(){ var el = qs('.category-tab.bg-black', catRow); return (el && el.getAttribute('data-category')) || ''; }
+			var searchTimer = null;
+			searchInput.addEventListener('input', function(){
+				if (searchTimer) clearTimeout(searchTimer);
+				searchTimer = setTimeout(function(){
+					load({ category: currentCategory(), q: searchInput.value.trim(), page: 1 }, true);
+				}, 250);
+			});
+		}
+		window.addEventListener('popstate', function(ev){ var st = (ev && ev.state) ? ev.state : null; if (!st) return; load({ category: st.category || '', q: st.q || '', page: st.page || 1 }, false); });
+	})();
+</script>
+<script>
+	// Newsletter AJAX
+	document.addEventListener('DOMContentLoaded', function () {
+		const form = document.getElementById('newsletter-form');
+		if (!form) return;
+		const toast = document.getElementById('newsletter-toast');
+		function showToast(message, ok=true){
+			if(!toast) return;
+			toast.textContent = message;
+			toast.classList.remove('hidden');
+			toast.style.backgroundColor = ok ? '#ffffff' : '#ef4444';
+			toast.style.color = ok ? '#111827' : '#ffffff';
+			setTimeout(()=>toast.classList.add('hidden'), 2500);
+		}
+		form.addEventListener('submit', async function(e){
+			e.preventDefault();
+			const email = document.getElementById('footer-email').value.trim();
+			if(!email){ showToast('Please enter your email', false); return; }
+			try{
+				const action = form.getAttribute('action');
+				var csrf='{{ csrf_token }}';
+				const res = await fetch(action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf }, body: new URLSearchParams({ email, csrfmiddlewaretoken: csrf }) });
+				const data = await res.json();
+				if(res.ok && (data.status === 'success' || data.ok)){ showToast(data.message || 'Subscribed successfully'); form.reset(); }
+				else { showToast(data.message || 'Subscription failed', false); }
+			}catch(err){ showToast('Network error. Please try again.', false); }
+		});
+	});
+</script>
+<script>
+	// Pull-to-refresh
+	(function(){
+		var scrollEl = document.querySelector('[data-ptr-scroll]');
+		if (!scrollEl) return;
+		var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+		if (!isTouch) return;
+		var indicator = document.getElementById('ptr-indicator');
+		var bar = document.getElementById('ptr-bar');
+		var text = document.getElementById('ptr-text');
+		if (!indicator || !bar || !text) return;
+		var startY = 0, pulling = false, triggered = false;
+		var maxPull = 110, threshold = 78;
+		function setBar(px){ var h = Math.max(0, Math.min(maxPull, px)); indicator.classList.remove('hidden'); bar.style.height = h + 'px'; text.textContent = (h >= threshold) ? 'Release to refresh' : 'Pull to refresh'; }
+		function reset(){ pulling = false; triggered = false; bar.style.height = '0px'; text.textContent = 'Pull to refresh'; setTimeout(function(){ try{ indicator.classList.add('hidden'); }catch(_){ } }, 180); }
+		scrollEl.addEventListener('touchstart', function(e){ try{ var t = e.target; if (t && (t.closest('input,textarea,select,button') || t.isContentEditable)) return; if (scrollEl.scrollTop > 0) return; startY = (e.touches && e.touches[0]) ? e.touches[0].clientY : 0; pulling = true; }catch(_){} }, { passive: true });
+		scrollEl.addEventListener('touchmove', function(e){ if (!pulling) return; try{ if (scrollEl.scrollTop > 0){ reset(); return; } var y = (e.touches && e.touches[0]) ? e.touches[0].clientY : 0; var dy = y - startY; if (dy <= 0){ setBar(0); return; } e.preventDefault(); setBar(dy * 0.85); triggered = (dy * 0.85) >= threshold; }catch(_){} }, { passive: false });
+		scrollEl.addEventListener('touchend', function(){ if (!pulling) return; if (triggered){ text.textContent = 'Refreshing…'; bar.style.height = '52px'; setTimeout(function(){ window.location.reload(); }, 250); return; } reset(); }, { passive: true });
+	})();
+</script>
+</html>

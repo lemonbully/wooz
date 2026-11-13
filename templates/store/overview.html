@@ -4,31 +4,38 @@
 
 {% block main %}
 <div class="app-page">
-
-  <div class="app-head">
-    <div>
-      <p class="pal-mono pal-mono--accent">{{ site.get_business_model_display }} store</p>
-      <h1 class="app-head__title pal-mt-4">{{ site.name }}</h1>
-      <p class="app-head__lead">{{ site.tagline|default:"Your store command centre — orders, catalogue and growth in one place." }}</p>
-    </div>
-    <div class="app-head__actions">
-      <a href="{% url 'store:product_new' site.id %}" class="pal-btn">Add product <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
-      <a href="{% url 'store:settings' site.id %}" class="pal-btn pal-btn--ghost">Settings</a>
-    </div>
-  </div>
-
-  <div class="app-block">
-    <div class="app-block__head">
-      <p class="pal-mono">Performance</p>
-      <span class="app-pill">30-day window</span>
-    </div>
-    <div class="app-kpis">
-      {% for kpi in kpis %}
-        <div class="app-kpi">
-          <p class="app-kpi__label">{{ kpi.label }}</p>
-          <p class="app-kpi__value">{{ kpi.value }}</p>
-          <p class="app-kpi__delta app-kpi__delta--flat">{{ kpi.caption }}</p>
+  <div>
+    <div class="app-block__head app-block__head--wrap">
+      <p class="pal-mono">Performance · {{ window_label }}</p>
+      <form method="get" class="ov-win" aria-label="Filter metrics by time window">
+        <div class="ov-win__presets" role="group" aria-label="Preset windows">
+          {% for val, label in window_presets %}
+            <button type="submit" name="window" value="{{ val }}" class="ov-win__opt{% if window == val %} is-active{% endif %}">{{ label }}</button>
+          {% endfor %}
         </div>
+        <div class="ov-win__custom">
+          <input type="date" name="from" value="{{ custom_from }}" class="ov-win__date" aria-label="From date" max="{{ custom_to|default:'' }}">
+          <span class="ov-win__dash" aria-hidden="true">–</span>
+          <input type="date" name="to" value="{{ custom_to }}" class="ov-win__date" aria-label="To date">
+          <button type="submit" name="window" value="custom" class="ov-win__opt ov-win__apply{% if window == 'custom' %} is-active{% endif %}">Apply</button>
+        </div>
+      </form>
+    </div>
+    <div class="app-kpis app-kpis--six">
+      {% for kpi in kpis %}
+        {% if kpi.url %}
+          <a href="{{ kpi.url }}" class="app-kpi app-kpi--link">
+            <p class="app-kpi__label">{{ kpi.label }} <span class="app-kpi__go" aria-hidden="true">→</span></p>
+            <p class="app-kpi__value">{{ kpi.value }}</p>
+            <p class="app-kpi__delta app-kpi__delta--flat">{{ kpi.caption }}</p>
+          </a>
+        {% else %}
+          <div class="app-kpi">
+            <p class="app-kpi__label">{{ kpi.label }}</p>
+            <p class="app-kpi__value">{{ kpi.value }}</p>
+            <p class="app-kpi__delta app-kpi__delta--flat">{{ kpi.caption }}</p>
+          </div>
+        {% endif %}
       {% endfor %}
     </div>
   </div>
@@ -47,8 +54,8 @@
               <tbody>
                 {% for order in recent_orders %}
                   <tr>
-                    <td class="app-table__id"><a href="{% url 'store:order_detail' site.id order.id %}">#{{ order.number }}</a></td>
-                    <td>{{ order.customer_name|default:"—" }}</td>
+                    <td class="app-table__id"><a href="{% url 'store:order_detail' site.id order.id %}">#{{ order.display_number }}</a></td>
+                    <td>{{ order.customer_name|default:"" }}</td>
                     <td><span class="app-badge app-badge--{{ order.status }}">{{ order.get_status_display }}</span></td>
                     <td class="app-table__num">{{ site.currency }} {{ order.total }}</td>
                   </tr>

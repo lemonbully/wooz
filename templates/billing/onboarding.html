@@ -1,0 +1,330 @@
+{% extends "accounts/_auth_shell.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} · OneWooz{% endblock %}
+
+{% comment %}
+Post-payment onboarding (app surface). Reached with a signed token once a
+subscription order settles. Three states:
+
+  onboard_error       the link is invalid or expired.
+  already_registered  an account already exists for the order's email.
+  (default)           the account-creation + tax-profile form.
+
+All validation is authoritative in billing.onboarding; the inline script only
+makes the same rules visible as the buyer types (entity → which tax id, live
+password checklist, confirm-match). Every field re-fills from POST on error.
+{% endcomment %}
+
+{% block auth_title %}
+  {% if onboard_error %}This link isn’t active
+  {% elif already_registered %}You already have an account
+  {% else %}Complete your account{% endif %}
+{% endblock %}
+
+{% block auth_subtitle %}
+  {% if onboard_error %}
+    <p class="auth__subtitle">Your onboarding link has expired or was already used. If your
+      payment went through, sign in with the same email to activate your subscription.</p>
+  {% elif already_registered %}
+    <p class="auth__subtitle">There’s already a OneWooz account for <strong>{{ email }}</strong>.
+      Your subscription is tied to this email  sign in and it’s ready.</p>
+  {% else %}
+    <p class="auth__subtitle">Payment received for <strong>{{ order.plan_name }}</strong>.
+      A few last details and your dashboard is ready.</p>
+  {% endif %}
+{% endblock %}
+
+{% block auth_body %}
+{% if onboard_error %}
+  <a href="{% url 'accounts:sign_in' %}" class="btn btn--primary btn--block mt-6">Go to sign in</a>
+
+{% elif already_registered %}
+  <a href="{{ sign_in_url }}" class="btn btn--primary btn--block mt-6">Sign in to activate &rarr;</a>
+
+{% else %}
+<style nonce="{{ csp_nonce }}">
+  /* Widen the auth console for this multi-field form (only ever on this page). */
+  .pal-auth__wrap{max-width:34rem}
+  .ob-form{margin-top:.5rem}
+  .ob-sec{margin-top:1.6rem}
+  .ob-sec:first-child{margin-top:0}
+  .ob-sec__h{font-family:var(--pal-font-mono);font-size:.6rem;font-weight:500;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--pal-accent);margin:0 0 .8rem;padding-bottom:.5rem;
+    border-bottom:1px solid var(--pal-line)}
+  .ob-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start}
+  /* Override pal.css's `.pal .field + .field { margin-top }` (equal specificity,
+     so this must be at least as specific and load later)  otherwise the
+     right-hand cell in each row is pushed down and the columns stop lining up. */
+  .pal .ob-grid > .field{margin-top:0}
+  .ob-grid--full{grid-column:1 / -1}
+  @media (max-width:32rem){.ob-grid{grid-template-columns:1fr}}
+
+  /* Entity type  two selectable cards (radio underneath). */
+  .ob-ent{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}
+  @media (max-width:32rem){.ob-ent{grid-template-columns:1fr}}
+  .ob-ent__opt{position:relative;display:flex;flex-direction:column;gap:.15rem;cursor:pointer;
+    border:1px solid var(--pal-line);background:var(--pal-panel);padding:.75rem .8rem;
+    transition:border-color .16s ease,box-shadow .16s ease}
+  .ob-ent__opt:hover{border-color:var(--pal-accent)}
+  .ob-ent__opt input{position:absolute;opacity:0;pointer-events:none}
+  .ob-ent__opt:has(input:checked){border-color:var(--pal-accent);box-shadow:inset 0 0 0 1px var(--pal-accent)}
+  .ob-ent__opt:has(input:focus-visible){outline:2px solid var(--pal-accent);outline-offset:2px}
+  .ob-ent__t{font-family:var(--pal-font-display);font-size:.98rem;color:var(--pal-ink);line-height:1.1}
+  .ob-ent__d{font-family:var(--pal-font-mono);font-size:.58rem;letter-spacing:.03em;text-transform:uppercase;
+    color:var(--pal-muted)}
+
+  .ob-err{margin-top:.4rem;font-family:var(--pal-font-mono);font-size:.66rem;letter-spacing:.02em;
+    line-height:1.5;color:#b0271d}
+  .field .input[aria-invalid="true"]{border-color:#b0271d;box-shadow:inset 0 0 0 1px #b0271d}
+  .ob-input--mono{font-family:var(--pal-font-mono);letter-spacing:.05em;text-transform:uppercase}
+  .ob-input--mono::placeholder{text-transform:none;letter-spacing:0}
+
+  /* Password rule checklist. */
+  .ob-rules{margin:.7rem 0 0;padding:0;list-style:none;display:grid;gap:.35rem}
+  .ob-rules li{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--pal-muted);line-height:1.4}
+  .ob-rules li .ob-tick{flex:0 0 auto;width:1rem;height:1rem;border:1px solid var(--pal-line);
+    display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;color:transparent;border-radius:2px}
+  .ob-rules li.ok{color:var(--pal-ink)}
+  .ob-rules li.ok .ob-tick{border-color:var(--positive);background:var(--positive);color:#fff}
+  .ob-match{margin-top:.5rem;font-family:var(--pal-font-mono);font-size:.66rem;letter-spacing:.02em}
+  .ob-match.ok{color:var(--positive)}
+  .ob-match.bad{color:#b0271d}
+  .ob-pw-wrap{position:relative}
+  .ob-eye{position:absolute;top:.5rem;right:.5rem;appearance:none;border:0;background:none;cursor:pointer;
+    font-family:var(--pal-font-mono);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--pal-muted)}
+  .ob-eye:hover{color:var(--pal-accent)}
+</style>
+
+<form method="post" class="ob-form" novalidate id="ob-form"
+      action="{% url 'onboarding' token %}" autocomplete="on">
+  {% csrf_token %}
+
+  {# ---- Registration / tax identity ---- #}
+  <div class="ob-sec">
+    <p class="ob-sec__h">How you’re registering</p>
+    <div class="ob-ent" role="radiogroup" aria-label="Registration type">
+      <label class="ob-ent__opt">
+        <input type="radio" name="entity_type" value="company" data-tax="gstin"
+               {% if form.entity_type == 'company' or not form.entity_type %}checked{% endif %}>
+        <span class="ob-ent__t">Company</span>
+        <span class="ob-ent__d">GSTIN</span>
+      </label>
+      <label class="ob-ent__opt">
+        <input type="radio" name="entity_type" value="individual" data-tax=""
+               {% if form.entity_type == 'individual' %}checked{% endif %}>
+        <span class="ob-ent__t">Individual</span>
+        <span class="ob-ent__d">No tax ID needed</span>
+      </label>
+    </div>
+    {% if field_errors.entity_type %}<p class="ob-err">{{ field_errors.entity_type }}</p>{% endif %}
+
+    {% comment %}
+    Company → GSTIN only. Individual → no tax id field at all (PAN is not asked
+    for now). Server-rendered to the selected entity so the right state shows
+    even before / without JS. Default entity is Company, so GSTIN shows on a
+    fresh load.
+    {% endcomment %}
+
+    {# GSTIN  shown for Company (the default) #}
+    <div class="field mt-4" id="ob-gstin-field" {% if form.entity_type == 'individual' %}hidden{% endif %}>
+      <label class="label" for="gstin">GSTIN</label>
+      <input class="input ob-input--mono" type="text" name="gstin" id="gstin" maxlength="15"
+             value="{{ form.gstin|default:'' }}" placeholder="22ABCDE1234F1Z5" autocomplete="off"
+             {% if form.entity_type == 'individual' %}disabled{% endif %}
+             {% if field_errors.gstin %}aria-invalid="true"{% endif %}>
+      {% if field_errors.gstin %}<p class="ob-err">{{ field_errors.gstin }}</p>
+      {% else %}<p class="hint">Your 15-character GST identification number.</p>{% endif %}
+    </div>
+  </div>
+
+  {# ---- Business + contact ---- #}
+  <div class="ob-sec">
+    <p class="ob-sec__h">Business details</p>
+
+    <div class="field">
+      <label class="label" for="company_name" id="ob-name-label">Company name</label>
+      <input class="input" type="text" name="company_name" id="company_name" maxlength="200"
+             value="{{ form.company_name|default:'' }}" autocomplete="organization"
+             {% if field_errors.company_name %}aria-invalid="true"{% endif %}>
+      {% if field_errors.company_name %}<p class="ob-err">{{ field_errors.company_name }}</p>{% endif %}
+    </div>
+
+    <div class="ob-grid mt-4">
+      <div class="field">
+        <label class="label" for="email">Email</label>
+        <input class="input" type="email" id="email" value="{{ email }}" readonly autocomplete="email">
+        <p class="hint">The address you verified. Sign-in email.</p>
+      </div>
+      <div class="field">
+        <label class="label" for="phone">Mobile number</label>
+        <input class="input" type="tel" name="phone" id="phone" maxlength="15"
+               value="{{ form.phone|default:'' }}" autocomplete="tel" inputmode="numeric"
+               placeholder="10-digit mobile"
+               {% if field_errors.phone %}aria-invalid="true"{% endif %}>
+        {% if field_errors.phone %}<p class="ob-err">{{ field_errors.phone }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="ob-grid mt-4">
+      <div class="field">
+        <label class="label" for="state">State</label>
+        <select class="input" name="state" id="state"
+                {% if field_errors.state %}aria-invalid="true"{% endif %}>
+          <option value="">Select a state…</option>
+          {% for s in states %}
+          <option value="{{ s }}" {% if form.state == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+        {% if field_errors.state %}<p class="ob-err">{{ field_errors.state }}</p>{% endif %}
+      </div>
+      <div class="field">
+        <label class="label" for="city">City</label>
+        <input class="input" type="text" name="city" id="city" maxlength="80"
+               value="{{ form.city|default:'' }}" autocomplete="address-level2"
+               {% if field_errors.city %}aria-invalid="true"{% endif %}>
+        {% if field_errors.city %}<p class="ob-err">{{ field_errors.city }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="field mt-4">
+      <label class="label" for="address">Address</label>
+      <textarea class="input" name="address" id="address" rows="2" maxlength="1000"
+                autocomplete="street-address"
+                {% if field_errors.address %}aria-invalid="true"{% endif %}
+                placeholder="Building, street, area, PIN">{{ form.address|default:'' }}</textarea>
+      {% if field_errors.address %}<p class="ob-err">{{ field_errors.address }}</p>{% endif %}
+    </div>
+  </div>
+
+  {# ---- Password ---- #}
+  <div class="ob-sec">
+    <p class="ob-sec__h">Set a password</p>
+
+    <div class="field">
+      <label class="label" for="password">Password</label>
+      <div class="ob-pw-wrap">
+        <input class="input" type="password" name="password" id="password"
+               autocomplete="new-password"
+               {% if field_errors.password %}aria-invalid="true"{% endif %}>
+        <button type="button" class="ob-eye" id="ob-eye" aria-label="Show password">Show</button>
+      </div>
+      {% if field_errors.password %}<p class="ob-err">{{ field_errors.password }}</p>{% endif %}
+      <ul class="ob-rules" id="ob-rules" aria-hidden="true">
+        {% for key, label in password_rules %}
+        <li data-rule="{{ key }}"><span class="ob-tick">✓</span><span>{{ label }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="field mt-4">
+      <label class="label" for="confirm_password">Confirm password</label>
+      <input class="input" type="password" name="confirm_password" id="confirm_password"
+             autocomplete="new-password"
+             {% if field_errors.confirm_password %}aria-invalid="true"{% endif %}>
+      {% if field_errors.confirm_password %}<p class="ob-err">{{ field_errors.confirm_password }}</p>{% endif %}
+      <p class="ob-match" id="ob-match" hidden></p>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn--primary btn--block mt-6" id="ob-submit">
+    Create account &amp; open dashboard
+  </button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not onboard_error and not already_registered %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var qs = function (s, r) { return (r || document).querySelector(s); };
+    var qsa = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+    // ── Entity type → GSTIN shown only for a company ───────────────────────
+    var gstField = qs("#ob-gstin-field");
+    var gstIn = qs("#gstin"), nameLabel = qs("#ob-name-label");
+    function syncEntity() {
+      var checked = qs('input[name="entity_type"]:checked');
+      var showGst = !checked || checked.getAttribute("data-tax") === "gstin";
+      if (gstField) gstField.hidden = !showGst;
+      // A hidden field must not block submission or carry a stale value server-side.
+      if (gstIn) gstIn.disabled = !showGst;
+      if (nameLabel) nameLabel.textContent = (checked && checked.value === "individual")
+        ? "Your name" : "Company name";
+    }
+    qsa('input[name="entity_type"]').forEach(function (r) {
+      r.addEventListener("change", syncEntity);
+    });
+    syncEntity();
+
+    // Upper-case the tax ids as typed (matches server normalisation).
+    function upperize(el) {
+      if (!el) return;
+      el.addEventListener("input", function () {
+        var start = el.selectionStart;
+        el.value = el.value.toUpperCase();
+        try { el.setSelectionRange(start, start); } catch (e) {}
+      });
+    }
+    upperize(gstIn);
+
+    // Digits only for phone.
+    var phone = qs("#phone");
+    if (phone) phone.addEventListener("input", function () {
+      phone.value = phone.value.replace(/\D+/g, "").slice(0, 15);
+    });
+
+    // ── Live password checklist ────────────────────────────────────────────
+    var pw = qs("#password"), confirm = qs("#confirm_password");
+    var rules = qsa("#ob-rules li");
+    function testRule(key, v) {
+      switch (key) {
+        case "length": return v.length >= 12;
+        case "upper": return /[A-Z]/.test(v);
+        case "lower": return /[a-z]/.test(v);
+        case "digit": return /[0-9]/.test(v);
+        case "symbol": return /[^A-Za-z0-9]/.test(v);
+      }
+      return true;
+    }
+    function paintRules() {
+      var v = pw ? pw.value : "";
+      rules.forEach(function (li) {
+        li.classList.toggle("ok", testRule(li.getAttribute("data-rule"), v));
+      });
+    }
+    var match = qs("#ob-match");
+    function paintMatch() {
+      if (!match || !confirm) return;
+      var c = confirm.value;
+      if (!c) { match.hidden = true; return; }
+      match.hidden = false;
+      var ok = c === (pw ? pw.value : "");
+      match.textContent = ok ? "Passwords match." : "Passwords don’t match yet.";
+      match.className = "ob-match " + (ok ? "ok" : "bad");
+    }
+    if (pw) pw.addEventListener("input", function () { paintRules(); paintMatch(); });
+    if (confirm) confirm.addEventListener("input", paintMatch);
+    paintRules();
+
+    // Show / hide password.
+    var eye = qs("#ob-eye");
+    if (eye && pw) eye.addEventListener("click", function () {
+      var show = pw.type === "password";
+      pw.type = show ? "text" : "password";
+      eye.textContent = show ? "Hide" : "Show";
+    });
+
+    // Guard against a double-submit spinning up two account creations.
+    var form = qs("#ob-form"), submit = qs("#ob-submit");
+    if (form && submit) form.addEventListener("submit", function () {
+      submit.disabled = true;
+      submit.textContent = "Creating your account…";
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}

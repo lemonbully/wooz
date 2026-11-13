@@ -1,0 +1,69 @@
+{% extends "storefront/referral/_page_shell.html" %}
+{% comment %}
+Core-pages hub for the collaboration store  mirrors the owner store's
+core_pages.html: a card per top-level page plus a full page → subpage → child
+tree, laid out single-column for the phone card. Links resolve on the referral
+urlconf (public_core_page / public_core_subpage / public_core_child).
+{% endcomment %}
+{% block page_heading %}Pages{% endblock %}
+{% block page_inner %}
+<div class="px-5 pt-4 pb-8">
+{% if pages %}
+
+	<div class="space-y-3">
+		{% for p in pages %}
+		<a href="{% url 'public_core_page' p.slug %}" class="block rounded-2xl border border-black/10 p-4 hover:bg-gray-50 transition-colors">
+			<div class="flex items-start gap-3">
+				<div class="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+					<svg class="h-5 w-5 text-black/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+				</div>
+				<div class="min-w-0 flex-1">
+					<h3 class="text-[14px] font-semibold text-black">{{ p.title }}</h3>
+					{% if p.subtitle %}<p class="mt-0.5 text-[12px] text-black/55 line-clamp-2">{{ p.subtitle }}</p>{% endif %}
+				</div>
+				<svg class="h-4 w-4 text-black/30 shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+			</div>
+		</a>
+		{% endfor %}
+	</div>
+
+	<div class="mt-6 rounded-2xl border border-black/10 overflow-hidden">
+		<div class="px-4 py-3 border-b border-black/5">
+			<h3 class="text-[13px] font-semibold text-black">Browse as a tree</h3>
+			<p class="text-[11px] text-black/50">Pages → subpages → child pages</p>
+		</div>
+		<div class="p-4">
+			<ul class="space-y-3 text-[13px]">
+				{% for p in pages %}
+				<li>
+					<a href="{% url 'public_core_page' p.slug %}" class="font-semibold text-black hover:underline">{{ p.title }}</a>
+					{% if p.subpages %}
+					<ul class="mt-2 pl-3 border-l border-black/10 space-y-1.5">
+						{% for sp in p.subpages %}{% if sp.slug %}
+						<li>
+							<a href="{% url 'public_core_subpage' p.slug sp.slug %}" class="text-black/80 hover:underline">{{ sp.title }}</a>
+							{% if sp.children %}
+							<ul class="mt-1 pl-3 border-l border-black/10 space-y-1">
+								{% for n in sp.children %}{% if n.slug %}
+								<li><a href="{% url 'public_core_child' p.slug sp.slug n.slug %}" class="text-black/55 hover:underline">{{ n.title }}</a></li>
+								{% endif %}{% endfor %}
+							</ul>
+							{% endif %}
+						</li>
+						{% endif %}{% endfor %}
+					</ul>
+					{% endif %}
+				</li>
+				{% endfor %}
+			</ul>
+		</div>
+	</div>
+
+{% else %}
+	<div class="rounded-2xl border border-dashed border-black/15 p-10 text-center">
+		<h2 class="text-[15px] font-semibold text-black">No pages yet</h2>
+		<p class="mt-1 text-[13px] text-black/55">This store hasn't published any pages.</p>
+	</div>
+{% endif %}
+</div>
+{% endblock %}

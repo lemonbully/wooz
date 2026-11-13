@@ -1,4 +1,4 @@
-# OneWooz edge — production.
+# OneWooz edge  production.
 #
 # TLS terminates here (not at the load balancer) because an AWS ALB can only
 # serve certificates for domains you own, and OneWooz must serve HTTPS for
@@ -9,7 +9,8 @@
 # Env expected:
 #   APP_UPSTREAM       app host:port (default 127.0.0.1:8000; compose sets web:8000)
 #   CADDY_ASK_SECRET   shared secret for the on-demand ask (== ONEWOOZ_CADDY_ASK_SECRET)
-#   ACME_EMAIL         Let's Encrypt account email
+#   ACME_EMAIL         ACME account email  ZeroSSL derives EAB credentials from it,
+#                      so NO ZeroSSL API key is needed (see the tls block below)
 #   REDIS_HOST         ElastiCache endpoint (certificate store)
 #   REDIS_PORT         default 6379
 #   REDIS_TLS          "true" for ElastiCache in-transit encryption, else "false"
@@ -18,8 +19,8 @@
 	admin off
 	email {$ACME_EMAIL}
 
-	# Mint certificates on first request — for storefront subdomains and
-	# custom domains — but only when the app authorises the hostname. Without
+	# Mint certificates on first request  for storefront subdomains and
+	# custom domains  but only when the app authorises the hostname. Without
 	# the ask, anyone pointing DNS at us could burn our ACME rate limit.
 	on_demand_tls {
 		ask http://{$APP_UPSTREAM:127.0.0.1:8000}/internal/caddy/ask?secret={$CADDY_ASK_SECRET}
@@ -58,17 +59,36 @@
 	}
 }
 
-# Platform hosts — certificates via the normal HTTP-01 challenge (no wildcard,
-# so no DNS-01 plugin needed). Point their DNS at the NLB.
-onewooz.com, www.onewooz.com, app.onewooz.com, admin.onewooz.com {
-	import proxy
+# Certificate authorities, tried in order. Let's Encrypt is primary because
+# ZeroSSL's ACME endpoint has been timing out from this edge (http2 timeouts on
+# newOrder/newNonce), and a stuck primary hogs the account-registration lock and
+# blocks the fallback. ZeroSSL stays as the second issuer, still keyed with no
+# API key (EAB derived from ACME_EMAIL); it takes over automatically once it is
+# healthy again. To prefer ZeroSSL again, swap the two issuer blocks back.
+# TLS-ALPN is disabled so validation runs over HTTP-01 on port 80.
+(cert_issuers) {
+	issuer acme {
+		disable_tlsalpn_challenge
+	}
+	issuer acme {
+		dir https://acme.zerossl.com/v2/DV90
+		disable_tlsalpn_challenge
+	}
 }
 
-# Everything else — storefront subdomains (<slug>.onewooz.site) and verified
-# custom domains — gets a certificate on demand, gated by the ask endpoint.
+# NOTE: the platform hosts (onewooz.com / www / app / admin) are deliberately
+# NOT listed as static sites here. They resolve to the ALB (served by ACM), not
+# to this edge, so Caddy must not try to obtain certificates for them  doing so
+# produces failing ACME orders and burns ZeroSSL/Let's Encrypt rate limits. If a
+# platform host ever does reach this edge, the on-demand block below still serves
+# it (the ask endpoint authorises platform hosts).
+#
+# On-demand: storefront subdomains (<slug>.onewooz.site) and verified custom
+# domains get a certificate on first request, gated by the ask endpoint.
 https:// {
 	tls {
 		on_demand
+		import cert_issuers
 	}
 	import proxy
 }

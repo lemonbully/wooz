@@ -1,0 +1,58 @@
+{% comment %}Styles for components/product_card.html, copied from the homepage
+Best Sellers section so every grid's card matches it. Include once per page,
+after the page's own styles.{% endcomment %}
+<style nonce="{{ csp_nonce }}">
+.product-image-link{
+    width: 100%;
+    height: 100%;
+}
+.best-seller-d2c-actions{
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+    align-items: stretch;
+}
+.product_card{
+    margin: 1.5rem;
+}
+@media (max-width: 767px) {
+    .product-image-link{
+        width: 100%;
+        height: 100%;
+    }
+    .best-seller-d2c-actions{
+        grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+    }
+    .products-grid-lg{
+        gap: 0rem;
+    }
+    .product_card{
+        margin: 0.75rem !important;
+    }
+    .best-seller-d2c-content{
+        width: 40vw;
+        max-width: 100%;
+        margin-left: 4px;
+        margin-right: 4px;
+        overflow: hidden;
+    }
+    .best-seller-d2c-title{
+        font-size: 12px;
+        line-clamp: 2;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+}
+@media (min-width: 1024px) {
+    .products-grid-lg {
+        max-width: 90%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+/* One wishlist heart size on every card. */
+.product_card .best-seller-d2c-actions svg { flex-shrink: 0; }
+</style>

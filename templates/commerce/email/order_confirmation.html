@@ -1,0 +1,39 @@
+{% extends "email/base.html" %}
+{% comment %}Customer order confirmation. Context: brand (store name), customer_name,
+order_number, items [{title, variant_label, quantity, unit_price, line_total}], sym,
+subtotal, discount, tax, total, confirmation_url, reply_to (bool), powered_by (bool).{% endcomment %}
+{% block preheader %}Your {{ brand }} order #{{ order_number }} is confirmed.{% endblock %}
+{% block kicker %}Order confirmed{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text=brand %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:22px; letter-spacing:-0.02em; line-height:1.18; color:#0a0a0b; margin:0 0 16px 0;">Thank you{% if customer_name %}, {{ customer_name }}{% endif %}!</h1>
+  <div style="margin:0 0 18px 0; color:#26262a;">We've received your order <strong>#{{ order_number }}</strong> and it is confirmed. Here's what you ordered:</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #d7d7d3;">
+    {% for it in items %}
+    <tr>
+      <td style="padding:12px 0; border-bottom:1px solid #ececea; vertical-align:top;">
+        <div style="font-size:15px; font-weight:600; color:#0a0a0b;">{{ it.title }}</div>
+        {% if it.variant_label %}<div style="font-size:13px; color:#66666b; margin-top:2px;">{{ it.variant_label }}</div>{% endif %}
+        <div style="font-size:13px; color:#66666b; margin-top:2px;">Qty {{ it.quantity }} &times; {{ sym }}{{ it.unit_price }}</div>
+      </td>
+      <td style="padding:12px 0; border-bottom:1px solid #ececea; text-align:right; vertical-align:top; font-size:15px; font-weight:600; color:#0a0a0b; white-space:nowrap;">{{ sym }}{{ it.line_total }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+    <tr><td style="padding:3px 0; color:#66666b; font-size:14px;">Subtotal</td><td style="padding:3px 0; text-align:right; color:#26262a; font-size:14px;">{{ sym }}{{ subtotal }}</td></tr>
+    {% if discount %}<tr><td style="padding:3px 0; color:#66666b; font-size:14px;">Discount</td><td style="padding:3px 0; text-align:right; color:#0a7d33; font-size:14px;">- {{ sym }}{{ discount }}</td></tr>{% endif %}
+    {% if credit %}<tr><td style="padding:3px 0; color:#66666b; font-size:14px;">Store credit</td><td style="padding:3px 0; text-align:right; color:#0a7d33; font-size:14px;">- {{ sym }}{{ credit }}</td></tr>{% endif %}
+    {% if tax %}<tr><td style="padding:3px 0; color:#66666b; font-size:14px;">GST</td><td style="padding:3px 0; text-align:right; color:#26262a; font-size:14px;">{{ sym }}{{ tax }}</td></tr>{% endif %}
+    <tr><td style="padding:8px 0 0 0; border-top:1px solid #d7d7d3; font-size:16px; font-weight:700; color:#0a0a0b;">Total</td><td style="padding:8px 0 0 0; border-top:1px solid #d7d7d3; text-align:right; font-size:16px; font-weight:700; color:#0a0a0b;">{{ sym }}{{ total }}</td></tr>
+  </table>
+
+  {% if confirmation_url %}{% include "email/_button.html" with url=confirmation_url label="View your order" %}{% endif %}
+{% endblock %}
+{% block footer %}
+  <div style="color:#66666b;">{{ brand }}</div>
+  {% if powered_by %}<div style="color:#9a9aa0;">Powered by OneWooz</div>{% endif %}
+{% endblock %}
+{% block sub_footer %}{% if reply_to %}Reply to this email to reach {{ brand }}.{% else %}This is an automated confirmation from {{ brand }}.{% endif %}{% endblock %}

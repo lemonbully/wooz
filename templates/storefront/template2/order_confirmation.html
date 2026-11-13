@@ -56,15 +56,15 @@
       </dl>
       <dl class="sm:flex items-center justify-between gap-4">
         <dt class="font-normal mb-1 sm:mb-0 text-gray-500">Name</dt>
-        <dd class="font-medium text-gray-900 sm:text-end">{{ order.customer_name|default:'—' }}</dd>
+        <dd class="font-medium text-gray-900 sm:text-end">{{ order.customer_name|default:'' }}</dd>
       </dl>
       <dl class="sm:flex items-center justify-between gap-4">
         <dt class="font-normal mb-1 sm:mb-0 text-gray-500">Address</dt>
-        <dd class="font-medium text-gray-900 sm:text-end">{{ order.shipping_address|default:'—' }}</dd>
+        <dd class="font-medium text-gray-900 sm:text-end">{{ order.shipping_address|default:'' }}</dd>
       </dl>
       <dl class="sm:flex items-center justify-between gap-4">
         <dt class="font-normal mb-1 sm:mb-0 text-gray-500">Phone</dt>
-        <dd class="font-medium text-gray-900 sm:text-end">{{ order.customer_phone|default:'—' }}</dd>
+        <dd class="font-medium text-gray-900 sm:text-end">{{ order.customer_phone|default:'' }}</dd>
       </dl>
       <dl class="sm:flex items-center justify-between gap-4">
         <dt class="font-normal mb-1 sm:mb-0 text-gray-500">Total</dt>

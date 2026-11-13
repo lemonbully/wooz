@@ -1,0 +1,33 @@
+{% comment %}
+The page × action permission grid. Expects `perm_groups` in context  a list of
+{label, pages:[{key,label,view,create,edit,delete}]}. Renders checkboxes named
+`perm_<page>_<action>` that commerce.staff.parse_permissions reads back.
+{% endcomment %}
+<div class="app-tablewrap">
+  <table class="app-table stf-grid">
+    <thead>
+      <tr>
+        <th>Page</th>
+        <th class="stf-grid__act">View</th>
+        <th class="stf-grid__act">Create</th>
+        <th class="stf-grid__act">Edit</th>
+        <th class="stf-grid__act">Delete</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for grp in perm_groups %}
+        <tr class="stf-grid__grp"><td colspan="5">{{ grp.label }}</td></tr>
+        {% for p in grp.pages %}
+          <tr>
+            <td class="stf-grid__page">{{ p.label }}</td>
+            <td class="stf-grid__act"><input type="checkbox" name="perm_{{ p.key }}_view" {% if p.view %}checked{% endif %} aria-label="View {{ p.label }}"></td>
+            <td class="stf-grid__act"><input type="checkbox" name="perm_{{ p.key }}_create" {% if p.create %}checked{% endif %} aria-label="Create in {{ p.label }}"></td>
+            <td class="stf-grid__act"><input type="checkbox" name="perm_{{ p.key }}_edit" {% if p.edit %}checked{% endif %} aria-label="Edit in {{ p.label }}"></td>
+            <td class="stf-grid__act"><input type="checkbox" name="perm_{{ p.key }}_delete" {% if p.delete %}checked{% endif %} aria-label="Delete in {{ p.label }}"></td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="stf-hint">Ticking Create, Edit or Delete automatically grants View  a person can’t act on a page they can’t see.</p>

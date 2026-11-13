@@ -105,7 +105,7 @@
                                  alt="Default banner" 
                                  class="w-full h-full object-cover">
                         {% endif %}
-                        <div class="absolute inset-0 bg-black" style="opacity: {{ banner.overlay_opacity|default:50|opacity_from_percent }};"></div>
+                        <div class="absolute inset-0 bg-black" style="opacity: {{ banner.overlay_opacity|banner_overlay_opacity }};"></div>
                     </div>
                     
                     <!-- Content with semantic HTML structure -->
@@ -885,8 +885,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <p class="text-gray-600 italic mb-6">"{{ testimonial.content|default:"This is the best shopping experience I've ever had. The quality of products and the excellent customer service exceeded my expectations." }}"</p>
                                 <div class="flex items-center justify-center">
-                                    {% if testimonial.avatar %}
-                                    <img src="{{ testimonial.avatar }}" alt="{{ testimonial.name|default:'Customer' }}" class="w-12 h-12 rounded-full mr-4">
+                                    {% if testimonial.image or testimonial.avatar %}
+                                    <img src="{{ testimonial.image|default:testimonial.avatar }}" data-no-srcset="true" alt="{{ testimonial.name|default:'Customer' }}" class="w-12 h-12 rounded-full mr-4">
                                     {% else %}
                                     <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-4">
                                         <span class="text-gray-500 text-xl">{{ testimonial.name|default:'C'|first }}</span>

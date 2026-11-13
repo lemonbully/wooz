@@ -1,49 +1,380 @@
 {% extends "store/_shell.html" %}
+{% load static %}
 {% block title %}{{ site.name }} · Shipping{% endblock %}
 {% block crumb %}Shipping{% endblock %}
 
 {% block main %}
-<div class="app-page">
+<style nonce="{{ csp_nonce }}">
+  .ship [hidden] { display: none !important; }
+  .ship-card { background: var(--pal-panel); border: 1px solid var(--pal-line); }
+  .ship-card + .ship-card { margin-top: 1.25rem; }
+  .ship-card__head { padding: 1.15rem 1.35rem; border-bottom: 1px solid var(--pal-line); }
+  .ship-card__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.05rem; letter-spacing: -0.01em; color: var(--pal-ink); }
+  .ship-card__lead { margin: 0.3rem 0 0; color: var(--pal-muted); font-size: 0.85rem; max-width: 60ch; }
+  .ship-card__body { padding: 1.35rem; }
+  .ship-grid { display: flex; flex-wrap: wrap; gap: 1.1rem 1.25rem; }
+  .ship-field { flex: 1 1 15rem; min-width: 0; display: block; }
+  .ship-field--full { flex-basis: 100%; }
+  .ship-field--half { flex-basis: 22rem; }
+  .ship-label { display: block; font-size: 0.82rem; color: var(--pal-muted); margin-bottom: 0.4rem; }
+  .ship-req { color: var(--pal-accent); }
+  .ship-form input:not([type="checkbox"]):not([type="radio"]),
+  .ship-form select,
+  .ship-form textarea {
+    width: 100%; padding: 0.58rem 0.7rem; border: 1px solid var(--pal-line);
+    background: var(--pal-panel); font: inherit; font-size: 0.9rem; color: var(--pal-ink);
+  }
+  .ship-form input:focus, .ship-form select:focus, .ship-form textarea:focus {
+    outline: 2px solid var(--pal-accent); outline-offset: 1px; border-color: var(--pal-accent);
+  }
+  .ship-hint { display: block; margin-top: 0.35rem; font-size: 0.76rem; color: var(--pal-faint); }
+  .ship-toggles { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin-top: 1.35rem; padding-top: 1.2rem; border-top: 1px solid var(--pal-line-soft); }
+  .ship-toggle { display: flex; gap: 0.6rem; align-items: flex-start; cursor: pointer; }
+  .ship-toggle input { margin-top: 0.15rem; width: 1rem; height: 1rem; accent-color: var(--pal-accent); flex: none; }
+  .ship-toggle__label { font-size: 0.9rem; color: var(--pal-ink-2); }
+  .ship-toggle__sub { display: block; margin-top: 0.1rem; font-size: 0.76rem; color: var(--pal-faint); }
+  .ship-foot { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--pal-line); display: flex; justify-content: flex-end; gap: 0.6rem; }
+  .ship-errs { margin: 0.3rem 0 0; padding-left: 1rem; color: #c0392b; font-size: 0.78rem; }
+  .ship-whlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.9rem; }
+  .ship-wh { border: 1px solid var(--pal-line); padding: 0.95rem 1.05rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .ship-wh.is-default { border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .ship-wh__top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .ship-wh__name { font-weight: 500; color: var(--pal-ink); font-size: 0.95rem; }
+  .ship-wh__meta { font-size: 0.82rem; color: var(--pal-muted); line-height: 1.5; }
+  .ship-wh__actions { display: flex; gap: 0.4rem; margin-top: 0.55rem; padding-top: 0.55rem; border-top: 1px solid var(--pal-line-soft); }
+  .ship-wh__actions form { display: inline; }
+  .ship-badge { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.18rem 0.45rem; background: var(--pal-accent); color: #fff; }
+  .ship-empty { padding: 1.5rem; border: 1px dashed var(--pal-line); text-align: center; color: var(--pal-muted); font-size: 0.88rem; }
+  .ship-subhead { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); margin: 1.6rem 0 0.9rem; }
+  .ship-linkbtn { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-size: 0.8rem; color: var(--pal-muted); text-decoration: underline; }
+  .ship-linkbtn:hover { color: var(--pal-accent); }
+  .ship-linkbtn--danger:hover { color: #c0392b; }
+  .ship-wh-row { display: flex; flex-direction: column; gap: 0.35rem; }
+  .ship-wh-row + .ship-wh-row { margin-top: 1rem; }
+  .ship-copyline { display: flex; align-items: stretch; border: 1px solid var(--pal-line); background: var(--pal-panel); min-width: 0; }
+  .ship-copyline + .ship-copyline { margin-top: 0.4rem; }
+  .ship-copyline code { flex: 1; min-width: 0; padding: 0.55rem 0.7rem; font-family: var(--pal-font-mono); font-size: 0.8rem; color: var(--pal-ink); overflow-x: auto; white-space: nowrap; }
+  .ship-copybtn { flex: none; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0 0.8rem; border: 0; border-left: 1px solid var(--pal-line); background: var(--pal-panel); cursor: pointer; font: inherit; font-size: 0.78rem; color: var(--pal-ink-2); }
+  .ship-copybtn svg { width: 0.9rem; height: 0.9rem; }
+  .ship-copybtn:hover, .ship-copybtn.is-copied { color: var(--pal-accent); }
+  .ship-steps { margin: 1.3rem 0 0; padding: 1rem 1.1rem 1rem 2.2rem; border: 1px solid var(--pal-line-soft); font-size: 0.84rem; color: var(--pal-ink-2); line-height: 1.6; }
+  .ship-steps li + li { margin-top: 0.25rem; }
+  .ship-whactions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.25rem; }
+  .ship-whactions form { display: inline; }
+  .ship-evwrap { overflow-x: auto; }
+  .ship-evtable { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .ship-evtable th { text-align: left; font-weight: 500; color: var(--pal-muted); font-size: 0.74rem; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--pal-line); white-space: nowrap; }
+  .ship-evtable td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--pal-line-soft); vertical-align: top; color: var(--pal-ink-2); }
+  .ship-evtable td.is-mono { font-family: var(--pal-font-mono); font-size: 0.76rem; }
+  .ship-evtable details summary { cursor: pointer; color: var(--pal-muted); font-size: 0.76rem; }
+  .ship-evtable pre { margin: 0.4rem 0 0; max-width: 34rem; max-height: 16rem; overflow: auto; padding: 0.6rem; background: var(--pal-line-soft); font-size: 0.72rem; white-space: pre; }
+  .ship-evsub { display: block; font-size: 0.72rem; color: var(--pal-faint); }
+  .ship-tone { display: inline-block; font-size: 0.72rem; padding: 0.12rem 0.45rem; border: 1px solid currentColor; white-space: nowrap; }
+  .ship-tone--ok { color: #1e7d4f; }
+  .ship-tone--warn { color: #a86400; }
+  .ship-tone--danger { color: #c0392b; }
+  .ship-tone--muted { color: var(--pal-faint); }
+  .ship-pickrow { display: flex; gap: 0.5rem; align-items: stretch; flex-wrap: wrap; }
+  .ship-pickrow > select, .ship-pickrow > .ow-cs { flex: 1 1 16rem; min-width: 0; }
+  .ship-pickbtn { flex: none; white-space: nowrap; }
+  .ship-hint--err { color: #c0392b; }
+  .ship .sr-wallet { margin-bottom: 1.25rem; }
+</style>
+
+<div class="app-page ship">
   <div class="app-head"><div>
     <p class="pal-mono pal-mono--accent">Delivery</p>
     <h1 class="app-head__title pal-mt-4">Shipping</h1>
-    <p class="app-head__lead">Connect a courier and set your pickup warehouses. Tokens are encrypted at rest.</p>
+    <p class="app-head__lead">Connect a courier and manage your pickup warehouses. API tokens are encrypted at rest.</p>
   </div></div>
 
+  {# ── Carrier ─────────────────────────────────────────────────────── #}
   <div class="app-block">
-    <div class="app-split">
-      <section>
-        <div class="app-card__head"><h2 class="app-card__title">Courier</h2></div>
-        <div class="app-card__body">
-          <form method="post" class="app-form">
-            {% csrf_token %}
-            <input type="hidden" name="intent" value="provider">
-            {% include "store/_form.html" with form=pform %}
-            <div class="app-form__foot"><button class="pal-btn" type="submit">Save courier</button></div>
-          </form>
-        </div>
-      </section>
+    <div class="ship-card">
+      <div class="ship-card__head">
+        <h2 class="ship-card__title">Carrier</h2>
+        <p class="ship-card__lead">Pick how orders ship. Choose a courier integration to auto-book shipments, or self-ship manually.</p>
+      </div>
+      <div class="ship-card__body">
+        {% include "store/_sr_wallet.html" with follow=True hidden=sr_wallet_hidden %}
+        <form method="post" class="app-form ship-form" data-carrier-form data-edit-lock{% if pform.errors %}="open"{% endif %}>
+          {% csrf_token %}
+          <input type="hidden" name="intent" value="provider">
+          {% include "store/_edit_lock_bar.html" with what="carrier settings" %}
+          {% if pform.non_field_errors %}<div class="pal-alert" role="alert">{{ pform.non_field_errors }}</div>{% endif %}
+          {# Locked until "Edit" is clicked (js/app/edit-lock.js). #}
+          <fieldset class="elock-fs" data-edit-lock-fields>
+          <div class="ship-grid">
+            <label class="ship-field ship-field--half">
+              <span class="ship-label">{{ pform.provider.label }}{% if pform.provider.field.required %} <span class="ship-req">*</span>{% endif %}</span>
+              {{ pform.provider }}
+              {% if pform.provider.errors %}<ul class="ship-errs">{% for e in pform.provider.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </label>
+            <label class="ship-field ship-field--half">
+              <span class="ship-label">{{ pform.default_warehouse.label }}</span>
+              {{ pform.default_warehouse }}
+              <span class="ship-hint">Where shipments are picked up from by default.</span>
+              {% if pform.default_warehouse.errors %}<ul class="ship-errs">{% for e in pform.default_warehouse.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </label>
+            <label class="ship-field">
+              <span class="ship-label">{{ pform.client_name.label }}</span>
+              {{ pform.client_name }}
+              <span class="ship-hint">The account/client name registered with the courier.</span>
+              {% if pform.client_name.errors %}<ul class="ship-errs">{% for e in pform.client_name.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </label>
+            {% comment %} The API token is only used by Delhivery. Shiprocket signs in with
+               the API email + password below, so the field is removed for it (and
+               for manual shipping). Hidden, not deleted, so a saved Delhivery token
+               is kept when the owner switches carriers. {% endcomment %}
+            <label class="ship-field" data-provider-only="delhivery"{% if pform.provider.value != 'delhivery' %} hidden{% endif %}>
+              <span class="ship-label">{{ pform.api_token.label }}</span>
+              {{ pform.api_token }}
+              <span class="ship-hint">Stored encrypted at rest.</span>
+              {% if pform.api_token.errors %}<ul class="ship-errs">{% for e in pform.api_token.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </label>
 
-      <aside>
-        <div class="app-card__head"><h2 class="app-card__title">Warehouses</h2></div>
-        <div class="app-card__body">
-          {% if warehouses %}
-            {% for w in warehouses %}
-              <div class="app-feed__item"><p class="app-feed__t">{{ w.name }}{% if w.is_default %} · <span class="app-badge app-badge--accent">Default</span>{% endif %}</p><p class="app-feed__b">{{ w.city }} {{ w.pincode }}</p></div>
-            {% endfor %}
-          {% else %}
-            <p class="app-note-inline">No warehouses yet. Add a pickup address below.</p>
+            {# ── Shiprocket API credentials ──────────────────────────── #}
+            <label class="ship-field ship-field--half">
+              <span class="ship-label">Shiprocket API email</span>
+              {{ pform.api_email }}
+              <span class="ship-hint">The email for your Shiprocket account's API access. Required to enable Shiprocket.</span>
+              {% if pform.api_email.errors %}<ul class="ship-errs">{% for e in pform.api_email.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </label>
+            <label class="ship-field ship-field--half">
+              <span class="ship-label">Shiprocket API password</span>
+              {{ pform.api_password }}
+              <span class="ship-hint">Stored encrypted at rest.</span>
+              {% if pform.api_password.errors %}<ul class="ship-errs">{% for e in pform.api_password.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </label>
+            <div class="ship-field" data-sr-pickup data-lookup-url="{% url 'store:shiprocket_pickup_locations' site.id %}">
+              <label class="ship-label" for="srPickupSelect">Shiprocket pickup location <span class="ship-req">*</span></label>
+              <div class="ship-pickrow">
+                <select name="pickup_location" id="srPickupSelect" class="pal-input" data-sr-pickup-select>
+                  {% if pickup_locations %}
+                    <option value="">Choose a pickup location</option>
+                    {% if pickup_current_missing %}
+                      <option value="{{ pickup_selected }}" selected>{{ pickup_selected }} (not found in Shiprocket)</option>
+                    {% endif %}
+                    {% for loc in pickup_locations %}
+                      <option value="{{ loc.name }}"{% if loc.name == pickup_selected %} selected{% endif %}>{{ loc.name }}{% if loc.city %} · {{ loc.city }}{% endif %}{% if loc.pincode %} {{ loc.pincode }}{% endif %}{% if loc.primary %} (primary){% endif %}</option>
+                    {% endfor %}
+                  {% elif pickup_selected %}
+                    <option value="{{ pickup_selected }}" selected>{{ pickup_selected }}</option>
+                  {% else %}
+                    <option value="">{% if has_sr_credentials %}No pickup locations loaded{% else %}Save your API email &amp; password to load locations{% endif %}</option>
+                  {% endif %}
+                </select>
+                <button type="button" class="pal-btn pal-btn--ghost ship-pickbtn" data-sr-pickup-load>Load pickup locations</button>
+              </div>
+              <span class="ship-hint" data-sr-pickup-hint>
+                {% if pickup_locations_error %}
+                  <span class="ship-hint--err">{{ pickup_locations_error }}</span>
+                {% elif not has_sr_credentials %}
+                  First enter your Shiprocket <strong>API email</strong> and <strong>API password</strong> above (Shiprocket → Settings → API → Configure API User), then click “Load pickup locations” to choose from the pickup addresses saved in your Shiprocket account.
+                {% else %}
+                  These are the pickup addresses saved in your Shiprocket account. The one you choose is used for every order you send to Shiprocket.
+                {% endif %}
+              </span>
+              {% if pform.pickup_location.errors %}<ul class="ship-errs">{% for e in pform.pickup_location.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+            </div>
+            {% if provider.provider == 'shiprocket' %}
+            <label class="ship-field">
+              <span class="ship-label">Preferred courier</span>
+              <select name="shiprocket_courier_id" class="pal-input">
+                <option value="">Automatic  Shiprocket picks the recommended courier</option>
+                {% for c in shiprocket_couriers %}
+                  <option value="{{ c.id }}"{% if shiprocket_courier_id == c.id|stringformat:'s' %} selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+              </select>
+              <span class="ship-hint">Orders you send to Shiprocket get assigned this courier when you request a pickup. Leave it on “Automatic” to choose the courier  and see live rates  for each pickup on the Orders page.{% if not shiprocket_couriers %} <em>Couldn’t load your courier list right now  save your API email &amp; password first, then reopen this page.</em>{% endif %}</span>
+            </label>
+            {% endif %}
+          </div>
+          <div class="ship-toggles">
+            <label class="ship-toggle">
+              {{ pform.enabled }}
+              <span><span class="ship-toggle__label">Enable this carrier</span><span class="ship-toggle__sub">Make it available for booking shipments.</span></span>
+            </label>
+            <label class="ship-toggle">
+              {{ pform.auto_ship }}
+              <span><span class="ship-toggle__label">Auto-create shipping</span><span class="ship-toggle__sub">On: new orders are booked with the courier automatically (sent to Shiprocket). Off: orders wait under Pending until you accept them.</span></span>
+            </label>
+          </div>
+          </fieldset>
+          <div class="ship-foot" data-edit-lock-foot>
+            <button class="pal-btn pal-btn--ghost" type="button" data-edit-lock-cancel>Cancel</button>
+            <button class="pal-btn" type="submit">Save carrier</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Tracking webhook ─────────────────────────────────────────────── #}
+  <div class="app-block" id="tracking-webhook">
+    <div class="ship-card">
+      <div class="ship-card__head">
+        <h2 class="ship-card__title">Tracking webhook</h2>
+        <p class="ship-card__lead">Paste this URL into Shiprocket so every status change (pickup, in transit, out for delivery, delivered, RTO) reaches your Orders page instantly. It's public (no login needed) and secured by your store's own token.</p>
+      </div>
+      <div class="ship-card__body">
+        {% if webhook %}
+          <div class="ship-wh-row">
+            <span class="ship-label">Webhook URL with token (recommended)</span>
+            <div class="ship-copyline"><code>{{ webhook.with_token }}</code><button type="button" class="ship-copybtn" data-ship-copy="{{ webhook.with_token }}">{% include "store/_icons.html" with icon="copy" %}<span>Copy</span></button></div>
+            <span class="ship-hint">Works on its own. Shiprocket's “Token” field can stay empty, or hold the token below.</span>
+          </div>
+          <div class="ship-wh-row">
+            <span class="ship-label">Or: plain URL + token</span>
+            <div class="ship-copyline"><code>{{ webhook.plain }}</code><button type="button" class="ship-copybtn" data-ship-copy="{{ webhook.plain }}">{% include "store/_icons.html" with icon="copy" %}<span>Copy</span></button></div>
+            <div class="ship-copyline"><code>{{ webhook.token }}</code><button type="button" class="ship-copybtn" data-ship-copy="{{ webhook.token }}">{% include "store/_icons.html" with icon="copy" %}<span>Copy</span></button></div>
+            <span class="ship-hint">Paste the token into Shiprocket's “Token” field; Shiprocket sends it as the x-api-key header.</span>
+          </div>
+
+          <ol class="ship-steps">
+            <li>In Shiprocket open <strong>Settings → API → Webhooks</strong>.</li>
+            <li>Paste the URL above (plus the token, if you used the plain URL), enable the shipment-status / tracking events, and save.</li>
+            <li>Shiprocket's test call shows up in the log below. From then on every status change moves the order between tabs automatically and fills its tracking popup.</li>
+          </ol>
+
+          <div class="ship-whactions">
+            {% if provider.provider == 'shiprocket' and provider.enabled %}
+              <form method="post">{% csrf_token %}<input type="hidden" name="intent" value="webhook_sync"><button type="submit" class="pal-btn">Sync now from Shiprocket</button></form>
+            {% endif %}
+            <form method="post" data-ship-confirm="Generate a new token? The current URL and token stop working until you update them in Shiprocket.">{% csrf_token %}<input type="hidden" name="intent" value="webhook_rotate"><button type="submit" class="pal-btn pal-btn--ghost">Regenerate token</button></form>
+          </div>
+          {% if provider.provider == 'shiprocket' and provider.enabled %}
+            <span class="ship-hint">“Sync now” pulls the live status of every shipment in transit straight from Shiprocket's API, a backup for any webhook that was missed.</span>
           {% endif %}
 
-          <form method="post" class="app-form" style="margin-top:1rem;">
-            {% csrf_token %}
-            <input type="hidden" name="intent" value="warehouse">
-            {% include "store/_form.html" with form=wform %}
-            <div class="app-form__foot"><button class="pal-btn pal-btn--ghost" type="submit">Add warehouse</button></div>
-          </form>
-        </div>
-      </aside>
+        {% else %}
+          <div class="ship-empty">Save your carrier above first. Your webhook URL and token are then generated automatically.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Warehouses (below) ──────────────────────────────────────────── #}
+  <div class="app-block">
+    <div class="ship-card">
+      <div class="ship-card__head">
+        <h2 class="ship-card__title">Warehouses</h2>
+        <p class="ship-card__lead">Pickup &amp; return addresses. The default is used when a courier books a shipment.</p>
+      </div>
+      <div class="ship-card__body">
+        {% if warehouses %}
+          <div class="ship-whlist">
+            {% for w in warehouses %}
+              <div class="ship-wh{% if w.is_default %} is-default{% endif %}">
+                <div class="ship-wh__top">
+                  <span class="ship-wh__name">{{ w.name }}</span>
+                  {% if w.is_default %}<span class="ship-badge">Default</span>{% endif %}
+                </div>
+                <div class="ship-wh__meta">
+                  {% if w.contact_name %}{{ w.contact_name }}<br>{% endif %}
+                  {% if w.address_line %}{{ w.address_line }}<br>{% endif %}
+                  {{ w.city }}{% if w.city and w.state %}, {% endif %}{{ w.state }} {{ w.pincode }}<br>
+                  {% if w.phone %}☎ {{ w.phone }}{% endif %}{% if w.phone and w.email %} · {% endif %}{% if w.email %}{{ w.email }}{% endif %}
+                </div>
+                <div class="ship-wh__actions">
+                  {% if not w.is_default %}
+                    <form method="post" action="{% url 'store:warehouse_default' site.id w.id %}">{% csrf_token %}<button type="submit" class="ship-linkbtn">Make default</button></form>
+                  {% endif %}
+                  <form method="post" action="{% url 'store:warehouse_delete' site.id w.id %}" onsubmit="return confirm('Remove “{{ w.name }}”?');">{% csrf_token %}<button type="submit" class="ship-linkbtn ship-linkbtn--danger">Delete</button></form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="ship-empty">No warehouses yet. Add your first pickup address below.</div>
+        {% endif %}
+
+        <p class="ship-subhead">Add a warehouse</p>
+        <form method="post" class="app-form ship-form">
+          {% csrf_token %}
+          <input type="hidden" name="intent" value="warehouse">
+          {% if wform.non_field_errors %}<div class="pal-alert" role="alert">{{ wform.non_field_errors }}</div>{% endif %}
+          <div class="ship-grid">
+            {% for field in wform %}
+              {% if field.field.widget.input_type == "checkbox" %}
+                <label class="ship-toggle ship-field ship-field--full">
+                  {{ field }}
+                  <span><span class="ship-toggle__label">{{ field.label }}</span>{% if field.help_text %}<span class="ship-toggle__sub">{{ field.help_text }}</span>{% endif %}</span>
+                </label>
+              {% else %}
+                <label class="ship-field{% if field.name == 'address_line' %} ship-field--full{% endif %}">
+                  <span class="ship-label">{{ field.label }}{% if field.field.required %} <span class="ship-req">*</span>{% endif %}</span>
+                  {{ field }}
+                  {% if field.help_text %}<span class="ship-hint">{{ field.help_text }}</span>{% endif %}
+                  {% if field.errors %}<ul class="ship-errs">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                </label>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <div class="ship-foot"><button class="pal-btn" type="submit">Add warehouse</button></div>
+        </form>
+      </div>
     </div>
   </div>
 </div>
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  // Copy-to-clipboard for the webhook URL / token.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-ship-copy]");
+    if (!btn) return;
+    var text = btn.getAttribute("data-ship-copy") || "";
+    var label = btn.querySelector("span");
+    function done() {
+      btn.classList.add("is-copied");
+      if (label) {
+        label.textContent = "Copied";
+        setTimeout(function () { btn.classList.remove("is-copied"); label.textContent = "Copy"; }, 1500);
+      }
+    }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (err) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fallback);
+    } else {
+      fallback();
+    }
+  });
+  // Carrier-specific fields (the API token is Delhivery-only) follow the
+  // provider dropdown.
+  var carrierForm = document.querySelector("[data-carrier-form]");
+  var providerSelect = carrierForm && carrierForm.querySelector("select[name='provider']");
+  function syncCarrierFields() {
+    var value = providerSelect ? providerSelect.value : "";
+    carrierForm.querySelectorAll("[data-provider-only]").forEach(function (el) {
+      el.hidden = el.getAttribute("data-provider-only") !== value;
+    });
+  }
+  if (providerSelect) {
+    providerSelect.addEventListener("change", syncCarrierFields);
+    syncCarrierFields();
+  }
+  // Confirm before rotating the webhook token.
+  document.addEventListener("submit", function (e) {
+    var msg = e.target.getAttribute && e.target.getAttribute("data-ship-confirm");
+    if (msg && !window.confirm(msg)) e.preventDefault();
+  });
+})();
+</script>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/app/sr-wallet.js' %}" defer></script>
+<script src="{% static 'js/app/sr-pickup.js' %}" defer></script>
 {% endblock %}

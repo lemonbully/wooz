@@ -1,0 +1,598 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Edit template{% else %}New template{% endif %} · Admin{% endblock %}
+{% block meta %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+
+{% comment %}
+Admin email-template builder  redesigned in the OneWooz "Palantir" register
+(see onewooz_design.md): near-white paper on near-black ink, hairline rules on
+everything, monospace metadata, section-numbered markers, corner-bracket framing,
+squared geometry, one accent. Everything is scoped under `.etb` and authored
+inline so no other admin page is affected. The chat is version-aware: every AI
+generation becomes a restorable version (chat card + a version rail on the
+preview); publishing uses the active version.
+{% endcomment %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block body %}
+<div class="etb">
+  <form method="post"
+        action="{% if is_edit %}{% url 'custom_admin:email_template_edit' template.id %}{% else %}{% url 'custom_admin:email_template_new' %}{% endif %}"
+        id="et-form"
+        class="etb-form"
+        data-generate-url="{% url 'custom_admin:email_template_generate' %}"
+        {% if is_edit %}data-preview-url="{% url 'custom_admin:email_template_preview' template.id %}"{% endif %}>
+    {% csrf_token %}
+    <input type="hidden" name="action" id="et-action" value="save">
+    <input type="hidden" name="html" id="et-html" value="{{ template.html|default:'' }}">
+
+    {# ---- Command bar ---- #}
+    <header class="etb-bar">
+      <div class="etb-bar__l">
+        <span class="etb-brand"><span class="etb-brand__mark" aria-hidden="true">O</span> OneWooz</span>
+        <span class="etb-crumb">
+          <a href="{% url 'custom_admin:email_templates' %}">Email templates</a>
+          <span class="etb-crumb__sep" aria-hidden="true">/</span>
+          <span class="etb-crumb__cur">{% if is_edit %}Edit{% else %}New{% endif %}</span>
+        </span>
+      </div>
+      <div class="etb-bar__actions">
+        <span class="etb-status"><span class="etb-status__dot" aria-hidden="true"></span>{% if is_edit %}Editing{% else %}Draft{% endif %}</span>
+        {% if is_edit %}<a href="{% url 'custom_admin:email_template_preview' template.id %}" target="_blank" rel="noopener" class="etb-btn etb-btn--ghost">Open preview <span aria-hidden="true">↗</span></a>{% endif %}
+        <button type="submit" class="etb-btn etb-btn--ghost" id="et-save">Save draft</button>
+        <button type="submit" class="etb-btn" id="et-publish">Publish <span class="etb-btn__arw" aria-hidden="true">→</span></button>
+      </div>
+    </header>
+
+    {# ---- Identity datasheet ---- #}
+    <div class="etb-ident">
+      <label class="etb-field">
+        <span class="etb-mk"><span class="etb-mk__n">01</span> Template name</span>
+        <input class="etb-in" name="name" id="et-name" value="{{ template.name|default:'' }}" placeholder="e.g. Welcome  warm intro" required>
+      </label>
+      <label class="etb-field">
+        <span class="etb-mk"><span class="etb-mk__n">02</span> Description <span class="etb-opt">optional</span></span>
+        <input class="etb-in" name="description" value="{{ template.description|default:'' }}" placeholder="A one-line note for your team">
+      </label>
+      <label class="etb-field" style="grid-column: 1 / -1;">
+        <span class="etb-mk"><span class="etb-mk__n">03</span> Email type <span class="etb-opt">required  choose before generating; fixed for this chat</span> <span class="etb-lock" id="et-ptype-lock" hidden>· locked for this chat</span></span>
+        <select class="etb-in" name="product_type" id="et-ptype" required>
+          <option value="" disabled {% if not is_edit or template.product_type == 'any' %}selected{% endif %}>Choose  single product, multiple products, or promotional?</option>
+          <option value="single" {% if template.product_type == 'single' %}selected{% endif %}>Single product  spotlight one product</option>
+          <option value="multi" {% if template.product_type == 'multi' %}selected{% endif %}>Multiple products  a grid of up to four</option>
+          <option value="promotional" {% if template.product_type == 'promotional' %}selected{% endif %}>Promotional  a sale / offer / launch</option>
+        </select>
+      </label>
+      <div class="etb-field" style="grid-column: 1 / -1;">
+        <span class="etb-mk"><span class="etb-mk__n">04</span> Design style <span class="etb-opt">optional  pre-applies a full look; every generation follows it</span></span>
+        <div class="etb-styles" id="et-styles" role="group" aria-label="Design style">
+          <button type="button" class="etb-style is-active" data-style="" title="Let the AI choose a fitting look">Auto</button>
+          {% for slug, label in style_choices %}
+          <button type="button" class="etb-style" data-style="{{ slug }}">{{ label }}</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="design_style" id="et-style" value="">
+      </div>
+    </div>
+
+    {# ---- Workspace: chat builder | live preview ---- #}
+    <div class="etb-work">
+
+      <section class="etb-chat">
+        <div class="etb-pane__head">
+          <span class="etb-mk etb-mk--pane">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            AI builder
+          </span>
+          <span class="etb-pane__sub">ChatGPT · refine, then publish</span>
+        </div>
+
+        <div class="etb-log" id="et-log">
+          <div class="etb-empty" id="et-empty">
+            <span class="etb-empty__ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </span>
+            <h3 class="etb-empty__title">Design an email with AI</h3>
+            <p class="etb-empty__sub">Pick a design style above and describe the email  I’ll pre-apply that whole look (palette, type, layout) so you don’t re-explain it each time, then preview it with demo content. Attach a reference image or a brand file for a closer match. Every generation is saved as a version you can restore, so refine freely, then Publish.</p>
+            <div class="etb-empty__chips" id="et-qs">
+              <button type="button" class="etb-qs" data-qs="A warm welcome email for new customers: logo at top, a friendly intro using {% templatetag openvariable %}store_name{% templatetag closevariable %}, a short value proposition, a products grid, and a clear “Shop now” button.">Welcome email</button>
+              <button type="button" class="etb-qs" data-qs="A bold promotional email for a weekend sale: a high-impact hero with the discount and a coupon code, urgency/deadline copy, a teaser products grid, and a high-contrast CTA button.">Weekend sale</button>
+              <button type="button" class="etb-qs" data-qs="A clean single-product spotlight: a large product image, a punchy headline, three benefit lines, price emphasis, and one prominent CTA.">Product spotlight</button>
+              <button type="button" class="etb-qs" data-qs="A tidy new-arrivals email: a short intro line and a scannable grid of up to four products, each shoppable, with a primary CTA and a browse-all link.">New arrivals</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="etb-vars">
+          <span class="etb-vars__lbl">Variables  click to insert</span>
+          <div class="etb-vars__chips">
+            {% for key, label, desc in variables %}<button type="button" class="etb-chip" title="{{ desc }}" data-token="{% templatetag openvariable %}{{ key }}{% templatetag closevariable %}">{% templatetag openvariable %}{{ key }}{% templatetag closevariable %}</button>{% endfor %}
+          </div>
+        </div>
+
+        <div class="etb-composer">
+          <div class="etb-model">
+            <span class="etb-mk__n">＃</span>
+            <label class="etb-model__lbl" for="et-model">Model</label>
+            <input type="text" id="et-model" class="etb-in etb-model__in" value="{{ openai_text_model }}" placeholder="gpt-5.6-sol" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Model code">
+          </div>
+          <textarea id="et-prompt" class="etb-in etb-in--area" rows="3" placeholder="e.g. A clean welcome email: logo top, a warm intro using {% templatetag openvariable %}store_name{% templatetag closevariable %}, a products grid, and a purple “Shop now” button."></textarea>
+          <div class="etb-attach">
+            <label class="etb-attach__btn" title="Attach reference image(s)  brand look, a mock, a logo">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="m21 15-5-5L5 21"/></svg>
+              <span>Image</span>
+              <input type="file" id="et-img-in" accept="image/*" multiple hidden>
+            </label>
+            <label class="etb-attach__btn" title="Attach a text/brand file  notes, copy, an SVG logo">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>
+              <span>File</span>
+              <input type="file" id="et-file-in" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.svg" multiple hidden>
+            </label>
+            <div class="etb-attach__list" id="et-attach-list" aria-live="polite"></div>
+          </div>
+          <button type="button" class="etb-btn etb-btn--block" id="et-send">Generate <span class="etb-btn__arw" aria-hidden="true">→</span></button>
+          <span class="etb-composer__hint">⌘/Ctrl + Enter to generate · pick a design style above · attach images or brand files · type any model code to switch</span>
+        </div>
+      </section>
+
+      <section class="etb-canvas">
+        <div class="etb-pane__head etb-canvas__head">
+          <span class="etb-mk etb-mk--pane">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            Preview
+          </span>
+          <div class="etb-vers" id="et-vers" hidden>
+            <span class="etb-vers__lbl">Versions</span>
+            <div class="etb-vers__rail" id="et-vers-rail"></div>
+          </div>
+        </div>
+        <div class="etb-canvas__stage">
+          <div class="etb-frame">
+            <span class="etb-cnr etb-cnr--tl" aria-hidden="true"></span>
+            <span class="etb-cnr etb-cnr--tr" aria-hidden="true"></span>
+            <span class="etb-cnr etb-cnr--bl" aria-hidden="true"></span>
+            <span class="etb-cnr etb-cnr--br" aria-hidden="true"></span>
+            <div class="etb-frame__cap"><span class="etb-frame__dot" aria-hidden="true"></span> <span id="et-cap">demo content &amp; images  how a store’s email will look</span></div>
+            <iframe id="et-frame" class="etb-frame__i" title="Email preview" srcdoc="{{ initial_preview }}"></iframe>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </form>
+</div>
+
+<style nonce="{{ csp_nonce }}">
+  .etb {
+    --pa: #f4f4f2; --pa2: #ececea; --pl: #ffffff;
+    --ink: #0a0a0b; --ink2: #26262a; --mut: #66666b; --fnt: #9a9aa0;
+    --ln: rgb(10 10 11 / 0.16); --lns: rgb(10 10 11 / 0.07); --ac: #4b2bf5;
+    --fd: "Space Grotesk", "Inter", system-ui, sans-serif;
+    --fm: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+    --fb: "Inter", system-ui, -apple-system, sans-serif;
+    display: flex; flex-direction: column; height: 100dvh;
+    background: var(--pa); color: var(--ink); font-family: var(--fb);
+  }
+  .etb *, .etb *::before, .etb *::after { box-sizing: border-box; }
+  .etb-form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  /* Command bar */
+  .etb-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem 1rem; flex-wrap: wrap; padding: 0.7rem clamp(1rem, 2vw, 1.5rem);
+    background: rgb(244 244 242 / 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--ln); }
+  .etb-bar__l { display: flex; align-items: center; gap: 1rem; min-width: 0; flex-wrap: wrap; }
+  .etb-brand { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--fd); font-weight: 600; font-size: 1rem; letter-spacing: -0.01em; }
+  .etb-brand__mark { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; background: var(--ink); color: var(--pa); font-family: var(--fm); font-size: 0.7rem; }
+  .etb-crumb { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--fm); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mut); min-width: 0; }
+  .etb-crumb a { color: var(--mut); text-decoration: none; }
+  .etb-crumb a:hover { color: var(--ink); }
+  .etb-crumb__sep { color: var(--fnt); }
+  .etb-crumb__cur { color: var(--ac); }
+  .etb-bar__actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .etb-status { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--fm); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mut); margin-right: 0.25rem; }
+  .etb-status__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ac); }
+
+  /* Buttons */
+  .etb-btn { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--fm); font-size: 0.66rem; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase; padding: 0.68rem 1.05rem; border: 1px solid var(--ink);
+    background: var(--ink); color: var(--pa); cursor: pointer; border-radius: 0; text-decoration: none;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease; }
+  .etb-btn:hover { background: var(--ac); border-color: var(--ac); color: #fff; }
+  .etb-btn--ghost { background: transparent; color: var(--ink); border-color: var(--ln); }
+  .etb-btn--ghost:hover { background: transparent; color: var(--ac); border-color: var(--ac); }
+  .etb-btn--block { width: 100%; justify-content: center; }
+  .etb-btn__arw { transition: transform 160ms ease; }
+  .etb-btn:hover .etb-btn__arw { transform: translateX(3px); }
+  .etb-btn:disabled, .etb-btn.is-busy { opacity: 0.55; pointer-events: none; }
+
+  /* Identity datasheet */
+  .etb-ident { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--ln); border-bottom: 1px solid var(--ln); }
+  .etb-field { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.85rem clamp(1rem, 2vw, 1.5rem); background: var(--pa); }
+  .etb-mk { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--fm); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mut); }
+  .etb-mk__n { color: var(--ac); }
+  .etb-opt { color: var(--fnt); text-transform: none; letter-spacing: 0; font-size: 0.6rem; }
+  .etb-lock { color: var(--ac); text-transform: none; letter-spacing: 0; font-size: 0.6rem; }
+  #et-ptype.is-locked { pointer-events: none; opacity: 0.8; background-color: var(--pa2); }
+  @media (max-width: 48rem) { .etb-ident { grid-template-columns: 1fr; } }
+
+  /* Design-style picker  mono chips; one active at a time (prompt orchestration) */
+  .etb-styles { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .etb-style { font-family: var(--fm); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase;
+    border: 1px solid var(--ln); background: var(--pl); color: var(--ink); padding: 0.4rem 0.7rem; cursor: pointer;
+    border-radius: 0; transition: border-color 140ms ease, color 140ms ease, background 140ms ease; }
+  .etb-style:hover { border-color: var(--ac); color: var(--ac); }
+  .etb-style.is-active { background: var(--ink); color: var(--pa); border-color: var(--ink); }
+  .etb-style.is-active:hover { background: var(--ac); border-color: var(--ac); color: #fff; }
+
+  /* Inputs */
+  .etb-in { font-family: var(--fb); font-size: 0.9rem; padding: 0.6rem 0.75rem; border: 1px solid var(--ln); background: var(--pl); color: var(--ink); border-radius: 0; width: 100%; }
+  .etb-in::placeholder { color: var(--fnt); }
+  .etb-in:focus { outline: none; border-color: var(--ac); box-shadow: inset 0 0 0 1px var(--ac); }
+  .etb-in--area { resize: vertical; line-height: 1.55; min-height: 4.5rem; }
+
+  /* Workspace */
+  .etb-work { flex: 1; min-height: 0; display: grid; grid-template-columns: 27rem 1fr; }
+  /* On narrow screens the panes stack and the page scrolls naturally, so the
+     shell grows to fit instead of trapping content inside a 100dvh box. */
+  @media (max-width: 64rem) {
+    .etb { height: auto; min-height: 100dvh; }
+    .etb-work { grid-template-columns: 1fr; }
+  }
+  .etb-pane__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    padding: 0.7rem clamp(1rem, 2vw, 1.25rem); border-bottom: 1px solid var(--ln); flex-wrap: wrap; min-height: 3.1rem; }
+  .etb-mk--pane { font-size: 0.66rem; color: var(--ink); }
+  .etb-mk--pane svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .etb-pane__sub { font-family: var(--fm); font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fnt); }
+
+  /* Chat */
+  .etb-chat { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--ln); background: var(--pa); }
+  @media (max-width: 64rem) { .etb-chat { border-right: 0; border-bottom: 1px solid var(--ln); } }
+  .etb-log { flex: 1; overflow-y: auto; padding: 1rem clamp(1rem, 2vw, 1.25rem); display: flex; flex-direction: column; gap: 0.65rem; min-height: 12rem; }
+  @media (max-width: 64rem) { .etb-log { min-height: 15rem; max-height: 28rem; } }
+  .etb-msg { padding: 0.65rem 0.8rem; border: 1px solid var(--ln); font-size: 0.88rem; line-height: 1.55; max-width: 92%; background: var(--pl); }
+  .etb-msg strong { font-weight: 600; }
+  .etb-msg--bot { background: var(--pa2); align-self: flex-start; }
+  .etb-msg--me { align-self: flex-end; border-color: var(--ac); box-shadow: inset 0 0 0 1px var(--ac); }
+  .etb-msg--err { align-self: flex-start; border-color: #b42318; color: #b42318; }
+  .etb-vercard { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.6rem; max-width: 92%;
+    border-left: 2px solid var(--ac); font-family: var(--fm); font-size: 0.64rem; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--mut); }
+  .etb-vercard.is-active { color: var(--ink); }
+  .etb-vercard__n { color: var(--ac); font-weight: 600; }
+  .etb-vercard__use { font-family: var(--fm); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase;
+    border: 1px solid var(--ln); background: var(--pl); color: var(--ink); padding: 0.25rem 0.5rem; cursor: pointer; }
+  .etb-vercard__use:hover { border-color: var(--ac); color: var(--ac); }
+  .etb-vercard.is-active .etb-vercard__use { background: var(--ac); color: #fff; border-color: var(--ac); }
+
+  /* Empty state  fills the chat so the column never reads as blank */
+  .etb-empty { margin: auto 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.55rem; padding: 0.4rem 0; }
+  .etb-empty__ico { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid var(--ln); color: var(--ac); }
+  .etb-empty__ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .etb-empty__title { font-family: var(--fd); font-weight: 500; font-size: 1.15rem; letter-spacing: -0.01em; margin: 0.15rem 0 0; }
+  .etb-empty__sub { font-size: 0.85rem; line-height: 1.55; color: var(--mut); margin: 0; max-width: 44ch; }
+  .etb-empty__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+  .etb-qs { font-family: var(--fm); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid var(--ln); background: var(--pl); color: var(--ink); padding: 0.4rem 0.7rem; cursor: pointer; border-radius: 0; transition: border-color 140ms ease, color 140ms ease; }
+  .etb-qs:hover { border-color: var(--ac); color: var(--ac); }
+  .etb-log.has-msgs .etb-empty { display: none; }
+  /* Once chatting, messages hug the composer so the column never reads as a big
+     empty gap while scrolling. */
+  .etb-log.has-msgs { justify-content: flex-end; }
+
+  /* Attachments (image / file) */
+  .etb-attach { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+  .etb-attach__btn { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--fm); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mut); border: 1px solid var(--ln); background: var(--pl); padding: 0.34rem 0.55rem; cursor: pointer; }
+  .etb-attach__btn:hover { border-color: var(--ac); color: var(--ac); }
+  .etb-attach__btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+  .etb-attach__list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .etb-att { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--fm); font-size: 0.58rem; letter-spacing: 0.03em; border: 1px solid var(--ln); background: var(--pa2); color: var(--ink2); padding: 0.2rem 0.2rem 0.2rem 0.45rem; max-width: 12rem; }
+  .etb-att__nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .etb-att__thumb { width: 1.15rem; height: 1.15rem; object-fit: cover; border: 1px solid var(--ln); flex: none; }
+  .etb-att__x { border: 0; background: none; color: var(--mut); cursor: pointer; padding: 0 0.2rem; font-size: 0.95rem; line-height: 1; }
+  .etb-att__x:hover { color: #b42318; }
+
+  /* Variables */
+  .etb-vars { padding: 0.65rem clamp(1rem, 2vw, 1.25rem); border-top: 1px solid var(--ln); }
+  .etb-vars__lbl { font-family: var(--fm); font-size: 0.56rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fnt); }
+  .etb-vars__chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.45rem; }
+  .etb-chip { font-family: var(--fm); font-size: 0.68rem; padding: 0.16rem 0.45rem; border: 1px solid var(--ln); background: var(--pl); color: var(--mut); cursor: pointer; border-radius: 0; }
+  .etb-chip:hover { border-color: var(--ac); color: var(--ac); }
+
+  /* Composer */
+  .etb-composer { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.85rem clamp(1rem, 2vw, 1.25rem); border-top: 1px solid var(--ln); }
+  .etb-composer__hint { font-family: var(--fm); font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fnt); text-align: right; }
+  .etb-model { display: flex; align-items: center; gap: 0.5rem; }
+  .etb-model .etb-mk__n { color: var(--ac); font-family: var(--fm); font-size: 0.8rem; line-height: 1; }
+  .etb-model__lbl { font-family: var(--fm); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fnt); flex: none; }
+  .etb-model__in { flex: 1; font-family: var(--fm); font-size: 0.78rem; padding: 0.4rem 0.6rem; letter-spacing: 0.02em; }
+
+  /* Canvas + framed preview */
+  .etb-canvas { display: flex; flex-direction: column; min-height: 0; background: var(--pa2); }
+  .etb-canvas__stage { flex: 1; min-height: 0; display: flex; padding: clamp(1rem, 2.5vw, 2rem); overflow: auto;
+    background-image: repeating-linear-gradient(to right, var(--lns) 0 1px, transparent 1px 5rem); }
+  @media (max-width: 64rem) { .etb-canvas__stage { min-height: 30rem; } }
+  .etb-frame { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column;
+    border: 1px solid var(--ink); background: var(--pl); box-shadow: 14px 14px 0 -1px rgb(10 10 11 / 0.06); }
+  .etb-cnr { position: absolute; width: 14px; height: 14px; border: 1.5px solid var(--ac); z-index: 3; }
+  .etb-cnr--tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  .etb-cnr--tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
+  .etb-cnr--bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
+  .etb-cnr--br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+  .etb-frame__cap { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--ln);
+    font-family: var(--fm); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mut); }
+  .etb-frame__dot { width: 6px; height: 6px; background: var(--ac); flex: none; }
+  .etb-frame__i { flex: 1; width: 100%; border: 0; background: #fff; min-height: 20rem; }
+
+  /* Version rail */
+  .etb-vers { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .etb-vers__lbl { font-family: var(--fm); font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fnt); }
+  .etb-vers__rail { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .etb-ver { font-family: var(--fm); font-size: 0.62rem; letter-spacing: 0.06em; border: 1px solid var(--ln);
+    background: var(--pl); color: var(--mut); padding: 0.25rem 0.5rem; cursor: pointer; border-radius: 0; }
+  .etb-ver:hover { border-color: var(--ac); color: var(--ac); }
+  .etb-ver.is-active { background: var(--ink); color: var(--pa); border-color: var(--ink); }
+</style>
+
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var form = document.getElementById("et-form");
+    if (!form) return;
+    var log = document.getElementById("et-log");
+    var promptEl = document.getElementById("et-prompt");
+    var sendBtn = document.getElementById("et-send");
+    var htmlField = document.getElementById("et-html");
+    var frame = document.getElementById("et-frame");
+    var actionField = document.getElementById("et-action");
+    var versWrap = document.getElementById("et-vers");
+    var rail = document.getElementById("et-vers-rail");
+    var capEl = document.getElementById("et-cap");
+    var modelEl = document.getElementById("et-model");
+
+    // Remember the last-used model code across reloads (admin convenience).
+    var MODEL_KEY = "ow-et-model";
+    try {
+      var saved = window.localStorage.getItem(MODEL_KEY);
+      if (saved && modelEl) modelEl.value = saved;
+    } catch (e) {}
+    if (modelEl) {
+      modelEl.addEventListener("change", function () {
+        try { window.localStorage.setItem(MODEL_KEY, (modelEl.value || "").trim()); } catch (e) {}
+      });
+    }
+
+    var history = [];
+    var versions = [];   // { html, preview, label }
+    var active = -1;
+
+    function bubble(text, kind) {
+      log.classList.add("has-msgs");
+      var el = document.createElement("div");
+      el.className = "etb-msg etb-msg--" + kind;
+      el.textContent = text;
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      return el;
+    }
+
+    // ---- Attachments: reference images (vision) + text/brand files (context) ----
+    var imgIn = document.getElementById("et-img-in");
+    var fileIn = document.getElementById("et-file-in");
+    var attList = document.getElementById("et-attach-list");
+    var attImages = [];  // { name, url }
+    var attFiles = [];   // { name, text }
+
+    function renderAtt() {
+      attList.innerHTML = "";
+      attImages.forEach(function (a, i) {
+        var chip = document.createElement("span"); chip.className = "etb-att";
+        var im = document.createElement("img"); im.className = "etb-att__thumb"; im.src = a.url; im.alt = "";
+        var nm = document.createElement("span"); nm.className = "etb-att__nm"; nm.textContent = a.name;
+        var x = document.createElement("button"); x.type = "button"; x.className = "etb-att__x"; x.setAttribute("aria-label", "Remove"); x.textContent = "×";
+        x.addEventListener("click", function () { attImages.splice(i, 1); renderAtt(); });
+        chip.appendChild(im); chip.appendChild(nm); chip.appendChild(x); attList.appendChild(chip);
+      });
+      attFiles.forEach(function (a, i) {
+        var chip = document.createElement("span"); chip.className = "etb-att";
+        var nm = document.createElement("span"); nm.className = "etb-att__nm"; nm.textContent = a.name;
+        var x = document.createElement("button"); x.type = "button"; x.className = "etb-att__x"; x.setAttribute("aria-label", "Remove"); x.textContent = "×";
+        x.addEventListener("click", function () { attFiles.splice(i, 1); renderAtt(); });
+        chip.appendChild(nm); chip.appendChild(x); attList.appendChild(chip);
+      });
+    }
+    function readImage(file) {
+      if (attImages.length >= 4) return;
+      var r = new FileReader();
+      r.onload = function () { attImages.push({ name: file.name, url: String(r.result) }); renderAtt(); };
+      r.readAsDataURL(file);
+    }
+    function readTextFile(file) {
+      if (attFiles.length >= 4) return;
+      var r = new FileReader();
+      r.onload = function () { attFiles.push({ name: file.name, text: String(r.result).slice(0, 8000) }); renderAtt(); };
+      r.readAsText(file);
+    }
+    if (imgIn) imgIn.addEventListener("change", function () {
+      Array.prototype.forEach.call(imgIn.files || [], readImage); imgIn.value = "";
+    });
+    if (fileIn) fileIn.addEventListener("change", function () {
+      Array.prototype.forEach.call(fileIn.files || [], readTextFile); fileIn.value = "";
+    });
+
+    // Quick-start chips fill the prompt so the empty chat is never dead space.
+    Array.prototype.forEach.call(document.querySelectorAll(".etb-qs"), function (qs) {
+      qs.addEventListener("click", function () {
+        promptEl.value = qs.getAttribute("data-qs") || qs.textContent;
+        promptEl.focus();
+      });
+    });
+
+    // Email type is compulsory before generating and fixed for the whole chat:
+    // the first generation locks it, so every version designs for the same type.
+    var ptypeEl = document.getElementById("et-ptype");
+    var ptypeLock = document.getElementById("et-ptype-lock");
+    var typeLocked = false, lockedType = "";
+    function getType() { return ptypeEl ? (ptypeEl.value || "").trim() : ""; }
+    function lockType(t) {
+      if (typeLocked || !ptypeEl) return;
+      typeLocked = true; lockedType = t || getType();
+      ptypeEl.classList.add("is-locked");
+      ptypeEl.setAttribute("aria-disabled", "true");
+      if (ptypeLock) ptypeLock.hidden = false;
+    }
+    if (ptypeEl) ptypeEl.addEventListener("change", function () { if (typeLocked) ptypeEl.value = lockedType; });
+
+    // Design-style picker  the prompt-orchestration control. Selecting a style
+    // pre-applies its full look to every generation; the choice rides each
+    // request as `style`, and is remembered across reloads for convenience.
+    var styleWrap = document.getElementById("et-styles");
+    var styleField = document.getElementById("et-style");
+    var STYLE_KEY = "ow-et-style";
+    function getStyle() { return styleField ? (styleField.value || "").trim() : ""; }
+    function setStyle(val) {
+      if (!styleField) return;
+      styleField.value = val || "";
+      if (styleWrap) {
+        Array.prototype.forEach.call(styleWrap.querySelectorAll(".etb-style"), function (b) {
+          b.classList.toggle("is-active", (b.getAttribute("data-style") || "") === (val || ""));
+        });
+      }
+      try { window.localStorage.setItem(STYLE_KEY, val || ""); } catch (e) {}
+    }
+    if (styleWrap) {
+      Array.prototype.forEach.call(styleWrap.querySelectorAll(".etb-style"), function (b) {
+        b.addEventListener("click", function () { setStyle(b.getAttribute("data-style") || ""); });
+      });
+      try {
+        var savedStyle = window.localStorage.getItem(STYLE_KEY);
+        if (savedStyle) setStyle(savedStyle);
+      } catch (e) {}
+    }
+
+    function csrf() {
+      var f = form.querySelector('input[name="csrfmiddlewaretoken"]');
+      return f ? f.value : "";
+    }
+
+    function renderRail() {
+      rail.innerHTML = "";
+      versions.forEach(function (v, i) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "etb-ver" + (i === active ? " is-active" : "");
+        b.textContent = "V" + (i + 1);
+        b.title = v.label || ("Version " + (i + 1));
+        b.addEventListener("click", function () { activate(i); });
+        rail.appendChild(b);
+      });
+      versWrap.hidden = versions.length === 0;
+    }
+
+    function activate(i) {
+      if (i < 0 || i >= versions.length) return;
+      active = i;
+      var v = versions[i];
+      htmlField.value = v.html || "";
+      frame.srcdoc = v.preview || "";
+      if (capEl) capEl.textContent = "Version " + (i + 1) + " · demo content & images";
+      renderRail();
+      Array.prototype.forEach.call(log.querySelectorAll(".etb-vercard"), function (c) {
+        c.classList.toggle("is-active", parseInt(c.getAttribute("data-ver"), 10) === i);
+      });
+    }
+
+    function addVersion(html, preview, label, model) {
+      versions.push({ html: html, preview: preview, label: label || ("Version " + (versions.length + 1)) });
+      var i = versions.length - 1;
+      var card = document.createElement("div");
+      card.className = "etb-vercard";
+      card.setAttribute("data-ver", i);
+      var n = document.createElement("span"); n.className = "etb-vercard__n"; n.textContent = "Version " + (i + 1);
+      var txt = document.createTextNode(model ? (" · " + model) : " ready");
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "etb-vercard__use"; btn.textContent = "Preview";
+      btn.addEventListener("click", function () { activate(i); });
+      card.appendChild(n); card.appendChild(txt); card.appendChild(btn);
+      log.appendChild(card); log.scrollTop = log.scrollHeight;
+      activate(i);
+    }
+
+    function generate() {
+      var ptype = getType();
+      if (!ptype) {
+        bubble("First choose an email type  single product, multiple products, or promotional. The whole chat designs for that type.", "err");
+        if (ptypeEl) ptypeEl.focus();
+        return;
+      }
+      var prompt = (promptEl.value || "").trim();
+      if (!prompt) { promptEl.focus(); return; }
+      lockType(ptype);
+      var imgs = attImages.map(function (a) { return a.url; });
+      var fls = attFiles.map(function (a) { return { name: a.name, text: a.text }; });
+      var attN = imgs.length + fls.length;
+      bubble(prompt + (attN ? ("  ⧉ " + attN + " attachment" + (attN > 1 ? "s" : "")) : ""), "me");
+      promptEl.value = "";
+      attImages = []; attFiles = []; renderAtt();  // consumed by this turn
+      sendBtn.classList.add("is-busy");
+      var thinking = bubble("Designing…", "bot");
+      var model = modelEl ? (modelEl.value || "").trim() : "";
+      fetch(form.getAttribute("data-generate-url"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
+        body: JSON.stringify({ prompt: prompt, history: history, html: htmlField.value || "", model: model, product_type: ptype, style: getStyle(), images: imgs, files: fls })
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        sendBtn.classList.remove("is-busy");
+        if (data && data.ok) {
+          thinking.remove();
+          history.push({ role: "user", content: prompt });
+          history.push({ role: "assistant", content: "(updated the template)" });
+          addVersion(data.html, data.preview || "", "From: " + prompt.slice(0, 60), data.model || "");
+        } else {
+          thinking.className = "etb-msg etb-msg--err";
+          thinking.textContent = (data && data.error) || "Couldn’t generate that. Try rephrasing.";
+        }
+      }).catch(function () {
+        sendBtn.classList.remove("is-busy");
+        thinking.className = "etb-msg etb-msg--err";
+        thinking.textContent = "Something went wrong. Please try again.";
+      });
+    }
+
+    sendBtn.addEventListener("click", generate);
+    promptEl.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); generate(); }
+    });
+
+    // Click a variable chip to insert its token into the prompt.
+    Array.prototype.forEach.call(document.querySelectorAll(".etb-chip"), function (chip) {
+      chip.addEventListener("click", function () {
+        var tok = chip.getAttribute("data-token") || chip.textContent;
+        var s = promptEl.value;
+        promptEl.value = s + (s && !/\s$/.test(s) ? " " : "") + tok + " ";
+        promptEl.focus();
+      });
+    });
+
+    document.getElementById("et-save").addEventListener("click", function () { actionField.value = "save"; });
+    document.getElementById("et-publish").addEventListener("click", function (e) {
+      if (!(htmlField.value || "").trim()) {
+        e.preventDefault();
+        bubble("Generate a template before publishing.", "err");
+        return;
+      }
+      actionField.value = "publish";
+    });
+
+    // Seed the saved version (edit mode) so it appears in the rail and is restorable.
+    if ((htmlField.value || "").trim()) {
+      versions.push({ html: htmlField.value, preview: frame.getAttribute("srcdoc") || "", label: "Saved version" });
+      active = 0;
+      renderRail();
+      // An existing template already has a type  keep it fixed while editing.
+      if (getType()) lockType(getType());
+    }
+  })();
+</script>
+{% endblock %}

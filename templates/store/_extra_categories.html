@@ -1,0 +1,18 @@
+{% load store_extras %}
+{% comment %}
+Shown only once a main Category is chosen and another category exists
+to add; the main one is never offered here (initExtraCategories).
+{% endcomment %}
+<div class="pal-field app-f--full" data-extracats hidden>
+  <span class="pal-field__label">Additional categories <span class="app-field-hint" style="display:inline"> optional</span>{% field_tip "categories_multi" %}</span>
+  <div class="app-catgrid">
+    {% for c in categories %}
+      <label class="app-catopt" data-cat-id="{{ c.id }}">
+        <input type="checkbox" name="categories_multi" value="{{ c.id }}"{% if c.id|stringformat:'s' in prefill.categories_multi %} checked{% endif %}>
+        <span>{{ c.name }}</span>
+      </label>
+    {% empty %}
+      <span class="app-field-hint">No other categories yet.</span>
+    {% endfor %}
+  </div>
+</div>

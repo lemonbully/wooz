@@ -1,0 +1,145 @@
+{% extends store_base|default:"storefront/theme_base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% block page_content %}
+{% website_base_path website request as website_base %}
+<section class="max-w-6xl mx-auto px-4 py-8 md:py-12" data-cart data-base="{{ website_base }}" data-currency="{{ website.currency|default:'INR' }}">
+  {% csrf_token %}
+  <h1 class="text-2xl md:text-3xl font-semibold text-gray-900">Your cart</h1>
+
+  {% if cart_items %}
+  <div class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Items -->
+    <div class="lg:col-span-2 divide-y divide-gray-100 border border-gray-100 rounded-xl">
+      {% for it in cart_items %}
+      <div class="flex gap-4 p-4" data-line="{{ it.id }}">
+        <a href="{{ website_base }}products/{{ it.slug }}/" class="block w-20 h-20 flex-none bg-gray-50 rounded-lg overflow-hidden">
+          {% if it.image %}<img src="{{ it.image.url }}" alt="{{ it.title }}" class="w-full h-full object-cover">{% endif %}
+        </a>
+        <div class="flex-1 min-w-0">
+          <a href="{{ website_base }}products/{{ it.slug }}/" class="font-medium text-gray-900 hover:underline line-clamp-2">{{ it.title }}</a>
+          {% if it.variant_label %}<p class="mt-0.5 text-xs text-gray-500">({{ it.variant_label }})</p>{% endif %}
+          <p class="mt-1 text-sm text-gray-500">{{ website.currency }} {{ it.unit_price }}{% if it.mrp %} <span class="line-through text-gray-400 ml-1">{{ it.mrp }}</span>{% endif %}</p>
+          {% if not it.in_stock %}<p class="mt-1 text-xs text-red-600">Out of stock</p>{% endif %}
+          <div class="mt-3 inline-flex items-center border border-gray-200 rounded-lg">
+            <button type="button" class="px-3 py-1.5 text-gray-600 hover:text-gray-900" data-qty-dec aria-label="Decrease">−</button>
+            <input type="text" inputmode="numeric" class="w-12 text-center border-0 focus:ring-0 py-1.5" value="{{ it.quantity }}" data-qty aria-label="Quantity">
+            <button type="button" class="px-3 py-1.5 text-gray-600 hover:text-gray-900" data-qty-inc aria-label="Increase">+</button>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="font-semibold text-gray-900" data-line-total>{{ website.currency }} {{ it.line_total }}</p>
+          <button type="button" class="mt-3 text-sm text-gray-400 hover:text-red-600" data-remove>Remove</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Summary -->
+    <aside class="border border-gray-100 rounded-xl p-5 h-fit lg:sticky lg:top-24">
+      <h2 class="font-semibold text-gray-900">Order summary</h2>
+
+      <div class="mt-4">
+        <label class="text-sm text-gray-600">Discount code</label>
+        <div class="mt-1 flex gap-2">
+          <input type="text" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm uppercase" placeholder="CODE"
+                 value="{{ cart_summary.coupon_code }}" data-coupon-input spellcheck="false">
+          <button type="button" class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium" data-coupon-apply>Apply</button>
+        </div>
+        <p class="mt-1.5 text-xs" data-coupon-msg></p>
+      </div>
+
+      <dl class="mt-5 space-y-2 text-sm border-t border-gray-100 pt-4">
+        <div class="flex justify-between text-gray-600"><dt>Subtotal</dt><dd data-sum-subtotal>{{ website.currency }} {{ cart_summary.subtotal }}</dd></div>
+        <div class="flex justify-between text-gray-600 {% if not cart_summary.discount %}hidden{% endif %}" data-sum-discount-row><dt>Discount</dt><dd class="text-green-600" data-sum-discount>− {{ website.currency }} {{ cart_summary.discount }}</dd></div>
+        <div class="flex justify-between text-gray-600 {% if not cart_summary.tax %}hidden{% endif %}" data-sum-tax-row><dt>GST</dt><dd data-sum-tax>{{ website.currency }} {{ cart_summary.tax|default:"0.00" }}</dd></div>
+        <div class="flex justify-between text-base font-semibold text-gray-900 border-t border-gray-100 pt-3"><dt>Total</dt><dd data-sum-total>{{ website.currency }} {{ cart_summary.total }}</dd></div>
+      </dl>
+
+      <a href="{{ website_base }}checkout/" class="mt-5 block text-center px-4 py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700">Checkout</a>
+      <a href="{{ website_base }}products/" class="mt-3 block text-center text-sm text-gray-500 hover:text-gray-900">Continue shopping</a>
+    </aside>
+  </div>
+  {% else %}
+  <div class="mt-10 text-center py-16 border border-dashed border-gray-200 rounded-xl">
+    <p class="text-gray-500">Your cart is empty.</p>
+    <a href="{{ website_base }}products/" class="mt-4 inline-block px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium">Browse products</a>
+  </div>
+  {% endif %}
+</section>
+
+<script>
+(function () {
+  var root = document.querySelector('[data-cart]');
+  if (!root) return;
+  var base = root.getAttribute('data-base') || '/';
+  var cur = root.getAttribute('data-currency') || '';
+  var token = (root.querySelector('input[name=csrfmiddlewaretoken]') || {}).value || '';
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': token, 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'same-origin',
+      body: body || ''
+    }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+  }
+  function money(v) { return cur + ' ' + v; }
+  function paintSummary(c) {
+    if (!c) return;
+    var q = function (s) { return document.querySelector(s); };
+    if (q('[data-sum-subtotal]')) q('[data-sum-subtotal]').textContent = money(c.subtotal);
+    if (q('[data-sum-total]')) q('[data-sum-total]').textContent = money(c.total);
+    var dRow = q('[data-sum-discount-row]');
+    if (dRow) {
+      if (parseFloat(c.discount) > 0) { dRow.classList.remove('hidden'); q('[data-sum-discount]').textContent = '− ' + money(c.discount); }
+      else dRow.classList.add('hidden');
+    }
+    var tRow = q('[data-sum-tax-row]');
+    if (tRow && c.tax != null) {
+      if (parseFloat(c.tax) > 0) { tRow.classList.remove('hidden'); if (q('[data-sum-tax]')) q('[data-sum-tax]').textContent = money(c.tax); }
+      else tRow.classList.add('hidden');
+    }
+    // If the cart emptied, reload to show the empty state.
+    if (parseInt(c.count, 10) === 0) window.location.reload();
+  }
+
+  root.addEventListener('click', function (e) {
+    var line = e.target.closest('[data-line]');
+    if (e.target.closest('[data-qty-inc]') || e.target.closest('[data-qty-dec]')) {
+      var input = line.querySelector('[data-qty]');
+      var v = parseInt(input.value, 10) || 1;
+      v = e.target.closest('[data-qty-inc]') ? v + 1 : Math.max(1, v - 1);
+      input.value = v;
+      updateLine(line, v);
+    } else if (e.target.closest('[data-remove]')) {
+      post(base + 'cart/remove/' + line.getAttribute('data-line') + '/').then(function (res) {
+        if (res.ok && res.data.ok) { line.remove(); paintSummary(res.data.cart); }
+      });
+    } else if (e.target.closest('[data-coupon-apply]')) {
+      var code = (root.querySelector('[data-coupon-input]') || {}).value || '';
+      post(base + 'cart/coupon/', 'code=' + encodeURIComponent(code)).then(function (res) {
+        var msg = root.querySelector('[data-coupon-msg]');
+        if (msg) { msg.textContent = res.data.message || ''; msg.className = 'mt-1.5 text-xs ' + (res.data.ok ? 'text-green-600' : 'text-red-600'); }
+        paintSummary(res.data.cart);
+      });
+    }
+  });
+
+  function updateLine(line, qty) {
+    post(base + 'cart/update/' + line.getAttribute('data-line') + '/', 'quantity=' + qty).then(function (res) {
+      if (res.ok && res.data.ok) paintSummary(res.data.cart);
+    });
+  }
+  root.addEventListener('change', function (e) {
+    if (e.target.matches('[data-qty]')) {
+      var line = e.target.closest('[data-line]');
+      var v = Math.max(1, parseInt(e.target.value, 10) || 1);
+      e.target.value = v;
+      updateLine(line, v);
+    }
+  });
+})();
+</script>
+{% endblock %}

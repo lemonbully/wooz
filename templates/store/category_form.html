@@ -12,6 +12,29 @@
     <form method="post" enctype="multipart/form-data" class="app-form app-card" style="padding:1.5rem;">
       {% csrf_token %}
       {% include "store/_form.html" with wide_fields="description" %}
+
+      <p class="app-field-hint cat-url" style="margin-top:0.75rem" data-cat-url data-base="{{ category_url_base }}" data-current="{{ category.slug|default:'' }}">
+        Page URL: <span class="cat-url__path">{{ category_url_base }}<b data-cat-slug>{{ category.slug|default:"your-category" }}</b>/</span><br>
+        <span data-cat-url-note>The URL follows the category name. Renaming it updates the link on your store and in your sitemap, and the old link redirects here.</span>
+      </p>
+
+      <div class="app-medfield" style="margin-top:1.25rem">
+        <span class="pal-field__label">Category image</span>
+        <div class="app-medfield__row">
+          <button type="button" class="pal-btn" data-ow-media-open data-ow-kind="image"
+                  data-ow-title="Select category image"
+                  data-ow-ids="media_image_category" data-ow-preview="#app-medfield-category">
+            Choose from media library
+          </button>
+          <span class="app-field-hint" style="margin:0">Pick an image (or upload a new one) from your store library.</span>
+        </div>
+        <div class="app-medfield__preview" id="app-medfield-category">
+          {% if category.image %}
+            <span class="app-medfield__item"><img class="app-medfield__thumb" src="{{ category.image.url }}" alt="{{ category.name }}"></span>
+          {% endif %}
+        </div>
+      </div>
+
       <div class="app-form__foot">
         <a href="{% url 'store:categories' site.id %}" class="pal-btn pal-btn--ghost">Cancel</a>
         <button class="pal-btn" type="submit">{% if is_edit %}Save changes{% else %}Create category{% endif %}</button>
@@ -19,4 +42,37 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script nonce="{{ csp_nonce }}">
+// Live preview of the category's page URL while the name is edited. Mirrors
+// Django's slugify (the server is authoritative and adds "-2" on a clash).
+(function () {
+  var box = document.querySelector("[data-cat-url]");
+  var name = document.querySelector('form [name="name"]');
+  if (!box || !name) return;
+  var out = box.querySelector("[data-cat-slug]");
+  var note = box.querySelector("[data-cat-url-note]");
+  var current = box.getAttribute("data-current") || "";
+  var NOTE = note ? note.textContent : "";
+  function slugify(v) {
+    return String(v || "").normalize("NFKD").replace(/[̀-ͯ]/g, "")
+      .toLowerCase().replace(/[^\w\s-]/g, "").replace(/[-\s]+/g, "-").replace(/^[-_]+|[-_]+$/g, "");
+  }
+  function sync() {
+    var slug = slugify(name.value) || "category";
+    // Unchanged when the slug is the name's slug, or it plus a "-N" suffix.
+    var tail = current.indexOf(slug + "-") === 0 ? current.slice(slug.length + 1) : "";
+    var same = !!current && (current === slug || /^\d+$/.test(tail));
+    out.textContent = same ? current : slug;
+    if (note) note.textContent = (current && !same)
+      ? "Saving will move this category to the new URL above. Your store links and sitemap update automatically, and the old URL (/" + current + "/) redirects here."
+      : NOTE;
+  }
+  name.addEventListener("input", sync);
+  sync();
+})();
+</script>
 {% endblock %}

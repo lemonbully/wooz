@@ -1,4 +1,7 @@
 {% load website_filters %}
+{% comment %} When the owner deleted every reel in the editor ("reels_removed"),
+   the strip is hidden instead of falling back to the demo reels. {% endcomment %}
+{% if videos|length or website.content.video_section.videos or not website.content.reels_removed %}
 <!-- Video Section (Join the Tribe) -->
 <section class="video-section py-12 md:py-16 bg-white overflow-hidden">
     <div class="container mx-auto max-w-7xl px-4">
@@ -43,13 +46,16 @@
                             {% endwith %}
                         {% endfor %}
                     {% else %}
-                        <!-- Placeholder cards if no videos uploaded -->
-                        {% for i in "123456" %}
+                        {% comment %} {# No reels uploaded yet  bundled demo videos (v1–v6) that autoplay
+                           muted and loop. They are served same-origin from static, so
+                           media-src 'self' admits them (unlike external demo videos). #} {% endcomment %}
+                        {% demo_reel_videos as reel_vids %}
+                        {% for vurl in reel_vids %}
                         <div class="video-slide">
-                            <div class="video-portrait bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center text-gray-400">
-                                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                </svg>
+                            <div class="video-portrait bg-gray-100 rounded-2xl overflow-hidden group">
+                                <video class="absolute inset-0 w-full h-full object-cover" autoplay muted loop playsinline preload="metadata">
+                                    <source src="{{ vurl }}" type="video/mp4">
+                                </video>
                             </div>
                         </div>
                         {% endfor %}
@@ -102,7 +108,7 @@
     @media (min-width: 768px) and (orientation: landscape) {
         .video-section {
             padding-top: 4.5rem;
-            padding-bottom: 4.5rem;
+            padding-bottom: 2rem;
         }
         .video-portrait { aspect-ratio: 9 / 17; }
         .video-portrait::before { padding-top: 188.8889%; }
@@ -156,5 +162,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
-
+{% endif %}

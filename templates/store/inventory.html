@@ -1,49 +1,139 @@
 {% extends "store/_shell.html" %}
+{% load static store_extras %}
 {% block title %}{{ site.name }} · Inventory{% endblock %}
 {% block crumb %}Inventory{% endblock %}
 
 {% block main %}
 <div class="app-page">
-  <div class="app-head"><div>
-    <p class="pal-mono pal-mono--accent">Catalogue</p>
-    <h1 class="app-head__title pal-mt-4">Inventory</h1>
-    <p class="app-head__lead">Stock on hand across every product and its variants.</p>
-  </div></div>
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Catalogue</p>
+      <h1 class="app-head__title pal-mt-4">Inventory Overview</h1>
+      <p class="app-head__lead">Track stock levels and sales for {{ inventory_month_label }}</p>
+      <div class="inv-legend">
+        <span class="inv-legend__item"><span class="inv-dot inv-dot--ok"></span>Live inventory powered by your D2C orders</span>
+        <span class="inv-legend__item"><span class="inv-dot inv-dot--accent"></span>Edit quantities directly from this tab</span>
+      </div>
+    </div>
+  </div>
 
   <div class="app-block">
-    <form method="get" class="app-toolbar">
+    <div class="app-toolbar">
       <div class="app-search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" name="q" value="{{ q }}" placeholder="Search title or SKU…">
+        <input type="search" id="inventory-search" placeholder="Search by title or SKU…">
       </div>
-      <button class="pal-btn pal-btn--ghost" type="submit">Search</button>
-    </form>
+      <select id="inventory-category" class="pal-select">
+        <option value="">All Categories</option>
+        {% for cat in categories_all %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}
+      </select>
+    </div>
 
-    {% if products %}
-      <div class="app-tablewrap">
-        <table class="app-table">
-          <thead><tr><th>Product</th><th>Category</th><th>Type</th><th class="app-table__num">Threshold</th><th class="app-table__num">On hand</th></tr></thead>
-          <tbody>
-            {% for p in products %}
-              <tr>
-                <td><a href="{% url 'store:product_edit' site.id p.id %}" class="app-table__strong">{{ p.title }}</a>{% if p.sku %}<div class="app-sub">{{ p.sku }}</div>{% endif %}</td>
-                <td>{{ p.category.name|default:"—" }}</td>
-                <td>{% if p.has_variants %}Variant{% else %}Simple{% endif %}</td>
-                <td class="app-table__num">{{ p.low_stock_threshold }}</td>
+    <div class="app-tablewrap">
+      <table class="app-table inv-table">
+        <thead>
+          <tr>
+            <th>Product</th><th>SKU ID</th><th>Category</th>
+            <th class="app-table__num">Available Qty</th>
+            <th class="app-table__num">Sold This Month</th>
+            <th class="app-table__actions">Action</th>
+          </tr>
+        </thead>
+        <tbody id="inventory-tbody">
+          {% for p in products %}
+            {% if p.variant_combinations %}
+              {% for v in p.variant_combinations %}
+                <tr data-title="{{ p.title|lower }}" data-sku="{{ v.sku|default_if_none:p.sku|lower }}" data-category="{% if p.category %}{{ p.category.id }}{% endif %}">
+                  <td>
+                    <span class="inv-prod">
+                      {% if p.images.first %}<img class="ord-thumb" src="{{ p.images.first.image.url }}" alt="">{% else %}<span class="ord-thumb ord-thumb--empty"></span>{% endif %}
+                      <span class="inv-prod__meta">
+                        <span class="app-table__strong">{{ p.title }}</span>
+                        <span class="app-sub">{% for a in v.attributes %}{% if a.name %}{{ a.name }}: {{ a.value }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td><span class="app-chip">{{ v.sku|default_if_none:p.sku|default:"" }}</span></td>
+                  <td>{% if p.category %}<span class="app-chip app-chip--soft">{{ p.category.name }}</span>{% else %}{% endif %}</td>
+                  <td class="app-table__num">
+                    {% with qty=v.inventory|default:0 %}
+                      <span class="inv-qty {% if qty <= 0 %}is-out{% elif qty <= p.low_stock_threshold %}is-low{% else %}is-ok{% endif %}" data-inventory-value="{{ qty }}"><span class="inv-dot"></span>{{ qty }}</span>
+                    {% endwith %}
+                  </td>
+                  <td class="app-table__num">{{ p.sold_this_month }}</td>
+                  <td class="app-table__actions">
+                    <span class="ord-acts">
+                      <a href="{{ site.storefront_url }}products/{{ p.slug }}/" target="_blank" rel="noopener" class="ord-actbtn ord-actbtn--view" title="View product on storefront">{% include "store/_icons.html" with icon="eye" %}</a>
+                      <button type="button" class="pal-btn pal-btn--sm" data-restock
+                              data-endpoint="{% url 'store:product_restock' site.id p.id %}"
+                              data-product-id="{{ p.id }}" data-variant-key="{{ v.key }}">Edit Qty</button>
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr data-title="{{ p.title|lower }}" data-sku="{{ p.sku|lower }}" data-category="{% if p.category %}{{ p.category.id }}{% endif %}">
+                <td>
+                  <span class="inv-prod">
+                    {% if p.images.first %}<img class="ord-thumb" src="{{ p.images.first.image.url }}" alt="">{% else %}<span class="ord-thumb ord-thumb--empty"></span>{% endif %}
+                    <span class="inv-prod__meta"><span class="app-table__strong">{{ p.title }}</span></span>
+                  </span>
+                </td>
+                <td><span class="app-chip">{{ p.sku|default:"" }}</span></td>
+                <td>{% if p.category %}<span class="app-chip app-chip--soft">{{ p.category.name }}</span>{% else %}{% endif %}</td>
                 <td class="app-table__num">
-                  {% if p.is_out_of_stock %}<span class="app-badge app-badge--danger">0</span>
-                  {% elif p.is_low_stock %}<span class="app-badge app-badge--warn">{{ p.stock_on_hand }}</span>
-                  {% else %}<span class="app-badge app-badge--ok">{{ p.stock_on_hand }}</span>{% endif %}
+                  {% with qty=p.available_inventory %}
+                    <span class="inv-qty {% if qty <= 0 %}is-out{% elif qty <= p.low_stock_threshold %}is-low{% else %}is-ok{% endif %}" data-inventory-value="{{ qty }}"><span class="inv-dot"></span>{{ qty }}</span>
+                  {% endwith %}
+                </td>
+                <td class="app-table__num">{{ p.sold_this_month }}</td>
+                <td class="app-table__actions">
+                  <span class="ord-acts">
+                    <a href="{{ site.storefront_url }}products/{{ p.slug }}/" target="_blank" rel="noopener" class="ord-actbtn ord-actbtn--view" title="View product on storefront">{% include "store/_icons.html" with icon="eye" %}</a>
+                    <button type="button" class="pal-btn pal-btn--sm" data-restock
+                            data-endpoint="{% url 'store:product_restock' site.id p.id %}"
+                            data-product-id="{{ p.id }}" data-variant-key="">Edit Qty</button>
+                  </span>
                 </td>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% include "store/_pagination.html" with page=products %}
-    {% else %}
-      <div class="app-empty"><h2 class="app-empty__title">Nothing to show</h2><p class="app-empty__text">Add products to start tracking stock.</p></div>
-    {% endif %}
+            {% endif %}
+          {% empty %}
+            <tr><td colspan="6" class="ord-empty">No products yet.</td></tr>
+          {% endfor %}
+          <tr id="inv-no-match" hidden><td colspan="6" class="ord-empty">No products match your search.</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
+
+{# ── Edit Quantity modal ───────────────────────────────────────────────── #}
+<div class="app-dlg" id="invModal" hidden>
+  <div class="app-dlg__backdrop" data-inv-close></div>
+  <div class="app-dlg__panel">
+    <header class="app-dlg__head">
+      <div><h3 class="app-dlg__title">Edit Quantity</h3></div>
+      <button type="button" class="app-dlg__x" data-inv-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+    </header>
+    <div class="app-dlg__body">
+      <label class="app-dlg__field">
+        <span>Quantity</span>
+        <input type="number" min="0" id="inventory-restock-qty" placeholder="Enter quantity">
+      </label>
+      <p class="app-dlg__hint">Updates inventory instantly for this product/variant.</p>
+      <input type="hidden" id="inventory-restock-endpoint">
+      <input type="hidden" id="inventory-restock-product-id">
+      <input type="hidden" id="inventory-restock-variant-key">
+    </div>
+    <footer class="app-dlg__foot">
+      <button type="button" class="pal-btn pal-btn--ghost" data-inv-close>Cancel</button>
+      <button type="button" class="pal-btn" id="inventory-restock-save">Save</button>
+    </footer>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/app/inventory.js' %}" defer></script>
 {% endblock %}

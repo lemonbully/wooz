@@ -3,42 +3,130 @@
 {% block page_eyebrow %}Legal{% endblock %}
 
 {% block page_body %}
-  <div class="alert alert--info">
-    Placeholder text. This page needs review by a lawyer before OneWooz takes
-    real customers — it is written to be accurate about how the service works,
-    not to be an enforceable agreement.
-  </div>
+  <p><strong>Last updated:</strong> 5 September 2026</p>
 
   <p class="lead">
-    The short version: your store is yours, your customers are yours, your
-    money is yours. We host it and keep it running.
+    These terms set out the deal between you and OneWooz. The short version:
+    your store is yours, your customers are yours, and your money is yours. We
+    host it, keep it running, and stay out of your way.
+  </p>
+
+  <h2 class="h3 mt-7">Who we are</h2>
+  <p>
+    OneWooz is owned and operated by <strong>The Artless</strong>, registered at
+    H.no. 866, Street no. 11, Mustafabad New, Delhi 110094, India. In these
+    terms, "we", "us" and "OneWooz" mean The Artless, and "you" means the person
+    or business using the service. By creating an account you agree to these
+    terms.
   </p>
 
   <h2 class="h3 mt-7">What we provide</h2>
   <p>
-    Hosting, the store software, automatic HTTPS for your domain, and the
-    integrations you connect. We aim for continuous availability but do not
-    guarantee it, and we will tell you about planned work in advance.
+    We provide hosting, the store software, automatic HTTPS for your domain, and
+    the integrations you connect. OneWooz builds both a shop that takes payments
+    directly (D2C) and a catalogue that captures enquiries and quotes (B2B). We
+    aim for continuous availability but do not guarantee it, and we will give you
+    reasonable notice of planned work.
+  </p>
+
+  <h2 class="h3 mt-7">Your account</h2>
+  <p>
+    You must give accurate details when you sign up and keep them current. You
+    are responsible for activity under your account and for keeping your
+    credentials secure. Tell us promptly if you believe your account has been
+    accessed without your permission. You must be able to form a binding
+    contract to use OneWooz.
   </p>
 
   <h2 class="h3 mt-7">What you are responsible for</h2>
   <ul class="checks mt-4">
     <li>{% include "web/_check.html" %} That what you sell is lawful where you sell it.</li>
-    <li>{% include "web/_check.html" %} Fulfilling orders, and handling returns and refunds you have promised.</li>
-    <li>{% include "web/_check.html" %} The accuracy of your product, tax and policy information.</li>
+    <li>{% include "web/_check.html" %} Fulfilling orders, and handling the returns and refunds you have promised.</li>
+    <li>{% include "web/_check.html" %} The accuracy of your product, pricing, tax, and policy information.</li>
+    <li>{% include "web/_check.html" %} The privacy notice and store policies shown to your own shoppers.</li>
     <li>{% include "web/_check.html" %} Keeping your account credentials secure.</li>
   </ul>
 
+  <h2 class="h3 mt-7">Acceptable use</h2>
+  <p>
+    You agree not to use OneWooz to sell unlawful goods or services, to
+    infringe someone else's rights, to send spam, to host malware, or to attempt
+    to break, overload, or gain unauthorised access to the platform or other
+    customers' data. Misuse of this kind may lead to suspension.
+  </p>
+
   <h2 class="h3 mt-7">Your content</h2>
   <p>
-    Text, images and product data you upload remain yours. You grant us only
-    the permission needed to host and display them on your store.
+    Text, images, and product data you upload remain yours. You grant us only the
+    permission needed to host, display, and back up that content so your store
+    can run. You are responsible for having the right to use everything you
+    upload.
+  </p>
+
+  <h2 class="h3 mt-7">Your customers and their orders</h2>
+  <p>
+    Your relationship with your shoppers is yours. You sell to them, you fulfil
+    their orders, and you handle their returns and refunds under the policies you
+    publish. Payments settle to your own account through your chosen payment
+    provider. OneWooz does not take a percentage of your sales.
+  </p>
+
+  <h2 class="h3 mt-7">Fees and billing</h2>
+  <p>
+    You pay for the OneWooz plan you choose. Fees, any applicable taxes such as
+    GST, and the billing cycle are shown before you subscribe. Unless stated
+    otherwise, fees are charged in advance and are non-refundable for the current
+    period. If a payment fails, we may pause paid features until it is resolved.
+    We will give you notice before any change to your plan price takes effect.
+  </p>
+
+  <h2 class="h3 mt-7">Third-party services</h2>
+  <p>
+    Payment gateways, couriers, and other services you connect are run by those
+    providers under their own terms. We pass them only what is needed to do their
+    job, but we are not responsible for their acts, outages, or decisions.
   </p>
 
   <h2 class="h3 mt-7">Ending it</h2>
   <p>
-    You can close your account at any time and export your data before you do.
-    We may suspend an account that is being used unlawfully or that puts other
-    customers at risk, and we will tell you why.
+    You can close your account at any time, and you can export your data before
+    you do. We may suspend or close an account that breaches these terms, is used
+    unlawfully, or puts other customers at risk, and we will tell you why unless
+    the law prevents us. On termination your right to use the service ends, and
+    we will delete your data in line with our
+    <a href="{% url 'web:page' 'privacy' %}" style="color:var(--accent-600);">privacy policy</a>.
+  </p>
+
+  <h2 class="h3 mt-7">Availability and liability</h2>
+  <p>
+    We provide the service with reasonable care and skill, but "as is" and
+    without guarantees that it will always be uninterrupted or error free. To the
+    extent the law allows, we are not liable for indirect or consequential loss,
+    or for loss of profit, revenue, or data, and our total liability to you is
+    limited to the fees you paid us in the twelve months before the claim. Nothing
+    in these terms limits liability that cannot be limited by law.
+  </p>
+
+  <h2 class="h3 mt-7">Governing law</h2>
+  <p>
+    These terms are governed by the laws of India, and the courts at Delhi have
+    jurisdiction over any dispute, subject to any rights you have as a consumer
+    under local law.
+  </p>
+
+  <h2 class="h3 mt-7">Changes to these terms</h2>
+  <p>
+    We may update these terms as the service grows or the law changes. When we
+    make a material change, we will update the date above and, where appropriate,
+    tell you by email. Continuing to use OneWooz after a change means you accept
+    the updated terms.
+  </p>
+
+  <h2 class="h3 mt-7">Contact</h2>
+  <p>
+    Questions about these terms:
+    <a href="mailto:hello@onewooz.com" style="color:var(--accent-600);">hello@onewooz.com</a>,
+    or write to The Artless, H.no. 866, Street no. 11, Mustafabad New,
+    Delhi 110094, India.
   </p>
 {% endblock %}

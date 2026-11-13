@@ -2,111 +2,502 @@
 {% load static %}
 
 {% block title %}Security · OneWooz{% endblock %}
+{% block crumb %}Security{% endblock %}
 
 {% block main %}
+<style nonce="{{ csp_nonce }}">
+  .sec-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .sec-head__title { display: flex; align-items: center; gap: 0.6rem; }
+  .sec-lead { color: var(--pal-muted); font-size: 0.86rem; max-width: 60ch; margin-top: 0.35rem; }
+  .sec-badge { font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.09em; text-transform: uppercase; padding: 0.14rem 0.45rem; border: 1px solid var(--pal-line); color: var(--pal-muted); white-space: nowrap; }
+  .sec-badge--on { border-color: #1f8a4c; color: #1f8a4c; }
+  .sec-badge--off { border-color: var(--pal-line); color: var(--pal-faint); }
+  .sec-list { margin-top: 1.15rem; }
+  .sec-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 0; border-top: 1px solid var(--pal-line-soft); }
+  .sec-row:first-child { border-top: 0; }
+  .sec-row__name { font-weight: 500; color: var(--pal-ink); font-size: 0.92rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .sec-row__meta { margin-top: 0.2rem; font-size: 0.78rem; color: var(--pal-muted); }
+  .sec-row__meta .dot { color: var(--pal-faint); margin: 0 0.35rem; }
+  .sec-row__right { text-align: right; flex: none; }
+  .sec-empty { padding: 0.9rem 0; color: var(--pal-faint); font-size: 0.86rem; }
+  .sec-remove { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-size: 0.82rem; color: var(--pal-muted); text-decoration: underline; }
+  .sec-remove:hover { color: var(--critical, #c0392b); }
+  .sec-when { font-size: 0.78rem; color: var(--pal-muted); font-variant-numeric: tabular-nums; }
+  .sec-when__ip { display: block; color: var(--pal-faint); }
+  .sec-flag { color: #b26a00; }
+  .sec-btn-wrap { flex: none; }
+
+  /* Two-step verification method chooser (authenticator vs email). */
+  .sec-2fa { margin-top: 1.15rem; display: grid; gap: 0.75rem; }
+  .sec-2fa__opt { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    border: 1px solid var(--pal-line); padding: 0.9rem 1rem; }
+  .sec-2fa__opt.is-active { border-color: var(--pal-accent, #4b2bf5); box-shadow: inset 0 0 0 1px var(--pal-accent, #4b2bf5); }
+  .sec-2fa__main { min-width: 0; }
+  .sec-2fa__act { flex: none; }
+  .sec-2fa__act form { margin: 0; }
+
+  /* Small danger button for "sign out / block this device". */
+  .sec-danger { appearance: none; cursor: pointer; font: inherit; font-size: 0.8rem; font-weight: 500;
+    padding: 0.4rem 0.75rem; border: 1px solid var(--pal-line); background: var(--pal-paper, #fff); color: #b0271d;
+    border-radius: 6px; transition: border-color .15s ease, background .15s ease; }
+  .sec-danger:hover { border-color: #b0271d; background: rgb(176 39 29 / 0.06); }
+  .sec-danger[disabled] { opacity: 0.5; cursor: default; }
+
+  /* ── Tabs ── */
+  .sec-tabs { display: flex; gap: 0.15rem; border-bottom: 1px solid var(--pal-line); margin-top: 1.75rem; flex-wrap: wrap; }
+  .sec-tab { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    padding: 0.65rem 0.95rem; cursor: pointer; font: inherit; font-size: 0.92rem; font-weight: 500; color: var(--pal-muted);
+    display: inline-flex; align-items: center; gap: 0.45rem; }
+  .sec-tab:hover { color: var(--pal-ink); }
+  .sec-tab[aria-selected="true"] { color: var(--pal-ink); border-bottom-color: var(--pal-accent, #4b2bf5); }
+  .sec-tab__count { font-family: var(--pal-font-mono); font-size: 0.6rem; padding: 0.08rem 0.4rem; border: 1px solid var(--pal-line); color: var(--pal-muted); border-radius: 999px; }
+  .sec-panel[hidden] { display: none; }
+  .sec-panel { margin-top: 0.25rem; }
+
+  /* Authenticator setup modal */
+  .ow-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.25rem; background: rgb(20 20 28 / 0.55); }
+  .ow-modal[hidden] { display: none; }
+  .ow-modal__card { background: var(--pal-paper, #fff); border: 1px solid var(--pal-line); border-radius: 10px; width: 100%; max-width: 26rem; max-height: calc(100vh - 2.5rem); overflow-y: auto; padding: 1.5rem; box-shadow: 0 22px 60px rgb(0 0 0 / 0.28); }
+  .ow-modal__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+  .ow-modal__title { font-size: 1.05rem; font-weight: 600; color: var(--pal-ink); }
+  .ow-modal__close { background: none; border: 0; font-size: 1.4rem; line-height: 1; cursor: pointer; color: var(--pal-muted); padding: 0 0.2rem; }
+  .totp-step { margin-top: 1rem; }
+  .totp-qr { display: block; width: 210px; height: auto; margin: 0.75rem auto 0; border: 1px solid var(--pal-line-soft); background: #fff; }
+  .totp-secret code { display: block; margin-top: 0.5rem; padding: 0.7rem; border: 1px solid var(--pal-line); background: var(--pal-paper-2, #f6f6f4); font-family: var(--pal-font-mono); font-size: 0.95rem; letter-spacing: 0.06em; word-break: break-all; user-select: all; text-align: center; color: var(--pal-ink); }
+  .totp-toggle { margin-top: 0.7rem; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-size: 0.82rem; color: var(--pal-accent, #4b2bf5); text-decoration: underline; }
+  .totp-help { margin-top: 0.5rem; font-size: 0.82rem; color: var(--pal-muted); line-height: 1.5; }
+  .totp-actions { margin-top: 1.1rem; display: flex; gap: 0.6rem; }
+
+  /* Segmented code boxes (paste blocked)  mirrors the auth OTP field */
+  .otp__boxes { display: flex; gap: 0.5rem; margin-top: 0.85rem; }
+  .otp__box { flex: 1 1 0; min-width: 0; aspect-ratio: 1 / 1; text-align: center; padding: 0; font-family: var(--pal-font-mono); font-size: 1.3rem; font-weight: 500; color: var(--pal-ink); background: var(--pal-paper, #fff); border: 1px solid var(--pal-line); border-radius: 6px; -moz-appearance: textfield; }
+  .otp__box::-webkit-outer-spin-button, .otp__box::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .otp__box:focus { outline: none; border-color: var(--pal-accent, #4b2bf5); box-shadow: inset 0 0 0 1px var(--pal-accent, #4b2bf5); }
+  .otp__box--filled { border-color: var(--pal-accent, #4b2bf5); }
+  .otp__warn { margin-top: 0.6rem; }
+</style>
+
 <div class="container section--tight">
   <div class="container--narrow" style="padding-inline:0;">
 
     <h1 class="h1">Security</h1>
-    <p class="lead mt-3">How you sign in, and where you've signed in from.</p>
+    <p class="lead mt-3">How you sign in, the devices you’re signed in on, and where you’ve signed in from.</p>
 
-    <section class="card card--pad-lg mt-7">
-      <div class="page-head">
-        <div>
-          <h2 class="h3">Passkeys</h2>
-          <p class="feature__body measure">
-            The strongest option. A passkey can't be phished, because your
-            browser only releases it to the real OneWooz.
-          </p>
-        </div>
-        <button type="button" id="add-passkey" class="btn btn--primary">Add passkey</button>
-      </div>
-
-      <p id="passkey-error" class="alert alert--error mt-4 hidden" role="alert"></p>
-
-      <ul class="list mt-5">
-        {% for credential in passkeys %}
-          <li>
-            <div>
-              <p class="small" style="font-weight:500;">{{ credential.label }}</p>
-              <p class="xs muted mt-3" style="margin-top:.25rem;">
-                Added {{ credential.created_at|date:"j M Y" }}
-                {% if credential.last_used_at %}· last used {{ credential.last_used_at|timesince }} ago{% endif %}
-              </p>
-            </div>
-            <form method="post" action="{% url 'accounts:passkey_delete' credential.pk %}">
-              {% csrf_token %}
-              <button type="submit" class="btn--link small" style="color:var(--critical);">Remove</button>
-            </form>
-          </li>
-        {% empty %}
-          <li><span class="small muted">No passkeys yet.</span></li>
+    {% if messages %}
+      <div class="mt-5">
+        {% for message in messages %}
+          <p class="alert {% if message.tags == 'error' %}alert--error{% endif %}" role="status">{{ message }}</p>
         {% endfor %}
-      </ul>
-    </section>
-
-    <section class="card card--pad-lg mt-5">
-      <div class="page-head">
-        <div>
-          <h2 class="h3">Authenticator app</h2>
-          <p class="feature__body measure">
-            A 6-digit code as a second step after your password.
-          </p>
-        </div>
-        {% if not totp_devices %}
-          <a href="{% url 'accounts:totp_enrol' %}" class="btn btn--secondary">Set up</a>
-        {% endif %}
       </div>
+    {% endif %}
 
-      {% if totp_devices %}
-        <ul class="list mt-5">
-          {% for device in totp_devices %}
-            <li>
-              <span class="small">{{ device.label }}</span>
-              <span class="xs muted">Added {{ device.created_at|date:"j M Y" }}</span>
-            </li>
+    {# ── Tabs ─────────────────────────────────────────────────────── #}
+    <div class="sec-tabs" role="tablist" aria-label="Security settings">
+      <button class="sec-tab" role="tab" id="tab-methods" aria-controls="panel-methods" aria-selected="true" data-tab="methods">Sign-in methods</button>
+      <button class="sec-tab" role="tab" id="tab-devices" aria-controls="panel-devices" aria-selected="false" tabindex="-1" data-tab="devices">
+        Devices &amp; sessions{% if live_session_count %} <span class="sec-tab__count">{{ live_session_count }}</span>{% endif %}
+      </button>
+      <button class="sec-tab" role="tab" id="tab-activity" aria-controls="panel-activity" aria-selected="false" tabindex="-1" data-tab="activity">Login activity</button>
+    </div>
+
+    {# ══ TAB 1  Sign-in methods (passkeys + authenticator) ═════════ #}
+    <div class="sec-panel" role="tabpanel" id="panel-methods" aria-labelledby="tab-methods" data-panel="methods">
+
+      <section class="card card--pad-lg mt-5">
+        <div class="sec-head">
+          <div>
+            <div class="sec-head__title">
+              <h2 class="h3">Passkeys</h2>
+              <span class="sec-badge {% if passkeys %}sec-badge--on{% else %}sec-badge--off{% endif %}">{% if passkeys %}Active{% else %}Not set{% endif %}</span>
+            </div>
+            <p class="sec-lead">The strongest option  a passkey can’t be phished, because your browser only releases it to the real OneWooz.</p>
+          </div>
+          <div class="sec-btn-wrap"><button type="button" id="add-passkey" class="btn btn--primary">Add passkey</button></div>
+        </div>
+
+        <p id="passkey-error" class="alert alert--error mt-4 hidden" role="alert"></p>
+
+        <div class="sec-list">
+          {% for credential in passkeys %}
+            <div class="sec-row">
+              <div>
+                <div class="sec-row__name">{{ credential.label }}</div>
+                <div class="sec-row__meta">
+                  Added {{ credential.created_at|date:"j M Y" }}
+                  {% if credential.last_used_at %}<span class="dot">·</span>last used {{ credential.last_used_at|timesince }} ago{% endif %}
+                </div>
+              </div>
+              <form method="post" action="{% url 'accounts:passkey_delete' credential.pk %}" class="sec-row__right">
+                {% csrf_token %}
+                <button type="submit" class="sec-remove">Remove</button>
+              </form>
+            </div>
+          {% empty %}
+            <div class="sec-empty">No passkeys yet. Add one for phishing-proof, password-free sign-in.</div>
           {% endfor %}
-        </ul>
-      {% endif %}
-    </section>
+        </div>
+      </section>
 
-    <section class="card card--pad-lg mt-5">
-      <h2 class="h3">Recent sign-in activity</h2>
-      <p class="feature__body measure">
-        Anything here you don't recognise is worth changing your password over.
-      </p>
+      <section class="card card--pad-lg mt-5">
+        <div class="sec-head">
+          <div>
+            <h2 class="h3">Two-step verification</h2>
+            <p class="sec-lead">After your password, confirm it’s you with a second step at sign-in. Choose how  one method is always active. An authenticator app is only active once you’ve set it up and confirmed a code.</p>
+          </div>
+        </div>
 
-      <ul class="list mt-5">
-        {% for entry in recent_activity %}
-          <li>
-            <div class="small">
-              <strong>{{ entry.get_method_display }}</strong>
-              <span class="muted">· {{ entry.get_outcome_display }}</span>
-              {% if entry.is_suspicious %}
-                <span class="xs" style="color:var(--caution);">· unusual</span>
+        <p id="totp-inline-error" class="alert alert--error mt-4 hidden" role="alert"></p>
+
+        <div class="sec-2fa">
+          {# Authenticator app #}
+          <div class="sec-2fa__opt {% if totp_devices %}is-active{% endif %}">
+            <div class="sec-2fa__main">
+              <div class="sec-row__name">
+                Authenticator app
+                {% if totp_devices %}<span class="sec-badge sec-badge--on">Active</span>{% endif %}
+              </div>
+              <div class="sec-row__meta">
+                A rotating 6-digit code from Google Authenticator, 1Password, Authy or similar.
+                {% if totp_devices %}<span class="dot">·</span>Set up {{ totp_devices.0.created_at|date:"j M Y" }}{% endif %}
+              </div>
+            </div>
+            <div class="sec-2fa__act">
+              {% if not totp_devices %}
+                <button type="button" id="add-totp" class="btn btn--secondary">Set up</button>
               {% endif %}
             </div>
-            <div class="xs muted" style="text-align:right;">
-              {{ entry.created_at|date:"j M Y, H:i" }}
-              {% if entry.ip_address %}<br>{{ entry.ip_address }}{% endif %}
-            </div>
-          </li>
-        {% empty %}
-          <li><span class="small muted">Nothing recorded yet.</span></li>
-        {% endfor %}
-      </ul>
-    </section>
+          </div>
 
+          {# Email notification #}
+          <div class="sec-2fa__opt {% if not totp_devices %}is-active{% endif %}">
+            <div class="sec-2fa__main">
+              <div class="sec-row__name">
+                Email notification
+                {% if not totp_devices %}<span class="sec-badge sec-badge--on">Active</span>{% endif %}
+              </div>
+              <div class="sec-row__meta">A one-time code sent to {{ request.user.email }} each time you sign in.</div>
+            </div>
+            <div class="sec-2fa__act">
+              {% if totp_devices %}
+                <form method="post" action="{% url 'accounts:two_factor_use_email' %}"
+                      data-confirm="Switch to email codes? Your authenticator app will be removed and you’ll get a code by email at sign-in.">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn--secondary">Use email instead</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    {# ══ TAB 2  Devices & sessions ════════════════════════════════ #}
+    <div class="sec-panel" role="tabpanel" id="panel-devices" aria-labelledby="tab-devices" data-panel="devices" hidden>
+
+      <section class="card card--pad-lg mt-5">
+        <div class="sec-head">
+          <div>
+            <h2 class="h3">Active sessions</h2>
+            <p class="sec-lead">Every device you’re currently signed in on. End any one and it’s signed out within seconds  the page there logs itself out.</p>
+          </div>
+          {% if other_session_count %}
+          <div class="sec-btn-wrap">
+            <button type="button" class="btn btn--secondary" id="end-others">Sign out everywhere else</button>
+          </div>
+          {% endif %}
+        </div>
+
+        <p id="session-error" class="alert alert--error mt-4 hidden" role="alert"></p>
+
+        <div class="sec-list" id="session-list">
+          {% for s in live_sessions %}
+            <div class="sec-row" data-session-row>
+              <div>
+                <div class="sec-row__name">
+                  {{ s.device }}
+                  {% if s.is_current %}<span class="sec-badge sec-badge--on">This device</span>{% endif %}
+                </div>
+                <div class="sec-row__meta">
+                  {{ s.location }}
+                  {% if s.ip %}<span class="dot">·</span>{{ s.ip }}{% endif %}
+                  {% if s.last_seen_at %}<span class="dot">·</span>active {{ s.last_seen_at|timesince }} ago{% elif s.signed_in_at %}<span class="dot">·</span>since {{ s.signed_in_at|date:"j M, H:i" }}{% endif %}
+                </div>
+              </div>
+              <div class="sec-row__right">
+                {% if s.is_current %}
+                  <span class="sec-when">Current session</span>
+                {% else %}
+                  <button type="button" class="sec-danger" data-end-session data-token="{{ s.token }}">Sign out</button>
+                {% endif %}
+              </div>
+            </div>
+          {% empty %}
+            <div class="sec-empty">No active sessions found.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="card card--pad-lg mt-5">
+        <h2 class="h3">Trusted devices</h2>
+        <p class="sec-lead">Browsers you’ve told us to stop asking for a second factor. Remove one to make it prove itself again on the next sign-in.</p>
+        <div class="sec-list">
+          {% for device in trusted_devices %}
+            <div class="sec-row" data-trusted-row>
+              <div>
+                <div class="sec-row__name">{{ device.label|default:"Trusted browser" }}</div>
+                <div class="sec-row__meta">
+                  {% if device.last_used_at %}Last used {{ device.last_used_at|timesince }} ago{% else %}Added {{ device.created_at|date:"j M Y" }}{% endif %}
+                  {% if device.ip_address %}<span class="dot">·</span>{{ device.ip_address }}{% endif %}
+                  <span class="dot">·</span>trusted until {{ device.expires_at|date:"j M Y" }}
+                </div>
+              </div>
+              <div class="sec-row__right">
+                <button type="button" class="sec-remove" data-remove-trusted
+                        data-url="{% url 'accounts:trusted_device_remove' device.pk %}">Remove</button>
+              </div>
+            </div>
+          {% empty %}
+            <div class="sec-empty">No trusted devices  you’ll be asked for your second factor on every sign-in.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+    </div>
+
+    {# ══ TAB 3  Login activity ════════════════════════════════════ #}
+    <div class="sec-panel" role="tabpanel" id="panel-activity" aria-labelledby="tab-activity" data-panel="activity" hidden>
+      <section class="card card--pad-lg mt-5">
+        <h2 class="h3">Recent sign-in activity</h2>
+        <p class="sec-lead">Where and how you’ve signed in. Anything here you don’t recognise is worth changing your password over.</p>
+        <div class="sec-list">
+          {% for entry in recent_activity %}
+            <div class="sec-row">
+              <div>
+                <div class="sec-row__name">
+                  {{ entry.device_friendly }}
+                  {% if entry.is_suspicious %}<span class="sec-flag">· unusual</span>{% endif %}
+                </div>
+                <div class="sec-row__meta">
+                  {{ entry.get_method_display }}<span class="dot">·</span>{{ entry.get_outcome_display }}
+                  <span class="dot">·</span>{{ entry.location }}
+                </div>
+              </div>
+              <div class="sec-row__right sec-when">
+                {{ entry.created_at|date:"j M Y, H:i" }}
+                {% if entry.ip_address %}<span class="sec-when__ip">{{ entry.ip_address }}</span>{% endif %}
+              </div>
+            </div>
+          {% empty %}
+            <div class="sec-empty">Nothing recorded yet.</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+  </div>
+</div>
+
+{# CSRF for the session/trusted AJAX actions. #}
+<form id="sec-csrf" hidden>{% csrf_token %}</form>
+<span id="sec-urls" hidden
+      data-end-session="{% url 'accounts:session_terminate' %}"
+      data-end-others="{% url 'accounts:sessions_terminate_others' %}"></span>
+
+{# ── Authenticator setup modal ────────────────────────────────────── #}
+<div class="ow-modal" id="totp-modal" hidden role="dialog" aria-modal="true" aria-labelledby="totp-modal-title">
+  <div class="ow-modal__card">
+    <div class="ow-modal__head">
+      <div class="ow-modal__title" id="totp-modal-title">Set up authenticator app</div>
+      <button type="button" class="ow-modal__close" id="totp-close" aria-label="Close">&times;</button>
+    </div>
+
+    <p class="totp-help">
+      Scan this QR code with Google Authenticator, 1Password, Authy or any TOTP
+      app, then enter the 6-digit code it shows to finish.
+    </p>
+
+    <div class="totp-step">
+      {# QR code  shown by default #}
+      <div id="totp-qr-wrap">
+        <img class="totp-qr" id="totp-qr" alt="Authenticator setup QR code" width="210" height="210">
+        <button type="button" class="totp-toggle" id="totp-show-secret">Can’t scan? Enter a setup key instead</button>
+      </div>
+
+      {# Secret key  the fallback, hidden until asked for #}
+      <div class="totp-secret" id="totp-secret-wrap" hidden>
+        <p class="totp-help">In your app choose “enter a setup key”, use your email as the account, and type this key:</p>
+        <code id="totp-secret"></code>
+        <button type="button" class="totp-toggle" id="totp-show-qr">Show the QR code instead</button>
+      </div>
+    </div>
+
+    <form id="totp-form" class="totp-step" novalidate>
+      {% csrf_token %}
+      <span class="sr-only" id="totp-code-label">Six-digit code from your app</span>
+      <div class="otp" data-otp>
+        <div class="otp__boxes" role="group" aria-labelledby="totp-code-label">
+          {% for pos in "123456"|make_list %}
+            <input class="otp__box" type="text" inputmode="numeric" pattern="[0-9]*"
+                   maxlength="1" autocomplete="off" aria-label="Digit {{ forloop.counter }}">
+          {% endfor %}
+        </div>
+        <input type="hidden" name="code" data-otp-code value="">
+        <p class="otp__warn alert alert--error" role="alert" data-otp-warn hidden>Pasting is not allowed.</p>
+      </div>
+
+      <p id="totp-error" class="alert alert--error mt-3 hidden" role="alert"></p>
+
+      <div class="totp-actions">
+        <button type="submit" class="btn btn--primary" id="totp-verify">Confirm and turn on</button>
+        <button type="button" class="btn btn--secondary" id="totp-cancel">Cancel</button>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+{{ block.super }}
 <script nonce="{{ csp_nonce }}" src="{% static 'js/passkeys.js' %}"
         data-auth-begin="{% url 'accounts:passkey_auth_begin' %}"
         data-auth-finish="{% url 'accounts:passkey_auth_finish' %}"
         data-register-begin="{% url 'accounts:passkey_register_begin' %}"
         data-register-finish="{% url 'accounts:passkey_register_finish' %}"></script>
+
+<script nonce="{{ csp_nonce }}">
+  // Confirm before a destructive form submit (CSP-safe, no inline handler).
+  (function () {
+    document.addEventListener("submit", function (e) {
+      var form = e.target;
+      if (form && form.getAttribute && form.getAttribute("data-confirm")) {
+        if (!window.confirm(form.getAttribute("data-confirm"))) e.preventDefault();
+      }
+    });
+  })();
+
+  // Tabs  accessible, remembers the chosen tab in the URL hash across reloads.
+  (function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll(".sec-tab"));
+    var panels = Array.prototype.slice.call(document.querySelectorAll(".sec-panel"));
+    if (!tabs.length) return;
+
+    function select(name, focus) {
+      tabs.forEach(function (t) {
+        var on = t.getAttribute("data-tab") === name;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.tabIndex = on ? 0 : -1;
+        if (on && focus) t.focus();
+      });
+      panels.forEach(function (p) { p.hidden = p.getAttribute("data-panel") !== name; });
+      try { history.replaceState(null, "", "#" + name); } catch (e) {}
+    }
+
+    tabs.forEach(function (t, i) {
+      t.addEventListener("click", function () { select(t.getAttribute("data-tab")); });
+      t.addEventListener("keydown", function (e) {
+        var idx = null;
+        if (e.key === "ArrowRight") idx = (i + 1) % tabs.length;
+        else if (e.key === "ArrowLeft") idx = (i - 1 + tabs.length) % tabs.length;
+        else if (e.key === "Home") idx = 0;
+        else if (e.key === "End") idx = tabs.length - 1;
+        if (idx !== null) { e.preventDefault(); select(tabs[idx].getAttribute("data-tab"), true); }
+      });
+    });
+
+    var initial = (location.hash || "").replace("#", "");
+    if (initial && tabs.some(function (t) { return t.getAttribute("data-tab") === initial; })) {
+      select(initial);
+    }
+  })();
+</script>
+
+<script nonce="{{ csp_nonce }}">
+  // Live-session actions: end one device, or sign out everywhere else. Trusted
+  // devices can be revoked here too. CSP-safe, CSRF from the rendered token.
+  (function () {
+    var urls = document.getElementById("sec-urls");
+    var csrfEl = document.querySelector("#sec-csrf [name=csrfmiddlewaretoken]");
+    if (!urls || !csrfEl) return;
+    var CSRF = csrfEl.value;
+    var END_SESSION = urls.getAttribute("data-end-session");
+    var END_OTHERS = urls.getAttribute("data-end-others");
+    var errBox = document.getElementById("session-error");
+
+    function showErr(msg) { if (errBox) { errBox.textContent = msg; errBox.classList.remove("hidden"); } }
+    function clearErr() { if (errBox) { errBox.classList.add("hidden"); errBox.textContent = ""; } }
+
+    function post(url, params) {
+      var body = new URLSearchParams();
+      Object.keys(params || {}).forEach(function (k) { body.set(k, params[k]); });
+      return fetch(url, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": CSRF,
+          "X-Requested-With": "XMLHttpRequest",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        credentials: "same-origin",
+        body: body.toString(),
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+    }
+
+    document.addEventListener("click", function (e) {
+      var endBtn = e.target.closest("[data-end-session]");
+      if (endBtn) {
+        clearErr();
+        endBtn.disabled = true; endBtn.textContent = "Signing out…";
+        post(END_SESSION, { token: endBtn.getAttribute("data-token") }).then(function (res) {
+          if (!res.ok || !res.data.ok) {
+            endBtn.disabled = false; endBtn.textContent = "Sign out";
+            showErr((res.data && res.data.error) || "Couldn’t end that session. Try again.");
+            return;
+          }
+          if (res.data.redirect) { window.location.href = res.data.redirect; return; }
+          var row = endBtn.closest("[data-session-row]");
+          if (row) row.parentNode.removeChild(row);
+        }).catch(function () {
+          endBtn.disabled = false; endBtn.textContent = "Sign out";
+          showErr("Network error. Please try again.");
+        });
+        return;
+      }
+
+      var othersBtn = e.target.closest("#end-others");
+      if (othersBtn) {
+        clearErr();
+        othersBtn.disabled = true; othersBtn.textContent = "Signing out…";
+        post(END_OTHERS, {}).then(function (res) {
+          window.location.reload();
+        }).catch(function () {
+          othersBtn.disabled = false; othersBtn.textContent = "Sign out everywhere else";
+          showErr("Network error. Please try again.");
+        });
+        return;
+      }
+
+      var trustBtn = e.target.closest("[data-remove-trusted]");
+      if (trustBtn) {
+        clearErr();
+        trustBtn.disabled = true; trustBtn.textContent = "Removing…";
+        post(trustBtn.getAttribute("data-url"), {}).then(function (res) {
+          if (!res.ok || !res.data.ok) {
+            trustBtn.disabled = false; trustBtn.textContent = "Remove";
+            showErr("Couldn’t remove that device. Try again.");
+            return;
+          }
+          var row = trustBtn.closest("[data-trusted-row]");
+          if (row) row.parentNode.removeChild(row);
+        }).catch(function () {
+          trustBtn.disabled = false; trustBtn.textContent = "Remove";
+          showErr("Network error. Please try again.");
+        });
+        return;
+      }
+    });
+  })();
+</script>
+
 <script nonce="{{ csp_nonce }}">
   (function () {
     var button = document.getElementById('add-passkey');
@@ -128,6 +519,108 @@
         errorBox.textContent = err.message || 'That passkey could not be added.';
         errorBox.classList.remove('hidden');
         button.disabled = false;
+      }
+    });
+  })();
+</script>
+
+<script nonce="{{ csp_nonce }}" src="{% static 'js/otp-boxes.js' %}"></script>
+<script nonce="{{ csp_nonce }}">
+  // Authenticator setup, in a modal  QR by default, "setup key" fallback, then
+  // verify the app's code without leaving the security page.
+  (function () {
+    var openBtn = document.getElementById('add-totp');
+    var modal = document.getElementById('totp-modal');
+    if (!openBtn || !modal) return;
+
+    var beginUrl = "{% url 'accounts:totp_setup_begin' %}";
+    var verifyUrl = "{% url 'accounts:totp_setup_verify' %}";
+
+    var form = document.getElementById('totp-form');
+    var csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+    var qrImg = document.getElementById('totp-qr');
+    var qrWrap = document.getElementById('totp-qr-wrap');
+    var secretWrap = document.getElementById('totp-secret-wrap');
+    var secretEl = document.getElementById('totp-secret');
+    var errorBox = document.getElementById('totp-error');
+    var verifyBtn = document.getElementById('totp-verify');
+    var hidden = form.querySelector('[data-otp-code]');
+    var boxes = Array.prototype.slice.call(form.querySelectorAll('.otp__box'));
+
+    function showError(msg) { errorBox.textContent = msg; errorBox.classList.remove('hidden'); }
+    function clearError() { errorBox.classList.add('hidden'); errorBox.textContent = ''; }
+    function clearBoxes() {
+      boxes.forEach(function (b) { b.value = ''; b.classList.remove('otp__box--filled'); });
+      if (hidden) { hidden.value = ''; }
+    }
+    function focusFirst() { if (boxes[0]) { boxes[0].focus(); } }
+    function openModal() { modal.hidden = false; setTimeout(focusFirst, 40); }
+    function closeModal() { modal.hidden = true; }
+
+    openBtn.addEventListener('click', async function () {
+      clearError();
+      clearBoxes();
+      qrWrap.hidden = false;
+      secretWrap.hidden = true;      // always open on the QR view
+      openBtn.disabled = true;
+      try {
+        var res = await fetch(beginUrl, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        var data = await res.json();
+        if (!res.ok || !data.ok) { throw new Error(data.error || 'Could not start setup.'); }
+        qrImg.src = data.qr;
+        secretEl.textContent = data.secret;
+        openModal();
+      } catch (err) {
+        showError(err.message || 'Could not start setup.');
+        errorBox.classList.remove('hidden');
+      } finally {
+        openBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('totp-show-secret').addEventListener('click', function () {
+      qrWrap.hidden = true; secretWrap.hidden = false;
+    });
+    document.getElementById('totp-show-qr').addEventListener('click', function () {
+      secretWrap.hidden = true; qrWrap.hidden = false;
+    });
+
+    document.getElementById('totp-close').addEventListener('click', closeModal);
+    document.getElementById('totp-cancel').addEventListener('click', closeModal);
+    modal.addEventListener('click', function (e) { if (e.target === modal) { closeModal(); } });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !modal.hidden) { closeModal(); }
+    });
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      clearError();
+      var code = ((hidden && hidden.value) || '').trim();
+      if (code.length !== 6) { showError('Enter the 6-digit code from your app.'); return; }
+      verifyBtn.disabled = true;
+      try {
+        var body = new URLSearchParams();
+        body.set('code', code);
+        var res = await fetch(verifyUrl, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrf,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: body.toString()
+        });
+        var data = await res.json();
+        if (!res.ok || !data.ok) { throw new Error(data.error || 'That code is not right.'); }
+        window.location.reload();   // reflect the now-active authenticator
+      } catch (err) {
+        showError(err.message || 'That code is not right.');
+        clearBoxes();
+        focusFirst();
+        verifyBtn.disabled = false;
       }
     });
   })();

@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+
+{% comment %}
+Shell for OneWooz's own admin pages (overview, email templates). Same chrome as
+the model admin: ink header, breadcrumbs and the model sidebar. Views render
+through custom_admin.views._admin_context, which adds Django admin's
+each_context (site name, sidebar apps, permissions) plus `owa_nav`.
+{% endcomment %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'custom_admin:overview' %}">OneWooz Admin</a>
+  {% block crumbs %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block content_title %}{% endblock %}

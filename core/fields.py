@@ -1,7 +1,7 @@
 """Model fields that encrypt their contents at rest.
 
 Storing a gateway key or courier token as an ``EncryptedTextField`` means the
-value is ciphertext in the database, in backups, and in any query log — while
+value is ciphertext in the database, in backups, and in any query log  while
 reading ``config.api_key`` in Python just gives the plaintext.
 
 The trade is that an encrypted column cannot be filtered, ordered, or indexed
@@ -71,5 +71,5 @@ class EncryptedCharField(_EncryptedMixin, models.CharField):
     """Encrypted bounded text.
 
     ``max_length`` is the *storage* width, so allow headroom over the longest
-    plaintext you expect — roughly ``len(plaintext) * 1.4 + 120``.
+    plaintext you expect  roughly ``len(plaintext) * 1.4 + 120``.
     """

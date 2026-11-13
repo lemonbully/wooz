@@ -1,0 +1,17 @@
+{% extends "storefront/referral/_page_shell.html" %}
+{% block page_inner %}
+<div class="px-6 pt-4 pb-6">
+	<div class="grid grid-cols-2 gap-4">
+		{% for cat in categories %}
+			<a href="{{ cat.url }}" class="block group">
+				<div class="overflow-hidden rounded-xl bg-gray-200 aspect-3-4 relative">
+					{% if cat.image %}<img src="{{ cat.image }}" alt="{{ cat.name }}" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform">{% else %}<div class="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-100"></div>{% endif %}
+					<div class="absolute inset-0 bg-black/30 flex items-end p-3"><span class="text-white text-[14px] font-semibold">{{ cat.name }}</span></div>
+				</div>
+			</a>
+		{% empty %}
+			<div class="col-span-2 text-center text-black/60 py-10">No categories yet.</div>
+		{% endfor %}
+	</div>
+</div>
+{% endblock %}

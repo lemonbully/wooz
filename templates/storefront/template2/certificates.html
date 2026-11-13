@@ -37,14 +37,14 @@
                 <div id="certificates-viewport" class="overflow-hidden">
                     <div id="certificates-track" class="flex transition-transform duration-500 ease-out will-change-transform">
                         {% for cert in certificates %}
-                        {% with u=cert.image|default:cert.file %}
-                        {% with is_img=u|is_image_url %}
+                        {% with u=cert.thumb %}
+                        {% with is_img=cert.thumb %}
                         <div class="certificate-slide box-border flex-none basis-1/2 lg:basis-1/4 px-3">
                             <article class="group">
-                                <a href="{{ cert.file|absolute_media_url }}" data-type="{% if is_img %}image{% else %}pdf{% endif %}" data-url="{{ cert.file|absolute_media_url }}" data-title="{{ cert.title|default:'Certificate' }}" class="relative block cert-card">
+                                <a href="{{ cert.file|absolute_media_url }}" data-type="{{ cert.file_type }}" data-url="{{ cert.file|absolute_media_url }}" data-title="{{ cert.title|default:'Certificate' }}" class="relative block cert-card">
                                     <div class="relative w-full aspect-[4/5] overflow-hidden bg-gray-100">
                                         {% if is_img %}
-                                        <img src="{{ u|absolute_media_url }}" srcset="{{ u|absolute_media_url }}" alt="{{ cert.title }}" class="absolute inset-0 w-full h-full transition-transform duration-700 ease-out group-hover:scale-105" />
+                                        <img src="{{ u|absolute_media_url }}" srcset="{{ u|absolute_media_url }}" alt="{{ cert.title }} certificate" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full transition-transform duration-700 ease-out group-hover:scale-105" />
                                         {% else %}
                                         <div class="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-50">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-10 w-10 text-gray-400 mx-auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
@@ -78,13 +78,13 @@
             {% else %}
             <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
                 {% for cert in certificates %}
-                {% with u=cert.image|default:cert.file %}
-                {% with is_img=u|is_image_url %}
+                {% with u=cert.thumb %}
+                {% with is_img=cert.thumb %}
                 <article class="group">
-                    <a href="{{ cert.file|absolute_media_url }}" data-type="{% if is_img %}image{% else %}pdf{% endif %}" data-url="{{ cert.file|absolute_media_url }}" data-title="{{ cert.title|default:'Certificate' }}" class="relative block cert-card">
+                    <a href="{{ cert.file|absolute_media_url }}" data-type="{{ cert.file_type }}" data-url="{{ cert.file|absolute_media_url }}" data-title="{{ cert.title|default:'Certificate' }}" class="relative block cert-card">
                         <div class="relative w-full aspect-[4/5] overflow-hidden bg-gray-100">
                             {% if is_img %}
-                            <img src="{{ u|absolute_media_url }}" srcset="{{ u|absolute_media_url }}" alt="{{ cert.title }}" class="absolute inset-0 w-full h-full transition-transform duration-700 ease-out group-hover:scale-105" />
+                            <img src="{{ u|absolute_media_url }}" srcset="{{ u|absolute_media_url }}" alt="{{ cert.title }} certificate" loading="lazy" decoding="async" class="absolute inset-0 w-full h-full transition-transform duration-700 ease-out group-hover:scale-105" />
                             {% else %}
                             <div class="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-50">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-10 w-10 text-gray-400 mx-auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>

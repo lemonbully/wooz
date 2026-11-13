@@ -1,0 +1,17 @@
+{% extends "email/base.html" %}
+{% comment %}Storefront shopper sign-in code. Context: brand (store name), code,
+minutes, reply_to (bool), powered_by (bool).{% endcomment %}
+{% block preheader %}{{ code }} is your {{ brand }} sign-in code.{% endblock %}
+{% block kicker %}Sign-in{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text="Sign-in code" %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:23px; letter-spacing:-0.02em; line-height:1.15; color:#0a0a0b; margin:0 0 16px 0;">Your sign-in code</h1>
+  <p style="margin:0 0 16px 0;">Your one-time sign-in code for <strong style="color:#0a0a0b;">{{ brand }}</strong> is below. It expires in <strong style="color:#0a0a0b;">{{ minutes }} minutes</strong> and works once.</p>
+  {% include "email/_code.html" with code=code %}
+  {% include "email/_note.html" with text="If you didn’t request it, you can safely ignore this email." %}
+{% endblock %}
+{% block footer %}
+  <div style="color:#66666b;">{{ brand }}</div>
+  {% if powered_by %}<div style="color:#9a9aa0;">Powered by OneWooz</div>{% endif %}
+{% endblock %}
+{% block sub_footer %}{% if reply_to %}Reply to this email to reach {{ brand }}.{% else %}This is an automated message from {{ brand }}.{% endif %}{% endblock %}

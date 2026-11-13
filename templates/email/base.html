@@ -1,0 +1,89 @@
+{% comment %}
+Shared HTML shell for every OneWooz email  the "Palantir" design language
+(onewooz_design.md) translated to email-safe HTML: table layout, inline styles,
+web-safe font stacks, squared corners (radius 0), hairline rules, near-white
+paper (#f4f4f2) against near-black ink (#0a0a0b), and the single accent (#4b2bf5)
+used only as a tick / marker / link  never as a fill.
+
+Every OneWooz + store email extends this. Children fill:
+  * {% block preheader %}  hidden inbox-preview line.
+  * {% block kicker %}      the mono label at the top-right of the header.
+  * {% block content %}     the body (headings, prose, and the shared
+                             components in email/_code.html, _button.html, etc.).
+Optional context: brand (header + footer name), footer_tagline, and the
+footer link blocks. Missing values degrade gracefully.
+{% endcomment %}<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+  <title>{{ brand|default:"OneWooz" }}</title>
+  <style>
+    a { color: #4b2bf5; }
+    .em-link:hover { color: #0a0a0b !important; }
+    @media only screen and (max-width: 600px) {
+      .em-card { width: 100% !important; }
+      .em-px { padding-left: 22px !important; padding-right: 22px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background:#f4f4f2; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">{% block preheader %}{% endblock %}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f2;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <table role="presentation" class="em-card" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background:#ffffff; border:1px solid #0a0a0b; box-shadow:14px 14px 0 -1px rgba(10,10,11,0.06);">
+
+          <!-- Header: brand mark + name, and a mono kicker on the right -->
+          <tr>
+            <td class="em-px" style="padding:24px 32px 18px 32px; border-bottom:1px solid #d7d7d3;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left" style="vertical-align:middle;">
+                    <span style="display:inline-block; width:22px; height:22px; background:#0a0a0b; color:#f4f4f2; text-align:center; line-height:22px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; font-weight:700; vertical-align:middle;">{{ brand|default:"OneWooz"|first|upper }}</span>
+                    <span style="display:inline-block; margin-left:9px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; font-weight:600; letter-spacing:-0.01em; color:#0a0a0b; vertical-align:middle;">{{ brand|default:"OneWooz" }}</span>
+                  </td>
+                  <td align="right" style="vertical-align:middle; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:10px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#4b2bf5;">{% block kicker %}{% endblock %}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content: font-family / colour / size set here so descendants inherit -->
+          <tr>
+            <td class="em-px" style="padding:28px 32px 30px 32px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.6; color:#26262a;">
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+
+          <!-- Footer: mono, uppercase, faint -->
+          <tr>
+            <td class="em-px" style="padding:18px 32px 24px 32px; border-top:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:#9a9aa0; line-height:1.7;">
+              {% block footer %}
+              <div style="color:#66666b;">{{ brand|default:"OneWooz" }} &mdash; {{ footer_tagline|default:"Your store, live in one click." }}</div>
+              {% block footer_links %}{% endblock %}
+              {% endblock %}
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Sub-card address line -->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+          <tr>
+            <td style="padding:14px 8px 0 8px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color:#9a9aa0; text-align:center;">
+              {% block sub_footer %}This is an automated message  please do not reply.{% endblock %}
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

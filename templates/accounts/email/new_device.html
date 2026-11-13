@@ -1,0 +1,27 @@
+{% extends "email/base.html" %}
+{% block preheader %}A new device just signed in to your OneWooz account.{% endblock %}
+{% block kicker %}Security{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text="Security alert" %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:23px; letter-spacing:-0.02em; line-height:1.15; color:#0a0a0b; margin:0 0 16px 0;">New sign-in to your account</h1>
+  <p style="margin:0 0 18px 0;">Someone signed in to <strong style="color:#0a0a0b;">{{ email }}</strong> from a device we haven’t seen before.</p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d7d7d3; border-collapse:collapse;">
+    <tr>
+      <td style="width:34%; padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">When</td>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; color:#0a0a0b;">{{ when }}</td>
+    </tr>
+    <tr>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">IP</td>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; color:#0a0a0b;">{{ ip }}</td>
+    </tr>
+    <tr>
+      <td style="padding:11px 14px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">Browser</td>
+      <td style="padding:11px 14px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; color:#0a0a0b;">{{ user_agent }}</td>
+    </tr>
+  </table>
+
+  <p style="margin:20px 0 0 0;">If that was you, there’s nothing to do. If it wasn’t, change your password now and remove any passkeys you don’t recognise.</p>
+  {% if app_origin %}{% include "email/_button.html" with url=app_origin|add:"/security/" label="Review security" %}{% endif %}
+{% endblock %}
+{% block footer_links %}{% if app_origin %}<div><a class="em-link" href="{{ app_origin }}/security/" style="color:#9a9aa0; text-decoration:none;">Security settings</a></div>{% endif %}{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "email/base.html" %}
+{% block preheader %}{{ total }} update{{ total|pluralize }} across your store{{ groups|length|pluralize }} in the last day.{% endblock %}
+{% block kicker %}Daily digest{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text=date %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:23px; letter-spacing:-0.02em; line-height:1.15; color:#0a0a0b; margin:0 0 8px 0;">Your daily digest</h1>
+  <p style="margin:0 0 20px 0; color:#66666b;">{{ total }} update{{ total|pluralize }} across your store{{ groups|length|pluralize }} in the last day.</p>
+
+  {% for g in groups %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d7d7d3; border-collapse:collapse; margin:0 0 14px 0;">
+    <tr>
+      <td style="padding:10px 16px; background:#ececea; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#0a0a0b;">{{ g.site_name }}</td>
+    </tr>
+    {% for line in g.lines %}
+    <tr>
+      <td style="padding:10px 16px;{% if not forloop.last %} border-bottom:1px solid #d7d7d3;{% endif %} font-size:14px; color:#26262a;"><span style="color:#4b2bf5; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace;">&rarr;</span>&nbsp;&nbsp;{{ line }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endfor %}
+
+  {% if app_origin %}{% include "email/_button.html" with url=app_origin|add:"/" label="Open dashboard" %}{% endif %}
+{% endblock %}
+{% block footer %}
+  <div style="color:#66666b;">You’re getting this because your notifications are set to a daily digest.</div>
+  {% if app_origin %}<div><a class="em-link" href="{{ app_origin }}/profile/" style="color:#9a9aa0; text-decoration:none;">Switch to instant or turn it off</a></div>{% endif %}
+{% endblock %}

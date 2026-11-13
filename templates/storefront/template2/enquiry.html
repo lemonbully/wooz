@@ -3,16 +3,52 @@
 {% load website_filters %}
 
 {% block content %}
+<style>
+    /* Contact form privacy consent (storefront tailwind.css is precompiled, so scoped here). */
+    .ow-consent { display: flex; align-items: flex-start; gap: 0.65rem; font-size: 0.875rem; line-height: 1.45; color: #4b5563; cursor: pointer; }
+    .ow-consent input { width: 1.05rem; height: 1.05rem; margin: 0.12rem 0 0; flex: none; accent-color: #4f46e5; cursor: pointer; }
+    .ow-consent a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+    .ow-consent a:hover { color: #111827; }
+    /* The card has no background, so the white inputs get a light border to stay visible. */
+    #contactForm input[type="text"], #contactForm input[type="tel"], #contactForm textarea {
+        border: 1px solid #e5e7eb; background-color: #e3e3e3;
+        padding: 0.625rem 0.875rem; font-size: 0.9375rem; line-height: 1.4;
+    }
+    #contactForm input[type="text"]:focus, #contactForm input[type="tel"]:focus, #contactForm textarea:focus { border-color: #6366f1; }
+    #contactForm button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+    #contactForm button[type="submit"]:disabled:hover { background-color: #4f46e5; }
+
+    /* Our office (left half) + map (right half). Stacks below 1024px. */
+    .ow-office { margin-top: 2.5rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.25rem; align-items: start; }
+    @media (min-width: 1024px) { .ow-office { margin-top: 3rem; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; } }
+    .ow-office--solo { grid-template-columns: minmax(0, 1fr) !important; }
+    .ow-office__title { font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.25rem); line-height: 1.15; font-weight: 600; letter-spacing: -0.01em; text-transform: uppercase; color: #111827; }
+    .ow-office__lead { margin-top: 0.6rem; max-width: 34rem; font-size: 0.95rem; line-height: 1.6; color: #4b5563; }
+    .ow-office__list { margin-top: 1.75rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem 1.75rem; }
+    @media (min-width: 520px) { .ow-office__list { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+    .ow-office__item { border-left: 2px solid #2f302f; padding-left: 1rem; min-width: 0; }
+    .ow-office__label { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #111827; }
+    .ow-office__value { margin-top: 0.4rem; font-size: 0.9rem; line-height: 1.55; color: #4b5563; overflow-wrap: anywhere; }
+    .ow-office__value a { color: #4f46e5; }
+    .ow-office__value a:hover { color: #4338ca; }
+    .ow-office__maphead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.5rem 1rem; }
+    .ow-office__maptitle { font-size: 1.25rem; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; color: #111827; }
+    .ow-office__mapsub { margin-top: 0.3rem; font-size: 0.875rem; color: #4b5563; }
+    .ow-office__maplink { font-size: 0.85rem; font-weight: 500; color: #111827; text-decoration: underline; text-underline-offset: 4px; white-space: nowrap; }
+    .ow-office__maplink:hover { color: #4b5563; }
+    .ow-office__frame { margin-top: 1rem; height: clamp(15rem, 40vw, 20rem); border: 1px solid #e5e7eb; border-radius: 1.25rem; overflow: hidden; background: #f9fafb; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+    .ow-office__frame iframe { display: block; width: 100%; height: 100%; }
+</style>
 <div class="bg-white font-sans leading-normal tracking-normal min-h-screen antialiased overflow-x-hidden">
-    <div class="max-w-7xl mx-auto px-8 sm:px-6 lg:px-8 pb-20 sm:py-16 lg:py-[2rem]">
+    <div class="max-w-7xl mx-auto px-8 sm:px-6 lg:px-8 pb-20 sm:py-16 lg:py-[4rem]">
         <!-- Light themed contact form + testimonial (Image 2 inspired) -->
-        <div class="bg-gray-100 rounded-3xl overflow-hidden mb-0 sm:mb-20 lg:mb-24">
+        <div class="rounded-3xl overflow-hidden mb-0 sm:mb-20 lg:mb-24">
           <div class="lg:grid lg:grid-cols-12">
               <!-- Testimonial / Aside  - Mobile-->
               <div class="block md:mt-10 md:hidden lg:col-span-5 bg-white p-6 sm:p-10 lg:p-12">
                 <div class="flex items-center gap-3">
                     <svg class="h-6 w-6 text-indigo-600" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 12l9-9 9 9-9 9-9-9z"/></svg>
-                    <span class="text-indigo-700 font-semibold text-lg">{{ website.content.site_name|default:'Workcation' }}</span>
+                    <h1 class="text-indigo-700 font-semibold text-lg leading-tight">Contact {{ website.content.site_name|default:website.name }}</h1>
                 </div>
 
                 <blockquote class="mt-6 text-lg leading-8 text-gray-700">
@@ -39,8 +75,8 @@
               </div>
               <!-- Form -->
               <div class="lg:col-span-7 p-6 sm:p-10 lg:p-12">
-                  <h2 class="text-2xl sm:text-4xl font-bold text-gray-900 leading-tight">Let's talk about your project</h2>
-                  <p class="mt-3 text-gray-600">We help companies and individuals build out their brand guidelines.</p>
+                  <h2 class="text-2xl sm:text-4xl font-bold text-gray-900 leading-tight">{{ website.content.contact_form_title|default:"Let's talk about your project" }}</h2>
+                  <p class="mt-3 text-gray-600">{{ website.content.contact_form_subtitle|default:"We help companies and individuals build out their brand guidelines."|linebreaksbr }}</p>
 
                   {% if messages %}
                       {% for message in messages %}
@@ -71,14 +107,18 @@
                           <textarea id="message" name="message" rows="5" class="mt-2 w-full rounded-xl border-gray-200 bg-white px-4 py-3 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Tell us a little about your project" required></textarea>
                       </div>
 
+                      {% comment %} Privacy consent: the form can't be sent until this is ticked
+                         (required + the button stays disabled; the server checks
+                         it too via consent_required, see storefront.views.enquiry). {% endcomment %}
+                      <input type="hidden" name="consent_required" value="1">
+                      <label for="privacy_consent" class="ow-consent">
+                          <input id="privacy_consent" name="privacy_consent" type="checkbox" value="1" required>
+                          <span>I agree to the <a href="{% url 'privacy_policy_page' %}" target="_blank" rel="noopener">privacy policy</a>.</span>
+                      </label>
+
                       <div class="pt-2">
                           <button type="submit" class="w-full sm:w-auto inline-flex justify-center rounded-xl bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-indigo-700 active:scale-[.98] transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Let's talk</button>
                       </div>
-
-                      <p class="mt-2 text-xs sm:text-sm text-gray-500">
-                        By submitting this form, I agree to the
-                        <a class="underline hover:text-gray-700" href="{% url 'privacy_policy_page' %}">privacy policy</a>.
-                      </p>
                   </form>
               </div>
 
@@ -86,7 +126,7 @@
               <div class="hidden md:block lg:col-span-5 bg-white/70 border-t lg:border-t-0 lg:border-l border-gray-200 p-6 sm:p-10 lg:p-12">
                   <div class="flex items-center gap-3">
                       <svg class="h-6 w-6 text-indigo-600" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 12l9-9 9 9-9 9-9-9z"/></svg>
-                      <span class="text-indigo-700 font-semibold text-lg">{{ website.content.site_name|default:'Workcation' }}</span>
+                      <p class="text-indigo-700 font-semibold text-lg leading-tight" role="heading" aria-level="1">Contact {{ website.content.site_name|default:website.name }}</p>
                   </div>
 
                   <blockquote class="mt-6 text-lg leading-8 text-gray-700">
@@ -110,48 +150,40 @@
                           <div class="text-sm text-gray-600">{{ website.content.contact_info.ceo_name|default:'Contact Name Goes HEre' }}</div>
                       </div>
                   </div>
+                  {% include "storefront/_grievance_card.html" %}
               </div>
           </div>
       </div>
-        <!-- Our offices (Image 1 inspired) -->
-        <div class="mt-10 sm:mt-12 md:px-0">
-            <div class="max-w-3xl">
-                <h1 class="text-3xl sm:text-5xl uppercase font-semibold text-gray-900 tracking-tight leading-tight">Our office</h1>
-                <p class="mt-3 text-base sm:text-xl text-gray-600">Reach us at our headquarters and channels below. Our team is available on business days and quick to respond.</p>
-            </div>
+        {% comment %} Our office + map: the office details on the left half and the
+           map on the right half (50/50) on desktop; stacked on tablets and phones.
+           Styles: .ow-office in the <style> block at the top of this page. {% endcomment %}
+        {% with map=website.content.contact_info|contact_map %}
+        <section class="ow-office{% if not map.embed %} ow-office--solo{% endif %}">
+            <div class="ow-office__info">
+                <h2 class="ow-office__title">Our office</h2>
+                <p class="ow-office__lead">Reach us at our headquarters and channels below. Our team is available on business days and quick to respond.</p>
 
-            <div class="mt-10 sm:mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
-                <!-- Office address -->
-                <div class="border-l-4 sm:border-l-4 border-t-0 sm:border-t-0 pl-4 sm:pl-6 pt-4 sm:pt-0 border-[#2f302f]">
-                    <h3 class="text-xl font-semibold uppercase text-gray-900">Our Office</h3>
-                    <p class="mt-3 text-gray-600 leading-relaxed sm:leading-relaxed leading-loose">{{ website.content.contact_info.address|default:"4556 Brendan Ferry<br>Los Angeles, CA 90210"|safe }}</p>
-                </div>
-
-                <!-- Email -->
-                <div class="border-l-4 sm:border-l-4 border-t-0 sm:border-t-0 pl-4 sm:pl-6 pt-4 sm:pt-0 border-[#2f302f]">
-                    <h3 class="text-xl font-semibold uppercase text-gray-900">Email</h3>
-                    <p class="mt-3 text-gray-600 leading-loose sm:leading-normal">
-                        <a class="text-indigo-600 hover:text-indigo-700" href="mailto:{{ website.content.contact_info.contact_email|default:'contact@example.com' }}">{{ website.content.contact_info.contact_email|default:'contact@example.com' }}</a>
-                    </p>
-                </div>
-
-                <!-- Phone -->
-                <div class="border-l-4 sm:border-l-4 border-t-0 sm:border-t-0 pl-4 sm:pl-6 pt-4 sm:pt-0 border-[#2f302f]">
-                    <h3 class="text-xl font-semibold uppercase text-gray-900">Phone</h3>
-                    <p class="mt-3 text-gray-600 leading-loose sm:leading-normal">
-                        <a class="text-indigo-600 hover:text-indigo-700" href="tel:{{ website.content.contact_info.mobile_number|default:'+1234567890' }}">{{ website.content.contact_info.mobile_number|default:'+1 (234) 567-890' }}</a>
-                    </p>
-                </div>
-
-                <!-- Office hours -->
-                <div class="border-l-4 sm:border-l-4 border-t-0 sm:border-t-0 pl-4 sm:pl-6 pt-4 sm:pt-0 border-[#2f302f]">
-                    <h3 class="text-xl font-semibold uppercase text-gray-900">Office hours</h3>
-                    <p class="mt-3 text-gray-600 leading-loose sm:leading-normal">
+                <div class="ow-office__list">
+                    <div class="ow-office__item">
+                        <h3 class="ow-office__label">Our office</h3>
+                        <p class="ow-office__value">{{ website.content.contact_info.address|default:"4556 Brendan Ferry<br>Los Angeles, CA 90210"|safe }}</p>
+                    </div>
+                    <div class="ow-office__item">
+                        <h3 class="ow-office__label">Email</h3>
+                        <p class="ow-office__value"><a href="mailto:{{ website.content.contact_info.contact_email|default:'contact@example.com' }}">{{ website.content.contact_info.contact_email|default:'contact@example.com' }}</a></p>
+                    </div>
+                    <div class="ow-office__item">
+                        <h3 class="ow-office__label">Phone</h3>
+                        <p class="ow-office__value"><a href="tel:{{ website.content.contact_info.mobile_number|default:'+1234567890' }}">{{ website.content.contact_info.mobile_number|default:'+1 (234) 567-890' }}</a></p>
+                    </div>
+                    <div class="ow-office__item">
+                        <h3 class="ow-office__label">Office hours</h3>
+                        <p class="ow-office__value">
                         {% with start_day=website.content.contact_info.office_start_day|default:'Monday' %}
                         {% with end_day=website.content.contact_info.office_end_day|default:'Friday' %}
                         {% with start_time=website.content.contact_info.office_start_time|default:'09:30' %}
                         {% with end_time=website.content.contact_info.office_end_time|default:'18:30' %}
-                        {% with holidays=website.content.contact_info.office_holidays|default_if_none:'' %}
+                        {% with holidays=website.content.contact_info.office_holidays|split_clean %}
                             {{ start_day }} – {{ end_day }}: 
                             {% if ":" in start_time %}
                                 {{ start_time }}
@@ -179,32 +211,41 @@
                         {% endwith %}
                         {% endwith %}
                     </p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        {% with map=website.content.contact_info.map_location %}
-        {% if map %}
-        <div class="mt-12 sm:mt-16">
-            <div class="max-w-3xl">
-                <h2 class="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">Find us on the map</h2>
-                <p class="mt-2 text-sm sm:text-base text-gray-600">Get directions to our location.</p>
+            {% if map.embed %}
+            <div class="ow-office__map">
+                <div class="ow-office__maphead">
+                    <div>
+                        <h2 class="ow-office__maptitle">Find us on the map</h2>
+                        <p class="ow-office__mapsub">Get directions to our location.</p>
+                    </div>
+                    {% if map.link %}
+                    <a href="{{ map.link }}" target="_blank" rel="noopener" class="ow-office__maplink">Open in Google Maps &#8599;</a>
+                    {% endif %}
+                </div>
+                <div class="ow-office__frame">
+                    <iframe
+                        src="{{ map.embed }}"
+                        frameborder="0"
+                        style="border:0;"
+                        allowfullscreen=""
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                        aria-label="Google Maps location"
+                    ></iframe>
+                </div>
             </div>
-            <div class="mt-5 rounded-3xl overflow-hidden border border-gray-200 bg-gray-50 h-72 sm:h-96 shadow-sm">
-                <iframe
-                    src="{{ map }}"
-                    class="w-full h-full"
-                    frameborder="0"
-                    style="border:0;"
-                    allowfullscreen=""
-                    loading="lazy"
-                    referrerpolicy="no-referrer-when-downgrade"
-                    aria-label="Google Maps location"
-                ></iframe>
-            </div>
-        </div>
-        {% endif %}
+            {% endif %}
+        </section>
         {% endwith %}
+
+        {# Phones: grievance officer + consumer helpline below the map (desktop shows it beside the form). #}
+        <div class="md:hidden">
+            {% include "storefront/_grievance_card.html" with grievance_standalone=True %}
+        </div>
     </div>
 </div>
 
@@ -212,6 +253,17 @@
 document.addEventListener('DOMContentLoaded', function () {
   var form = document.getElementById('contactForm');
   if (!form) return;
+  // The submit button stays disabled until the privacy consent box is ticked.
+  var consent = document.getElementById('privacy_consent');
+  var consentBtn = form.querySelector('button[type="submit"]');
+  function syncConsent() { if (consent && consentBtn) consentBtn.disabled = !consent.checked; }
+  if (consent) {
+    consent.addEventListener('change', syncConsent);
+    // After a sent form is reset the box is unticked again; re-lock once the
+    // submit handler has finished restoring the button.
+    form.addEventListener('reset', function () { setTimeout(syncConsent, 0); });
+    syncConsent();
+  }
   // Legacy multi-field support (first/last name, website, budget)
   var first = document.getElementById('first_name');
   var last = document.getElementById('last_name');

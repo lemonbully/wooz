@@ -1,0 +1,40 @@
+{% comment %}
+Session heartbeat  included on every authenticated dashboard/store page.
+
+Polls accounts:session_ping on a short interval. When this device's session has
+been ended from another device (Security → Devices & sessions → Sign out), the
+row is gone, the ping comes back {authenticated:false}, and the page reloads 
+which, being behind login_required, lands on sign-in. So "end this session" takes
+effect on the other device within one interval, not on its next navigation.
+Only polls while the tab is visible, so a backgrounded tab costs nothing.
+{% endcomment %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var URL = "{% url 'accounts:session_ping' %}";
+    var INTERVAL = 15000;
+    var stopped = false;
+
+    function ping() {
+      if (stopped) return;
+      fetch(URL, {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        credentials: "same-origin",
+        cache: "no-store",
+      })
+        .then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (d) {
+          if (d && d.authenticated === false) {
+            stopped = true;
+            window.location.reload();
+          }
+        })
+        .catch(function () { /* transient network error  try again next tick */ });
+    }
+
+    setInterval(function () { if (!document.hidden) ping(); }, INTERVAL);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) ping();
+    });
+  })();
+</script>

@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{ site_title }} - Checkout</title>
+	{% if website.content.favicon %}<link rel="icon" href="{{ website.content.favicon }}" type="image/x-icon">{% endif %}
+	<meta name="robots" content="noindex, nofollow">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<style>
+		body, html { font-family: 'Poppins', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; }
+		* { font-family: inherit; }
+		/* Payment method cards (same design as the store checkout, sized for
+		   this phone-width card so three options still share one row). */
+		.pm{margin:1.5rem 0;border:1px solid #e5e7eb;border-radius:.5rem;padding:.875rem}
+		.pm-set{border:0;margin:0;padding:0;min-width:0}
+		.pm-legend{padding:0;margin:0 0 .75rem;font-size:1rem;font-weight:500;color:#111827}
+		.pm-grid{display:flex;flex-wrap:wrap;gap:.625rem}
+		.pm-card{position:relative;display:flex;flex:1 1 6.25rem;min-width:0;cursor:pointer;container-type:inline-size}
+		.pm-card--online{--pm-a:#2563eb;--pm-b:#7c3aed;--pm-ink:#1e3a8a;--pm-sub:#1d4ed8;--pm-soft-a:#eff6ff;--pm-soft-b:#f5f3ff;--pm-line:#bfdbfe;--pm-glow:rgba(37,99,235,.55)}
+		.pm-card--part{--pm-a:#c2410c;--pm-b:#be185d;--pm-ink:#7c2d12;--pm-sub:#c2410c;--pm-soft-a:#fff7ed;--pm-soft-b:#fdf2f8;--pm-line:#fdba74;--pm-glow:rgba(234,88,12,.5)}
+		.pm-card--cod{--pm-a:#047857;--pm-b:#0f766e;--pm-ink:#064e3b;--pm-sub:#047857;--pm-soft-a:#ecfdf5;--pm-soft-b:#f0fdfa;--pm-line:#6ee7b7;--pm-glow:rgba(5,150,105,.5)}
+		.pm-input{position:absolute;top:0;left:0;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+		.pm-body{position:relative;display:flex;align-items:center;gap:.5rem;width:100%;padding:.4rem .6rem;border:1px solid var(--pm-line,#e5e7eb);border-radius:.625rem;background:linear-gradient(135deg,var(--pm-soft-a,#fff),var(--pm-soft-b,#fff));transition:border-color .15s ease,box-shadow .2s ease,transform .2s ease}
+		.pm-card:hover .pm-body{border-color:var(--pm-a,#9ca3af);box-shadow:0 6px 14px -10px var(--pm-glow,rgba(0,0,0,.4))}
+		.pm-input:checked + .pm-body{border-color:transparent;background:linear-gradient(135deg,var(--pm-a,#000),var(--pm-b,#000));box-shadow:0 10px 22px -10px var(--pm-glow,rgba(0,0,0,.5));transform:translateY(-1px)}
+		.pm-input:focus-visible + .pm-body{outline:2px solid var(--pm-a,#111827);outline-offset:2px}
+		.pm-icon{display:inline-flex;flex:none;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border-radius:.4375rem;background:linear-gradient(135deg,var(--pm-a,#374151),var(--pm-b,#374151));color:#fff;box-shadow:0 4px 10px -6px var(--pm-glow,rgba(0,0,0,.4));transition:color .15s ease,box-shadow .15s ease}
+		.pm-icon svg{width:1rem;height:1rem}
+		.pm-input:checked + .pm-body .pm-icon{background:#fff;color:var(--pm-a,#111827);box-shadow:none}.pm-input:checked + .pm-body .pm-title{color:#fff}.pm-input:checked + .pm-body .pm-detail{color:rgba(255,255,255,.88)}.pm-input:checked + .pm-body .pm-detail .pm-amt{color:#fff}
+		.pm-text{display:flex;flex:1 1 auto;flex-direction:column;gap:.0625rem;min-width:0}
+		.pm-dot{position:relative;flex:none;width:1rem;height:1rem;border-radius:9999px;border:1.5px solid var(--pm-line,#d1d5db);background:#fff;transition:border-color .15s ease}
+		.pm-dot::after{content:"";position:absolute;inset:2.5px;border-radius:9999px;background:var(--pm-a,#111827);transform:scale(0);transition:transform .15s ease}
+		.pm-input:checked + .pm-body .pm-dot{border-color:#fff;background:transparent}.pm-input:checked + .pm-body .pm-dot::after{background:#fff}
+		.pm-input:checked + .pm-body .pm-dot::after{transform:scale(1)}
+		.pm-title{font-size:.78125rem;font-weight:600;line-height:1.2;color:var(--pm-ink,#111827)}
+		.pm-detail{font-size:.6875rem;line-height:1.25;color:var(--pm-sub,#6b7280)}
+		.pm-amt{white-space:nowrap}
+		.pm-detail .pm-amt{font-weight:600;color:var(--pm-ink,#374151)}
+		@container (max-width: 9.5rem){.pm-icon{display:none}.pm-body{gap:.375rem;padding:.4rem .5rem;border-left:3px solid var(--pm-a,#e5e7eb)}.pm-title{font-size:.75rem}.pm-detail{font-size:.65625rem}.pm-dot{width:.875rem;height:.875rem}.pm-dot::after{inset:2px}}
+		.pm-note{margin-top:.75rem;font-size:.8125rem;line-height:1.5;color:#4b5563}
+		.pm-note strong{font-weight:600;color:#111827}
+		.pm-split{margin-top:.75rem;padding:.75rem;border:1px solid #fdba74;border-radius:.5rem;background:linear-gradient(135deg,#fff7ed,#fdf2f8)}
+		.pm-bar{display:flex;height:.5rem;overflow:hidden;border-radius:9999px;background:linear-gradient(90deg,#047857,#0f766e)}
+		.pm-bar-now{background:linear-gradient(90deg,#2563eb,#7c3aed);transition:width .25s ease}
+		.pm-split-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-top:.5rem;font-size:.75rem;color:#4b5563}
+		.pm-split-row strong{font-weight:600;color:#111827;white-space:nowrap}
+		.pm-key{display:inline-flex;align-items:center;gap:.4rem}
+		.pm-swatch{width:.625rem;height:.625rem;border-radius:9999px;background:linear-gradient(135deg,#2563eb,#7c3aed)}
+		.pm-swatch--rest{background:linear-gradient(135deg,#047857,#0f766e)}
+		@media (prefers-reduced-motion:reduce){.pm-body,.pm-icon,.pm-dot,.pm-dot::after,.pm-bar-now{transition:none}.pm-input:checked + .pm-body{transform:none}}
+	</style>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script>
+		tailwind.config = { theme: { extend: { borderRadius: { phone: '32px' }, boxShadow: { phone: '0 30px 80px -30px rgba(0,0,0,0.45)' } } } };
+	</script>
+</head>
+<body class="bg-white sm:bg-[#f5f2ec] flex items-center justify-center h-[100svh] overflow-hidden px-0 py-0 sm:min-h-screen sm:overflow-visible sm:px-6 sm:py-6">
+	<div class="w-[100vw] sm:w-[92vw] sm:max-w-[420px] sm:min-w-[320px] h-[100svh] sm:h-[88vh] sm:max-h-[860px] sm:min-h-[560px] bg-white rounded-none sm:rounded-phone shadow-none sm:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)] ring-0 sm:ring-1 sm:ring-black/10 overflow-hidden relative">
+		<div class="absolute inset-0 grid grid-rows-[auto_1fr]" data-checkout data-base="/" data-symbol="₹" data-currency="₹" data-partial-type="{{ partial_type }}" data-partial-value="{{ partial_value }}" data-gateway="{{ gateway_name }}">
+			<div class="flex items-center justify-between px-5 py-3 border-b">
+				<a href="{% url 'public_website' %}" class="p-2 rounded-full bg-gray-100 text-gray-700" aria-label="Back">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</a>
+				<h1 class="text-[15px] font-semibold text-black">Checkout</h1>
+				<div class="w-9"></div>
+			</div>
+			<div class="min-h-0 overflow-auto">
+				<section class="bg-white py-2 md:py-6 px-2">
+					<form data-checkout-form method="post" class="mx-auto max-w-screen-xl px-4 2xl:px-0" onsubmit="return false;">
+						{% csrf_token %}
+						<div class="mx-auto flex flex-col gap-6">
+							<!-- Mobile accordion -->
+							<div class="block mt-2">
+								<button type="button" id="mobile-order-toggle" class="w-full flex items-center gap-3 rounded-lg border border-gray-400 bg-white px-3 py-2">
+									<span id="mobile-order-label" class="min-w-0 flex-1 text-left text-md font-medium text-gray-900">View products</span>
+									<div class="flex items-center gap-2">
+										<div class="text-sm font-semibold text-gray-900" data-sum-total>₹{{ totals.total }}</div>
+										<svg id="mobile-order-toggle-icon" class="w-4 h-4 text-gray-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+									</div>
+								</button>
+								<div id="mobile-order-panel" class="hidden mt-3"></div>
+							</div>
+
+							<!-- Billing & Delivery -->
+							<div class="mt-2 mx-[10px] space-y-4 border-b border-t border-gray-200 py-8">
+								<h4 class="text-lg font-semibold text-gray-900">Billing &amp; Delivery information</h4>
+								<dl>
+									<dt class="text-base font-medium text-gray-900">Customer</dt>
+									<dd class="mt-1 text-base font-normal text-gray-600">
+										<input name="name" class="w-full rounded-lg border border-gray-300 p-2 text-sm" placeholder="Your name" value="{{ prefill.name }}" autocomplete="name" required />
+										<div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+											<input name="phone" class="w-full rounded-lg border border-gray-300 p-2 text-sm" placeholder="Phone" value="{{ prefill.phone }}" autocomplete="tel-national" required />
+											<input name="email" type="email" class="w-full rounded-lg border border-gray-300 p-2 text-sm" placeholder="Email" value="{{ prefill.email }}" autocomplete="email" required />
+										</div>
+									</dd>
+								</dl>
+								<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+									<div class="sm:col-span-2">
+										<div class="mb-2 flex items-center justify-start">
+											<input id="has_gst_onpage" type="checkbox" class="h-4 w-4 rounded border-gray-300"{% if prefill.gstin %} checked{% endif %} />
+											<label for="has_gst_onpage" class="block text-sm font-medium text-gray-900 ml-2 cursor-pointer">Do you have GST?</label>
+										</div>
+										<div id="company_gst_row" class="{% if not prefill.gstin %}hidden {% endif %}grid grid-cols-1 sm:grid-cols-2 gap-4">
+											<div>
+												<label class="mb-2 block text-sm font-medium text-gray-900">Company name</label>
+												<input type="text" id="company_name_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" placeholder="Company (optional)" value="{{ prefill.company_name }}" />
+											</div>
+											<div>
+												<label class="mb-2 block text-sm font-medium text-gray-900">GSTIN*</label>
+												<input type="text" id="gstin_onpage" maxlength="15" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" placeholder="15-character GSTIN" value="{{ prefill.gstin }}" />
+											</div>
+										</div>
+									</div>
+									<div class="sm:col-span-2">
+										<label class="mb-2 block text-sm font-medium text-gray-900">Country/Region*</label>
+										<select id="country_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900"><option value="India" selected>India</option></select>
+									</div>
+									<div>
+										<label class="mb-2 block text-sm font-medium text-gray-900">House No.*</label>
+										<input type="text" id="house_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" placeholder="House/Flat/Block" value="{{ prefill.house }}" required />
+									</div>
+									<div>
+										<label class="mb-2 block text-sm font-medium text-gray-900">Street/Area*</label>
+										<input type="text" id="street_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" placeholder="Street/Area" value="{{ prefill.street }}" required />
+									</div>
+									<div>
+										<label class="mb-2 block text-sm font-medium text-gray-900">City*</label>
+										<input type="text" id="city_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" placeholder="City" value="{{ prefill.city }}" required />
+									</div>
+									<div>
+										<label class="mb-2 block text-sm font-medium text-gray-900">State*</label>
+										<select id="state_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" required>
+											<option{% if not prefill.state %} selected{% endif %} disabled>Select state</option>
+											{% for s in states %}<option value="{{ s }}"{% if prefill.state and s|lower == prefill.state|lower %} selected{% endif %}>{{ s }}</option>{% endfor %}
+										</select>
+									</div>
+									<div>
+										<label class="mb-2 block text-sm font-medium text-gray-900">PIN*</label>
+										<input type="text" id="pincode_onpage" maxlength="6" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" placeholder="PIN Code" value="{{ prefill.pincode }}" required />
+									</div>
+									<div class="sm:col-span-2">
+										<label class="mb-2 block text-sm font-medium text-gray-900">Shipping Address</label>
+										<textarea id="address_onpage" rows="3" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" placeholder="Apartment, landmark, instructions (optional)">{{ prefill.notes }}</textarea>
+									</div>
+									<div class="sm:col-span-2">
+										<div class="flex items-center">
+											<input id="ship_diff_toggle_onpage" type="checkbox" class="h-4 w-4 rounded border-gray-300" />
+											<label for="ship_diff_toggle_onpage" class="ml-2 text-sm font-medium text-gray-900 cursor-pointer">Ship to a different address?</label>
+										</div>
+									</div>
+									<div id="ship_diff_container_onpage" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<div><label class="mb-2 block text-sm font-medium text-gray-900">First Name</label><input id="first_name_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" /></div>
+										<div><label class="mb-2 block text-sm font-medium text-gray-900">Last Name</label><input id="last_name_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" /></div>
+										<div><label class="mb-2 block text-sm font-medium text-gray-900">Phone</label><input id="phone_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" /></div>
+										<div><label class="mb-2 block text-sm font-medium text-gray-900">House No.</label><input id="house_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" /></div>
+										<div><label class="mb-2 block text-sm font-medium text-gray-900">Street/Area</label><input id="street_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" /></div>
+										<div><label class="mb-2 block text-sm font-medium text-gray-900">City</label><input id="city_ship_onpage" type="text" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" /></div>
+										<div><label class="mb-2 block text-sm font-medium text-gray-900">State</label>
+											<select id="state_ship_onpage" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900"><option selected disabled>Select state</option>{% for s in states %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
+										</div>
+										<div><label class="mb-2 block text-sm font-medium text-gray-900">PIN</label><input id="pincode_ship_onpage" type="text" maxlength="6" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" /></div>
+									</div>
+								</div>
+								<div class="mt-4">
+									<label class="mb-2 block text-sm font-medium text-gray-900">Order notes</label>
+									<textarea name="notes" id="order_notes" rows="2" class="block w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900" placeholder="Special notes for delivery (optional)."></textarea>
+								</div>
+							</div>
+
+							<!-- Items + Summary -->
+							<div id="order-summary-section" class="mt-2 mx-[10px]">
+								<div class="relative overflow-hidden border-b border-gray-200">
+									<table class="w-full text-left font-medium text-gray-900 table-auto">
+										<tbody id="checkout-items-body" class="divide-y divide-gray-200">
+											{% for it in cart_items %}
+											<tr data-pid="{{ it.id }}" data-qty="{{ it.quantity }}" class="align-top">
+												<td class="py-4 w-full">
+													<div class="flex items-start gap-4">
+														<a href="{% url 'public_product_detail' it.slug %}" class="flex items-center aspect-square w-10 h-10 shrink-0">{% if it.image %}<img class="h-auto w-full max-h-full object-contain" src="{{ it.image.url }}" alt="{{ it.title }}" />{% endif %}</a>
+														<div class="w-full grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+															<div class="flex-1 min-w-0">
+																<a href="{% url 'public_product_detail' it.slug %}" class="block text-sm font-medium text-gray-900 break-words">{{ it.title }}</a>
+																<button type="button" class="mt-1 text-xs text-red-600 hover:text-red-700 underline" data-action="remove">Remove</button>
+															</div>
+															<div class="flex items-center justify-end gap-3 shrink-0">
+																<div class="inline-flex items-center gap-2">
+																	<button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="dec">−</button>
+																	<span class="min-w-[2ch] text-sm text-gray-900 text-center" data-role="qty">{{ it.quantity }}</span>
+																	<button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="inc">+</button>
+																</div>
+																<span class="text-right text-base font-bold text-gray-900 whitespace-nowrap">₹{{ it.line_total }}</span>
+															</div>
+														</div>
+													</div>
+												</td>
+											</tr>
+											{% empty %}
+											<tr><td class="py-6 text-center text-gray-500">No items in cart.</td></tr>
+											{% endfor %}
+										</tbody>
+									</table>
+								</div>
+								<div class="my-4">
+									<h4 class="text-xl font-semibold text-gray-900">Order summary</h4>
+									<div class="space-y-4">
+										<div class="space-y-2">
+											<dl class="flex items-center justify-between gap-4"><dt class="text-gray-500">Subtotal</dt><dd id="checkout-subtotal" class="text-base font-medium text-gray-900">₹{{ totals.subtotal }}</dd></dl>
+											<dl id="checkout-discount-row" class="flex items-center justify-between gap-4 hidden"><dt class="text-gray-500">Discount</dt><dd id="checkout-discount" class="text-base font-medium text-green-600">− ₹{{ totals.discount }}</dd></dl>
+											<dl id="checkout-credit-row" class="flex items-center justify-between gap-4 {% if not totals.credit_discount %}hidden{% endif %}" data-credit-email="{{ credit_email|default:'' }}" data-credit="{{ totals.credit_discount|default:'0' }}" data-total-before-credit="{{ totals.total_before_credit|default:totals.total }}"><dt class="text-gray-500">Store credit</dt><dd id="checkout-credit" class="text-base font-medium text-green-600">− ₹{{ totals.credit_discount|default:'0.00' }}</dd></dl>
+										</div>
+										<dl class="flex items-center justify-between gap-4 border-t border-gray-200 pt-2"><dt class="text-lg font-bold text-gray-900">Total</dt><dd id="checkout-total" class="text-lg font-bold text-gray-900">₹{{ totals.total }}</dd></dl>
+									</div>
+
+									<!-- Coupon -->
+									<div class="mt-4 rounded-lg border border-gray-200" data-coupon-section>
+										<button type="button" id="coupon-accordion-btn" aria-expanded="true" class="w-full flex items-center justify-between px-4 py-3 text-left">
+											<span class="text-sm font-medium text-gray-900">Have a discount code?</span>
+											<svg class="h-5 w-5 text-gray-500 transition-transform duration-300" id="coupon-accordion-icon" viewBox="0 0 20 20" fill="currentColor" style="transform:rotate(180deg)"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.08 1.04l-4.25 4.25a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+										</button>
+										<div id="coupon-accordion-panel" class="overflow-hidden transition-all duration-300 ease-in-out">
+											<div class="px-4 pb-4 space-y-3">
+												<div id="coupon-applied-row" class="hidden rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800 flex items-center justify-between">
+													<div><span class="font-semibold">Applied:</span><span id="applied-coupon-code" class="ml-1"></span></div>
+													<button type="button" id="remove-coupon" class="text-emerald-700 hover:text-emerald-900 underline">Remove</button>
+												</div>
+												<div class="flex gap-2">
+													<input id="coupon-input" type="text" class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900" placeholder="Enter code" />
+													<button type="button" id="apply-coupon" class="shrink-0 inline-flex items-center rounded-lg bg-gray-900 text-white px-4 py-2 text-sm font-medium hover:bg-gray-800">Apply</button>
+												</div>
+												<p id="coupon-message" class="text-xs text-gray-500"></p>
+											</div>
+										</div>
+									</div>
+
+									<!-- Payment method: one card per available option, side by side,
+									     wrapping onto the next line when the screen is too narrow. -->
+									{% if has_payment_config %}
+									<div class="pm" data-payment-section>
+										<fieldset class="pm-set">
+											<legend class="pm-legend">Payment method</legend>
+											<div class="pm-grid">
+												{% if gateway_ready %}
+												<label class="pm-card pm-card--online">
+													<input type="radio" name="method" value="gateway" class="pm-input" checked>
+													<span class="pm-body">
+														<span class="pm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h3"/></svg></span>
+														<span class="pm-text">
+															<span class="pm-title">Pay Online</span>
+															<span class="pm-detail">UPI, cards, netbanking</span>
+														</span>
+														<span class="pm-dot" aria-hidden="true"></span>
+													</span>
+												</label>
+												{% endif %}
+												{% if partial_enabled %}
+												<label class="pm-card pm-card--part">
+													<input type="radio" name="method" value="partial" class="pm-input">
+													<span class="pm-body">
+														<span class="pm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg></span>
+														<span class="pm-text">
+															<span class="pm-title">Pay <span class="pm-amt" data-partial-now>₹{{ partial_now }}</span> now</span>
+															<span class="pm-detail">Rest <span class="pm-amt" data-partial-rest>₹{{ partial_rest }}</span> on COD</span>
+														</span>
+														<span class="pm-dot" aria-hidden="true"></span>
+													</span>
+												</label>
+												{% endif %}
+												{% if cod_enabled %}
+												<label class="pm-card pm-card--cod">
+													<input type="radio" name="method" value="cod" class="pm-input" {% if not gateway_ready %}checked{% endif %}>
+													<span class="pm-body">
+														<span class="pm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5h.01M18 14.5h.01"/></svg></span>
+														<span class="pm-text">
+															<span class="pm-title">Cash on Delivery</span>
+															<span class="pm-detail">Pay when it arrives</span>
+														</span>
+														<span class="pm-dot" aria-hidden="true"></span>
+													</span>
+												</label>
+												{% endif %}
+											</div>
+										</fieldset>
+
+										<p class="pm-note" aria-live="polite" data-pay-note>
+											{% if gateway_ready %}You pay <strong>₹{{ totals.total }}</strong> now, online. Your order is confirmed as soon as the payment goes through.{% else %}You pay <strong>₹{{ totals.total }}</strong> when your order is delivered. Nothing to pay now.{% endif %}
+										</p>
+
+										{% if partial_enabled %}
+										<div id="partial-breakdown" class="pm-split hidden">
+											<div class="pm-bar" aria-hidden="true"><span class="pm-bar-now" data-partial-bar></span></div>
+											<div class="pm-split-row">
+												<span class="pm-key"><span class="pm-swatch" aria-hidden="true"></span>Online now</span>
+												<strong id="partial-online-amt">₹{{ partial_now }}</strong>
+											</div>
+											<div class="pm-split-row">
+												<span class="pm-key"><span class="pm-swatch pm-swatch--rest" aria-hidden="true"></span>Cash on delivery (COD)</span>
+												<strong id="partial-cod-amt">₹{{ partial_rest }}</strong>
+											</div>
+										</div>
+										{% endif %}
+									</div>
+									{% else %}
+									<p class="my-6 text-sm rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800" data-payment-section>Payments are temporarily unavailable until the store owner finishes payment setup.</p>
+									{% endif %}
+
+									{% if request.GET.payment == 'incomplete' %}
+									<p class="mb-3 text-sm rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">Your payment wasn’t completed, so no order was placed. You can try again below. If money was debited from your account, please don’t pay again. Your order will be confirmed automatically once the payment reaches us.</p>
+									{% endif %}
+									<p data-checkout-error class="hidden mb-3 text-sm rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700"></p>
+
+									<div class="gap-4 sm:flex sm:items-center my-2" data-cta-section>
+										<a href="{% url 'public_website' %}" class="w-full rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 text-center">Return to Shopping</a>
+										<button type="button" id="place-order" data-place {% if not has_payment_config %}disabled class="mt-4 flex w-full items-center justify-center rounded-lg bg-gray-300 text-gray-500 px-5 py-2.5 text-sm font-medium cursor-not-allowed sm:mt-0"{% else %}class="mt-4 flex w-full items-center justify-center rounded-lg bg-black text-white px-5 py-2.5 text-sm font-medium hover:bg-black/90 sm:mt-0"{% endif %}>Place order</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</form>
+				</section>
+			</div>
+		</div>
+	</div>
+
+	{% if gateway_ready and gateway_name == 'razorpay' %}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{% endif %}
+	{% if gateway_ready and gateway_name == 'cashfree' %}<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>{% endif %}
+	<script>
+	(function () {
+		var root = document.querySelector('[data-checkout]');
+		if (!root) return;
+		var base = root.getAttribute('data-base') || '/';
+		var cur = root.getAttribute('data-symbol') || root.getAttribute('data-currency') || '';
+		var token = (root.querySelector('input[name=csrfmiddlewaretoken]') || {}).value || '';
+		var form = root.querySelector('[data-checkout-form]');
+		var btn = root.querySelector('[data-place]');
+		var errBox = root.querySelector('[data-checkout-error]');
+		function money(v) { return cur + (v == null ? '' : v); }
+		function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+		function showError(m) { if (errBox) { errBox.textContent = m || 'Something went wrong.'; errBox.classList.remove('hidden'); } if (btn) { btn.disabled = false; btn.textContent = 'Place order'; } }
+		function post(url, body) {
+			return fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': token, 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'same-origin', body: body })
+				.then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+		}
+		function selectedMethod() { var m = root.querySelector('input[name=method]:checked'); return m ? m.value : ''; }
+		var gstToggle = document.getElementById('has_gst_onpage');
+		if (gstToggle) gstToggle.addEventListener('change', function () { document.getElementById('company_gst_row').classList.toggle('hidden', !gstToggle.checked); });
+		var shipToggle = document.getElementById('ship_diff_toggle_onpage');
+		if (shipToggle) shipToggle.addEventListener('change', function () { document.getElementById('ship_diff_container_onpage').classList.toggle('hidden', !shipToggle.checked); });
+		// Payment method cards. Display only: the server computes and charges the
+		// real split. syncCredit calls this on every total change (coupon, store
+		// credit), so the amounts on the cards always match the summary.
+		var partialType = root.getAttribute('data-partial-type') || 'percent';
+		var partialValue = parseFloat(root.getAttribute('data-partial-value') || '0') || 0;
+		var gatewayName = root.getAttribute('data-gateway') || '';
+		var gatewayLabel = gatewayName ? gatewayName.charAt(0).toUpperCase() + gatewayName.slice(1) : '';
+		function currentTotal() { var el = document.getElementById('checkout-total'); return el ? (parseFloat(el.textContent.replace(/[^0-9.]/g, '')) || 0) : 0; }
+		function round2(n) { return Math.round(n * 100) / 100; }
+		function setNote(parts) {
+			var note = root.querySelector('[data-pay-note]');
+			if (!note) return;
+			while (note.firstChild) note.removeChild(note.firstChild);
+			parts.forEach(function (p) {
+				if (p && typeof p === 'object') { var s = document.createElement('strong'); s.textContent = p.b; note.appendChild(s); }
+				else note.appendChild(document.createTextNode(p));
+			});
+		}
+		function syncPartial() {
+			var total = currentTotal();
+			var online = partialType === 'fixed' ? partialValue : (total * partialValue / 100);
+			online = round2(online); if (online < 0) online = 0; if (online > total) online = total;
+			var cod = round2(Math.max(0, total - online));
+			var nowText = money(online.toFixed(2)), restText = money(cod.toFixed(2)), totalText = money(total.toFixed(2));
+			root.querySelectorAll('[data-partial-now]').forEach(function (el) { el.textContent = nowText; });
+			root.querySelectorAll('[data-partial-rest]').forEach(function (el) { el.textContent = restText; });
+			var onEl = document.getElementById('partial-online-amt'); var codEl = document.getElementById('partial-cod-amt');
+			if (onEl) onEl.textContent = nowText; if (codEl) codEl.textContent = restText;
+			var bar = root.querySelector('[data-partial-bar]');
+			if (bar) bar.style.width = (total > 0 ? Math.max(0, Math.min(100, online / total * 100)) : 0).toFixed(2) + '%';
+			var method = selectedMethod();
+			var box = document.getElementById('partial-breakdown');
+			if (box) box.classList.toggle('hidden', method !== 'partial');
+			if (method === 'partial') setNote(['You pay ', { b: nowText }, ' now, online, to confirm your order. The remaining ', { b: restText }, ' is collected in cash on delivery (COD).']);
+			else if (method === 'cod') setNote(['You pay ', { b: totalText }, ' when your order is delivered. Nothing to pay now.']);
+			else if (method === 'gateway') setNote(['You pay ', { b: totalText }, ' now, online' + (gatewayLabel ? ' via ' + gatewayLabel : '') + '. Your order is confirmed as soon as the payment goes through.']);
+		}
+		root.addEventListener('change', function (e) { if (e.target && e.target.name === 'method') syncPartial(); });
+		var couponBtn = document.getElementById('coupon-accordion-btn');
+		var couponPanel = document.getElementById('coupon-accordion-panel');
+		var couponIcon = document.getElementById('coupon-accordion-icon');
+		// Open by default (rendered open); an open panel has no height cap so the
+		// applied-code row and messages are never clipped.
+		if (couponBtn) couponBtn.addEventListener('click', function () {
+			var open = couponBtn.getAttribute('aria-expanded') === 'true';
+			couponBtn.setAttribute('aria-expanded', String(!open));
+			couponPanel.style.maxHeight = couponPanel.scrollHeight + 'px';
+			if (open) { void couponPanel.offsetHeight; couponPanel.style.maxHeight = '0px'; }
+			if (couponIcon) couponIcon.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+		});
+		if (couponPanel) couponPanel.addEventListener('transitionend', function () {
+			if (couponBtn && couponBtn.getAttribute('aria-expanded') === 'true') couponPanel.style.maxHeight = 'none';
+		});
+		function setAll(id, text) { document.querySelectorAll('[id="' + id + '"]').forEach(function (el) { el.textContent = text; }); }
+		function toggleAll(id, show) { document.querySelectorAll('[id="' + id + '"]').forEach(function (el) { el.classList.toggle('hidden', !show); }); }
+		// Store credit (signed-in shopper only): applies while the order email is
+		// the verified one, so the total follows the email field.
+		var creditRow = document.getElementById('checkout-credit-row');
+		var creditEmail = creditRow ? (creditRow.getAttribute('data-credit-email') || '').toLowerCase() : '';
+		var credit = {
+			amount: creditRow ? (creditRow.getAttribute('data-credit') || '0') : '0',
+			before: creditRow ? (creditRow.getAttribute('data-total-before-credit') || '') : '',
+			total: ((document.getElementById('checkout-total') || {}).textContent || '').replace(/[^0-9.]/g, '')
+		};
+		var creditEmailInput = document.querySelector('input[name=email]');
+		function syncCredit() {
+			var typed = creditEmailInput ? creditEmailInput.value.trim().toLowerCase() : '';
+			var on = !!creditEmail && parseFloat(credit.amount) > 0 && typed === creditEmail;
+			setAll('checkout-credit', '− ' + money(credit.amount));
+			toggleAll('checkout-credit-row', on);
+			var total = on ? credit.total : (credit.before || credit.total);
+			setAll('checkout-total', money(total));
+			document.querySelectorAll('[data-sum-total]').forEach(function (el) { el.textContent = money(total); });
+			syncPartial();
+		}
+		function applyTotals(c) {
+			if (!c) return;
+			setAll('checkout-subtotal', money(c.subtotal));
+			var disc = parseFloat(c.discount) || 0;
+			setAll('checkout-discount', '− ' + money(c.discount));
+			toggleAll('checkout-discount-row', disc > 0);
+			credit.amount = c.credit_discount != null ? c.credit_discount : '0';
+			credit.total = c.total;
+			credit.before = c.total_before_credit != null ? c.total_before_credit : c.total;
+			syncCredit();
+		}
+		if (creditEmailInput) creditEmailInput.addEventListener('input', syncCredit);
+		function setAppliedUI(code) { var row = document.getElementById('coupon-applied-row'); var codeEl = document.getElementById('applied-coupon-code'); if (!row) return; if (code) { if (codeEl) codeEl.textContent = String(code).toUpperCase(); row.classList.remove('hidden'); } else { row.classList.add('hidden'); } }
+		function applyCoupon(code) {
+			var msg = document.getElementById('coupon-message');
+			post(base + 'cart/coupon/', 'code=' + encodeURIComponent(code || '')).then(function (res) {
+				if (msg) { msg.textContent = (res.data && res.data.message) || ''; msg.className = 'text-xs ' + (res.data && res.data.ok ? 'text-green-600' : 'text-red-600'); }
+				if (res.data) applyTotals(res.data.cart);
+				var disc = (res.data && res.data.cart) ? (parseFloat(res.data.cart.discount) || 0) : 0;
+				setAppliedUI((code || '').trim() && disc > 0 ? code : '');
+			});
+		}
+		var couponApply = document.getElementById('apply-coupon');
+		if (couponApply) couponApply.addEventListener('click', function () { applyCoupon(val('coupon-input')); });
+		var couponInput = document.getElementById('coupon-input');
+		if (couponInput) couponInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(couponInput.value); } });
+		var couponRemove = document.getElementById('remove-coupon');
+		if (couponRemove) couponRemove.addEventListener('click', function () { var i = document.getElementById('coupon-input'); if (i) i.value = ''; applyCoupon(''); });
+		function refresh() {
+			return fetch(base + 'cart/data/', { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store', credentials: 'same-origin' })
+				.then(function (r) { return r.json(); }).then(function (data) {
+					var tbody = document.getElementById('checkout-items-body');
+					if (tbody) {
+						var html = '';
+						(data.items || []).forEach(function (it) {
+							html += '<tr data-pid="' + it.product_id + '" data-qty="' + it.quantity + '" class="align-top">' +
+								'<td class="py-4 w-full"><div class="flex items-start gap-4">' +
+								'<a href="' + it.url + '" class="flex items-center aspect-square w-10 h-10 shrink-0">' + (it.image ? ('<img class="h-auto w-full max-h-full object-contain" src="' + it.image + '" alt=""/>') : '') + '</a>' +
+								'<div class="w-full grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">' +
+								'<div class="flex-1 min-w-0"><a href="' + it.url + '" class="hover:underline block text-sm font-medium text-gray-900 break-words">' + it.title + '</a>' +
+								(it.variant_label ? ('<div class="mt-0.5 text-[11px] text-gray-500">(' + it.variant_label + ')</div>') : '') +
+								'<button type="button" class="mt-1 text-xs text-red-600 hover:text-red-700 underline" data-action="remove">Remove</button></div>' +
+								'<div class="flex items-center justify-end gap-3 shrink-0"><div class="inline-flex items-center gap-2">' +
+								'<button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="dec">−</button>' +
+								'<span class="min-w-[2ch] text-sm text-gray-900 text-center" data-role="qty">' + it.quantity + '</span>' +
+								'<button type="button" class="qty-btn w-9 h-9 rounded-md border flex items-center justify-center" data-action="inc">+</button></div>' +
+								'<span class="text-right text-base font-bold text-gray-900 whitespace-nowrap">' + money(it.line_total) + '</span></div></div></div></td></tr>';
+						});
+						if (!html) { html = '<tr><td class="py-6 text-center text-gray-500">No items in cart.</td></tr>'; }
+						tbody.innerHTML = html;
+					}
+					applyTotals(data.totals || null);
+					if (data.count === 0) { window.location.href = base + '?open_cart=1'; }
+				}).catch(function () {});
+		}
+		function cartAction(action, pid, qty) {
+			var body = new URLSearchParams(); body.set('action', action); body.set('product_id', pid);
+			if (qty != null) body.set('quantity', String(qty));
+			return post(base + 'cart/update/', body.toString()).then(function () { return refresh(); });
+		}
+		document.addEventListener('click', function (e) {
+			var t = e.target; if (!t || !t.matches('.qty-btn,[data-action]')) return;
+			var action = t.getAttribute('data-action'); if (!action) return;
+			var row = t.closest('[data-pid]'); if (!row) return;
+			var pid = row.getAttribute('data-pid');
+			var qtyEl = row.querySelector('[data-role="qty"]');
+			var current = parseInt(qtyEl ? qtyEl.textContent : (row.getAttribute('data-qty') || '1'), 10) || 1;
+			if (action === 'inc') cartAction('set', pid, current + 1);
+			else if (action === 'dec') { var n = current - 1; if (n <= 0) cartAction('remove', pid); else cartAction('set', pid, n); }
+			else if (action === 'remove') cartAction('remove', pid);
+		});
+		var mToggle = document.getElementById('mobile-order-toggle');
+		if (mToggle) {
+			var mOpen = false;
+			mToggle.addEventListener('click', function () {
+				var panel = document.getElementById('mobile-order-panel'); var icon = document.getElementById('mobile-order-toggle-icon'); var label = document.getElementById('mobile-order-label'); var section = document.getElementById('order-summary-section');
+				mOpen = !mOpen;
+				if (mOpen && section) {
+					var clone = section.cloneNode(true); clone.removeAttribute('id');
+					['[data-payment-section]', '[data-cta-section]', '[data-coupon-section]'].forEach(function (sel) { var n = clone.querySelector(sel); if (n) n.remove(); });
+					panel.innerHTML = ''; panel.appendChild(clone); panel.classList.remove('hidden');
+					if (icon) icon.style.transform = 'rotate(180deg)'; if (label) label.textContent = 'Hide details';
+				} else { panel.classList.add('hidden'); panel.innerHTML = ''; if (icon) icon.style.transform = 'rotate(0deg)'; if (label) label.textContent = 'View products'; }
+			});
+		}
+		function payload(extra) {
+			var shipDiff = document.getElementById('ship_diff_toggle_onpage'); var useShip = shipDiff && shipDiff.checked;
+			var house = useShip ? val('house_ship_onpage') : val('house_onpage');
+			var street = useShip ? val('street_ship_onpage') : val('street_onpage');
+			var addr = [house, street, val('address_onpage')].filter(Boolean).join(', ');
+			var p = new URLSearchParams();
+			p.set('name', (form.querySelector('input[name=name]') || {}).value || '');
+			p.set('phone', useShip && val('phone_ship_onpage') ? val('phone_ship_onpage') : ((form.querySelector('input[name=phone]') || {}).value || ''));
+			p.set('email', (form.querySelector('input[name=email]') || {}).value || '');
+			p.set('address', addr);
+			// The parts too, so the next checkout on this store can be pre-filled.
+			p.set('house', val('house_onpage'));
+			p.set('street', val('street_onpage'));
+			p.set('notes', val('address_onpage'));
+			p.set('city', useShip ? val('city_ship_onpage') : val('city_onpage'));
+			p.set('state', useShip ? val('state_ship_onpage') : val('state_onpage'));
+			p.set('pincode', useShip ? val('pincode_ship_onpage') : val('pincode_onpage'));
+			p.set('company_name', val('company_name_onpage'));
+			p.set('gstin', val('gstin_onpage'));
+			p.set('method', selectedMethod());
+			if (extra) Object.keys(extra).forEach(function (k) { p.set(k, extra[k]); });
+			return p.toString();
+		}
+		function openRazorpay(p) {
+			var rzp = new Razorpay({ key: p.key_id, order_id: p.order_id, amount: p.amount, currency: p.currency, name: p.name, prefill: p.prefill || {},
+				handler: function (resp) { post(base + 'checkout/verify/', new URLSearchParams({ payment_id: p.payment_id, razorpay_payment_id: resp.razorpay_payment_id || '', razorpay_signature: resp.razorpay_signature || '' }).toString()).then(function (res) { if (res.ok && res.data.ok) window.location.href = res.data.redirect; else showError('We couldn’t confirm your payment, so no order was placed yet. If money was debited, your order will be confirmed automatically. Please don’t pay again.'); }); },
+				modal: { ondismiss: function () { showError('Payment cancelled. No order was placed.'); } } });
+			rzp.open();
+		}
+		function openCashfree(p) {
+			if (typeof Cashfree !== 'function') { showError('Couldn’t open the payment window. Please refresh and try again.'); return; }
+			function verify(onFail) {
+				return post(base + 'checkout/verify/', new URLSearchParams({ payment_id: p.payment_id }).toString())
+					.then(function (res) { if (res.ok && res.data.ok) window.location.href = res.data.redirect; else showError(onFail); });
+			}
+			var cf = Cashfree({ mode: p.mode === 'production' ? 'production' : 'sandbox' });
+			cf.checkout({ paymentSessionId: p.payment_session_id, redirectTarget: '_modal' }).then(function (result) {
+				result = result || {};
+				if (result.redirect) return; // Cashfree is taking the page to the bank/UPI step.
+				if (result.error) return verify(((result.error && result.error.message) || 'Payment was cancelled.') + ' No order was placed.');
+				return verify('Payment wasn’t completed, so no order was placed. If money was debited, your order will be confirmed automatically. Please don’t pay again.');
+			}).catch(function () { showError('Couldn’t open the payment window. Please try again.'); });
+		}
+		if (btn) btn.addEventListener('click', function () {
+			if (errBox) errBox.classList.add('hidden');
+			if (form && !form.reportValidity()) return;
+			if (!val('house_onpage') || !val('city_onpage') || !val('pincode_onpage')) { return showError('Please complete your delivery address.'); }
+			btn.disabled = true; btn.textContent = 'Processing…';
+			post(base + 'checkout/place/', payload()).then(function (res) {
+				var d = res.data || {};
+				if (!res.ok || !d.ok) return showError(d.error);
+				if (d.redirect) { window.location.href = d.redirect; return; }
+				if (d.gateway === 'razorpay') openRazorpay(d);
+				else if (d.gateway === 'cashfree') openCashfree(d);
+				else showError('Payment could not be started.');
+			}).catch(function () { showError(); });
+		});
+	})();
+	</script>
+</body>
+</html>

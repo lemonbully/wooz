@@ -11,7 +11,7 @@
   "containerDefinitions": [
     {
       "name": "worker",
-      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app:latest",
+      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app@sha256:9dbe9195556b37004007c502615b5b9b81932219084940b3b86044fa09eb8207",
       "essential": true,
       "command": [
         "worker"
@@ -50,12 +50,60 @@
           "value": "onewooz-media-bucket"
         },
         {
+          "name": "ONEWOOZ_STATIC_BUCKET",
+          "value": "onewooz-static-bucket"
+        },
+        {
+          "name": "ONEWOOZ_STATIC_CDN_DOMAIN",
+          "value": "cdn.onewooz.com"
+        },
+        {
+          "name": "ONEWOOZ_MEDIA_CDN_DOMAIN",
+          "value": "cdn.onewooz.com"
+        },
+        {
           "name": "ONEWOOZ_CELERY_BROKER_URL",
           "value": "sqs://"
         },
         {
           "name": "ONEWOOZ_SQS_PREFIX",
           "value": "onewooz-"
+        },
+        {
+          "name": "USE_ONEWOOZ_EMAIL",
+          "value": "false"
+        },
+        {
+          "name": "ONEWOOZ_STOREFRONT_EMAIL_DOMAIN",
+          "value": "via.onewooz.website"
+        },
+        {
+          "name": "ONEWOOZ_STORE_EMAIL_BACKEND",
+          "value": "core.mail.SESEmailBackend"
+        },
+        {
+          "name": "ONEWOOZ_STORE_EMAIL_SES_REGION",
+          "value": "ap-south-1"
+        },
+        {
+          "name": "ONEWOOZ_STORE_EMAIL_SES_CONFIGURATION_SET",
+          "value": ""
+        },
+        {
+          "name": "ONEWOOZ_EMAIL_USE_SES",
+          "value": "true"
+        },
+        {
+          "name": "ONEWOOZ_FROM_NAME",
+          "value": "OneWooz"
+        },
+        {
+          "name": "ONEWOOZ_FROM_EMAIL",
+          "value": "no-reply@onewooz.com"
+        },
+        {
+          "name": "ONEWOOZ_REFERRAL_FROM_EMAIL",
+          "value": "no-reply@myugcstore.com"
         }
       ],
       "secrets": [
@@ -94,6 +142,26 @@
         {
           "name": "ONEWOOZ_GMAIL_APP_PASSWORD",
           "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GMAIL_APP_PASSWORD"
+        },
+        {
+          "name": "ONEWOOZ_SMTP_USER",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/SMTP_USER"
+        },
+        {
+          "name": "ONEWOOZ_SMTP_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/SMTP_PASSWORD"
+        },
+        {
+          "name": "ONEWOOZ_GOOGLE_OAUTH_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GOOGLE_OAUTH_CLIENT_ID"
+        },
+        {
+          "name": "ONEWOOZ_GOOGLE_OAUTH_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GOOGLE_OAUTH_CLIENT_SECRET"
+        },
+        {
+          "name": "ONEWOOZ_GOOGLE_MERCHANT_DEVELOPER_EMAIL",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GOOGLE_MERCHANT_DEVELOPER_EMAIL"
         }
       ],
       "logConfiguration": {

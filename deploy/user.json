@@ -1,0 +1,15 @@
+{
+    "containerOverrides": [
+      {
+        "name": "web",
+        "command": [
+          "python", "manage.py", "createuser",
+          "--email", "myonewooz@gmail.com",
+          "--name", "Tanush",
+          "--password", "Lemon##18",
+          "--superuser", "--no-input"
+        ]
+      }
+    ]
+  }
+  

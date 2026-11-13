@@ -7,7 +7,7 @@
   <div class="app-head"><div>
     <p class="pal-mono pal-mono--accent">Leads</p>
     <h1 class="app-head__title pal-mt-4">{% if is_b2b %}Trade enquiries{% else %}Contact enquiries{% endif %}</h1>
-    <p class="app-head__lead">{% if is_b2b %}Quote requests from businesses — the product, the quantity and who to reach.{% else %}Messages from your storefront’s contact form.{% endif %}</p>
+    <p class="app-head__lead">{% if is_b2b %}Quote requests from businesses  the product, the quantity and who to reach.{% else %}Messages from your storefront’s contact form.{% endif %}</p>
   </div></div>
 
   <div class="app-block">
@@ -19,9 +19,10 @@
     {% if enquiries %}
       <div class="app-enquiries" style="margin-top:1rem;">
         {% for e in enquiries %}
-          <article class="app-enquiry {% if not e.is_read %}app-enquiry--new{% endif %}">
+          {% with eid=e.id|stringformat:"s" %}
+          <article class="app-enquiry {% if not e.is_read %}app-enquiry--new{% endif %}{% if focus_id and eid == focus_id %} app-enquiry--focus{% endif %}" id="enquiry-{{ e.id }}">
             <div class="app-enquiry__head">
-              <span class="app-table__strong">{{ e.name|default:"Anonymous" }}</span>
+              <span class="app-table__strong">{{ e.name|default:"Anonymous" }}{% if not e.is_read %} <span class="app-badge app-badge--invited">Unread</span>{% endif %}</span>
               <span class="app-sub">{{ e.created_at|date:"d M Y, H:i" }}</span>
             </div>
             <p class="app-sub">{{ e.email|default:"" }}{% if e.mobile_number %} · {{ e.mobile_number }}{% endif %}</p>
@@ -34,7 +35,20 @@
             {% endif %}
             {% if e.subject %}<p class="app-enquiry__subject">{{ e.subject }}</p>{% endif %}
             {% if e.message %}<p class="app-enquiry__body">{{ e.message }}</p>{% endif %}
+            <div class="app-enquiry__actions">
+              {% if not e.is_read %}
+                <form method="post" action="{% url 'store:enquiry_mark_read' site.id e.id %}">{% csrf_token %}
+                  {% if unread_only %}<input type="hidden" name="unread" value="1">{% endif %}
+                  <button type="submit" class="pal-btn pal-btn--ghost pal-btn--sm">Mark as read</button>
+                </form>
+              {% endif %}
+              <form method="post" action="{% url 'store:enquiry_delete' site.id e.id %}" onsubmit="return confirm('Delete this enquiry? This cannot be undone.');">{% csrf_token %}
+                {% if unread_only %}<input type="hidden" name="unread" value="1">{% endif %}
+                <button type="submit" class="pal-btn pal-btn--danger pal-btn--sm">Delete</button>
+              </form>
+            </div>
           </article>
+          {% endwith %}
         {% endfor %}
       </div>
       {% include "store/_pagination.html" with page=enquiries %}
@@ -43,4 +57,19 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<style nonce="{{ csp_nonce }}">
+  .app-enquiry--focus { outline: 2px solid var(--pal-accent); outline-offset: -2px; animation: enq-focus 2.4s ease-out 1; }
+  @keyframes enq-focus { 0% { background: rgb(75 43 245 / 0.10); } 100% { background: var(--pal-panel); } }
+</style>
+<script nonce="{{ csp_nonce }}">
+// Opened from a notification: bring the enquiry into view.
+(function () {
+  var el = document.querySelector(".app-enquiry--focus");
+  if (el) setTimeout(function () { el.scrollIntoView({ block: "center" }); }, 60);
+})();
+</script>
 {% endblock %}

@@ -4,7 +4,7 @@ Use this link to sign in. It works once and expires in {{ minutes }} minutes.
 
 {{ url }}
 
-If you didn't ask for this, you can ignore it — the link only works from your
+If you didn't ask for this, you can ignore it  the link only works from your
 inbox, and nobody has access to your account.
 
-— {{ brand }}
+ {{ brand }}

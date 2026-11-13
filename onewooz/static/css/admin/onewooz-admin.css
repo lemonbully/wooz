@@ -1,0 +1,547 @@
+/* ==========================================================================
+   OneWooz Admin (arcane.onewooz.com): design system
+   --------------------------------------------------------------------------
+   Re-skins the whole admin surface in the OneWooz register: near-white paper,
+   near-black ink, hairline rules, Space Grotesk headings, JetBrains Mono
+   metadata, one accent (#4b2bf5), squared geometry with two radii.
+
+   1. Django's model admin (/db/): its CSS variables are remapped to OneWooz
+      tokens, then its chrome is restyled component by component. Dark mode is
+      intentionally off (one consistent theme).
+   2. Our own admin pages (overview, email templates, sign-in flow) use the
+      .owa-* components, inside the same shell.
+
+   Loaded only on the admin surface.
+   ========================================================================== */
+
+/* 0. Tokens ================================================================ */
+
+html:root,
+html[data-theme="light"],
+html[data-theme="dark"],
+html[data-theme="auto"] {
+  --owa-paper: #f4f4f2;
+  --owa-paper-2: #ececea;
+  --owa-panel: #ffffff;
+  --owa-ink: #0a0a0b;
+  --owa-ink-2: #26262a;
+  --owa-muted: #66666b;
+  --owa-faint: #9a9aa0;
+  --owa-line: rgb(10 10 11 / 0.13);
+  --owa-line-soft: rgb(10 10 11 / 0.07);
+  --owa-accent: #4b2bf5;
+  --owa-accent-2: #6a44fb;
+  --owa-accent-soft: rgb(75 43 245 / 0.07);
+  --owa-accent-line: rgb(75 43 245 / 0.28);
+  --owa-ok: #0f7a53;
+  --owa-danger: #b42318;
+  --owa-r1: 2px;
+  --owa-r2: 6px;
+  --owa-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --owa-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
+  --owa-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --owa-header-h: 56px;
+
+  /* Django admin variables, remapped. */
+  --primary: var(--owa-accent);
+  --secondary: var(--owa-ink);
+  --accent: var(--owa-accent-2);
+  --primary-fg: #ffffff;
+  --body-fg: var(--owa-ink-2);
+  --body-bg: var(--owa-paper);
+  --body-quiet-color: var(--owa-muted);
+  --body-medium-color: var(--owa-ink-2);
+  --body-loud-color: var(--owa-ink);
+  --header-color: #ffffff;
+  --header-branding-color: #ffffff;
+  --header-bg: var(--owa-ink);
+  --header-link-color: #ffffff;
+  --breadcrumbs-fg: var(--owa-muted);
+  --breadcrumbs-link-fg: var(--owa-ink-2);
+  --breadcrumbs-bg: var(--owa-panel);
+  --link-fg: var(--owa-accent);
+  --link-hover-color: var(--owa-ink);
+  --link-selected-fg: var(--owa-accent);
+  --hairline-color: var(--owa-line-soft);
+  --border-color: var(--owa-line);
+  --error-fg: var(--owa-danger);
+  --message-success-bg: #eaf6f0;
+  --message-warning-bg: #fbf3e2;
+  --message-error-bg: #fcecea;
+  --darkened-bg: var(--owa-paper-2);
+  --selected-bg: #e6e2fb;
+  --selected-row: #efecfe;
+  --button-fg: #ffffff;
+  --button-bg: var(--owa-ink);
+  --button-hover-bg: var(--owa-ink-2);
+  --default-button-bg: var(--owa-accent);
+  --default-button-hover-bg: var(--owa-accent-2);
+  --close-button-bg: var(--owa-muted);
+  --close-button-hover-bg: var(--owa-ink);
+  --delete-button-bg: var(--owa-danger);
+  --delete-button-hover-bg: #8f1c13;
+  --object-tools-fg: var(--owa-ink);
+  --object-tools-bg: var(--owa-panel);
+  --object-tools-hover-bg: var(--owa-paper-2);
+  --font-family-primary: var(--owa-body);
+  --font-family-monospace: var(--owa-mono);
+  color-scheme: light;
+}
+
+/* 1. Base ================================================================== */
+
+html, body { background: var(--owa-paper); }
+body { font-family: var(--owa-body); font-size: 0.875rem; color: var(--owa-ink-2); -webkit-font-smoothing: antialiased; }
+::selection { background: var(--owa-accent); color: #fff; }
+:focus-visible { outline: 2px solid var(--owa-accent); outline-offset: 2px; }
+a:link, a:visited { color: var(--owa-accent); text-decoration: none; }
+a:focus, a:hover { color: var(--owa-ink); text-decoration: none; }
+h1, h2, h3, h4, h5 { font-family: var(--owa-display); color: var(--owa-ink); }
+code, pre, kbd { font-family: var(--owa-mono); }
+.base-svgs { display: none; }
+
+/* 2. Header ================================================================ */
+
+#header {
+  height: auto; min-height: var(--owa-header-h);
+  padding: 0 clamp(14px, 2vw, 28px);
+  background: var(--owa-ink); color: #fff;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  border-bottom: 1px solid #000; box-sizing: border-box;
+}
+#branding { display: flex; align-items: center; gap: 12px; min-width: 0; }
+#branding h1, #site-name { margin: 0; font-weight: 500; }
+.owa-brand, .owa-brand:link, .owa-brand:visited {
+  display: inline-flex; align-items: center; gap: 10px;
+  color: #fff; font-family: var(--owa-display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.01em;
+}
+.owa-brand:hover { color: #fff; }
+.owa-brand__mark { display: inline-grid; place-items: center; width: 28px; height: 28px; flex: none; background: #fff; border-radius: var(--owa-r1); }
+.owa-brand__mark img { width: 20px; height: 20px; display: block; object-fit: contain; }
+.owa-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px; border: 1px solid rgb(255 255 255 / 0.22); border-radius: var(--owa-r1);
+  font-family: var(--owa-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgb(255 255 255 / 0.72);
+}
+.owa-tag__dot { width: 6px; height: 6px; border-radius: 50%; background: #3ddc97; }
+
+#user-tools {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end;
+  margin: 0; padding: 0; text-align: right;
+  font-family: var(--owa-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: rgb(255 255 255 / 0.6);
+}
+#user-tools a, #user-tools a:link, #user-tools a:visited, #user-tools button {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 10px; border: 1px solid transparent; border-radius: var(--owa-r1);
+  background: none; color: rgb(255 255 255 / 0.78);
+  font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; text-decoration: none;
+}
+#user-tools a:hover, #user-tools button:hover { color: #fff; border-color: rgb(255 255 255 / 0.22); background: rgb(255 255 255 / 0.05); }
+#user-tools a.is-active { color: #fff; border-color: rgb(255 255 255 / 0.3); }
+.owa-user {
+  display: inline-flex; align-items: center; gap: 8px; margin-right: 6px; padding-right: 10px;
+  border-right: 1px solid rgb(255 255 255 / 0.16); color: rgb(255 255 255 / 0.55); text-transform: none; letter-spacing: 0.02em;
+}
+.owa-user__av {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--owa-accent); color: #fff; font-family: var(--owa-display); font-size: 0.72rem; text-transform: uppercase;
+}
+.owa-signout-form { display: inline; margin: 0; }
+#user-tools button.owa-signout { color: #ffb4ab; }
+.theme-toggle { display: none !important; }
+
+/* 3. Breadcrumbs =========================================================== */
+
+div.breadcrumbs {
+  background: var(--owa-panel); border-bottom: 1px solid var(--owa-line);
+  padding: 11px clamp(14px, 2vw, 28px); color: var(--owa-faint);
+  font-family: var(--owa-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; text-align: left;
+}
+div.breadcrumbs a, div.breadcrumbs a:link, div.breadcrumbs a:visited { color: var(--owa-muted); }
+div.breadcrumbs a:hover { color: var(--owa-accent); }
+
+/* 4. Sidebar =============================================================== */
+
+#nav-sidebar { background: var(--owa-panel); border-right: 1px solid var(--owa-line); border-top: 0; padding: 12px 10px 24px; box-sizing: border-box; }
+.toggle-nav-sidebar { background: var(--owa-panel); border-right: 1px solid var(--owa-line); color: var(--owa-muted); }
+.toggle-nav-sidebar:hover, .toggle-nav-sidebar:focus { background: var(--owa-paper-2); color: var(--owa-accent); }
+#nav-filter {
+  margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--owa-line); border-radius: var(--owa-r1);
+  background: var(--owa-paper); color: var(--owa-ink); font-family: var(--owa-body); font-size: 0.8rem;
+}
+#nav-filter:focus { outline: none; border-color: var(--owa-accent); box-shadow: 0 0 0 3px var(--owa-accent-soft); background: #fff; }
+#nav-sidebar .module { margin: 0 0 10px; border: 0; background: none; border-radius: 0; }
+#nav-sidebar .module caption, #nav-sidebar .module caption a,
+#nav-sidebar .module caption a:link, #nav-sidebar .module caption a:visited {
+  background: none; border: 0; color: var(--owa-faint);
+  font-family: var(--owa-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 10px 8px 6px;
+}
+#nav-sidebar .current-app caption a { color: var(--owa-accent) !important; }
+#nav-sidebar .module th, #nav-sidebar .module td { border: 0; padding: 0; background: none; }
+#nav-sidebar .module th a, #nav-sidebar .module th a:link, #nav-sidebar .module th a:visited {
+  display: block; padding: 7px 8px 7px 12px; border-radius: var(--owa-r1);
+  color: var(--owa-ink-2); font-size: 0.82rem; font-weight: 400; border-left: 2px solid transparent;
+}
+#nav-sidebar .module th a:hover { background: var(--owa-paper); color: var(--owa-ink); }
+#nav-sidebar .module td { padding-right: 4px; vertical-align: middle; }
+#nav-sidebar .module td a.addlink {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0; margin: 0;
+  background: none; border-radius: var(--owa-r1); font-size: 0; color: var(--owa-faint);
+}
+#nav-sidebar .module td a.addlink::before { content: "+"; font-size: 0.95rem; line-height: 1; }
+#nav-sidebar .module td a.addlink:hover { background: var(--owa-accent-soft); color: var(--owa-accent); }
+#nav-sidebar tbody tr:hover th, #nav-sidebar tbody tr:hover td { background: none; }
+#nav-sidebar .current-model { background: none; }
+#nav-sidebar .current-model th a, #nav-sidebar .current-model th a:link, #nav-sidebar .current-model th a:visited {
+  background: var(--owa-accent-soft); color: var(--owa-accent); font-weight: 500; border-left-color: var(--owa-accent);
+}
+
+/* 5. Content & type ======================================================== */
+
+.main { background: var(--owa-paper); }
+#content { padding: clamp(18px, 2.2vw, 32px) clamp(14px, 2.2vw, 36px) 48px; box-sizing: border-box; }
+#content > h1, .owa-page-title {
+  margin: 0 0 18px; font-family: var(--owa-display); font-weight: 500;
+  font-size: clamp(1.45rem, 1.1rem + 1vw, 1.95rem); letter-spacing: -0.025em; line-height: 1.1; color: var(--owa-ink);
+}
+#content > h2 { font-family: var(--owa-mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--owa-muted); margin: -8px 0 18px; font-weight: 500; }
+#footer { padding: 0; }
+
+/* 6. Modules / cards ======================================================= */
+
+.module { background: var(--owa-panel); border: 1px solid var(--owa-line); border-radius: var(--owa-r2); margin-bottom: 20px; overflow: hidden; }
+.module h2, .module caption, .inline-group h2 {
+  background: var(--owa-panel); color: var(--owa-ink); border-bottom: 1px solid var(--owa-line);
+  padding: 12px 16px; text-align: left;
+  font-family: var(--owa-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.module caption a, .module caption a:link, .module caption a:visited, .module h2 a { color: var(--owa-ink); }
+.module caption a:hover { color: var(--owa-accent); }
+fieldset.module { padding: 0; }
+.module .description, fieldset .description {
+  margin: 0; padding: 10px 16px; color: var(--owa-muted); background: var(--owa-paper);
+  border-bottom: 1px solid var(--owa-line-soft); font-size: 0.8rem;
+}
+
+/* 7. Tables ================================================================ */
+
+thead th, tfoot td {
+  background: var(--owa-paper); color: var(--owa-muted);
+  border-top: 0; border-bottom: 1px solid var(--owa-line);
+  font-family: var(--owa-mono); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 10px 12px;
+}
+thead th a:link, thead th a:visited { color: var(--owa-muted); }
+thead th.sorted { background: var(--owa-paper-2); }
+thead th.sorted .text a { color: var(--owa-ink); }
+td, th { border-bottom: 1px solid var(--owa-line-soft); padding: 10px 12px; font-size: 0.84rem; vertical-align: middle; }
+tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+tbody tr:hover td, tbody tr:hover th { background: rgb(75 43 245 / 0.025); }
+#result_list tbody th a { font-weight: 500; }
+tr.selected td, tr.selected th { background: var(--selected-row) !important; }
+
+/* Dashboard (index): apps as a grid of cards, recent actions beside. */
+.dashboard #content { width: auto; max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0 24px; align-items: start; }
+.dashboard #content > h1 { grid-column: 1 / -1; }
+.dashboard #content > br.clear { display: none; }
+.dashboard #content-main { float: none; width: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; align-items: start; }
+.dashboard #content-main .module { margin: 0; }
+.dashboard .module table { width: 100%; }
+.dashboard .module table th { width: 100%; }
+.dashboard .module table th a { color: var(--owa-ink-2); font-weight: 400; }
+.dashboard .module table th a:hover { color: var(--owa-accent); }
+.dashboard .module table td { white-space: nowrap; text-align: right; }
+#content-related { float: none; width: auto; margin: 0; background: none; }
+#content-related .module { background: var(--owa-panel); }
+#content-related h3 { font-family: var(--owa-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--owa-faint); margin: 12px 16px 6px; }
+#recent-actions-module ul.actionlist { padding: 4px 16px 14px; margin: 0; }
+ul.actionlist li { font-size: 0.8rem; padding: 6px 0 6px 18px; border-bottom: 1px solid var(--owa-line-soft); overflow-wrap: anywhere; }
+ul.actionlist li:last-child { border-bottom: 0; }
+ul.actionlist li .mini { font-family: var(--owa-mono); font-size: 0.62rem; letter-spacing: 0.04em; color: var(--owa-faint); }
+@media (max-width: 1024px) { .dashboard #content { grid-template-columns: 1fr; } }
+
+/* 8. Buttons & object tools ================================================ */
+
+.button, input[type=submit], input[type=button], .submit-row input, a.button, button.button {
+  background: var(--owa-ink); color: #fff; border: 1px solid var(--owa-ink); border-radius: var(--owa-r1);
+  padding: 9px 16px; height: auto;
+  font-family: var(--owa-body); font-size: 0.8rem; font-weight: 500; letter-spacing: 0; cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover, a.button:hover {
+  background: var(--owa-ink-2); border-color: var(--owa-ink-2); color: #fff;
+}
+.button.default, input[type=submit].default, .submit-row input.default { background: var(--owa-accent); border-color: var(--owa-accent); font-weight: 600; }
+.button.default:hover, input[type=submit].default:hover, .submit-row input.default:hover { background: var(--owa-accent-2); border-color: var(--owa-accent-2); }
+.submit-row {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  background: var(--owa-panel); border: 1px solid var(--owa-line); border-radius: var(--owa-r2);
+  padding: 12px 14px; margin: 16px 0 0;
+}
+.submit-row a.deletelink, .submit-row a.deletelink:link, .submit-row a.deletelink:visited {
+  margin-left: auto; background: none; color: var(--owa-danger); border: 1px solid rgb(180 35 24 / 0.35);
+  border-radius: var(--owa-r1); padding: 9px 14px; height: auto; font-size: 0.8rem; font-weight: 500;
+}
+.submit-row a.deletelink:hover { background: var(--owa-danger); border-color: var(--owa-danger); color: #fff; }
+.submit-row a.closelink { border-radius: var(--owa-r1); padding: 9px 14px; height: auto; }
+.delete-confirmation form input[type=submit] { background: var(--owa-danger); border-color: var(--owa-danger); }
+.delete-confirmation form .cancel-link {
+  border-radius: var(--owa-r1); background: var(--owa-panel); color: var(--owa-ink) !important;
+  border: 1px solid var(--owa-line); padding: 9px 14px; height: auto; line-height: normal;
+}
+.object-tools li { height: auto; margin-left: 6px; }
+.object-tools a:link, .object-tools a:visited {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--owa-panel); color: var(--owa-ink); border: 1px solid var(--owa-line); border-radius: var(--owa-r1);
+  padding: 8px 12px; height: auto; line-height: 1.2;
+  font-family: var(--owa-mono); font-size: 0.64rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.object-tools a:hover { background: var(--owa-paper-2); border-color: var(--owa-ink); color: var(--owa-ink); }
+.object-tools a.addlink, .object-tools a.addlink:link, .object-tools a.addlink:visited { background: var(--owa-accent); background-image: none; border-color: var(--owa-accent); color: #fff; padding-left: 12px; }
+.object-tools a.addlink::before { content: "+"; font-family: var(--owa-body); font-size: 0.9rem; line-height: 1; }
+.object-tools a.addlink:hover { background: var(--owa-accent-2); border-color: var(--owa-accent-2); color: #fff; }
+
+/* 9. Forms ================================================================= */
+
+input[type=text], input[type=password], input[type=email], input[type=url], input[type=number],
+input[type=tel], input[type=search], input[type=date], input[type=time], input[type=datetime-local],
+textarea, select, .vTextField {
+  border: 1px solid var(--owa-line); border-radius: var(--owa-r1); background: var(--owa-panel); color: var(--owa-ink);
+  padding: 8px 10px; font-family: var(--owa-body); font-size: 0.85rem; box-sizing: border-box;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+select { height: auto; }
+input:focus, textarea:focus, select:focus, .vTextField:focus { outline: none; border-color: var(--owa-accent); box-shadow: 0 0 0 3px var(--owa-accent-soft); }
+.form-row { padding: 14px 16px; border-bottom: 1px solid var(--owa-line-soft); }
+.form-row:last-child { border-bottom: 0; }
+.aligned label, .form-row label { color: var(--owa-ink-2); font-weight: 500; font-size: 0.82rem; }
+label.required { color: var(--owa-ink); }
+label.required::after { content: " *"; color: var(--owa-accent); }
+.help, div.help, p.help, form .help { color: var(--owa-muted); font-size: 0.74rem; line-height: 1.5; margin-top: 6px; }
+input[type=checkbox], input[type=radio] { accent-color: var(--owa-accent); width: 15px; height: 15px; vertical-align: middle; }
+.errornote {
+  background: var(--message-error-bg); color: var(--owa-danger);
+  border: 1px solid rgb(180 35 24 / 0.25); border-left: 3px solid var(--owa-danger); border-radius: var(--owa-r1);
+  padding: 12px 14px; font-size: 0.84rem;
+}
+ul.errorlist { margin: 6px 0 0; padding: 0; list-style: none; }
+ul.errorlist li { background: none; color: var(--owa-danger); font-size: 0.78rem; padding: 0; margin: 0; }
+.errors input, .errors select, .errors textarea { border-color: var(--owa-danger); }
+.inline-group { border: 1px solid var(--owa-line); border-radius: var(--owa-r2); background: var(--owa-panel); overflow: hidden; }
+/* Saved inline rows print the object's name in a small caption above the
+   fields (td.original p, absolutely positioned at its static spot). Our global
+   `td { vertical-align: middle }` dropped that caption to mid-row, on top of the
+   first input. Pin it to the top of the row, inside the padding Django reserves. */
+.inline-group .tabular tr.has_original td { padding-top: 2.2em; }
+.inline-group .tabular tr.has_original td.original { padding: 0; vertical-align: top; }
+.inline-group .tabular td.original p {
+  margin: 0; padding: 6px 16px 0; height: auto; line-height: 1.2; white-space: nowrap;
+  font-family: var(--owa-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.04em; color: var(--owa-muted);
+}
+.inline-group .tabular tr.add-row td, .inline-group div.add-row { background: var(--owa-paper); border-top: 1px solid var(--owa-line-soft); padding: 10px 16px; }
+.inline-related h3 {
+  background: var(--owa-paper); color: var(--owa-ink); border-bottom: 1px solid var(--owa-line-soft);
+  font-family: var(--owa-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 16px;
+}
+.selector .selector-available h2, .selector .selector-chosen h2, .selector-available-title, .selector-chosen-title {
+  background: var(--owa-ink); color: #fff; font-family: var(--owa-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.selector-chosen .selector-chosen-title, .selector .selector-chosen h2 { background: var(--owa-accent); }
+.calendar caption, .calendarbox h2 { background: var(--owa-ink); color: #fff; }
+.calendar td.selected a { background: var(--owa-accent); }
+.select2-container--admin-autocomplete .select2-selection--single,
+.select2-container--admin-autocomplete .select2-selection--multiple { border: 1px solid var(--owa-line) !important; border-radius: var(--owa-r1) !important; min-height: 36px; }
+.select2-container--admin-autocomplete .select2-selection--multiple .select2-selection__choice {
+  background: var(--owa-accent-soft) !important; border: 1px solid var(--owa-accent-line) !important; border-radius: var(--owa-r1) !important; color: var(--owa-ink);
+}
+.select2-container--admin-autocomplete .select2-results__option--highlighted[aria-selected] { background: var(--owa-accent) !important; }
+
+/* 10. Changelist ========================================================== */
+
+#toolbar { background: var(--owa-panel); border: 1px solid var(--owa-line); border-radius: var(--owa-r2); padding: 12px; margin-bottom: 14px; }
+#toolbar form input[type=text] { min-width: 240px; }
+#changelist .actions { background: var(--owa-panel); border: 1px solid var(--owa-line); border-bottom: 0; border-radius: var(--owa-r2) var(--owa-r2) 0 0; padding: 10px 12px; color: var(--owa-muted); }
+#changelist .actions.selected { background: var(--selected-row); }
+#changelist .results { background: var(--owa-panel); border: 1px solid var(--owa-line); border-radius: 0 0 var(--owa-r2) var(--owa-r2); overflow-x: auto; }
+#changelist-filter { background: var(--owa-panel); border: 1px solid var(--owa-line); border-radius: var(--owa-r2); overflow: hidden; }
+#changelist-filter h2 {
+  background: var(--owa-panel); color: var(--owa-ink); border-bottom: 1px solid var(--owa-line);
+  font-family: var(--owa-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 12px 14px;
+}
+#changelist-filter h3, #changelist-filter summary {
+  font-family: var(--owa-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--owa-faint); margin: 14px 14px 6px;
+}
+#changelist-filter ul { margin: 0 8px 8px; padding: 0; border: 0; }
+#changelist-filter li { list-style: none; margin: 0; }
+#changelist-filter li a { display: block; padding: 5px 8px; border-radius: var(--owa-r1); color: var(--owa-ink-2); font-size: 0.8rem; }
+#changelist-filter li a:hover { background: var(--owa-paper); color: var(--owa-ink); }
+#changelist-filter li.selected a { background: var(--owa-accent-soft); color: var(--owa-accent); font-weight: 500; border-left: 0; margin-left: 0; padding-left: 8px; }
+.paginator { background: none; border: 0; padding: 14px 2px; color: var(--owa-muted); font-family: var(--owa-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; line-height: 2.2; }
+.paginator a:link, .paginator a:visited { display: inline-block; min-width: 28px; text-align: center; padding: 0 8px; border: 1px solid var(--owa-line); border-radius: var(--owa-r1); background: var(--owa-panel); color: var(--owa-ink-2); }
+.paginator a:hover { border-color: var(--owa-accent); color: var(--owa-accent); }
+.paginator .this-page { display: inline-block; min-width: 28px; text-align: center; padding: 0 8px; background: var(--owa-ink); color: #fff; border-radius: var(--owa-r1); font-weight: 500; }
+.paginator a.showall { border: 0; background: none; color: var(--owa-accent); }
+.date-hierarchy { background: var(--owa-panel); border: 1px solid var(--owa-line); border-radius: var(--owa-r2); padding: 8px 12px; margin-bottom: 12px; }
+
+/* 11. Messages ============================================================= */
+
+ul.messagelist { margin: 0 0 18px; padding: 0; }
+ul.messagelist li {
+  margin: 0 0 8px; padding: 12px 14px 12px 16px; background: var(--owa-panel); color: var(--owa-ink-2);
+  border: 1px solid var(--owa-line); border-left: 3px solid var(--owa-ok); border-radius: var(--owa-r1);
+  font-size: 0.84rem; background-image: none !important;
+}
+ul.messagelist li.info { border-left-color: var(--owa-accent); }
+ul.messagelist li.warning { border-left-color: #c48a00; background: #fffaf0; }
+ul.messagelist li.error { border-left-color: var(--owa-danger); background: #fff7f6; }
+.main > .content > ul.messagelist { margin: clamp(14px, 2vw, 24px) clamp(14px, 2.2vw, 36px) 0; }
+
+/* 12. Responsive ========================================================== */
+
+@media (max-width: 1024px) {
+  #header { flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+}
+@media (max-width: 767px) {
+  #header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  #user-tools { justify-content: flex-start; }
+  .owa-user { border-right: 0; padding-right: 0; width: 100%; }
+  #content { padding-left: 14px; padding-right: 14px; }
+  #toolbar form input[type=text] { min-width: 0; width: 100%; }
+  .submit-row a.deletelink { margin-left: 0; }
+}
+
+/* ==========================================================================
+   13. OneWooz admin pages (.owa-*): overview, email templates
+   ========================================================================== */
+
+.owa-kicker { font-family: var(--owa-mono); font-size: 0.64rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--owa-accent); margin: 0 0 8px; }
+.owa-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+.owa-head__lead { margin: 8px 0 0; color: var(--owa-muted); font-size: 0.92rem; max-width: 62ch; line-height: 1.55; }
+.owa-head .owa-page-title { margin: 0; }
+
+.owa-btn, a.owa-btn, a.owa-btn:link, a.owa-btn:visited, button.owa-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border: 1px solid var(--owa-ink); border-radius: var(--owa-r1);
+  background: var(--owa-ink); color: #fff; cursor: pointer;
+  font-family: var(--owa-body); font-size: 0.82rem; font-weight: 500; line-height: 1.2; text-decoration: none;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.owa-btn:hover { background: var(--owa-ink-2); color: #fff; }
+.owa-btn--accent, a.owa-btn--accent:link, a.owa-btn--accent:visited, button.owa-btn--accent { background: var(--owa-accent); border-color: var(--owa-accent); color: #fff; }
+.owa-btn--accent:hover { background: var(--owa-accent-2); border-color: var(--owa-accent-2); color: #fff; }
+.owa-btn--ghost, a.owa-btn--ghost:link, a.owa-btn--ghost:visited { background: var(--owa-panel); color: var(--owa-ink); border-color: var(--owa-line); }
+.owa-btn--ghost:hover { background: var(--owa-paper-2); color: var(--owa-ink); border-color: var(--owa-ink); }
+.owa-btn--block { width: 100%; justify-content: center; padding: 11px 16px; font-size: 0.88rem; }
+.owa-btn__arw { transition: transform 160ms ease; }
+.owa-btn:hover .owa-btn__arw { transform: translateX(3px); }
+
+.owa-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; background: var(--owa-line); border: 1px solid var(--owa-line); border-radius: var(--owa-r2); overflow: hidden; margin-bottom: 8px; }
+.owa-kpi { background: var(--owa-panel); padding: 16px 18px; min-width: 0; }
+.owa-kpi__label { font-family: var(--owa-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--owa-faint); }
+.owa-kpi__value { margin-top: 8px; font-family: var(--owa-display); font-size: 1.7rem; font-weight: 500; letter-spacing: -0.03em; color: var(--owa-ink); font-feature-settings: "tnum"; line-height: 1; }
+.owa-kpi__sub { margin-top: 6px; font-size: 0.74rem; color: var(--owa-muted); }
+
+.owa-marker { display: flex; align-items: center; gap: 12px; margin: 28px 0 12px; font-family: var(--owa-mono); font-size: 0.64rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--owa-ink); }
+.owa-marker::after { content: ""; flex: 1; height: 1px; background: var(--owa-line); }
+.owa-marker__n { color: var(--owa-accent); }
+
+.owa-tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+a.owa-tool, a.owa-tool:link, a.owa-tool:visited {
+  position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 116px;
+  padding: 16px 18px; background: var(--owa-panel); border: 1px solid var(--owa-line); border-radius: var(--owa-r2);
+  color: var(--owa-ink-2); text-decoration: none; transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+a.owa-tool:hover { border-color: var(--owa-accent); box-shadow: 0 6px 18px -12px rgb(75 43 245 / 0.45); transform: translateY(-1px); color: var(--owa-ink-2); }
+.owa-tool__ico { display: inline-grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--owa-line); border-radius: var(--owa-r1); color: var(--owa-ink); }
+.owa-tool__ico svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+a.owa-tool:hover .owa-tool__ico { border-color: var(--owa-accent); color: var(--owa-accent); }
+.owa-tool__title { margin-top: 4px; font-family: var(--owa-display); font-size: 1rem; font-weight: 500; letter-spacing: -0.01em; color: var(--owa-ink); }
+.owa-tool__desc { font-size: 0.78rem; color: var(--owa-muted); line-height: 1.5; }
+.owa-tool__arw { position: absolute; top: 16px; right: 16px; color: var(--owa-faint); transition: color 150ms ease, transform 150ms ease; }
+a.owa-tool:hover .owa-tool__arw { color: var(--owa-accent); transform: translate(2px, -2px); }
+
+.owa-panel { background: var(--owa-panel); border: 1px solid var(--owa-line); border-radius: var(--owa-r2); overflow: hidden; }
+.owa-panel__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--owa-line); font-family: var(--owa-mono); font-size: 0.64rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--owa-ink); }
+.owa-tablewrap { overflow-x: auto; }
+.owa-table { width: 100%; border-collapse: collapse; }
+.owa-table th { text-align: left; }
+.owa-table td { vertical-align: top; }
+.owa-strong, a.owa-strong:link, a.owa-strong:visited { color: var(--owa-ink); font-weight: 600; }
+a.owa-strong:hover { color: var(--owa-accent); }
+.owa-sub { margin-top: 3px; font-size: 0.76rem; color: var(--owa-muted); }
+.owa-mono { font-family: var(--owa-mono); font-size: 0.72rem; color: var(--owa-muted); }
+.owa-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--owa-line); border-radius: var(--owa-r1); font-family: var(--owa-mono); font-size: 0.58rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--owa-muted); background: var(--owa-paper); }
+.owa-badge--ok { color: var(--owa-ok); border-color: rgb(15 122 83 / 0.3); background: rgb(15 122 83 / 0.06); }
+.owa-actions { display: flex; align-items: center; gap: 4px; justify-content: flex-end; white-space: nowrap; }
+.owa-link, a.owa-link:link, a.owa-link:visited, button.owa-link {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid transparent; border-radius: var(--owa-r1);
+  background: none; color: var(--owa-ink-2); font: inherit; font-size: 0.78rem; cursor: pointer; text-decoration: none;
+}
+.owa-link:hover { border-color: var(--owa-line); background: var(--owa-paper); color: var(--owa-accent); }
+.owa-link--danger:hover, button.owa-link--danger:hover { color: var(--owa-danger); border-color: rgb(180 35 24 / 0.3); background: #fff7f6; }
+.owa-link svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
+.owa-inline-form { display: inline; margin: 0; }
+.owa-empty { padding: 48px 20px; text-align: center; }
+.owa-empty__title { font-family: var(--owa-display); font-size: 1.2rem; font-weight: 500; color: var(--owa-ink); margin: 0; }
+.owa-empty__text { margin: 8px auto 18px; max-width: 44ch; color: var(--owa-muted); font-size: 0.86rem; }
+
+.owa-feed { list-style: none; margin: 0; padding: 0; }
+.owa-feed li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 14px; padding: 10px 16px; border-bottom: 1px solid var(--owa-line-soft); font-size: 0.82rem; }
+.owa-feed li:last-child { border-bottom: 0; }
+.owa-feed__what { color: var(--owa-ink); font-family: var(--owa-mono); font-size: 0.72rem; overflow-wrap: anywhere; }
+.owa-feed__who { color: var(--owa-muted); font-size: 0.76rem; overflow-wrap: anywhere; }
+.owa-feed__when { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-family: var(--owa-mono); font-size: 0.62rem; color: var(--owa-faint); white-space: nowrap; }
+.owa-split { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+@media (max-width: 1100px) { .owa-split { grid-template-columns: 1fr; } }
+
+/* 14. Auth (sign-in, code, forgot, reset) ================================= */
+
+body.owa-auth { margin: 0; min-height: 100dvh; background: var(--owa-paper); font-family: var(--owa-body); color: var(--owa-ink-2); }
+.owa-auth__grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); min-height: 100dvh; }
+.owa-auth__side {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+  padding: clamp(28px, 4vw, 56px); background-color: var(--owa-ink); color: #fff; overflow: hidden;
+  background-image: linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.owa-auth__title-lg { margin: 0; font-family: var(--owa-display); font-weight: 500; font-size: clamp(2rem, 1.2rem + 2.4vw, 3.2rem); letter-spacing: -0.035em; line-height: 1.02; color: #fff; }
+.owa-auth__title-lg em { font-style: normal; color: #a594ff; }
+.owa-auth__lead { margin: 14px 0 0; max-width: 38ch; color: rgb(255 255 255 / 0.62); font-size: 0.95rem; line-height: 1.6; }
+.owa-auth__specs { border-top: 1px solid rgb(255 255 255 / 0.14); }
+.owa-auth__spec { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid rgb(255 255 255 / 0.14); font-family: var(--owa-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgb(255 255 255 / 0.5); }
+.owa-auth__spec span:last-child { color: #fff; }
+.owa-auth__main { display: flex; align-items: center; justify-content: center; padding: clamp(24px, 4vw, 56px) 20px; }
+.owa-auth__card { position: relative; width: 100%; max-width: 400px; background: var(--owa-panel); border: 1px solid var(--owa-line); border-radius: var(--owa-r2); padding: clamp(24px, 3vw, 36px); box-shadow: 0 24px 48px -32px rgb(10 10 11 / 0.35); box-sizing: border-box; }
+.owa-auth__card::before, .owa-auth__card::after { content: ""; position: absolute; width: 12px; height: 12px; pointer-events: none; }
+.owa-auth__card::before { top: -1px; left: -1px; border-top: 2px solid var(--owa-accent); border-left: 2px solid var(--owa-accent); border-top-left-radius: var(--owa-r2); }
+.owa-auth__card::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--owa-accent); border-right: 2px solid var(--owa-accent); border-bottom-right-radius: var(--owa-r2); }
+.owa-auth__h { margin: 0; font-family: var(--owa-display); font-size: 1.55rem; font-weight: 500; letter-spacing: -0.025em; color: var(--owa-ink); }
+.owa-auth__p { margin: 8px 0 0; color: var(--owa-muted); font-size: 0.88rem; line-height: 1.55; }
+.owa-auth__p strong { color: var(--owa-ink); }
+.owa-auth__card form { margin-top: 22px; }
+.owa-field { display: block; margin-top: 14px; }
+.owa-field:first-child { margin-top: 0; }
+.owa-field__label { display: block; margin-bottom: 6px; font-family: var(--owa-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--owa-muted); }
+.owa-input { width: 100%; padding: 10px 12px; border: 1px solid var(--owa-line); border-radius: var(--owa-r1); background: #fff; color: var(--owa-ink); font-family: var(--owa-body); font-size: 0.92rem; box-sizing: border-box; }
+.owa-input:focus { outline: none; border-color: var(--owa-accent); box-shadow: 0 0 0 3px var(--owa-accent-soft); }
+.owa-auth__card .owa-btn--block { margin-top: 20px; }
+.owa-alert { margin-top: 16px; padding: 11px 13px; border: 1px solid var(--owa-line); border-left: 3px solid var(--owa-accent); border-radius: var(--owa-r1); background: var(--owa-paper); font-size: 0.84rem; color: var(--owa-ink-2); }
+.owa-alert ul { margin: 0; padding-left: 18px; }
+.owa-alert--error { border-left-color: var(--owa-danger); background: #fff7f6; color: var(--owa-danger); }
+.owa-auth__foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--owa-line-soft); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 0.82rem; }
+.owa-auth__foot a { color: var(--owa-accent); text-decoration: none; }
+.owa-auth__foot a:hover { color: var(--owa-ink); }
+.owa-auth__note { margin-top: 16px; font-family: var(--owa-mono); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--owa-faint); text-align: center; }
+.owa-otp { display: flex; gap: 8px; justify-content: space-between; }
+.owa-otp__box { width: 100%; max-width: 52px; height: 58px; text-align: center; font-family: var(--owa-mono); font-size: 1.4rem; font-weight: 500; color: var(--owa-ink); border: 1px solid var(--owa-line); border-radius: var(--owa-r1); background: #fff; caret-color: var(--owa-accent); -webkit-user-select: none; user-select: none; padding: 0; box-sizing: border-box; }
+.owa-otp__box:focus { outline: none; border-color: var(--owa-accent); box-shadow: 0 0 0 3px var(--owa-accent-soft); }
+.owa-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+@media (max-width: 860px) {
+  .owa-auth__grid { grid-template-columns: 1fr; }
+  .owa-auth__side { padding: 22px 20px; gap: 16px; }
+  .owa-auth__specs, .owa-auth__lead { display: none; }
+  .owa-auth__title-lg { font-size: 1.6rem; }
+}

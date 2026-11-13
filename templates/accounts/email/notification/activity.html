@@ -1,0 +1,20 @@
+{% extends "email/base.html" %}
+{% block preheader %}{{ phrase }} · {{ site_name }}{% endblock %}
+{% block kicker %}Activity{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text=site_name %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:22px; letter-spacing:-0.02em; line-height:1.18; color:#0a0a0b; margin:0 0 16px 0;">{{ phrase }}</h1>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d7d7d3; border-collapse:collapse;">
+    <tr>
+      <td style="padding:13px 16px; border-bottom:1px solid #d7d7d3; font-size:14px; color:#26262a;">{{ line }}</td>
+    </tr>
+    <tr>
+      <td style="padding:11px 16px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">When&nbsp;&nbsp;&middot;&nbsp;&nbsp;{{ when }}</td>
+    </tr>
+  </table>
+  {% if app_origin %}{% include "email/_button.html" with url=app_origin|add:"/" label="Open dashboard" %}{% endif %}
+{% endblock %}
+{% block footer %}
+  <div style="color:#66666b;">You’re getting this because activity notifications are on for {{ site_name }}.</div>
+  {% if app_origin %}<div><a class="em-link" href="{{ app_origin }}/profile/" style="color:#9a9aa0; text-decoration:none;">Change what you’re emailed</a></div>{% endif %}
+{% endblock %}

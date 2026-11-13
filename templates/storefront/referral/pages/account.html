@@ -1,0 +1,232 @@
+{% extends "storefront/referral/_page_shell.html" %}
+{% comment %}
+Shopper account for the collaboration storefront, laid out single-column for the
+phone card (the shared storefront/account.html uses md: breakpoints that key off
+the desktop VIEWPORT, not the ~420px card, so it collapsed into an unreadable
+squished grid here). Same data as the owner store  orders, credits and wishlist
+are scoped by (site, email); see storefront.referral.account.
+{% endcomment %}
+{% block page_heading %}Your account{% endblock %}
+{% block page_inner %}
+<div class="px-5 pt-4 pb-8">
+{% if customer_email %}
+
+	<!-- Signed-in card -->
+	<div class="rounded-2xl bg-gray-50 border border-black/5 p-4 flex items-center justify-between gap-3">
+		<div class="min-w-0">
+			<p class="text-[11px] uppercase tracking-wide text-black/45">Signed in as</p>
+			<p class="text-[13px] font-medium text-black truncate">{{ customer_email }}</p>
+			<a href="#account-details" class="text-[11px] font-medium text-black/70 underline underline-offset-2">Manage details</a>
+		</div>
+		<a href="{% url 'public_account_logout' %}" class="shrink-0 inline-flex items-center px-3.5 py-2 rounded-lg bg-black text-white text-[12px] font-medium">Logout</a>
+	</div>
+
+	<!-- Orders -->
+	<div class="mt-6 flex items-center justify-between gap-3">
+		<h2 class="text-[15px] font-semibold text-black">Your orders</h2>
+		<form method="get" id="order-filter">
+			<select name="status" class="h-9 rounded-lg border border-black/15 bg-white text-[12px] px-2 outline-none focus:border-black">
+				<option value="">All statuses</option>
+				{% for val, label in order_status_choices %}
+				<option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+				{% endfor %}
+			</select>
+		</form>
+	</div>
+
+	<div class="mt-3 space-y-3">
+		{% for order in orders %}
+		<details class="group rounded-2xl border border-black/10 overflow-hidden bg-white">
+			<summary class="list-none cursor-pointer px-4 py-3 flex items-center justify-between gap-3">
+				<div class="min-w-0">
+					<div class="text-[11px] text-black/45">Order #{{ order.display_number }}{% if order.is_replacement %} <span class="orq-tag">Replacement</span>{% endif %}</div>
+					<div class="text-[14px] font-semibold text-black">₹{{ order.total }}</div>
+					<div class="text-[11px] text-black/45">{{ order.created_at|date:"M d, Y · h:i A" }}</div>
+				</div>
+				<div class="shrink-0 flex items-center gap-2">
+					<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] border border-black/15 text-black/70">{% if order.status == 'created' %}Placed{% else %}{{ order.get_status_display }}{% endif %}</span>
+					<svg class="w-4 h-4 text-black/40 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</div>
+			</summary>
+			<div class="px-4 pb-4 border-t border-black/5">
+				<div class="mt-3 divide-y divide-black/5">
+					{% for item in order.items.all %}
+					<div class="py-2 flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<div class="text-[12.5px] text-black line-clamp-2">{{ item.title }}</div>
+							{% if item.variant_label %}<div class="text-[11px] text-black/50">{{ item.variant_label }}</div>{% endif %}
+							<div class="text-[11px] text-black/55">Qty: {{ item.quantity }}</div>
+						</div>
+						<div class="text-right shrink-0">
+							<div class="text-[12.5px] font-medium text-black">₹{{ item.line_total }}</div>
+							<div class="text-[11px] text-black/45">₹{{ item.unit_price }} ea</div>
+						</div>
+					</div>
+					{% endfor %}
+				</div>
+				<div class="mt-3 grid grid-cols-2 gap-y-1 text-[12px]">
+					<div class="text-black/55">Subtotal</div><div class="text-right text-black/80">₹{{ order.subtotal }}</div>
+					<div class="text-black/55">Discount</div><div class="text-right text-black/80">₹{{ order.discount_amount }}</div>
+					<div class="text-black/55">Shipping</div><div class="text-right text-black/80">₹{{ order.shipping_amount }}</div>
+					<div class="pt-1 mt-1 border-t border-black/10 font-semibold text-black">Total</div><div class="pt-1 mt-1 border-t border-black/10 text-right font-semibold text-black">₹{{ order.total }}</div>
+				</div>
+				<a href="{% url 'public_order_confirmation' order.id %}" class="mt-3 inline-flex items-center gap-1 text-[12px] text-black underline">View order confirmation</a>
+				{% include "storefront/_order_request_status.html" %}
+			</div>
+		</details>
+		{% empty %}
+		<div class="rounded-2xl border border-dashed border-black/15 p-8 text-center">
+			<p class="text-[13px] text-black/55">No orders yet.</p>
+			<a href="{% url 'public_all_products' %}" class="mt-3 inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-black text-white text-[12px] font-medium">Start shopping</a>
+		</div>
+		{% endfor %}
+	</div>
+
+	<!-- Credits -->
+	{% if customer_credits %}
+	<div class="mt-7">
+		<h2 class="text-[15px] font-semibold text-black">Your credits</h2>
+		<div class="mt-3 space-y-2">
+			{% for cr in customer_credits %}
+			<div class="rounded-xl border border-black/10 p-3">
+				<div class="text-[13px] font-semibold text-black">{% if cr.credit_type == 'percent' %}{{ cr.credit_value }}% discount{% else %}₹{{ cr.remaining_amount|default:cr.credit_value }} credit{% endif %}</div>
+				{% if cr.valid_until %}<div class="text-[11px] text-black/45 mt-1">Valid until {{ cr.valid_until|date:"M d, Y" }}</div>{% endif %}
+			</div>
+			{% endfor %}
+		</div>
+	</div>
+	{% endif %}
+
+	<!-- Wishlist -->
+	<div class="mt-7">
+		<h2 class="text-[15px] font-semibold text-black">Your wishlist</h2>
+		<div id="acct-wishlist" class="mt-3 space-y-3">
+			{% for w in wishlist %}
+			<div class="flex items-center gap-3 rounded-2xl border border-black/10 p-3 bg-white" data-wish="{{ w.product_id }}">
+				<a href="{{ w.url }}" class="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-100">
+					{% if w.image1 %}<img src="{{ w.image1.url }}" alt="{{ w.title }}" class="w-full h-full object-cover">{% endif %}
+				</a>
+				<div class="min-w-0 flex-1">
+					<a href="{{ w.url }}" class="text-[13px] text-black line-clamp-2">{{ w.title }}</a>
+					<div class="text-[12.5px] text-black/70 mt-0.5">₹{{ w.price }}</div>
+				</div>
+				<button type="button" class="wishlist-remove-btn shrink-0 px-3 py-1.5 rounded-lg border border-black/15 text-[12px] hover:bg-gray-50" data-remove-url="{% url 'public_wishlist_remove' w.product_id %}">Remove</button>
+			</div>
+			{% empty %}
+			<div class="rounded-2xl border border-dashed border-black/15 p-8 text-center text-[13px] text-black/55">No items in your wishlist yet.</div>
+			{% endfor %}
+		</div>
+	</div>
+
+	{% include "storefront/_account_profile.html" %}
+
+{% else %}
+
+	{# ---------------- Signed out: email → OTP ---------------- #}
+	<div class="pt-6">
+		<h2 class="text-[20px] font-semibold text-black">Sign in</h2>
+		<p class="mt-1 text-[13px] text-black/60">Enter your email and we'll send a one-time code  no password needed.</p>
+		<div id="acct-msg" class="hidden mt-4 rounded-xl px-4 py-3 text-[13px]"></div>
+
+		<form id="acct-email-form" class="mt-4 space-y-3">
+			{% csrf_token %}
+			<input type="email" name="email" required autocomplete="email" placeholder="you@example.com" class="w-full h-12 rounded-xl border border-black/15 px-3 text-[14px] outline-none focus:border-black">
+			<button type="submit" id="acct-send-btn" class="w-full h-12 rounded-xl bg-black text-white text-[14px] font-semibold inline-flex items-center justify-center">
+				<span id="acct-send-spinner" class="hidden mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+				<span id="acct-send-text">Send code</span>
+			</button>
+		</form>
+
+		<form id="acct-otp-form" class="mt-3 space-y-3 hidden">
+			{% csrf_token %}
+			<input type="hidden" name="email" value="">
+			<input type="text" name="otp" inputmode="numeric" pattern="[0-9]{4,8}" required placeholder="Enter the code" class="w-full h-12 rounded-xl border border-black/15 px-3 text-[14px] tracking-widest text-center outline-none focus:border-black">
+			<button type="submit" class="w-full h-12 rounded-xl bg-black text-white text-[14px] font-semibold">Verify &amp; sign in</button>
+			<button type="button" id="acct-resend" class="w-full h-11 rounded-xl border border-black/15 text-black text-[13px]">Use a different email</button>
+		</form>
+	</div>
+
+{% endif %}
+</div>
+{% if customer_email %}{% include "storefront/_order_request.html" %}{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+	// Status filter auto-submits (no separate Apply button in the card).
+	var filter = document.getElementById('order-filter');
+	if (filter) {
+		var sel = filter.querySelector('select[name="status"]');
+		if (sel) sel.addEventListener('change', function () { filter.submit(); });
+	}
+
+	var token = '{{ csrf_token }}';
+	function post(url, fd) {
+		return fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': token }, credentials: 'same-origin', body: fd })
+			.then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+	}
+
+	// ---- Wishlist remove ----
+	document.querySelectorAll('.wishlist-remove-btn').forEach(function (b) {
+		b.addEventListener('click', function () {
+			post(b.getAttribute('data-remove-url'), new FormData()).then(function () {
+				var row = b.closest('[data-wish]'); if (row) row.remove();
+				var list = document.getElementById('acct-wishlist');
+				if (list && !list.querySelector('[data-wish]')) {
+					list.innerHTML = '<div class="rounded-2xl border border-dashed border-black/15 p-8 text-center text-[13px] text-black/55">No items in your wishlist yet.</div>';
+				}
+			}).catch(function(){});
+		});
+	});
+
+	// ---- Sign-in (email → OTP) ----
+	var emailForm = document.getElementById('acct-email-form');
+	var otpForm = document.getElementById('acct-otp-form');
+	var msg = document.getElementById('acct-msg');
+	function showMsg(text, ok) {
+		if (!msg) return;
+		msg.textContent = text; msg.classList.remove('hidden');
+		msg.className = 'mt-4 rounded-xl px-4 py-3 text-[13px] ' + (ok ? 'bg-black text-white' : 'bg-red-50 text-red-700 border border-red-200');
+	}
+	var sendBtn = document.getElementById('acct-send-btn');
+	var sendSpinner = document.getElementById('acct-send-spinner');
+	var sendText = document.getElementById('acct-send-text');
+	function setSendLoading(on) {
+		if (!sendBtn) return;
+		sendBtn.disabled = !!on;
+		if (sendSpinner) sendSpinner.classList.toggle('hidden', !on);
+		if (sendText) sendText.textContent = on ? 'Sending…' : 'Send code';
+		sendBtn.classList.toggle('opacity-70', !!on);
+	}
+	if (emailForm) emailForm.addEventListener('submit', function (e) {
+		e.preventDefault();
+		var email = emailForm.querySelector('input[name=email]').value.trim();
+		var fd = new FormData(); fd.append('email', email);
+		setSendLoading(true);
+		post('{% url "public_account_send_otp" %}', fd).then(function (res) {
+			if (res.ok && res.data.success) {
+				showMsg('Code sent. Check your email.', true);
+				otpForm.querySelector('input[name=email]').value = email;
+				emailForm.classList.add('hidden'); otpForm.classList.remove('hidden');
+			} else { showMsg((res.data && res.data.error) || 'Could not send the code.', false); }
+		}).catch(function () { showMsg('Could not send the code. Please try again.', false); })
+			.finally(function () { setSendLoading(false); });
+	});
+	if (otpForm) otpForm.addEventListener('submit', function (e) {
+		e.preventDefault();
+		var fd = new FormData(otpForm);
+		post('{% url "public_account_verify_otp" %}', fd).then(function (res) {
+			if (res.ok && res.data.success) {
+				window.location.href = res.data.redirect || '{% url "public_user_account" %}';
+			} else { showMsg((res.data && res.data.error) || 'Incorrect code.', false); }
+		}).catch(function () { showMsg('Could not verify the code. Please try again.', false); });
+	});
+	var resend = document.getElementById('acct-resend');
+	if (resend) resend.addEventListener('click', function () {
+		otpForm.classList.add('hidden'); emailForm.classList.remove('hidden');
+		if (msg) msg.classList.add('hidden'); setSendLoading(false);
+	});
+})();
+</script>
+{% endblock %}

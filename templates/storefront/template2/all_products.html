@@ -189,7 +189,7 @@
     <div class="container mx-auto px-4">
         <!-- Mobile Filter Toggle Button -->
         <div class="flex justify-between items-center mb-4 md:hidden">
-            <h1 class="text-xl font-normal text-gray-900 uppercase">All Products</h1>
+            <p class="text-xl font-normal text-gray-900 uppercase" role="heading" aria-level="1">{% if selected_category_names %}{{ selected_category_names|join:", " }}{% else %}All Products{% endif %}</p>
             <button id="mobileFilterToggle" class="px-4 py-2 bg-gray-100 text-gray-800 rounded-md flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -216,10 +216,11 @@
                         <div class="">
                             <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-widest mb-3">Categories</h2>
                             <form id="filtersForm" method="get" class="space-y-2">
-                                {% if sort %}<input type="hidden" name="sort" value="{{ sort }}" />{% endif %}
+                                {% if sort and sort != 'newest' %}<input type="hidden" name="sort" value="{{ sort }}" />{% endif %}
+                                <a href="{% url 'public_all_products' %}" class="flex items-center gap-3 text-sm uppercase {% if not selected_category_ids %}font-semibold text-gray-900{% else %}text-gray-700 hover:text-gray-900{% endif %}">All Products</a>
                                 {% for c in categories %}
                                 <label class="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-gray-900" name="categories" value="{{ c.id }}" {% if c.id in selected_category_ids %}checked{% endif %} />
+                                    <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-gray-900" name="categories" value="{{ c.id }}" {% if c.id|stringformat:'s' in selected_category_ids %}checked{% endif %} />
                                     <span class="text-sm uppercase text-gray-700">{{ c.name }}</span>
                                 </label>
                                 {% endfor %}
@@ -268,33 +269,7 @@
             <div class="md:col-span-3">
                 <!-- Category Header -->
                 <div class="mb-6">
-                    <h1 id="categoryHeader" class="hidden sm:block text-xl ml-2 md:text-2xl font-normal md:ml-[2rem] text-gray-900 uppercase">All Products</h1>
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            // Get selected category IDs
-                            const selectedIds = [{% for id in selected_category_ids %}{{ id }}{% if not forloop.last %},{% endif %}{% endfor %}];
-                            
-                            // Get total number of available categories
-                            const totalCategories = {{ categories|length }};
-                            
-                            // If no categories selected or all categories selected, show "All Products"
-                            if (selectedIds.length === 0 || selectedIds.length === totalCategories) {
-                                document.getElementById('categoryHeader').textContent = 'All Products';
-                                return;
-                            }
-                            
-                            // Create mapping of category IDs to names
-                            const categoryMap = {
-                                {% for c in categories %}
-                                {{ c.id }}: "{{ c.name }}"{% if not forloop.last %},{% endif %}
-                                {% endfor %}
-                            };
-                            
-                            // Build display string
-                            const selectedCategories = selectedIds.map(id => categoryMap[id]);
-                            document.getElementById('categoryHeader').textContent = selectedCategories.join(', ');
-                        });
-                    </script>
+                    <h1 class="hidden md:block text-xl ml-2 md:text-2xl font-normal md:ml-[2rem] text-gray-900 uppercase">{% if selected_category_names %}{{ selected_category_names|join:", " }}{% else %}All Products{% endif %}</h1>
                 </div>
                 {% if active_category_id and subcategories %}
                 <div class="mb-6 px-1 sm:px-2 md:px-4">
@@ -307,131 +282,14 @@
                 </div>
                 {% endif %}
                 {% if products %}
+                {% include "storefront/template2/components/product_card_styles.html" %}
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-4 md:gap-6" id="productsGrid">
                     {% for product in products %}
-                    <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] md:m-4" style="border-radius: 8px;" data-product-id="{{ product.product_id }}" data-product-title="{{ product.title|lower }}">
-                        <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
-                            {% if product.image1 %}
-                            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
-                               class="group relative flex items-center justify-center flex-shrink-0 product-image-link">
-                              <span class="relative w-full h-full flex items-center justify-center">
-                              {% if website.content.enable_product_hover_swap and product.image2 %}
-                            <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="block w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0"/>
-                            <img src="{{ product.image2.url }}" {% media_attrs website product.image2.url product.title %} class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100"/>
-                              {% else %}
-                            <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="block w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"/>
-                              {% endif %}
-                              </span>
-                            </a>
-                            {% else %}
-                            <div class="absolute inset-0 flex items-center justify-center bg-gray-100"></div>
-                            {% endif %}
-
-                            {% comment %} Badges: NEW for recently featured; Discount from specifications if provided {% endcomment %}
-                            {% if product.specifications %}
-                            <div class="absolute top-2 right-2 flex flex-col items-end space-y-1.5 pointer-events-none">
-                                {% with specs=product.specifications %}
-                                    {% if specs %}
-                                        {% if specs.discount %}
-                                            <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount }}%</span>
-                                        {% elif specs.discount_percentage %}
-                                            <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount_percentage }}%</span>
-                                        {% endif %}
-                                    {% endif %}
-                                {% endwith %}
-                            </div>
-                            {% endif %}
-                        </div>
-                        <div class="px-2 sm:px-3 md:px-4 py-4 text-left best-seller-d2c-content">
-                            {% if is_d2c or website.template.is_D2C %}
-                            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
-                               class="block text-[12px] sm:text-[13px] font-normal uppercase leading-tight text-gray-900 hover:text-black transition-colors break-words best-seller-d2c-title">
-                                {{ product.title }}
-                            </a>
-                            {% if show_price_in_lists %}
-                            <div class="mt-1 text-gray-700">
-                                <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
-                                   class="inline-flex items-baseline justify-start gap-1.5 hover:text-black transition-colors max-w-full">
-                                    {% with specs=product.specifications %}
-                                        <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words">{{ product.currency|currency_symbol }}{{ product.price }}</span>
-                                        {% if specs and specs.mrp %}
-                                            <span class="text-[15px] text-gray-400 line-through break-words">{{ product.currency|currency_symbol }}{{ specs.mrp }}</span>
-                                        {% elif specs and specs.original_price %}
-                                            <span class="text-[15px] text-gray-400 line-through break-words">{{ product.currency|currency_symbol }}{{ specs.original_price }}</span>
-                                        {% endif %}
-                                    {% endwith %}
-                                </a>
-                            </div>
-                            {% endif %}
-                            <div class="mt-1.5 best-seller-d2c-actions">
-                                <a href="{% url 'public_cart_add' product_id=product.product_id|default:'0' %}?qty=1"
-                                   class="inline-flex items-center justify-center gap-1 w-full h-7 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
-                                   style="border: 1px solid #888888;"
-                                   aria-label="Add {{ product.title }} to cart">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7">
-                                        <circle cx="9" cy="20" r="1.6"></circle>
-                                        <circle cx="18" cy="20" r="1.6"></circle>
-                                        <path d="M3 4h2l2.1 10.2a1 1 0 0 0 1 .8h9.9a1 1 0 0 0 1-.8L21 8H7.2"></path>
-                                    </svg>
-                                    <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Add To Cart</span>
-                                </a>
-                                <button type="button"
-                                        class="w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-gray-700 bg-white hover:bg-gray-50 transition js-listing-wishlist"
-                                        style="border: 1px solid #888888;"
-                                        data-wishlist-url="{% url 'public_wishlist_add' product_id=product.product_id|default:'0' %}"
-                                        data-account-url="{% url 'public_user_account' %}"
-                                        aria-label="Add {{ product.title }} to wishlist">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.7">
-                                        <path d="M12 21s-6.7-4.35-9.2-8.07C.87 10.13 1.5 6.7 4.4 5.2a5 5 0 0 1 5.6.77L12 7.7l2-1.73a5 5 0 0 1 5.6-.77c2.9 1.5 3.53 4.93 1.6 7.73C18.7 16.65 12 21 12 21z"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            {% else %}
-                            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
-                               class="inline-block text-[11px] md:text-[13px] uppercase tracking-[0.2em] text-gray-800 hover:text-black transition-colors best-seller-d2c-title">
-                                {{ product.title }}
-                            </a>
-                            {% if show_price_in_lists %}
-                            <div class="mt-1 text-gray-700">
-                                <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
-                                   class="inline-flex items-baseline justify-start gap-1.5 hover:text-black transition-colors max-w-full">
-                                    {% with specs=product.specifications %}
-                                        <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words">{{ product.currency|currency_symbol }}{{ product.price }}</span>
-                                        {% if specs and specs.mrp %}
-                                            <span class="text-[15px] text-gray-400 line-through break-words">{{ product.currency|currency_symbol }}{{ specs.mrp }}</span>
-                                        {% elif specs and specs.original_price %}
-                                            <span class="text-[15px] text-gray-400 line-through break-words">{{ product.currency|currency_symbol }}{{ specs.original_price }}</span>
-                                        {% else %}
-                                            {# price only #}
-                                        {% endif %}
-                                    {% endwith %}
-                                </a>
-                            </div>
-                            {% endif %}
-                            <div class="mt-1.5 best-seller-d2c-actions">
-                                <button type="button"
-                                   class="inline-flex items-center justify-center gap-1 w-full h-6 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
-                                   style="border: 1px solid #888888;"
-                                   onclick="openListingEnquiryModal('{{ product.product_id }}')"
-                                   aria-label="Send enquiry for {{ product.title }}">
-                                    <span class="font-medium leading-none truncate">Send Enquiry</span>
-                                </button>
-                                <a href="{% url 'public_product_whatsapp' product_id=product.product_id|default:'0' %}"
-                                   class="w-full h-6 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-[#25D366] bg-white hover:bg-gray-50 transition"
-                                   style="border: 1px solid #888888;"
-                                   aria-label="Share {{ product.title }} on WhatsApp">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-4 h-4" fill="currentColor" aria-hidden="true">
-                                        <path d="M16.02 3.2c-7.07 0-12.8 5.73-12.8 12.8 0 2.26.6 4.48 1.74 6.43L3.2 28.8l6.53-1.72a12.75 12.75 0 0 0 6.29 1.64h.01c7.07 0 12.8-5.73 12.8-12.8 0-3.42-1.33-6.63-3.75-9.05a12.7 12.7 0 0 0-9.06-3.67Zm0 23.31h-.01a10.5 10.5 0 0 1-5.35-1.46l-.38-.23-3.88 1.02 1.04-3.78-.24-.39a10.54 10.54 0 1 1 18.81-5.67c0 5.8-4.72 10.51-10.49 10.51Zm5.76-7.85c-.31-.15-1.83-.9-2.12-1-.28-.1-.49-.15-.69.16-.2.3-.79 1-.97 1.2-.18.2-.36.22-.67.07-.31-.15-1.3-.48-2.48-1.54-.92-.82-1.54-1.84-1.72-2.15-.18-.31-.02-.48.13-.63.14-.14.31-.36.46-.54.15-.18.2-.31.31-.51.1-.2.05-.38-.03-.54-.08-.15-.69-1.67-.95-2.28-.25-.6-.5-.52-.69-.53-.18-.01-.38-.01-.59-.01-.2 0-.54.08-.82.38-.28.31-1.08 1.06-1.08 2.58 0 1.52 1.11 2.99 1.26 3.2.15.2 2.18 3.33 5.27 4.67.74.32 1.32.51 1.77.66.74.24 1.41.2 1.94.12.59-.09 1.83-.75 2.09-1.47.26-.72.26-1.33.18-1.47-.08-.13-.28-.2-.59-.36Z"></path>
-                                    </svg>
-                                </a>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
+                    {% include "storefront/template2/components/product_card.html" with product=product wish_class="js-listing-wishlist" %}
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="text-center py-10 text-gray-500">No products found for selected categories.</div>
+                <div class="text-center py-10 text-gray-500">{% if selected_category_ids or search_query %}No products found for your selection. <a href="{% url 'public_all_products' %}" class="underline">View all products</a>{% else %}No products available yet.{% endif %}</div>
                 {% endif %}
             </div>
         </div>
@@ -631,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 id: "{{ product.product_id }}",
                 title: "{{ product.title }}",
                 element: document.querySelector('[data-product-id="{{ product.product_id }}"]'),
-                variants: {% if product.variants %}{{ product.variants|safe }}{% else %}null{% endif %}
+                variants: {% if product.variants %}{{ product.variants|js_json }}{% else %}null{% endif %}
             }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
@@ -682,8 +540,12 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // Function to check if a product matches the selected variant filters
     function productMatchesFilters(product, selectedFilters) {
-        // If no filters selected, show all products
-        if (Object.keys(selectedFilters).length === 0) {
+        // Every variant type has an entry here (an empty list until the shopper
+        // ticks a value), so "no filter chosen" means no entry has any values,
+        // not that there are no entries. Without this, a product with no
+        // variations (or other variation types) was hidden on page load.
+        const active = Object.entries(selectedFilters).filter(([, vals]) => vals && vals.length > 0);
+        if (active.length === 0) {
             return true;
         }
         
@@ -942,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 if (response.ok && data && data.success) {
-                    button.classList.add('text-red-500', 'border-red-200', 'bg-red-50');
+                    { button.classList.remove('text-gray-700', 'bg-white'); button.classList.add('text-red-500', 'bg-red-50', 'is-wishlisted'); button.setAttribute('aria-pressed', 'true'); var heartSvg = button.querySelector('svg'); if (heartSvg) heartSvg.setAttribute('fill', 'currentColor'); }
                 }
             } catch (e) {
                 // no-op

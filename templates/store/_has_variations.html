@@ -1,0 +1,13 @@
+{% load store_extras %}
+{% comment %}
+Shared by the D2C and B2B product forms. Toggles the Variations step's
+combinations matrix (store/_variant_matrix.html). Pass `cls` for the width.
+{% endcomment %}
+<label class="pal-field {{ cls|default:'app-f--third' }}">
+  <span class="pal-field__label">Has variations?{% field_tip "has_variations" %}</span>
+  <select id="has_variations" data-no-enhance>
+    <option value="no"{% if not prefill.has_variations %} selected{% endif %}>No</option>
+    <option value="yes"{% if prefill.has_variations %} selected{% endif %}>Yes</option>
+  </select>
+  <span class="app-field-hint">Turn on to sell sizes/colours with their own SKU, price &amp; stock.</span>
+</label>

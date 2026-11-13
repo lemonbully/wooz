@@ -9,6 +9,12 @@
     <p class="pal-mono pal-mono--accent">Catalogue · {{ site.get_business_model_display }}</p>
     <h1 class="app-head__title pal-mt-4">{% if is_edit %}Edit product{% else %}New product{% endif %}</h1>
     <p class="app-head__lead">Complete each step. You can move back at any time; required fields are checked before you move on.</p>
+  </div>
+  <div class="app-head__actions">
+    <button type="button" id="pf-ask-gpt" class="pal-btn pal-btn--ghost">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="margin-right:.4rem"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm1.07-7.75-.9.92A2.5 2.5 0 0 0 13 12h-2v-.5a3.5 3.5 0 0 1 1.05-2.5l1.24-1.26a1.5 1.5 0 1 0-2.56-1.06H8.73a3.5 3.5 0 1 1 6.34 2.07z"/></svg>
+      Ask ChatGPT
+    </button>
   </div></div>
 
   <div class="app-block">
@@ -17,9 +23,30 @@
 
       {% if form.non_field_errors %}<div class="pal-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
 
+      {% if is_edit %}
+      {% comment %}
+        Per-variation details. One numbered tab per variation combination
+        (built from the Variations step's rows by the script below). Picking a
+        tab shows that variation's summary and an Edit button; Edit loads the
+        variation into the steps below (all but Variations) so it can be
+        edited like a product of its own. Only what differs from the main
+        product is saved, on that combination's "profile"
+        (commerce/variant_profiles.py); everything else is inherited.
+      {% endcomment %}
+      <div class="app-vbar" id="vbar" hidden>
+        <div class="app-vbar__head">
+          <span class="pal-field__label">Variation details</span>
+          <span class="app-field-hint">Pick a variation to give it its own details. Anything you don't change is taken from the main product.</span>
+        </div>
+        <div class="app-vbar__tabs" id="vbar-tabs" role="tablist" aria-label="Variations"></div>
+        <div class="app-vbar__card" id="vbar-card" hidden></div>
+      </div>
+      <div class="app-vmode" id="vmode-banner" role="status" hidden></div>
+      {% endif %}
+
       <div class="app-wiztabs" role="tablist">
         {% if is_b2b %}
-          {% for label in "Basics,Images,Pricing & tax,Logistics,Specifications,Variants,FAQs & badges"|split:"," %}
+          {% for label in "Basics,Images & video,Pricing & tax,Logistics,Specifications,Variants,FAQs & badges"|split:"," %}
             <button type="button" class="app-wiztab" data-goto="{{ forloop.counter0 }}">{{ label }}</button>
           {% endfor %}
         {% else %}
@@ -37,16 +64,22 @@
           <div class="app-formgrid">
             {% include "store/_field.html" with field=form.title cls="app-f--full" %}
             {% include "store/_field.html" with field=form.description cls="app-f--full" %}
-            {% include "store/_field.html" with field=form.category cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.category cls="app-f--third" %}
             {% include "store/_field.html" with field=form.sku cls="app-f--third" %}
-            <label class="pal-field app-f--full"><span class="pal-field__label">Tags</span><input type="text" name="keywords" value="{{ prefill.keywords }}" placeholder="Comma-separated, e.g. wholesale, bulk"></label>
-            {% include "store/_field.html" with field=form.video_link cls="app-f--full" %}
+            {% include "store/_has_variations.html" with cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.brand cls="app-f--third" %}
+            {% include "store/_extra_categories.html" %}
+            <label class="pal-field app-f--full"><span class="pal-field__label">Tags{% field_tip "keywords" %}</span><input type="text" name="keywords" value="{{ prefill.keywords }}" placeholder="Comma-separated, e.g. wholesale, bulk"></label>
             {% include "store/_field.html" with field=form.is_active cls="app-f--full" %}
           </div>
         </section>
 
         <section class="app-wizpanel" data-step hidden>
-          <div class="app-formgrid">{% include "store/_images.html" %}</div>
+          <div class="app-formgrid">
+            {% include "store/_images.html" %}
+            {% include "store/_video_format.html" %}
+            {% include "store/_video_block.html" %}
+          </div>
         </section>
 
         <section class="app-wizpanel" data-step hidden>
@@ -55,6 +88,8 @@
             {% include "store/_field.html" with field=form.mrp cls="app-f--third" %}
             {% include "store/_field.html" with field=form.gst_percentage cls="app-f--quarter" %}
             {% include "store/_field.html" with field=form.hsn_code cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.gst_inclusive cls="app-f--full" %}
+            <p class="app-field-hint app-f--full">Tick this if the selling price already includes GST. Leave it unticked to add GST on top at checkout (customers see the GST amount separately).</p>
             {% include "store/_field.html" with field=form.inventory cls="app-f--quarter" %}
             {% include "store/_field.html" with field=form.low_stock_threshold cls="app-f--quarter" %}
           </div>
@@ -65,7 +100,9 @@
             {% include "store/_field.html" with field=form.country_of_origin cls="app-f--half" %}
             {% include "store/_field.html" with field=form.dangerous_goods cls="app-f--half" %}
             {% include "store/_field.html" with field=form.guarantee_warranty cls="app-f--half" %}
-            {% include "store/_field.html" with field=form.return_type cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.return_type cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.return_days cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.replacement_days cls="app-f--quarter" %}
             {% include "store/_field.html" with field=form.package_length cls="app-f--quarter" %}
             {% include "store/_field.html" with field=form.package_breadth cls="app-f--quarter" %}
             {% include "store/_field.html" with field=form.package_height cls="app-f--quarter" %}
@@ -73,7 +110,8 @@
             {% include "store/_field.html" with field=form.weight_value cls="app-f--third" %}
             {% include "store/_field.html" with field=form.weight_unit cls="app-f--third" %}
             {% include "store/_field.html" with field=form.manufacturer_contact cls="app-f--full" %}
-            {% include "store/_field.html" with field=form.packer_contact cls="app-f--full" %}
+            {% include "store/_field.html" with field=form.packer_contact cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.importer_contact cls="app-f--half" %}
           </div>
         </section>
 
@@ -84,9 +122,7 @@
         </section>
 
         <section class="app-wizpanel" data-step hidden>
-          <div class="app-formgrid">
-            {% include "store/_rep_pairs.html" with label="Variant types" name_a="variant_type_name" ph_a="Type (e.g. Size)" name_b="variant_type_values" ph_b="Values, comma-separated (S, M, L)" rows=prefill.variants %}
-          </div>
+          {% include "store/_variant_matrix.html" %}
         </section>
 
         <section class="app-wizpanel" data-step hidden>
@@ -100,38 +136,71 @@
         {# ================= D2C / Both ================= #}
         <section class="app-wizpanel" data-step hidden>
           <div class="app-formgrid">
-            {% include "store/_field.html" with field=form.category cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.category cls="app-f--third" %}
+            {% include "store/_has_variations.html" %}
             {% include "store/_field.html" with field=form.currency cls="app-f--third" %}
+
+            {% include "store/_extra_categories.html" %}
+
             {% include "store/_field.html" with field=form.title cls="app-f--full" %}
-            {% include "store/_rep_simple.html" with name="bullets" label="Bullet points" placeholder="A short selling point" rows=prefill.bullets %}
+            {% include "store/_field.html" with field=form.brand cls="app-f--third" %}
+            {% include "store/_rep_simple.html" with name="bullets" label="Bullet points" placeholder="A short selling point" rows=prefill.bullets min_rows=3 %}
             {% include "store/_field.html" with field=form.description cls="app-f--full" %}
-            <label class="pal-field app-f--full"><span class="pal-field__label">Keywords</span><input type="text" name="keywords" value="{{ prefill.keywords }}" placeholder="Comma-separated"></label>
-            <label class="pal-field app-f--half"><span class="pal-field__label">Recommended use</span><input type="text" name="recommended_use" value="{{ prefill.recommended_use }}"></label>
-            <label class="pal-field app-f--third"><span class="pal-field__label">Material</span><input type="text" name="material" value="{{ prefill.material }}"></label>
-            <label class="pal-field app-f--third"><span class="pal-field__label">Colour / texture</span><input type="text" name="colour" value="{{ prefill.colour }}"></label>
-            <label class="pal-field app-f--full"><span class="pal-field__label">Special features</span><input type="text" name="features" value="{{ prefill.features }}" placeholder="Comma-separated"></label>
+
+            <div class="pal-field app-f--full app-tags" data-tagchips>
+              <span class="pal-field__label">Keywords{% field_tip "keywords" %}</span>
+              <input type="hidden" name="keywords" value="{{ prefill.keywords }}" data-tags-store>
+              <div class="app-tags__box">
+                <span class="app-tags__list" data-tags-list></span>
+                <input type="text" class="app-tags__input" data-tags-input placeholder="Type and press Enter or comma">
+              </div>
+            </div>
+
+            <label class="pal-field app-f--half"><span class="pal-field__label">Recommended use{% field_tip "recommended_use" %}</span><input type="text" name="recommended_use" value="{{ prefill.recommended_use }}"></label>
+            <label class="pal-field app-f--third"><span class="pal-field__label">Material/Ingredients{% field_tip "material" %}</span><input type="text" name="material" value="{{ prefill.material }}"></label>
+            <label class="pal-field app-f--third"><span class="pal-field__label">Colour / texture{% field_tip "colour" %}</span><input type="text" name="colour" value="{{ prefill.colour }}"></label>
+
+            <div class="pal-field app-f--full app-tags" data-tagchips>
+              <span class="pal-field__label">Special features{% field_tip "features" %}</span>
+              <input type="hidden" name="features" value="{{ prefill.features }}" data-tags-store>
+              <div class="app-tags__box">
+                <span class="app-tags__list" data-tags-list></span>
+                <input type="text" class="app-tags__input" data-tags-input placeholder="Type and press Enter or comma">
+              </div>
+            </div>
+
+            {% include "store/_rep_pairs.html" with label="FAQs (add at least 6)" name_a="faq_q" ph_a="Question" name_b="faq_r" ph_b="Answer" rows=prefill.faqs %}
+
             {% include "store/_field.html" with field=form.is_active cls="app-f--full" %}
+            <label class="app-check app-f--full">
+              <input type="checkbox" name="is_best_seller"{% if prefill.is_best_seller %} checked{% endif %}>
+              <span class="app-check__label">Mark as Best Seller{% field_tip "is_best_seller" %}</span>
+            </label>
           </div>
         </section>
 
         <section class="app-wizpanel" data-step hidden>
           <div class="app-formgrid">
             {% include "store/_images.html" %}
-            {% include "store/_field.html" with field=form.video_link cls="app-f--full" %}
-            {% include "store/_field.html" with field=form.video_orientation cls="app-f--half" %}
+
+            {% include "store/_video_format.html" %}
+
+            {% include "store/_video_block.html" %}
           </div>
         </section>
 
         <section class="app-wizpanel" data-step hidden>
           <div class="app-formgrid">
             {% include "store/_field.html" with field=form.sku cls="app-f--third" %}
-            <label class="pal-field app-f--third"><span class="pal-field__label">Handling time</span><input type="text" name="handling_time" value="{{ prefill.handling_time }}" placeholder="e.g. Ships in 2 days"></label>
+            <label class="pal-field app-f--third"><span class="pal-field__label">Handling time{% field_tip "handling_time" %}</span><input type="text" name="handling_time" value="{{ prefill.handling_time }}" placeholder="e.g. Ships in 2 days"></label>
             {% include "store/_field.html" with field=form.mrp cls="app-f--quarter" %}
             {% include "store/_field.html" with field=form.price cls="app-f--quarter" %}
             {% include "store/_field.html" with field=form.gst_percentage cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.hsn_code cls="app-f--third" %}
+            {% include "store/_field.html" with field=form.gst_inclusive cls="app-f--full" %}
+            <p class="app-field-hint app-f--full">Tick this if the selling price already includes GST. Leave it unticked to add GST on top at checkout (customers see the GST amount separately).</p>
             {% include "store/_field.html" with field=form.inventory cls="app-f--quarter" %}
             {% include "store/_field.html" with field=form.low_stock_threshold cls="app-f--quarter" %}
-            {% include "store/_field.html" with field=form.hsn_code cls="app-f--third" %}
             {% include "store/_badges.html" %}
             {% include "store/_rep_simple.html" with name="accessories" label="Accessories" placeholder="Accessory name" rows=prefill.accessories %}
             {% include "store/_rep_simple.html" with name="includes" label="What's in the box" placeholder="Included item" rows=prefill.includes %}
@@ -156,9 +225,7 @@
         </section>
 
         <section class="app-wizpanel" data-step hidden>
-          <div class="app-formgrid">
-            {% include "store/_rep_pairs.html" with label="Variant types" name_a="variant_type_name" ph_a="Type (e.g. Size)" name_b="variant_type_values" ph_b="Values, comma-separated (S, M, L)" rows=prefill.variants %}
-          </div>
+          {% include "store/_variant_matrix.html" %}
         </section>
 
         <section class="app-wizpanel" data-step hidden>
@@ -171,13 +238,16 @@
           <div class="app-formgrid">
             {% include "store/_field.html" with field=form.country_of_origin cls="app-f--half" %}
             {% include "store/_field.html" with field=form.dangerous_goods cls="app-f--half" %}
-            {% include "store/_field.html" with field=form.return_type cls="app-f--half" %}
+            {% include "store/_field.html" with field=form.return_type cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.return_days cls="app-f--quarter" %}
+            {% include "store/_field.html" with field=form.replacement_days cls="app-f--quarter" %}
             {% include "store/_field.html" with field=form.guarantee_warranty cls="app-f--half" %}
             {% include "store/_field.html" with field=form.manufacturer_contact cls="app-f--full" %}
             {% include "store/_field.html" with field=form.packer_contact cls="app-f--full" %}
-            <label class="pal-field app-f--full"><span class="pal-field__label">Warning</span><input type="text" name="warning" value="{{ prefill.warning }}"></label>
-            <label class="pal-field app-f--half"><span class="pal-field__label">Support phone</span><input type="text" name="support_phone" value="{{ prefill.support_phone }}"></label>
-            <label class="pal-field app-f--half"><span class="pal-field__label">Support email</span><input type="email" name="support_email" value="{{ prefill.support_email }}"></label>
+            {% include "store/_field.html" with field=form.importer_contact cls="app-f--half" %}
+            <label class="pal-field app-f--half"><span class="pal-field__label">Warning{% field_tip "warning" %}</span><input type="text" name="warning" value="{{ prefill.warning }}"></label>
+            <label class="pal-field app-f--half"><span class="pal-field__label">Support phone{% field_tip "support_phone" %}</span><input type="text" name="support_phone" value="{{ prefill.support_phone }}"></label>
+            <label class="pal-field app-f--half"><span class="pal-field__label">Support email{% field_tip "support_email" %}</span><input type="email" name="support_email" value="{{ prefill.support_email }}"></label>
           </div>
         </section>
 
@@ -208,6 +278,124 @@
   "use strict";
   var form = document.getElementById("product-form");
   if (!form) return;
+
+  /* "Ask ChatGPT": gather EVERY field on the product form  those the owner has
+     filled in AND those still empty  and open ChatGPT with a listing-writing
+     prompt pre-filled (and auto-submitted via ?q=). Empty fields are listed so
+     ChatGPT suggests a value for each. Works on the create and edit pages. */
+  (function () {
+    var btn = document.getElementById("pf-ask-gpt");
+    if (!btn) return;
+
+    // Friendlier names for grouped fields whose per-item <label> isn't the group.
+    var LABEL_ALIASES = {
+      categories_multi: "Additional categories",
+      trusted_icons: "Trusted badges",
+      keywords: "Keywords / tags",
+      bullets: "About-this-item bullets",
+      features: "Features",
+      accessories: "Accessories",
+      includes: "What's in the box",
+      variant_type_name: "Variation name",
+      variant_type_values: "Variation values"
+    };
+    function clean(s) { return String(s || "").replace(/\*/g, "").replace(/\s+/g, " ").trim(); }
+    function humanize(name) {
+      return clean(name.replace(/\[\]$/, "").replace(/[_\-]+/g, " "))
+        .replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+    }
+    // A readable label for a field: an explicit alias, then its form label, then
+    // aria-label/placeholder, then a humanised version of its name attribute.
+    function labelFor(el, name) {
+      if (LABEL_ALIASES[name]) return LABEL_ALIASES[name];
+      var lab = el.closest ? el.closest("label") : null;
+      if (lab) {
+        var span = lab.querySelector(".pal-field__label, .app-check__label");
+        // The label minus any "!" tooltip (its hover text isn't the label).
+        var txt = "";
+        if (span) {
+          var copy = span.cloneNode(true);
+          Array.prototype.forEach.call(copy.querySelectorAll(".app-tip"), function (t) { t.remove(); });
+          txt = clean(copy.textContent);
+        }
+        if (txt) return txt;
+      }
+      if (el.getAttribute("aria-label")) return clean(el.getAttribute("aria-label"));
+      if (el.getAttribute("placeholder")) return clean(el.getAttribute("placeholder"));
+      return humanize(name);
+    }
+    function valueOf(el) {
+      var type = (el.type || "").toLowerCase();
+      if (type === "checkbox") {
+        if (el.value && el.value.toLowerCase() !== "on") {
+          // A value-bearing checkbox (e.g. a category or badge): when ticked,
+          // report its visible text so the prompt shows names, not raw ids.
+          if (!el.checked) return "";
+          var lab = el.closest ? el.closest("label") : null;
+          var t = "";
+          if (lab) {
+            var lc = lab.cloneNode(true);
+            Array.prototype.forEach.call(lc.querySelectorAll(".app-tip"), function (n) { n.remove(); });
+            t = clean(lc.textContent);
+          }
+          return t || el.value;
+        }
+        return el.checked ? "Yes" : "No"; // plain on/off toggle
+      }
+      if (type === "radio") return el.checked ? (el.value || "") : "";
+      if (el.tagName === "SELECT") {
+        var o = el.options[el.selectedIndex];
+        return o ? clean(o.text) : "";
+      }
+      return (el.value || "").trim();
+    }
+
+    function buildPrompt() {
+      var order = [];       // labels in first-seen order
+      var map = {};         // label -> array of non-empty values
+      var els = form.querySelectorAll("input, select, textarea");
+      Array.prototype.forEach.call(els, function (el) {
+        var name = el.getAttribute("name");
+        if (!name || name === "csrfmiddlewaretoken") return;
+        var type = (el.type || "").toLowerCase();
+        if (type === "hidden" || type === "file" || type === "submit" || type === "button" || type === "reset") return;
+        var label = labelFor(el, name);
+        if (!(label in map)) { map[label] = []; order.push(label); }
+        var v = valueOf(el);
+        if (v) map[label].push(v);
+      });
+
+      var filled = [], empty = [];
+      order.forEach(function (label) {
+        var vals = map[label].filter(function (v) { return v !== ""; });
+        if (vals.length) filled.push("- " + label + ": " + vals.join(", "));
+        else empty.push("- " + label);
+      });
+
+      var lines = ["I'm creating a product listing in my online store and want your help completing and improving it. Below are all the fields from my product form.", ""];
+      if (filled.length) {
+        lines.push("Fields I've already filled in:");
+        lines = lines.concat(filled);
+        lines.push("");
+      }
+      if (empty.length) {
+        lines.push("Fields still empty  please suggest a suitable value for each, appropriate for this product:");
+        lines = lines.concat(empty);
+        lines.push("");
+      }
+      lines.push("Please:");
+      lines.push("1. Write a compelling, conversion-focused product description.");
+      lines.push("2. Suggest a value for every empty field listed above.");
+      lines.push("3. Suggest 5 bullet-point highlights, SEO keywords and a short meta description.");
+      return lines.join("\n");
+    }
+
+    btn.addEventListener("click", function () {
+      var target = "https://chatgpt.com/?q=" + encodeURIComponent(buildPrompt());
+      window.open(target, "_blank", "noopener");
+    });
+  })();
+
   var panels = Array.prototype.slice.call(form.querySelectorAll(".app-wizpanel"));
   var tabs = Array.prototype.slice.call(form.querySelectorAll(".app-wiztab"));
   var prevBtn = document.getElementById("wiz-prev");
@@ -215,6 +403,29 @@
   var submitBtn = document.getElementById("wiz-submit");
   var alertBox = document.getElementById("wiz-alert");
   var current = 0;
+  // The Save button appears on the LAST step (as before) and, once the user has
+  // changed anything, on EVERY step  so an edit made on step 2 can be saved
+  // without clicking through to the end. `ready` ignores the input/change events
+  // that widgets fire while they initialise, so Save only appears on real edits.
+  var dirty = false;
+  var ready = false;
+
+  function updateSaveVisibility() {
+    var last = current === panels.length - 1;
+    if (submitBtn) submitBtn.hidden = !(last || dirty);
+  }
+  function markDirty() {
+    if (dirty || !ready) return;
+    dirty = true;
+    updateSaveVisibility();
+  }
+
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = String(s == null ? "" : s);
+    // Also escape quotes: the result is used inside value="…" attributes.
+    return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
 
   function show(i) {
     current = i;
@@ -223,7 +434,7 @@
     if (prevBtn) prevBtn.disabled = i === 0;
     var last = i === panels.length - 1;
     if (nextBtn) nextBtn.hidden = last;
-    if (submitBtn) submitBtn.hidden = !last;
+    updateSaveVisibility();
     if (alertBox) alertBox.hidden = true;
     if (form.scrollIntoView) form.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -244,10 +455,20 @@
     return true;
   }
 
+  // A step whose tab is hidden (the Variations step while a single variation
+  // is being edited) is stepped over by Next / Previous.
+  function skipped(i) { return !!(tabs[i] && tabs[i].hidden); }
   if (nextBtn) nextBtn.addEventListener("click", function () {
-    if (validate(panels[current])) show(Math.min(current + 1, panels.length - 1));
+    if (!validate(panels[current])) return;
+    var n = Math.min(current + 1, panels.length - 1);
+    while (n < panels.length - 1 && skipped(n)) n++;
+    show(n);
   });
-  if (prevBtn) prevBtn.addEventListener("click", function () { show(Math.max(current - 1, 0)); });
+  if (prevBtn) prevBtn.addEventListener("click", function () {
+    var p = Math.max(current - 1, 0);
+    while (p > 0 && skipped(p)) p--;
+    show(p);
+  });
   tabs.forEach(function (t, idx) {
     t.addEventListener("click", function () {
       if (idx > current && !validate(panels[current])) return;
@@ -255,10 +476,25 @@
     });
   });
 
+  // Reveal the Save button the moment the user edits anything, on any step. The
+  // `ready` flag (set below, after widgets have finished initialising) keeps the
+  // programmatic input/change events they fire on load from counting as edits.
+  form.addEventListener("input", markDirty);
+  form.addEventListener("change", markDirty);
+  window.setTimeout(function () { ready = true; }, 400);
+
   form.addEventListener("submit", function (e) {
     for (var i = 0; i < panels.length; i++) {
       if (!validate(panels[i])) { e.preventDefault(); show(i); return; }
     }
+  });
+
+  // Field tooltips ("!" beside a label): clicking one only shows its text. It
+  // sits inside the field's <label>, so stop the click from also focusing the
+  // input or ticking a checkbox.
+  form.addEventListener("click", function (e) {
+    var tip = e.target.closest ? e.target.closest(".app-tip") : null;
+    if (tip) { e.preventDefault(); try { tip.focus(); } catch (err) {} }
   });
 
   // Repeatable rows: add / remove.
@@ -280,7 +516,1988 @@
     }
   });
 
+  /* ── Tag chips (keywords, special features) ──────────────────────────── */
+  function initTagChips(wrap) {
+    var store = wrap.querySelector("[data-tags-store]");
+    var list = wrap.querySelector("[data-tags-list]");
+    var input = wrap.querySelector("[data-tags-input]");
+    if (!store || !list || !input) return;
+    var tags = String(store.value || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+    function sync() { store.value = tags.join(", "); render(); store.dispatchEvent(new Event("input", { bubbles: true })); }
+    function render() {
+      list.innerHTML = "";
+      tags.forEach(function (t, i) {
+        var chip = document.createElement("span");
+        chip.className = "app-tag";
+        chip.appendChild(document.createTextNode(t));
+        var x = document.createElement("button");
+        x.type = "button"; x.className = "app-tag__x"; x.setAttribute("aria-label", "Remove"); x.textContent = "×";
+        x.addEventListener("click", function () { tags.splice(i, 1); sync(); });
+        chip.appendChild(x);
+        list.appendChild(chip);
+      });
+    }
+    function add() {
+      var changed = false;
+      String(input.value || "").split(",").forEach(function (p) {
+        p = p.trim();
+        if (p && tags.indexOf(p) < 0) { tags.push(p); changed = true; }
+      });
+      input.value = "";
+      if (changed) sync();
+    }
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === ",") { e.preventDefault(); add(); }
+      else if (e.key === "Backspace" && !input.value && tags.length) { tags.pop(); sync(); }
+    });
+    input.addEventListener("blur", add);
+    // Replace every chip at once (the variation editor swaps a product's and a
+    // variation's features in and out). Quiet: fires no input event.
+    wrap._tagsSet = function (csv) {
+      tags = String(csv || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+      input.value = "";
+      store.value = tags.join(", ");
+      render();
+    };
+    render();
+  }
+  Array.prototype.forEach.call(form.querySelectorAll("[data-tagchips]"), initTagChips);
+
+  /* ── Trusted badges: 4-cap, "+" create popup, delete, warranty lock ───── */
+  Array.prototype.forEach.call(form.querySelectorAll("[data-badgeset]"), function (set) {
+    var MAX = 4;
+    var list = set.querySelector("[data-badge-list]");
+    var addTile = set.querySelector("[data-badge-add]");
+    var countEl = set.querySelector("[data-badge-count]");
+    var createUrl = set.getAttribute("data-create-url");
+    var deleteUrl = set.getAttribute("data-delete-url");
+    var tokenEl = form.querySelector("input[name=csrfmiddlewaretoken]");
+    function token() { return tokenEl ? tokenEl.value : ""; }
+    function boxes() { return Array.prototype.slice.call(set.querySelectorAll('[data-badge-list] input[type="checkbox"]')); }
+    function norm(s) { return String(s || "").replace(/[-_]/g, " ").replace(/\s+/g, " ").trim().toLowerCase(); }
+
+    // Warranty lock: a ticked warranty badge (e.g. "1-Year Warranty") becomes the
+    // product's warranty, so the Compliance step's warranty field is locked to it
+    // (read-only, still submitted). Unticking restores what was typed before.
+    var warrantyIn = form.querySelector('[name="guarantee_warranty"]');
+    var warrantyHint = null;
+    if (warrantyIn) {
+      warrantyHint = document.createElement("span");
+      warrantyHint.className = "app-field-hint app-warranty-lock";
+      warrantyHint.hidden = true;
+      warrantyIn.insertAdjacentElement("afterend", warrantyHint);
+    }
+    function syncWarranty() {
+      if (!warrantyIn) return;
+      var picked = boxes().filter(function (b) { return b.checked && /warranty/i.test(b.value); })[0];
+      if (picked) {
+        if (!warrantyIn.hasAttribute("data-prev")) warrantyIn.setAttribute("data-prev", warrantyIn.value);
+        var pickedLabel = picked.getAttribute("data-label") || picked.value;
+        warrantyIn.value = pickedLabel;
+        warrantyIn.readOnly = true;
+        warrantyIn.setAttribute("aria-readonly", "true");
+        warrantyIn.classList.add("is-locked");
+        warrantyHint.textContent = "Set by the “" + pickedLabel + "” trust badge. Untick it under Trusted badges to edit.";
+        warrantyHint.hidden = false;
+      } else if (warrantyIn.readOnly) {
+        warrantyIn.readOnly = false;
+        warrantyIn.removeAttribute("aria-readonly");
+        warrantyIn.classList.remove("is-locked");
+        if (warrantyIn.hasAttribute("data-prev")) {
+          warrantyIn.value = warrantyIn.getAttribute("data-prev");
+          warrantyIn.removeAttribute("data-prev");
+        }
+        warrantyHint.hidden = true;
+      }
+    }
+
+    function update() {
+      var bs = boxes();
+      var n = bs.filter(function (b) { return b.checked; }).length;
+      if (countEl) countEl.textContent = n;
+      bs.forEach(function (b) {
+        b.disabled = (!b.checked && n >= MAX);
+        var opt = b.closest(".app-badgeopt"); if (opt) opt.classList.toggle("is-off", b.disabled);
+      });
+      syncWarranty();
+    }
+    set.addEventListener("change", function (e) {
+      if (e.target && e.target.name === "trusted_icons") update();
+    });
+
+    // Delete a store-made badge (× on its tile).
+    function bindDelete(opt) {
+      var del = opt.querySelector("[data-badge-del]");
+      if (!del || del._bound) return;
+      del._bound = true;
+      del.addEventListener("click", function (e) {
+        e.preventDefault(); e.stopPropagation();
+        var cb = opt.querySelector('input[type="checkbox"]');
+        var name = cb ? cb.value : "";
+        if (!name || !window.confirm("Delete the “" + name + "” badge? Products showing it will stop showing it.")) return;
+        del.disabled = true;
+        fetch(deleteUrl, {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token(), "X-Requested-With": "XMLHttpRequest" },
+          body: JSON.stringify({ name: name })
+        }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok && d.ok, d: d }; }); })
+          .then(function (res) {
+            if (!res.ok) { del.disabled = false; window.alert((res.d && res.d.error) || "Couldn't delete the badge."); return; }
+            opt.remove(); update(); form.dispatchEvent(new Event("change", { bubbles: true }));
+          })
+          .catch(function () { del.disabled = false; window.alert("Couldn't delete the badge. Check your connection."); });
+      });
+    }
+    Array.prototype.forEach.call(set.querySelectorAll("[data-badge-opt]"), bindDelete);
+
+    function addOption(badge, checked) {
+      var opt = document.createElement("label");
+      opt.className = "app-badgeopt is-custom";
+      opt.setAttribute("data-badge-opt", "");
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.name = "trusted_icons"; cb.value = badge.name; cb.checked = !!checked;
+      var ico = document.createElement("span"); ico.className = "app-badgeopt__ico"; ico.innerHTML = badge.svg || "";
+      var nm = document.createElement("span"); nm.className = "app-badgeopt__name"; nm.textContent = badge.name;
+      var del = document.createElement("button");
+      del.type = "button"; del.className = "app-badgeopt__del"; del.setAttribute("data-badge-del", "");
+      del.title = "Delete this badge"; del.setAttribute("aria-label", "Delete badge " + badge.name); del.innerHTML = "&times;";
+      opt.appendChild(cb); opt.appendChild(ico); opt.appendChild(nm); opt.appendChild(del);
+      list.insertBefore(opt, addTile);
+      bindDelete(opt);
+      return opt;
+    }
+
+    // ---- Create popup ---------------------------------------------------
+    var dlg = set.querySelector("[data-badge-dlg]");
+    if (dlg && addTile) {
+      var CAT = [], SVGS = {};
+      try { CAT = JSON.parse(document.getElementById("trust-icon-catalog").textContent) || []; } catch (e) {}
+      try { SVGS = JSON.parse(document.getElementById("trust-icon-svgs").textContent) || {}; } catch (e) {}
+      var nameIn = dlg.querySelector("[data-badge-name]");
+      var nameHint = dlg.querySelector("[data-badge-name-hint]");
+      var iconsEl = dlg.querySelector("[data-badge-icons]");
+      var groupsEl = dlg.querySelector("[data-badge-icon-groups]");
+      var searchIn = dlg.querySelector("[data-badge-icon-search]");
+      var pvIco = dlg.querySelector("[data-badge-pv-ico]");
+      var pvName = dlg.querySelector("[data-badge-pv-name]");
+      var errEl = dlg.querySelector("[data-badge-err]");
+      var saveBtn = dlg.querySelector("[data-badge-save]");
+      var st = { icon: "", group: "All", q: "" };
+      var lastFocus = null;
+      var SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+      function iconSvg(key) { return SVGS[key] ? SVG_OPEN + SVGS[key] + "</svg>" : ""; }
+      var groups = ["All"];
+      CAT.forEach(function (c) { if (groups.indexOf(c.group) === -1) groups.push(c.group); });
+
+      // Keep the popup's typing out of the product form's dirty / autosave logic.
+      ["input", "change", "keydown"].forEach(function (ev) {
+        dlg.addEventListener(ev, function (e) {
+          if (ev === "keydown") {
+            if (e.key === "Escape") { e.preventDefault(); close(); }
+            else if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); if (e.target === nameIn) submit(); }
+          }
+          e.stopPropagation();
+        });
+      });
+
+      function words(s) { s = String(s || "").trim(); return s ? s.split(/\s+/).length : 0; }
+      function nameError() {
+        var v = nameIn.value.replace(/\s+/g, " ").trim();
+        if (!v) return "Enter a badge name.";
+        if (words(v) > 2) return "Keep it to 2 words at most.";
+        if (v.length > 24) return "Keep it to 24 characters at most.";
+        var taken = boxes().some(function (b) { return norm(b.value) === norm(v); });
+        if (taken) return "A badge with that name already exists.";
+        return "";
+      }
+      function validate() {
+        var w = words(nameIn.value);
+        nameHint.textContent = w + " / 2 words";
+        nameHint.classList.toggle("is-over", w > 2);
+        pvName.textContent = nameIn.value.trim() || "Badge name";
+        pvIco.innerHTML = st.icon ? iconSvg(st.icon) : "";
+        saveBtn.disabled = !!nameError() || !st.icon;
+      }
+      function renderGroups() {
+        groupsEl.innerHTML = "";
+        groups.forEach(function (g) {
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "app-badgedlg__grp" + (g === st.group && !st.q ? " is-on" : "");
+          b.textContent = g;
+          b.addEventListener("click", function () { st.group = g; st.q = ""; searchIn.value = ""; renderGroups(); renderIcons(); });
+          groupsEl.appendChild(b);
+        });
+      }
+      function renderIcons() {
+        iconsEl.innerHTML = "";
+        var q = st.q.trim().toLowerCase();
+        var items = CAT.filter(function (c) {
+          if (q) return (c.label + " " + c.key + " " + c.group).toLowerCase().indexOf(q) !== -1;
+          return st.group === "All" || c.group === st.group;
+        });
+        if (!items.length) {
+          var none = document.createElement("p"); none.className = "app-dlg__muted"; none.textContent = "No icons match “" + st.q + "”.";
+          iconsEl.appendChild(none); return;
+        }
+        items.forEach(function (c) {
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "app-badgedlg__icon" + (c.key === st.icon ? " is-on" : "");
+          b.setAttribute("role", "option"); b.setAttribute("aria-selected", c.key === st.icon ? "true" : "false");
+          b.title = c.label; b.setAttribute("aria-label", c.label);
+          b.innerHTML = iconSvg(c.key);
+          b.addEventListener("click", function () {
+            st.icon = c.key;
+            Array.prototype.forEach.call(iconsEl.querySelectorAll(".app-badgedlg__icon"), function (x) {
+              x.classList.remove("is-on"); x.setAttribute("aria-selected", "false");
+            });
+            b.classList.add("is-on"); b.setAttribute("aria-selected", "true");
+            validate();
+          });
+          iconsEl.appendChild(b);
+        });
+      }
+      function open() {
+        lastFocus = document.activeElement;
+        st.icon = ""; st.group = "All"; st.q = "";
+        nameIn.value = ""; searchIn.value = ""; errEl.hidden = true;
+        renderGroups(); renderIcons(); validate();
+        dlg.hidden = false;
+        document.body.style.overflow = "hidden";
+        setTimeout(function () { nameIn.focus(); }, 30);
+      }
+      function close() {
+        dlg.hidden = true;
+        document.body.style.overflow = "";
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+      }
+      function submit() {
+        var err = nameError() || (st.icon ? "" : "Choose an icon for the badge.");
+        if (err) { errEl.textContent = err; errEl.hidden = false; return; }
+        errEl.hidden = true;
+        saveBtn.disabled = true;
+        var name = nameIn.value.replace(/\s+/g, " ").trim();
+        fetch(createUrl, {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": token(), "X-Requested-With": "XMLHttpRequest" },
+          body: JSON.stringify({ name: name, icon: st.icon })
+        }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok && d.ok, d: d }; }); })
+          .then(function (res) {
+            if (!res.ok) { errEl.textContent = (res.d && res.d.error) || "Couldn't create the badge."; errEl.hidden = false; validate(); return; }
+            // Tick the new badge if there is room under the 4-badge cap.
+            var room = boxes().filter(function (b) { return b.checked; }).length < MAX;
+            addOption(res.d.badge, room);
+            update();
+            form.dispatchEvent(new Event("change", { bubbles: true }));
+            close();
+          })
+          .catch(function () { errEl.textContent = "Couldn't create the badge. Check your connection."; errEl.hidden = false; validate(); });
+      }
+      addTile.addEventListener("click", open);
+      Array.prototype.forEach.call(dlg.querySelectorAll("[data-badge-close]"), function (b) { b.addEventListener("click", close); });
+      nameIn.addEventListener("input", function () { errEl.hidden = true; validate(); });
+      var sTimer = null;
+      searchIn.addEventListener("input", function () {
+        clearTimeout(sTimer);
+        sTimer = setTimeout(function () { st.q = searchIn.value; renderGroups(); renderIcons(); }, 120);
+      });
+      saveBtn.addEventListener("click", submit);
+    }
+
+    update();
+  });
+
+  /* ── Additional categories: only after a main category is chosen ─────── */
+  // Hidden until the main Category has a value, and hidden altogether when no
+  // other category exists. The main category is removed from the list (and
+  // unticked) so it can't be added twice; the server drops it as well.
+  (function () {
+    var box = form.querySelector("[data-extracats]");
+    var main = form.querySelector('select[name="category"]');
+    if (!box || !main) return;
+    var opts = Array.prototype.slice.call(box.querySelectorAll("[data-cat-id]"));
+    function sync() {
+      var chosen = String(main.value || "");
+      var visible = 0;
+      opts.forEach(function (o) {
+        var isMain = chosen && o.getAttribute("data-cat-id") === chosen;
+        o.hidden = !!isMain;
+        if (isMain) {
+          var cb = o.querySelector('input[type="checkbox"]');
+          if (cb) cb.checked = false;
+        } else {
+          visible++;
+        }
+      });
+      box.hidden = !chosen || visible === 0;
+    }
+    main.addEventListener("change", sync);
+    sync();
+  })();
+
+  /* ── Media blocks: 6 product-image blocks + 1 video block ───────────────── */
+  // Blocks are filled from the store media library modal; the chosen asset id
+  // is what the form submits, and the view copies the file onto the product.
+  // (The direct upload below is only the fallback when the modal is missing.)
+  var owMedia = document.getElementById("ow-media");
+  var libUploadUrl = owMedia ? owMedia.getAttribute("data-upload-url") : "";
+  function uploadToLibrary(file) {
+    var fd = new FormData();
+    fd.append("file", file);
+    var tokenEl = form.querySelector("input[name=csrfmiddlewaretoken]");
+    return fetch(libUploadUrl, {
+      method: "POST", body: fd, credentials: "same-origin",
+      headers: { "X-CSRFToken": tokenEl ? tokenEl.value : "", "X-Requested-With": "XMLHttpRequest" }
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (r.ok && d && d.ok && d.asset && d.asset.id) return d.asset;
+        throw new Error((d && d.error) || "Upload failed. Please try again.");
+      });
+    }, function () { throw new Error("Upload failed. Check your connection and try again."); });
+  }
+  function pickLocal(accept, multiple, cb) {
+    var input = document.createElement("input");
+    input.type = "file"; input.accept = accept; input.multiple = !!multiple;
+    input.addEventListener("change", function () { cb(Array.prototype.slice.call(input.files || [])); });
+    input.click();
+  }
+  // Every add-media block opens the store's media library modal, where the
+  // owner uploads a new file or picks an existing one. Only if the library
+  // script failed to load does it fall back to the plain file picker, so a
+  // click is never dead.
+  function openLibrary(opts, fallback) {
+    if (owMedia && window.OneWoozMedia && typeof window.OneWoozMedia.open === "function") {
+      window.OneWoozMedia.open(opts);
+    } else if (fallback) {
+      fallback();
+    }
+  }
+  // The modal's type filter can be switched, so keep only assets of the kind
+  // the block takes (a video can't become a product image).
+  function pickedAssets(chosen, kind) {
+    return (Array.isArray(chosen) ? chosen : [chosen]).filter(function (a) {
+      return a && a.id && a.url && (!a.kind || a.kind === kind);
+    });
+  }
+  function flashError(el, msg) {
+    if (!el) return;
+    el.textContent = msg; el.hidden = false;
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.hidden = true; }, 6000);
+  }
+  function markFormChanged(el) { el.dispatchEvent(new Event("change", { bubbles: true })); }
+  var ICON_IMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>';
+  var ICON_VID = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="5" width="14" height="14" rx="1"/><path d="M16.5 10l5-3v10l-5-3z"/></svg>';
+
+  function slotRemoveBtn(label, onClick) {
+    var rm = document.createElement("button");
+    rm.type = "button"; rm.className = "app-imgslot__rm";
+    rm.title = label; rm.setAttribute("aria-label", label);
+    rm.textContent = "×";
+    rm.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); onClick(); });
+    return rm;
+  }
+  function emptySlot(icon, text, aria, onClick) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "app-imgslot is-empty";
+    b.setAttribute("aria-label", aria);
+    b.innerHTML = icon + '<span class="app-imgslot__txt">' + esc(text) + "</span>";
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  Array.prototype.forEach.call(form.querySelectorAll("[data-imgslots]"), function (root) {
+    var MAX = parseInt(root.getAttribute("data-max"), 10) || 6;
+    var grid = root.querySelector("[data-imgslots-grid]");
+    var errEl = root.querySelector("[data-imgslots-err]");
+    var libBtn = root.querySelector("[data-imgslots-lib]");
+    if (!grid) return;
+    // One entry per block, by position: null (empty) | {kind: "existing", id, url}
+    // | {kind: "new", assetId, url} | {kind: "pending", preview}. Removing an
+    // image empties its own block; the images after it stay where they are.
+    var slots = [];
+    for (var s0 = 0; s0 < MAX; s0++) slots.push(null);
+    // Saved images go back into the block they were saved in (their order is
+    // the block number). One without a free block of its own (saved before
+    // blocks were kept) takes the first empty block.
+    var unplaced = [];
+    Array.prototype.forEach.call(root.querySelectorAll("[data-imgslots-existing] [data-id]"), function (n) {
+      var item = { kind: "existing", id: n.getAttribute("data-id"), url: n.getAttribute("data-url"), alt: n.getAttribute("data-alt") || "" };
+      var pos = parseInt(n.getAttribute("data-order"), 10);
+      if (pos >= 1 && pos <= MAX && !slots[pos - 1]) slots[pos - 1] = item;
+      else unplaced.push(item);
+    });
+    unplaced.forEach(function (item) {
+      var k = slots.indexOf(null);
+      if (k !== -1) slots[k] = item; else slots.push(item);
+    });
+    function filled() { return slots.filter(Boolean).length; }
+    function room() { return MAX - filled(); }
+    // Empty blocks to fill, starting at the one clicked and wrapping round.
+    function emptyBlocks(from) {
+      var out = [], k;
+      from = from || 0;
+      for (k = from; k < MAX; k++) if (!slots[k]) out.push(k);
+      for (k = 0; k < from; k++) if (!slots[k]) out.push(k);
+      return out.slice(0, Math.max(room(), 0));
+    }
+    function remove(item) {
+      var i = slots.indexOf(item);
+      if (i === -1) return;
+      // Within the six blocks the block just empties; a legacy extra beyond
+      // them simply goes.
+      if (i < MAX) slots[i] = null; else slots.splice(i, 1);
+      if (item.kind === "existing") {
+        var flag = document.createElement("input");
+        flag.type = "hidden"; flag.name = "remove_image"; flag.value = item.id;
+        root.appendChild(flag);
+      }
+      render(); markFormChanged(root);
+    }
+    function render() {
+      grid.innerHTML = "";
+      var mainAt = -1;
+      for (var m = 0; m < slots.length; m++) { if (slots[m] && slots[m].kind !== "pending") { mainAt = m; break; } }
+      slots.forEach(function (item, i) {
+        if (!item) {
+          grid.appendChild(emptySlot(ICON_IMG, i === 0 ? "Main image" : "Add image", "Add product image " + (i + 1), function () {
+            pickFromLibrary(i);
+          }));
+          return;
+        }
+        var box = document.createElement("div");
+        box.className = "app-imgslot is-filled" + (item.kind === "pending" ? " is-uploading" : "");
+        var img = document.createElement("img");
+        img.src = item.kind === "pending" ? item.preview : item.url;
+        img.alt = item.alt || ("Product image " + (i + 1));
+        box.appendChild(img);
+        if (i === mainAt) {
+          var badge = document.createElement("span");
+          badge.className = "app-imgslot__badge"; badge.textContent = "Main";
+          box.appendChild(badge);
+        }
+        // The block each image sits in is posted with it, so it is saved there.
+        if (item.kind === "existing") {
+          var pos = document.createElement("input");
+          pos.type = "hidden"; pos.name = "image_slot"; pos.value = item.id + ":" + (i + 1);
+          box.appendChild(pos);
+        }
+        if (item.kind === "new") {
+          var hid = document.createElement("input");
+          hid.type = "hidden"; hid.name = "media_image"; hid.value = item.assetId;
+          box.appendChild(hid);
+          var at = document.createElement("input");
+          at.type = "hidden"; at.name = "media_image_slot"; at.value = String(i + 1);
+          box.appendChild(at);
+        }
+        if (item.kind !== "pending") box.appendChild(slotRemoveBtn("Remove image", function () { remove(item); }));
+        grid.appendChild(box);
+      });
+      if (libBtn) libBtn.disabled = room() <= 0;
+      // A product saved before the 6-image cap may still hold more; ask the
+      // owner to trim it rather than silently dropping pictures.
+      if (filled() > MAX && errEl) {
+        errEl.textContent = "This product has " + filled() + " images. Up to " + MAX + " are allowed. Remove " + (filled() - MAX) + " to add new ones.";
+        errEl.hidden = false;
+      }
+    }
+    function addFiles(files, from) {
+      files = files.filter(function (f) { return /^image\//.test(f.type || ""); });
+      if (!files.length) return;
+      var targets = emptyBlocks(from);
+      if (files.length > targets.length) flashError(errEl, "Up to " + MAX + " images per product. Extra files were skipped.");
+      files.slice(0, targets.length).forEach(function (file, n) {
+        var item = { kind: "pending", preview: URL.createObjectURL(file) };
+        slots[targets[n]] = item;
+        uploadToLibrary(file).then(function (asset) {
+          item.kind = "new"; item.assetId = asset.id; item.url = asset.url; item.alt = asset.alt || "";
+        }, function (err) {
+          var i = slots.indexOf(item); if (i !== -1) slots[i] = null;
+          flashError(errEl, err.message);
+        }).then(function () {
+          try { URL.revokeObjectURL(item.preview); } catch (e) {}
+          render(); markFormChanged(root);
+        });
+      });
+      render();
+    }
+    // Picked images fill the empty blocks starting at the one clicked.
+    function pickFromLibrary(from) {
+      openLibrary({
+        kind: "image", multiple: true, title: "Select product images",
+        onSelect: function (chosen) {
+          var picked = pickedAssets(chosen, "image");
+          if (!picked.length) return;
+          var targets = emptyBlocks(from);
+          picked.slice(0, targets.length).forEach(function (a, n) {
+            slots[targets[n]] = { kind: "new", assetId: a.id, url: a.url, alt: a.alt || "" };
+          });
+          var skipped = picked.length - Math.min(picked.length, targets.length);
+          if (skipped) flashError(errEl, "Up to " + MAX + " images per product. " + skipped + " not added.");
+          render(); markFormChanged(root);
+        }
+      }, function () {
+        pickLocal("image/*", true, function (files) { addFiles(files, from); });
+      });
+    }
+    if (libBtn) libBtn.addEventListener("click", function () { pickFromLibrary(0); });
+    render();
+  });
+
+  Array.prototype.forEach.call(form.querySelectorAll("[data-vidslot]"), function (root) {
+    var grid = root.querySelector("[data-vidslot-grid]");
+    var linkIn = root.querySelector("[data-vidslot-link]");
+    var idIn = root.querySelector("[data-vidslot-id]");
+    var errEl = root.querySelector("[data-vidslot-err]");
+    var libBtn = root.querySelector("[data-vidslot-lib]");
+    if (!grid || !linkIn || !idIn) return;
+    var pending = null; // local preview URL while uploading
+    function isVideoFile(u) { return /\.(mp4|webm|mov|m4v|ogv|ogg)(\?|#|$)/i.test(String(u || "")); }
+    function clearVideo() {
+      linkIn.value = ""; idIn.value = "";
+      render(); markFormChanged(root);
+    }
+    function render() {
+      grid.innerHTML = "";
+      var url = pending || linkIn.value.trim();
+      if (url) {
+        var box = document.createElement("div");
+        box.className = "app-imgslot app-imgslot--video is-filled" + (pending ? " is-uploading" : "");
+        if (pending || isVideoFile(url)) {
+          var v = document.createElement("video");
+          v.src = url; v.muted = true; v.playsInline = true; v.preload = "metadata"; v.controls = !pending;
+          box.appendChild(v);
+        } else {
+          var a = document.createElement("a");
+          a.className = "app-imgslot__link"; a.href = url; a.target = "_blank"; a.rel = "noopener";
+          a.title = url; a.innerHTML = ICON_VID + "<span>Video link</span>";
+          box.appendChild(a);
+        }
+        if (!pending) box.appendChild(slotRemoveBtn("Remove video", clearVideo));
+        grid.appendChild(box);
+      } else {
+        grid.appendChild(emptySlot(ICON_VID, "Add video", "Add product video", pickFromLibrary));
+      }
+    }
+    function upload(file) {
+      if (!/^video\//.test(file.type || "")) { flashError(errEl, "\"" + file.name + "\" isn't a video."); return; }
+      pending = URL.createObjectURL(file);
+      render();
+      uploadToLibrary(file).then(function (asset) {
+        idIn.value = asset.id; linkIn.value = asset.url;
+      }, function (err) { flashError(errEl, err.message); }).then(function () {
+        try { URL.revokeObjectURL(pending); } catch (e) {}
+        pending = null; render(); markFormChanged(root);
+      });
+    }
+    // A pasted link replaces any uploaded/library pick.
+    linkIn.addEventListener("input", function () { idIn.value = ""; render(); });
+    function pickFromLibrary() {
+      openLibrary({
+        kind: "video", multiple: false, title: "Select product video",
+        onSelect: function (chosen) {
+          var a = pickedAssets(chosen, "video")[0];
+          if (!a) return;
+          idIn.value = a.id; linkIn.value = a.url;
+          render(); markFormChanged(root);
+        }
+      }, function () {
+        pickLocal("video/*", false, function (files) { if (files[0]) upload(files[0]); });
+      });
+    }
+    if (libBtn) libBtn.addEventListener("click", pickFromLibrary);
+    render();
+  });
+
+  // Don't submit while a file is still uploading: its asset id isn't known yet,
+  // so that picture would silently be left off the product.
+  form.addEventListener("submit", function (e) {
+    if (form.querySelector(".app-imgslot.is-uploading, .app-vc__slot.is-uploading")) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      window.alert("Please wait for the uploads to finish, then save.");
+    }
+  }, true);
+
+  /* ── Variant-type editor (name + tag-chip values, auto-combinations) ──── */
+  // regenCombos is wired by the combinations matrix below (D2C and B2B); when it is
+  // set, changing any variation name or value rebuilds the combinations, so
+  // there is no "Generate" button to press.
+  var regenCombos = null, regenTimer = null;
+  // Set by the combinations matrix: what the per-variation editor needs from
+  // its rows (see "Per-variation details" below).
+  var vcApi = null;
+  function scheduleRegen() {
+    if (!regenCombos) return;
+    clearTimeout(regenTimer);
+    regenTimer = setTimeout(regenCombos, 150);
+  }
+  // Variation-type picker: common presets (Size, Color, …) or "Custom…" with a
+  // free-text name. The picker only drives the `variant_type_name` text input,
+  // which is what posts, so the server and the combinations matrix are
+  // unchanged. An existing name is never rewritten on load (combination keys
+  // are built from it): it just selects the matching preset, or "Custom…".
+  var VT_CUSTOM = "__custom__";
+  function vtNorm(v) { return String(v == null ? "" : v).replace(/\s+/g, " ").trim().toLowerCase(); }
+  function vtPreset(sel, name) {
+    var want = vtNorm(name);
+    if (!want) return null;
+    for (var i = 0; i < sel.options.length; i++) {
+      var o = sel.options[i];
+      if (o.value && o.value !== VT_CUSTOM && vtNorm(o.value) === want) return o;
+    }
+    return null;
+  }
+  // A type already used by another row is greyed out in every other picker, so
+  // the same variation can't be added twice.
+  function refreshUsedTypes() {
+    var pickers = form.querySelectorAll("[data-vt-row]");
+    var used = {};
+    Array.prototype.forEach.call(pickers, function (row) {
+      var nm = row.querySelector("[data-vt-name]");
+      var n = nm ? vtNorm(nm.value) : "";
+      if (n) used[n] = (used[n] || 0) + 1;
+    });
+    Array.prototype.forEach.call(pickers, function (row) {
+      var sel = row.querySelector("[data-vt-type]");
+      var nm = row.querySelector("[data-vt-name]");
+      if (!sel || !nm) return;
+      var own = vtNorm(nm.value);
+      Array.prototype.forEach.call(sel.options, function (o) {
+        if (!o.value || o.value === VT_CUSTOM) return;
+        var v = vtNorm(o.value);
+        o.disabled = !!used[v] && v !== own;
+      });
+    });
+  }
+  function initVariantTypePicker(row) {
+    var sel = row.querySelector("[data-vt-type]");
+    var name = row.querySelector("[data-vt-name]");
+    if (!sel || !name || sel._bound) return;
+    sel._bound = true;
+    var tagInput = row.querySelector("[data-tags-input]");
+    var basePh = tagInput ? tagInput.getAttribute("placeholder") : "";
+    function setExample(opt) {
+      if (!tagInput) return;
+      var eg = opt && opt.getAttribute("data-eg");
+      tagInput.setAttribute("placeholder", eg ? "Add value, Enter or comma (" + eg + ")" : basePh);
+    }
+    function showCustom(on) {
+      name.hidden = !on;
+      row.classList.toggle("is-custom", on);
+    }
+    var current = name.value.trim();
+    var match = vtPreset(sel, current);
+    if (match) { sel.value = match.value; showCustom(false); setExample(match); }
+    else if (current) { sel.value = VT_CUSTOM; showCustom(true); }
+    else { sel.value = ""; showCustom(false); }
+
+    sel.addEventListener("change", function () {
+      if (sel.value === VT_CUSTOM) {
+        // Start the custom name blank unless the owner had already typed one.
+        if (vtPreset(sel, name.value)) name.value = "";
+        showCustom(true);
+        setExample(null);
+        name.focus();
+      } else {
+        name.value = sel.value; // "" when "Select type…" is chosen again
+        showCustom(false);
+        setExample(sel.options[sel.selectedIndex]);
+      }
+      // The variant editor listens for `input` to rebuild the combinations.
+      name.dispatchEvent(new Event("input", { bubbles: true }));
+      refreshUsedTypes();
+    });
+    name.addEventListener("input", refreshUsedTypes);
+  }
+  function bindVariantRow(row) {
+    var del = row.querySelector("[data-vt-del]");
+    if (del && !del._bound) {
+      del._bound = true;
+      del.addEventListener("click", function () { row.remove(); refreshUsedTypes(); scheduleRegen(); });
+    }
+    initVariantTypePicker(row);
+  }
+  Array.prototype.forEach.call(form.querySelectorAll("[data-vt]"), function (vt) {
+    var rows = vt.querySelector("[data-vt-rows]");
+    var tmpl = vt.querySelector("[data-vt-tmpl]");
+    var addBtn = vt.querySelector("[data-vt-add]");
+    if (!rows) return;
+    // Existing rows' value widgets were already turned into tag chips by the
+    // generic initTagChips pass above; here we just wire their remove buttons.
+    Array.prototype.forEach.call(rows.querySelectorAll("[data-vt-row]"), bindVariantRow);
+    refreshUsedTypes();
+    if (addBtn && tmpl) {
+      addBtn.addEventListener("click", function () {
+        if (!tmpl.content.firstElementChild) return;
+        var row = tmpl.content.firstElementChild.cloneNode(true);
+        rows.appendChild(row);
+        var chips = row.querySelector("[data-tagchips]");
+        if (chips) initTagChips(chips);
+        bindVariantRow(row);
+        refreshUsedTypes();
+        var pick = row.querySelector("[data-vt-type]"); if (pick) pick.focus();
+        scheduleRegen();
+      });
+    }
+    // Any edit to a name or a value tag rebuilds the combinations.
+    vt.addEventListener("input", scheduleRegen);
+  });
+
+  /* ── Variant combinations matrix ─────────────────────────────────────── */
+  (function () {
+    var hasVarSel = document.getElementById("has_variations");
+    var vcBody = document.getElementById("vc-body");
+    var vcEmpty = document.getElementById("vc-empty");
+    var vcRows = document.getElementById("vc-rows");
+    var vcStore = document.getElementById("variant_combinations");
+    if (!vcRows || !vcStore) return;
+
+    function comboKey(attrs) {
+      return attrs.map(function (a) { return a.name + "-" + a.value; }).join("__");
+    }
+    function variantTypes() {
+      var names = form.querySelectorAll('input[name="variant_type_name"]');
+      var vals = form.querySelectorAll('input[name="variant_type_values"]');
+      var types = [];
+      for (var i = 0; i < names.length; i++) {
+        var nm = String(names[i].value || "").trim();
+        var vv = String(vals[i] ? vals[i].value : "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+        if (nm && vv.length) types.push({ name: nm, values: vv });
+      }
+      return types;
+    }
+    function cartesian(types) {
+      if (!types.length) return [];
+      var out = [[]];
+      types.forEach(function (t) {
+        var next = [];
+        out.forEach(function (combo) {
+          t.values.forEach(function (v) { next.push(combo.concat([{ name: t.name, value: v }])); });
+        });
+        out = next;
+      });
+      return out;
+    }
+    // Per-row image list (URLs). Kept on the row's data-vc-images attribute as
+    // JSON so serialize()/currentData() round-trip it. At most VC_IMG_MAX.
+    var VC_IMG_MAX = 5;
+    var mediaHost = document.getElementById("ow-media");
+    var uploadUrl = mediaHost ? mediaHost.getAttribute("data-upload-url") : "";
+    function csrf() {
+      var el = form.querySelector("input[name=csrfmiddlewaretoken]");
+      return el ? el.value : "";
+    }
+    function rowImages(row) {
+      try { return (JSON.parse(row.getAttribute("data-vc-images") || "[]") || []).slice(0, VC_IMG_MAX); }
+      catch (e) { return []; }
+    }
+    // Image add/remove changes no visible input, so tell the form it is dirty
+    // (that is what reveals the Save button on every step).
+    function imagesChanged() {
+      vcStore.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    function setRowImages(row, urls) {
+      row.setAttribute("data-vc-images", JSON.stringify(urls.slice(0, VC_IMG_MAX)));
+    }
+    // Five fixed boxes in the row: filled ones show the image (× removes it),
+    // uploading ones show a local preview while the file goes up, and the empty
+    // ones are click-to-upload. The picture appears in its box straight away.
+    function renderRowImages(row) {
+      var wrap = row.querySelector("[data-vc-slots]");
+      if (!wrap) return;
+      var urls = rowImages(row);
+      var pending = row._vcPending || [];
+      wrap.innerHTML = "";
+      urls.forEach(function (u, i) {
+        var box = document.createElement("span");
+        box.className = "app-vc__slot is-filled";
+        var img = document.createElement("img");
+        img.src = u; img.alt = "Variation image " + (i + 1);
+        box.appendChild(img);
+        var rm = document.createElement("button");
+        rm.type = "button"; rm.className = "app-vc__slotrm";
+        rm.title = "Remove image"; rm.setAttribute("aria-label", "Remove image");
+        rm.textContent = "×";
+        rm.addEventListener("click", function () {
+          var cur = rowImages(row); cur.splice(i, 1);
+          setRowImages(row, cur);
+          renderRowImages(row); serialize(); imagesChanged();
+        });
+        box.appendChild(rm);
+        wrap.appendChild(box);
+      });
+      pending.forEach(function (p) {
+        var box = document.createElement("span");
+        box.className = "app-vc__slot is-uploading";
+        box.title = "Uploading…";
+        var img = document.createElement("img");
+        img.src = p.preview; img.alt = "";
+        box.appendChild(img);
+        wrap.appendChild(box);
+      });
+      for (var k = urls.length + pending.length; k < VC_IMG_MAX; k++) {
+        var empty = document.createElement("button");
+        empty.type = "button";
+        empty.className = "app-vc__slot is-empty";
+        empty.title = "Add an image for this variation";
+        empty.setAttribute("aria-label", "Add image " + (k + 1) + " for this variation");
+        empty.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>';
+        empty.addEventListener("click", function () { pickRowFromLibrary(row); });
+        wrap.appendChild(empty);
+      }
+      if (vcApi && vcApi.onRowImages) vcApi.onRowImages(row);
+    }
+    function showImgError(row, msg) {
+      var err = row.querySelector("[data-vc-imgerr]");
+      if (!err) return;
+      err.textContent = msg;
+      err.hidden = false;
+      clearTimeout(err._t);
+      err._t = setTimeout(function () { err.hidden = true; }, 5000);
+    }
+    // Empty boxes open the media library; picked images join the row's list.
+    function pickRowFromLibrary(row) {
+      openLibrary({
+        kind: "image", multiple: true, title: "Select variation images",
+        onSelect: function (chosen) {
+          // The combinations may have been rebuilt meanwhile; a detached row
+          // no longer posts, so there is nothing to add it to.
+          if (!document.body.contains(row)) return;
+          var picked = pickedAssets(chosen, "image");
+          if (!picked.length) return;
+          var cur = rowImages(row);
+          var room = VC_IMG_MAX - cur.length - (row._vcPending || []).length;
+          var added = 0;
+          picked.forEach(function (a) {
+            if (added < room && cur.indexOf(a.url) === -1) { cur.push(a.url); added++; }
+          });
+          if (picked.length > Math.max(room, 0)) showImgError(row, "Up to " + VC_IMG_MAX + " images per variation. Extra images were skipped.");
+          setRowImages(row, cur);
+          renderRowImages(row); serialize(); imagesChanged();
+        }
+      }, function () { pickFiles(row); });
+    }
+    function pickFiles(row) {
+      var input = document.createElement("input");
+      input.type = "file"; input.accept = "image/*"; input.multiple = true;
+      input.addEventListener("change", function () {
+        var files = Array.prototype.slice.call(input.files || []);
+        var room = VC_IMG_MAX - rowImages(row).length - (row._vcPending || []).length;
+        if (files.length > room) showImgError(row, "Up to " + VC_IMG_MAX + " images per variation. Extra files were skipped.");
+        files.slice(0, Math.max(room, 0)).forEach(function (f) { uploadImage(row, f); });
+      });
+      input.click();
+    }
+    function uploadImage(row, file) {
+      if (!uploadUrl) { showImgError(row, "Image upload isn't available on this page."); return; }
+      if (!/^image\//.test(file.type || "")) { showImgError(row, "\"" + file.name + "\" isn't an image."); return; }
+      var entry = { preview: URL.createObjectURL(file) };
+      row._vcPending = (row._vcPending || []).concat([entry]);
+      renderRowImages(row);
+      var fd = new FormData();
+      fd.append("file", file);
+      function done() {
+        row._vcPending = (row._vcPending || []).filter(function (p) { return p !== entry; });
+        try { URL.revokeObjectURL(entry.preview); } catch (e) {}
+      }
+      fetch(uploadUrl, {
+        method: "POST", body: fd, credentials: "same-origin",
+        headers: { "X-CSRFToken": csrf(), "X-Requested-With": "XMLHttpRequest" }
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, data: data }; });
+      }).then(function (res) {
+        done();
+        var asset = res.data && res.data.asset;
+        if (res.ok && res.data.ok && asset && asset.url) {
+          var cur = rowImages(row);
+          if (cur.length < VC_IMG_MAX && cur.indexOf(asset.url) === -1) cur.push(asset.url);
+          setRowImages(row, cur);
+        } else {
+          showImgError(row, (res.data && res.data.error) || "Upload failed. Please try again.");
+        }
+        renderRowImages(row); serialize(); imagesChanged();
+      }).catch(function () {
+        done();
+        showImgError(row, "Upload failed. Check your connection and try again.");
+        renderRowImages(row);
+      });
+    }
+
+    // Color swatch: a row whose combination includes a Color/Colour value gets a
+    // colour picker for the dot shown beside that colour on the storefront. It
+    // starts from the value read as a CSS colour name ("Black" -> #000000); the
+    // owner can pick any colour instead. It is saved once picked (or if saved
+    // before), so an unrecognised name never gets a made-up grey.
+    function colorAttr(attrs) {
+      for (var i = 0; i < attrs.length; i++) {
+        var n = String(attrs[i].name || "").trim().toLowerCase();
+        if (n === "color" || n === "colour") return attrs[i];
+      }
+      return null;
+    }
+    var cssProbe = null;
+    try { cssProbe = document.createElement("canvas").getContext("2d"); } catch (e) {}
+    function cssColorHex(name) {
+      if (!cssProbe || !name) return "";
+      // An invalid colour leaves fillStyle untouched, so probe from two
+      // different starting points: a real colour resolves the same both times.
+      cssProbe.fillStyle = "#010203"; cssProbe.fillStyle = String(name);
+      var a = String(cssProbe.fillStyle || "").toLowerCase();
+      cssProbe.fillStyle = "#040506"; cssProbe.fillStyle = String(name);
+      var b = String(cssProbe.fillStyle || "").toLowerCase();
+      return (a === b && /^#[0-9a-f]{6}$/.test(a)) ? a : "";
+    }
+    function normVal(v) { return String(v == null ? "" : v).replace(/\s+/g, " ").trim().toLowerCase(); }
+    function siblingSwatch(colorValue) {
+      var want = normVal(colorValue);
+      var rows = vcRows.querySelectorAll("[data-vc-row][data-vc-swatch]");
+      for (var i = 0; i < rows.length; i++) {
+        var a = [];
+        try { a = JSON.parse(rows[i].getAttribute("data-vc-attrs") || "[]"); } catch (e) {}
+        var c = colorAttr(a);
+        if (c && normVal(c.value) === want) return rows[i].getAttribute("data-vc-swatch");
+      }
+      return "";
+    }
+
+    function appendRow(attrs, data) {
+      data = data || {};
+      var key = comboKey(attrs);
+      var label = attrs.map(function (a) { return a.name + ": " + a.value; }).join(" / ");
+      var images = Array.isArray(data.images) ? data.images.filter(Boolean).slice(0, VC_IMG_MAX) : [];
+      var col = colorAttr(attrs);
+      var savedSwatch = /^#[0-9a-f]{6}$/i.test(String(data.swatch || "")) ? String(data.swatch).toLowerCase() : "";
+      // A newly generated row (e.g. a size just added) inherits the colour
+      // already picked for the same colour value on its sibling rows.
+      if (!savedSwatch && col) {
+        var sib = siblingSwatch(col.value);
+        if (sib) savedSwatch = sib;
+      }
+      var swatchVal = savedSwatch || (col ? cssColorHex(col.value) : "") || "#cccccc";
+      function field(lbl, input, extra) {
+        return '<label class="app-vc__f' + (extra || "") + '"><span class="app-vc__flabel">' + lbl + '</span>' + input + '</label>';
+      }
+      var row = document.createElement("div");
+      row.className = "app-vc__row";
+      row.setAttribute("data-vc-row", "");
+      row.setAttribute("data-vc-key", key);
+      row.setAttribute("data-vc-attrs", JSON.stringify(attrs));
+      row.setAttribute("data-vc-images", JSON.stringify(images));
+      if (savedSwatch) row.setAttribute("data-vc-swatch", savedSwatch);
+      // The variation's own product details (only what differs from the
+      // product). Kept on the row so a rebuild of the combinations keeps it.
+      row._vcProfile = (data.profile && typeof data.profile === "object" && !Array.isArray(data.profile) && Object.keys(data.profile).length) ? data.profile : null;
+      row.innerHTML =
+        '<span class="app-vc__label">' + esc(label) + "</span>" +
+        '<div class="app-vc__fields">' +
+          field("SKU", '<input type="text" class="app-vc__in app-vc__in--sku" data-vc-f="sku" placeholder="SKU-001" value="' + esc(data.sku || "") + '">') +
+          field("MRP", '<input type="number" class="app-vc__in app-vc__in--money" step="0.01" min="0" data-vc-f="mrp" placeholder="0.00" value="' + esc(data.mrp == null ? "" : data.mrp) + '">') +
+          field("Selling price", '<input type="number" class="app-vc__in app-vc__in--money" step="0.01" min="0" data-vc-f="price" placeholder="0.00" value="' + esc(data.price == null ? "" : data.price) + '">') +
+          field("Stock", '<input type="number" class="app-vc__in app-vc__in--stock" step="1" min="0" data-vc-f="inventory" placeholder="0" value="' + esc(data.inventory == null ? "" : data.inventory) + '">') +
+          (col ? field("Color", '<span class="app-vc__swatch"><input type="color" data-vc-f="swatch" value="' + esc(swatchVal) + '" title="Dot colour shown for ' + esc(col.value) + ' on the product page"><span class="app-vc__swatchval" data-vc-swatchval>' + esc(savedSwatch || swatchVal) + '</span></span>') : "") +
+          '<div class="app-vc__f app-vc__f--imgs">' +
+            '<span class="app-vc__flabel">Images <span class="app-vc__fnote">(up to ' + VC_IMG_MAX + ')</span></span>' +
+            '<div class="app-vc__slots" data-vc-slots></div>' +
+          '</div>' +
+        '</div>' +
+        '<p class="app-vc__imgerr" data-vc-imgerr role="alert" hidden></p>' +
+        '<label class="app-vc__default" title="Pre-select this variation on the storefront product page. Only one variation can be the default.">' +
+          '<input type="checkbox" data-vc-f="default"' + (data.default_selected ? ' checked' : '') + '>' +
+          '<span>Default selected</span>' +
+        '</label>';
+      vcRows.appendChild(row);
+      renderRowImages(row);
+      var sw = row.querySelector('[data-vc-f="swatch"]');
+      if (sw && col) sw.addEventListener("input", function () {
+        // One colour, one dot: apply the pick to every combination sharing this
+        // colour value (Black / S, Black / M, ...), since the storefront shows a
+        // single dot per colour.
+        var v = sw.value.toLowerCase();
+        var want = normVal(col.value);
+        Array.prototype.forEach.call(vcRows.querySelectorAll("[data-vc-row]"), function (r) {
+          var a = [];
+          try { a = JSON.parse(r.getAttribute("data-vc-attrs") || "[]"); } catch (e) {}
+          var c = colorAttr(a);
+          if (!c || normVal(c.value) !== want) return;
+          r.setAttribute("data-vc-swatch", v);
+          var inp = r.querySelector('[data-vc-f="swatch"]');
+          if (inp && inp !== sw) inp.value = v;
+          var lbl = r.querySelector("[data-vc-swatchval]");
+          if (lbl) lbl.textContent = v;
+        });
+        serialize();
+      });
+    }
+    /* SKUs: every variation needs its own, distinct from the product SKU and
+       from each other. A blank one is filled server-side with the suggestion
+       shown as its placeholder (suggested_variant_sku in commerce/views/catalog.py). */
+    var skuErr = document.getElementById("vc-sku-err");
+    function baseSku() {
+      var el = form.querySelector('[name="sku"]');
+      return el ? String(el.value || "").trim() : "";
+    }
+    function skuPart(v) { return String(v == null ? "" : v).toUpperCase().replace(/[^A-Z0-9]+/g, "").slice(0, 12); }
+    function suggestSku(attrs) {
+      var base = baseSku();
+      if (!base) return "";
+      var parts = (attrs || []).map(function (a) { return skuPart(a.value); }).filter(Boolean);
+      return [base].concat(parts).join("-").slice(0, 100);
+    }
+    function checkSkus() {
+      // Variations are compared with each other only: once a product has
+      // variations its Pricing-step SKU is ignored, so a variation may reuse it.
+      var seen = {};
+      var rows = Array.prototype.slice.call(vcRows.querySelectorAll("[data-vc-row]"));
+      rows.forEach(function (row) {
+        var inp = row.querySelector('[data-vc-f="sku"]');
+        var attrs = [];
+        try { attrs = JSON.parse(row.getAttribute("data-vc-attrs") || "[]"); } catch (e) {}
+        var sug = suggestSku(attrs);
+        inp.placeholder = sug || "SKU-001";
+        var eff = (inp.value.trim() || sug).toLowerCase();
+        inp.classList.remove("app-invalid");
+        inp.removeAttribute("aria-invalid");
+        if (!eff) return;
+        (seen[eff] = seen[eff] || []).push(inp);
+      });
+      var dups = [];
+      Object.keys(seen).forEach(function (k) {
+        if (seen[k].length < 2) return;
+        dups.push(k.toUpperCase());
+        seen[k].forEach(function (inp) {
+          if (!inp) return;
+          inp.classList.add("app-invalid");
+          inp.setAttribute("aria-invalid", "true");
+        });
+      });
+      if (skuErr) {
+        skuErr.hidden = !dups.length;
+        skuErr.textContent = dups.length
+          ? "Duplicate SKU" + (dups.length > 1 ? "s" : "") + ": " + dups.join(", ") + ". Every variation needs its own SKU."
+          : "";
+      }
+      return dups.length;
+    }
+
+    function serialize() {
+      checkSkus();
+      var arr = [];
+      Array.prototype.forEach.call(vcRows.querySelectorAll("[data-vc-row]"), function (row) {
+        var attrs = [];
+        try { attrs = JSON.parse(row.getAttribute("data-vc-attrs") || "[]"); } catch (e) {}
+        var defBox = row.querySelector('[data-vc-f="default"]');
+        arr.push({
+          key: row.getAttribute("data-vc-key"),
+          attributes: attrs,
+          sku: row.querySelector('[data-vc-f="sku"]').value.trim(),
+          mrp: row.querySelector('[data-vc-f="mrp"]').value.trim(),
+          price: row.querySelector('[data-vc-f="price"]').value.trim(),
+          inventory: row.querySelector('[data-vc-f="inventory"]').value.trim(),
+          default_selected: !!(defBox && defBox.checked),
+          images: rowImages(row),
+          swatch: row.getAttribute("data-vc-swatch") || "",
+          profile: row._vcProfile || undefined
+        });
+      });
+      vcStore.value = JSON.stringify(arr);
+      syncTopStock();
+      if (vcApi && vcApi.onSerialize) vcApi.onSerialize();
+    }
+
+    // With variations on, stock is kept per variation (the Stock column above)
+    // and the product-level "Stock available" box is not used on save. Lock it
+    // and show the live total instead, so a value typed there can't be lost.
+    var topStock = form.querySelector('input[name="inventory"]');
+    var topStockHint = null;
+    var bulkBox = null;
+    if (topStock) {
+      topStockHint = document.createElement("span");
+      topStockHint.className = "app-field-hint";
+      topStockHint.hidden = true;
+      topStock.parentNode.insertBefore(topStockHint, topStock.nextSibling);
+
+      // "Set stock for every variation": the way to change the whole product's
+      // stock when it has variations (0 = the whole product out of stock).
+      // Fills each variation's Stock column; Save stores it.
+      bulkBox = document.createElement("span");
+      bulkBox.className = "app-stockall";
+      bulkBox.hidden = true;
+      var bulkIn = document.createElement("input");
+      bulkIn.type = "number"; bulkIn.min = "0"; bulkIn.step = "1";
+      bulkIn.placeholder = "e.g. 0";
+      bulkIn.setAttribute("aria-label", "Stock for every variation");
+      var bulkBtn = document.createElement("button");
+      bulkBtn.type = "button";
+      bulkBtn.className = "pal-btn pal-btn--ghost pal-btn--sm";
+      bulkBtn.textContent = "Set for all variations";
+      var bulkMsg = document.createElement("span");
+      bulkMsg.className = "app-field-hint";
+      bulkBox.appendChild(bulkIn);
+      bulkBox.appendChild(bulkBtn);
+      bulkBox.appendChild(bulkMsg);
+      topStockHint.parentNode.insertBefore(bulkBox, topStockHint.nextSibling);
+      bulkBtn.addEventListener("click", function () {
+        var raw = String(bulkIn.value || "").trim();
+        var n = parseInt(raw, 10);
+        if (raw === "" || isNaN(n) || n < 0) {
+          bulkMsg.textContent = "Enter a stock number (0 or more).";
+          bulkIn.focus();
+          return;
+        }
+        var cells = vcRows.querySelectorAll('[data-vc-f="inventory"]');
+        Array.prototype.forEach.call(cells, function (c) { c.value = String(n); });
+        serialize();
+        markFormChanged(vcRows);
+        bulkMsg.textContent = n === 0
+          ? "Every variation set to 0: the product shows as out of stock once you save."
+          : "Every variation set to " + n + ". Save to keep it.";
+      });
+    }
+    function syncTopStock() {
+      if (!topStock) return;
+      var on = hasVarSel && hasVarSel.value === "yes" && vcRows.querySelector("[data-vc-row]");
+      if (on) {
+        var total = 0;
+        Array.prototype.forEach.call(vcRows.querySelectorAll('[data-vc-f="inventory"]'), function (i) {
+          total += Math.max(0, parseInt(i.value, 10) || 0);
+        });
+        if (!topStock.disabled) topStock.setAttribute("data-own-value", topStock.value);
+        topStock.disabled = true;
+        topStock.value = String(total);
+        topStockHint.textContent = "This product has variations, so its stock is the total of each variation's stock (Stock column in the Variations step): " + total + ". To change all of them at once, use the box below; 0 marks the whole product out of stock.";
+        topStockHint.hidden = false;
+        if (bulkBox) bulkBox.hidden = false;
+      } else if (topStock.disabled) {
+        topStock.disabled = false;
+        topStock.value = topStock.getAttribute("data-own-value") || "";
+        topStockHint.hidden = true;
+        if (bulkBox) bulkBox.hidden = true;
+      }
+    }
+    function currentData() {
+      var map = {};
+      Array.prototype.forEach.call(vcRows.querySelectorAll("[data-vc-row]"), function (row) {
+        var defBox = row.querySelector('[data-vc-f="default"]');
+        map[row.getAttribute("data-vc-key")] = {
+          sku: row.querySelector('[data-vc-f="sku"]').value,
+          mrp: row.querySelector('[data-vc-f="mrp"]').value,
+          price: row.querySelector('[data-vc-f="price"]').value,
+          inventory: row.querySelector('[data-vc-f="inventory"]').value,
+          default_selected: !!(defBox && defBox.checked),
+          images: rowImages(row),
+          swatch: row.getAttribute("data-vc-swatch") || "",
+          profile: row._vcProfile || null
+        };
+      });
+      return map;
+    }
+    function regenerate() {
+      var keep = currentData();
+      var combos = cartesian(variantTypes());
+      vcRows.innerHTML = "";
+      combos.forEach(function (attrs) { appendRow(attrs, keep[comboKey(attrs)]); });
+      serialize();
+    }
+    function renderFromStore() {
+      var arr = [];
+      try { arr = JSON.parse(vcStore.value || "[]"); } catch (e) { arr = []; }
+      if (!Array.isArray(arr) || !arr.length) { regenerate(); return; }
+      vcRows.innerHTML = "";
+      arr.forEach(function (c) {
+        if (c && c.attributes) appendRow(c.attributes, c);
+      });
+      serialize();
+    }
+    function applyToggle() {
+      var on = hasVarSel && hasVarSel.value === "yes";
+      if (vcBody) vcBody.hidden = !on;
+      if (vcEmpty) vcEmpty.hidden = on;
+      syncTopStock();
+    }
+
+    // While one variation is being edited, the Pricing step's "Stock
+    // available" box is that variation's own stock: unlock it (it normally
+    // shows the locked total) and hide the "set for all" helper. Leaving puts
+    // the product's state back and returns the variation's typed value.
+    function stockVarMode(on, value) {
+      if (!topStock) return "";
+      if (on) {
+        topStock._vmDisabled = topStock.disabled;
+        topStock._vmValue = topStock.value;
+        topStock.disabled = false;
+        topStock.value = value == null ? "" : String(value);
+        if (topStockHint) topStockHint.hidden = true;
+        if (bulkBox) bulkBox.hidden = true;
+        return "";
+      }
+      var typed = topStock.value;
+      topStock.value = topStock._vmValue == null ? "" : topStock._vmValue;
+      topStock.disabled = !!topStock._vmDisabled;
+      syncTopStock();
+      return typed;
+    }
+
+    vcApi = {
+      panel: vcRows.closest(".app-wizpanel"),
+      stockInput: topStock,
+      variationsOn: function () { return !!(hasVarSel && hasVarSel.value === "yes"); },
+      rows: function () { return Array.prototype.slice.call(vcRows.querySelectorAll("[data-vc-row]")); },
+      rowByKey: function (key) {
+        var rs = vcApi.rows();
+        for (var i = 0; i < rs.length; i++) if (rs[i].getAttribute("data-vc-key") === key) return rs[i];
+        return null;
+      },
+      attrs: function (row) {
+        try { return JSON.parse(row.getAttribute("data-vc-attrs") || "[]") || []; } catch (e) { return []; }
+      },
+      input: function (row, f) { return row.querySelector('[data-vc-f="' + f + '"]'); },
+      profile: function (row) { return row._vcProfile || null; },
+      setProfile: function (row, prof) {
+        row._vcProfile = (prof && Object.keys(prof).length) ? prof : null;
+      },
+      rowImages: rowImages,
+      setRowImages: setRowImages,
+      renderRowImages: renderRowImages,
+      pickImages: pickRowFromLibrary,
+      imagesChanged: imagesChanged,
+      serialize: serialize,
+      stockVarMode: stockVarMode,
+      onSerialize: null,
+      onRowImages: null
+    };
+
+    // Expose regeneration to the variant-type editor so combinations rebuild
+    // automatically as the owner adds/edits variations (no button to press).
+    regenCombos = regenerate;
+    vcRows.addEventListener("input", serialize);
+    // "Default selected" is single-choice: ticking one combination unticks the
+    // rest, so at most one variation is ever the storefront default.
+    vcRows.addEventListener("change", function (e) {
+      var box = e.target;
+      if (!box || box.getAttribute("data-vc-f") !== "default") return;
+      if (box.checked) {
+        vcRows.querySelectorAll('[data-vc-f="default"]').forEach(function (other) {
+          if (other !== box) other.checked = false;
+        });
+      }
+      serialize();
+    });
+    if (hasVarSel) {
+      hasVarSel.addEventListener("change", function () {
+        applyToggle();
+        if (hasVarSel.value !== "yes") {
+          vcRows.innerHTML = ""; vcStore.value = "[]";
+          if (vcApi.onSerialize) vcApi.onSerialize();
+        }
+        else if (!vcRows.children.length) regenerate();
+      });
+    }
+    // Clear stale combos on submit when variations are off.
+    form.addEventListener("submit", function (e) {
+      if (!hasVarSel || hasVarSel.value !== "yes") { vcStore.value = "[]"; return; }
+      if (e.defaultPrevented || !checkSkus()) return;
+      // Duplicate SKUs: stay on the form and take the owner to the Variations step.
+      e.preventDefault();
+      var panel = vcRows.closest(".app-wizpanel");
+      var panelsAll = Array.prototype.slice.call(form.querySelectorAll(".app-wizpanel"));
+      var tabsAll = Array.prototype.slice.call(form.querySelectorAll(".app-wiztab"));
+      var idx = panelsAll.indexOf(panel);
+      if (idx >= 0 && panel.hidden && tabsAll[idx]) tabsAll[idx].click();
+      var bad = vcRows.querySelector(".app-invalid");
+      if (bad && bad.focus) bad.focus();
+      if (skuErr && skuErr.scrollIntoView) skuErr.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    // The product SKU feeds every variation's suggested SKU.
+    var skuInput = form.querySelector('[name="sku"]');
+    if (skuInput) skuInput.addEventListener("input", checkSkus);
+
+    applyToggle();
+    if (!hasVarSel || hasVarSel.value === "yes") renderFromStore();
+  })();
+
+  /* ── Per-variation details ("Edit this variation") ─────────────────────
+     A numbered tab per variation combination. Picking one shows its summary
+     and an Edit button; Edit loads that variation into the steps above (the
+     Variations step is hidden meanwhile) so it can be edited as a product of
+     its own: every field of every step (category, badges, tax, return
+     policy, video, details, compliance, dimensions, extras…) plus its own
+     SKU / MRP / price / stock / images. Only "Has variations?" is hidden.
+     Leaving (Done, another tab, or Save) stores only what differs from the
+     main product on that combination's `profile`; the rest keeps following
+     the product. The server whitelists it (commerce/variant_profiles.py) and
+     the storefront swaps these details in when a shopper picks the variation. */
+  (function () {
+    var bar = document.getElementById("vbar");
+    var tabsEl = document.getElementById("vbar-tabs");
+    var card = document.getElementById("vbar-card");
+    var banner = document.getElementById("vmode-banner");
+    if (!bar || !tabsEl || !card || !banner || !vcApi) return;
+
+    function q(name) { return form.querySelector('[name="' + name + '"]'); }
+    function str(v) { return String(v == null ? "" : v); }
+    function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+    function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+
+    // Repeatable lists ([data-rep]) found by the name their rows post.
+    function repFor(name) {
+      var reps = form.querySelectorAll("[data-rep]");
+      for (var i = 0; i < reps.length; i++) {
+        var t = reps[i].querySelector(".app-rep__tmpl");
+        if (t && t.content && t.content.querySelector('input[name="' + name + '"]')) return reps[i];
+      }
+      return null;
+    }
+    function repRead(rep) {
+      return Array.prototype.map.call(rep.querySelectorAll(".app-rep__rows > .app-rep__row"), function (row) {
+        return Array.prototype.map.call(row.querySelectorAll("input"), function (i) { return str(i.value); });
+      });
+    }
+    function repWrite(rep, rows) {
+      var box = rep.querySelector(".app-rep__rows");
+      var tmpl = rep.querySelector(".app-rep__tmpl");
+      if (!box || !tmpl || !tmpl.content.firstElementChild) return;
+      box.innerHTML = "";
+      (rows || []).forEach(function (vals) {
+        var r = tmpl.content.firstElementChild.cloneNode(true);
+        var ins = r.querySelectorAll("input");
+        (vals || []).forEach(function (v, i) { if (ins[i]) ins[i].value = str(v); });
+        box.appendChild(r);
+      });
+      // Lists that open with a few blank inputs (bullet points) keep them when
+      // a variation with fewer values is loaded in.
+      var min = parseInt(rep.getAttribute("data-min-rows") || "0", 10) || 0;
+      while (box.children.length < min) box.appendChild(tmpl.content.firstElementChild.cloneNode(true));
+    }
+
+    /* Field adapters. Each knows how to read its raw state (restored exactly,
+       half-typed rows included), its normalised value (compared with the
+       product's and saved, same shape the server keeps) and how to show one. */
+    var FIELDS = [];
+    function scalar(key, opts) {
+      var el = q(key);
+      if (!el) return;
+      opts = opts || {};
+      function show(v) {
+        el.value = str(v);
+        if (el.tagName === "SELECT") el.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      FIELDS.push({
+        key: key, els: [el],
+        raw: function () { return { value: el.value, prev: el.getAttribute("data-prev") }; },
+        restore: function (r) {
+          show(r && typeof r === "object" ? r.value : r);
+          if (r && typeof r === "object") {
+            if (r.prev == null) el.removeAttribute("data-prev"); else el.setAttribute("data-prev", r.prev);
+          }
+        },
+        val: function () {
+          var s = str(el.value).trim();
+          if (!s) return s;
+          if (opts.decimal) { var n = parseFloat(s); return (isNaN(n) || n < 0) ? "" : n.toFixed(2); }
+          if (opts.int) { var m = parseInt(s, 10); return (isNaN(m) || m < 0) ? "" : String(m); }
+          return s;
+        },
+        apply: function (v) { show(v == null ? "" : v); }
+      });
+    }
+    // A single checkbox (Active, Best seller, GST included).
+    function bool(key) {
+      var el = form.querySelector('input[type="checkbox"][name="' + key + '"]');
+      if (!el) return;
+      FIELDS.push({
+        key: key, els: [el],
+        raw: function () { return el.checked; },
+        restore: function (v) { el.checked = !!v; },
+        val: function () { return !!el.checked; },
+        apply: function (v) { el.checked = !!v; }
+      });
+    }
+    // A group of checkboxes posting one name (trust badges, extra categories).
+    function checks(key, inputName) {
+      function boxes() { return Array.prototype.slice.call(form.querySelectorAll('input[type="checkbox"][name="' + inputName + '"]')); }
+      if (!boxes().length && inputName !== "trusted_icons") return;
+      function set(list) {
+        var want = (Array.isArray(list) ? list : []).map(str);
+        var bs = boxes();
+        bs.forEach(function (b) { b.disabled = false; b.checked = want.indexOf(b.value) !== -1; });
+        // Lets the badge picker re-apply its 4-badge cap and the warranty /
+        // return-policy locks, and the extra categories hide the main one.
+        if (bs[0]) bs[0].dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      FIELDS.push({
+        key: key, els: [], group: inputName,
+        raw: function () { return boxes().filter(function (b) { return b.checked; }).map(function (b) { return b.value; }); },
+        restore: set,
+        val: function () { return boxes().filter(function (b) { return b.checked; }).map(function (b) { return b.value; }); },
+        apply: set
+      });
+    }
+    // Radio buttons (video format).
+    function radio(key) {
+      function radios() { return Array.prototype.slice.call(form.querySelectorAll('input[type="radio"][name="' + key + '"]')); }
+      if (!radios().length) return;
+      function set(v) { radios().forEach(function (r) { r.checked = r.value === str(v); }); }
+      FIELDS.push({
+        key: key, els: [],
+        raw: function () { var c = radios().filter(function (r) { return r.checked; })[0]; return c ? c.value : ""; },
+        restore: set,
+        val: function () { var c = radios().filter(function (r) { return r.checked; })[0]; return c ? c.value : ""; },
+        apply: set
+      });
+    }
+    // The product video: a link, or a library pick (asset id + its URL).
+    function video() {
+      var box = form.querySelector("[data-vidslot]");
+      var link = box && box.querySelector("[data-vidslot-link]");
+      var id = box && box.querySelector("[data-vidslot-id]");
+      if (!link || !id) return;
+      function show(url) { link.value = str(url); link.dispatchEvent(new Event("input", { bubbles: true })); }
+      FIELDS.push({
+        key: "video_link", els: [box],
+        raw: function () { return { link: link.value, id: id.value }; },
+        restore: function (r) { show(r ? r.link : ""); id.value = r ? str(r.id) : ""; },
+        val: function () { return str(link.value).trim(); },
+        apply: function (v) { show(v); }
+      });
+    }
+    function list(key) {
+      var rep = repFor(key);
+      if (!rep) return;
+      FIELDS.push({
+        key: key, els: [rep],
+        raw: function () { return repRead(rep); },
+        restore: function (rows) { repWrite(rep, rows); },
+        val: function () {
+          return repRead(rep).map(function (r) { return str(r[0]).trim(); }).filter(Boolean);
+        },
+        apply: function (v) { repWrite(rep, (Array.isArray(v) ? v : []).map(function (x) { return [x]; })); }
+      });
+    }
+    function pairs(key, inputName, a, b, bRequired) {
+      var rep = repFor(inputName);
+      if (!rep) return;
+      FIELDS.push({
+        key: key, els: [rep],
+        raw: function () { return repRead(rep); },
+        restore: function (rows) { repWrite(rep, rows); },
+        val: function () {
+          var out = [];
+          repRead(rep).forEach(function (r) {
+            var x = str(r[0]).trim(), y = str(r[1]).trim();
+            if (!x || (bRequired && !y)) return;
+            var o = {}; o[a] = x; o[b] = y; out.push(o);
+          });
+          return out;
+        },
+        apply: function (v) {
+          repWrite(rep, (Array.isArray(v) ? v : []).map(function (o) { return [o && o[a], o && o[b]]; }));
+        }
+      });
+    }
+    function tags(key, inputName) {
+      var store = q(inputName || key);
+      if (!store) return;
+      var wrap = store.closest("[data-tagchips]");
+      function put(csv) {
+        if (wrap && wrap._tagsSet) wrap._tagsSet(csv);
+        else store.value = str(csv);
+      }
+      function split(csv) { return str(csv).split(",").map(function (s) { return s.trim(); }).filter(Boolean); }
+      FIELDS.push({
+        key: key, els: [wrap || store],
+        raw: function () { return store.value; },
+        restore: put,
+        val: function () { return split(store.value); },
+        apply: function (v) { put((Array.isArray(v) ? v : []).join(", ")); }
+      });
+    }
+    checks("trusted_icons", "trusted_icons");
+    scalar("category");
+    checks("categories", "categories_multi");
+    scalar("return_type");
+    ["return_days", "replacement_days", "low_stock_threshold"].forEach(function (k) { scalar(k, { int: true }); });
+    ["title", "description", "brand", "currency", "hsn_code", "dangerous_goods",
+     "recommended_use", "material", "colour", "handling_time",
+     "country_of_origin", "guarantee_warranty", "manufacturer_contact", "packer_contact",
+     "importer_contact", "warning", "support_phone", "support_email",
+     "product_unit", "weight_unit", "package_unit", "package_weight_unit"].forEach(function (k) { scalar(k); });
+    ["gst_percentage", "product_length", "product_breadth", "product_height", "weight_value",
+     "package_length", "package_breadth", "package_height", "package_weight_value"].forEach(function (k) { scalar(k, { decimal: true }); });
+    ["is_active", "is_best_seller", "gst_inclusive"].forEach(bool);
+    radio("video_orientation");
+    video();
+    ["bullets", "accessories", "includes"].forEach(list);
+    tags("features");
+    tags("keywords");
+    pairs("faqs", "faq_q", "question", "answer", true);
+    pairs("specifications", "spec_k", "name", "value", false);
+    pairs("extras", "extra_name", "name", "value", false);
+
+    var LABELS = {
+      title: "Title", description: "Description", bullets: "Bullet points", features: "Special features",
+      recommended_use: "Recommended use", material: "Material", colour: "Colour / texture", faqs: "FAQs",
+      handling_time: "Handling time", accessories: "Accessories", includes: "What's in the box",
+      specifications: "Specifications", extras: "Extra sections", country_of_origin: "Country of origin",
+      guarantee_warranty: "Warranty", manufacturer_contact: "Manufacturer", packer_contact: "Packer",
+      importer_contact: "Importer", warning: "Warning", support_phone: "Support phone", support_email: "Support email",
+      trusted_icons: "Trust badges", category: "Category", categories: "Extra categories", return_type: "Return policy",
+      return_days: "Return days", replacement_days: "Replacement days", low_stock_threshold: "Low stock level",
+      brand: "Brand", currency: "Currency", hsn_code: "HSN", dangerous_goods: "Dangerous goods", gst_percentage: "GST %",
+      is_active: "Active", is_best_seller: "Best seller", gst_inclusive: "GST included", video_orientation: "Video format",
+      video_link: "Video", keywords: "Keywords"
+    };
+    function changedLabels(prof) {
+      var out = [], dims = false;
+      Object.keys(prof || {}).forEach(function (k) {
+        if (LABELS[k]) out.push(LABELS[k]);
+        else dims = true;
+      });
+      if (dims) out.push("Dimensions & weight");
+      return out;
+    }
+
+    // The combination row's own SKU / MRP / price, shown in the Pricing step.
+    var DIRECT = ["sku", "mrp", "price"];
+
+    var hasVarSel = document.getElementById("has_variations");
+    var varPanel = vcApi.panel;
+    var varIdx = panels.indexOf(varPanel);
+    var imgBlock = form.querySelector("[data-imgslots]");
+    var editing = null;      // state while a variation is loaded into the form
+    var selected = "";       // the picked tab's key ("" = main product)
+
+    function rowLabel(row) {
+      return vcApi.attrs(row).map(function (a) { return a.name + ": " + a.value; }).join(" / ");
+    }
+    function shortLabel(row) {
+      return vcApi.attrs(row).map(function (a) { return a.value; }).join(" / ");
+    }
+    function rowNo(row) { return vcApi.rows().indexOf(row) + 1; }
+
+    // ── The variation's own images, in place of the product images block ──
+    var vImgs = document.createElement("div");
+    vImgs.className = "app-f--full app-vm-imgs";
+    vImgs.hidden = true;
+    vImgs.innerHTML =
+      '<span class="pal-field__label">Images for this variation <span class="app-field-hint app-vm-inline">(up to 5 · shown when a shopper picks it; leave empty to use the product images)</span></span>' +
+      '<div class="app-vc__slots app-vm-imgs__slots" data-vm-slots></div>' +
+      '<div class="app-vm-inherit" data-vm-inherit hidden>' +
+        '<span class="app-field-hint">No images of its own yet, so this variation shows the product images:</span>' +
+        '<div class="app-vm-inherit__imgs" data-vm-inherit-imgs></div>' +
+      '</div>';
+    if (imgBlock && imgBlock.parentNode) imgBlock.parentNode.insertBefore(vImgs, imgBlock);
+    var vSlots = vImgs.querySelector("[data-vm-slots]");
+    var vInherit = vImgs.querySelector("[data-vm-inherit]");
+    var vInheritImgs = vImgs.querySelector("[data-vm-inherit-imgs]");
+    function productImageUrls() {
+      if (!imgBlock) return [];
+      return Array.prototype.map.call(
+        imgBlock.querySelectorAll(".app-imgslot.is-filled:not(.is-uploading) img"),
+        function (im) { return im.getAttribute("src") || ""; }
+      ).filter(Boolean);
+    }
+    var IMG_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>';
+    function renderVarImages() {
+      if (!editing) return;
+      var row = vcApi.rowByKey(editing.key);
+      if (!row) return;
+      var urls = vcApi.rowImages(row);
+      var pending = row._vcPending || [];
+      vSlots.innerHTML = "";
+      var inherited = (urls.length || pending.length) ? [] : productImageUrls();
+      vInherit.hidden = !inherited.length;
+      vInheritImgs.innerHTML = "";
+      inherited.forEach(function (u, i) {
+        var im = document.createElement("img");
+        im.src = u; im.alt = "Product image " + (i + 1) + " (used by this variation)";
+        vInheritImgs.appendChild(im);
+      });
+      urls.forEach(function (u, i) {
+        var box = document.createElement("span");
+        box.className = "app-vc__slot is-filled";
+        var img = document.createElement("img");
+        img.src = u; img.alt = "Variation image " + (i + 1);
+        box.appendChild(img);
+        var rm = document.createElement("button");
+        rm.type = "button"; rm.className = "app-vc__slotrm";
+        rm.title = "Remove image"; rm.setAttribute("aria-label", "Remove image");
+        rm.textContent = "×";
+        rm.addEventListener("click", function () {
+          var cur = vcApi.rowImages(row); cur.splice(i, 1);
+          vcApi.setRowImages(row, cur);
+          vcApi.renderRowImages(row); vcApi.serialize(); vcApi.imagesChanged();
+        });
+        box.appendChild(rm);
+        vSlots.appendChild(box);
+      });
+      pending.forEach(function (p) {
+        var box = document.createElement("span");
+        box.className = "app-vc__slot is-uploading";
+        var img = document.createElement("img");
+        img.src = p.preview; img.alt = "";
+        box.appendChild(img);
+        vSlots.appendChild(box);
+      });
+      for (var k = urls.length + pending.length; k < 5; k++) {
+        var empty = document.createElement("button");
+        empty.type = "button";
+        empty.className = "app-vc__slot is-empty";
+        empty.title = "Add an image for this variation";
+        empty.setAttribute("aria-label", "Add image " + (k + 1) + " for this variation");
+        empty.innerHTML = IMG_ICON;
+        empty.addEventListener("click", function () { vcApi.pickImages(row); });
+        vSlots.appendChild(empty);
+      }
+    }
+    vcApi.onRowImages = function (row) {
+      if (editing && row.getAttribute("data-vc-key") === editing.key) renderVarImages();
+    };
+
+    // ── While a variation is open: every field is its own, except "Has
+    //    variations?" (a product-wide switch), which is hidden; the product
+    //    image blocks give way to the variation's own images. ──
+    var hasVarField = hasVarSel ? (hasVarSel.closest(".pal-field") || hasVarSel.parentNode) : null;
+    function hideProductOnly() {
+      if (hasVarField) hasVarField.hidden = true;
+    }
+    function showProductOnly() {
+      if (hasVarField) hasVarField.hidden = false;
+    }
+
+    // ── Entering / leaving a variation ──
+    function enter(key) {
+      var row = vcApi.rowByKey(key);
+      if (!row) return;
+      if (editing) leave();
+      var wasReady = ready;
+      ready = false; // loading values is not an edit
+      var fields = FIELDS.slice();
+      var st = { key: key, fields: fields, main: {}, mainVal: {}, direct: {}, startProfile: JSON.stringify(vcApi.profile(row) || null) };
+      editing = st;
+      fields.forEach(function (f) { st.main[f.key] = f.raw(); st.mainVal[f.key] = f.val(); });
+      var prof = vcApi.profile(row) || {};
+      fields.forEach(function (f) { f.apply(has(prof, f.key) ? prof[f.key] : st.mainVal[f.key]); });
+
+      // SKU / MRP / price / stock are the variation row's own values; blank
+      // MRP / price fall back to the product's (the placeholder says so).
+      DIRECT.forEach(function (n) {
+        var el = q(n), src = vcApi.input(row, n);
+        if (!el || !src) return;
+        st.direct[n] = { value: el.value, placeholder: el.placeholder, required: el.required, prefilled: false };
+        // MRP / price left blank on the variation follow the product's, so
+        // the product's value is shown (pre-filled). It stays inherited
+        // unless it is changed here. The SKU is always the variation's own.
+        if (n !== "sku" && !String(src.value || "").trim() && String(el.value || "").trim()) {
+          st.direct[n].prefilled = true;
+        } else {
+          el.value = src.value;
+        }
+        if (n === "sku") el.placeholder = src.placeholder || "";
+        else el.placeholder = st.direct[n].value ? ("Product " + (n === "mrp" ? "MRP" : "price") + ": " + st.direct[n].value) : "";
+        el.required = false;
+      });
+      var inv = vcApi.input(row, "inventory");
+      vcApi.stockVarMode(true, inv ? inv.value : "");
+
+      if (imgBlock) imgBlock.hidden = true;
+      vImgs.hidden = false;
+      renderVarImages();
+      hideProductOnly();
+      form.classList.add("is-varmode");
+      if (tabs[varIdx]) tabs[varIdx].hidden = true;
+      // Back to the top of the form, on the step the owner was on (the
+      // Variations step itself is hidden now).
+      show(current === varIdx ? 0 : current);
+      selected = key;
+      render();
+      ready = wasReady;
+    }
+
+    // Store what differs from the product, then put the product back.
+    function leave() {
+      if (!editing) return;
+      var st = editing;
+      var wasReady = ready;
+      ready = false;
+      var row = vcApi.rowByKey(st.key);
+      if (row) {
+        var old = vcApi.profile(row) || {};
+        var prof = {};
+        var active = {};
+        st.fields.forEach(function (f) {
+          active[f.key] = true;
+          var v = f.val();
+          // The product's title / description can't be blank: a blank one
+          // here means "use the product's".
+          if ((f.key === "title" || f.key === "description") && !v) return;
+          if (!same(v, st.mainVal[f.key])) prof[f.key] = v;
+        });
+        // Keep overrides of fields that couldn't be edited this time (e.g. the
+        // warranty while a warranty badge locks it).
+        Object.keys(old).forEach(function (k) { if (!active[k]) prof[k] = old[k]; });
+        vcApi.setProfile(row, prof);
+        DIRECT.forEach(function (n) {
+          var el = q(n), dst = vcApi.input(row, n), d = st.direct[n];
+          if (!el || !dst) return;
+          // Untouched pre-filled product value: keep following the product.
+          var same = d && d.prefilled && String(el.value).trim() === String(d.value).trim();
+          dst.value = same ? "" : el.value;
+        });
+        var inv = vcApi.input(row, "inventory");
+        var typed = vcApi.stockVarMode(false);
+        if (inv) inv.value = typed;
+      } else {
+        vcApi.stockVarMode(false);
+      }
+      st.fields.forEach(function (f) { f.restore(st.main[f.key]); });
+      DIRECT.forEach(function (n) {
+        var el = q(n), d = st.direct[n];
+        if (!el || !d) return;
+        el.value = d.value; el.placeholder = d.placeholder; el.required = d.required;
+      });
+      showProductOnly();
+      vImgs.hidden = true;
+      if (imgBlock) imgBlock.hidden = false;
+      form.classList.remove("is-varmode");
+      if (tabs[varIdx]) tabs[varIdx].hidden = false;
+      editing = null;
+      ready = wasReady;
+      vcApi.serialize(); // re-renders the tabs too (onSerialize)
+      if (row && JSON.stringify(vcApi.profile(row) || null) !== st.startProfile) markDirty();
+    }
+
+    function reset(key) {
+      var row = vcApi.rowByKey(key);
+      if (!row) return;
+      if (!window.confirm("Reset “" + rowLabel(row) + "” to the main product's details? Its own SKU, price, stock and images stay as they are.")) return;
+      if (editing && editing.key === key) {
+        var wasReady = ready;
+        ready = false;
+        editing.fields.forEach(function (f) { f.apply(editing.mainVal[f.key]); });
+        ready = wasReady;
+      }
+      vcApi.setProfile(row, null);
+      vcApi.serialize();
+      markDirty();
+    }
+
+    // ── Tabs, summary card and editing banner ──
+    function button(cls, text, onClick) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = cls; b.textContent = text;
+      b.addEventListener("click", onClick);
+      return b;
+    }
+    function tab(n, text, title, key, customised) {
+      var t = document.createElement("button");
+      t.type = "button";
+      var on = selected === key;
+      t.className = "app-vtab" + (on ? " is-active" : "") + (editing && editing.key === key ? " is-editing" : "");
+      t.setAttribute("role", "tab");
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.title = title;
+      var num = document.createElement("span");
+      num.className = "app-vtab__n"; num.textContent = n;
+      var lbl = document.createElement("span");
+      lbl.className = "app-vtab__l"; lbl.textContent = text;
+      t.appendChild(num); t.appendChild(lbl);
+      if (customised) {
+        var dot = document.createElement("span");
+        dot.className = "app-vtab__dot";
+        dot.title = "Has its own details";
+        t.appendChild(dot);
+      }
+      t.addEventListener("click", function () {
+        if (editing && editing.key !== key) leave();
+        selected = key;
+        render();
+      });
+      return t;
+    }
+    function render() {
+      var rows = vcApi.variationsOn() ? vcApi.rows() : [];
+      if (!rows.length) {
+        if (editing) leave();
+        bar.hidden = true; banner.hidden = true; selected = "";
+        return;
+      }
+      bar.hidden = false;
+      if (selected && !vcApi.rowByKey(selected)) selected = "";
+      tabsEl.innerHTML = "";
+      var main = tab("M", "Main product", "The product's own details, used by every variation", "", false);
+      main.classList.add("app-vtab--main");
+      tabsEl.appendChild(main);
+      rows.forEach(function (row, i) {
+        var key = row.getAttribute("data-vc-key");
+        tabsEl.appendChild(tab(String(i + 1), shortLabel(row), rowLabel(row), key, !!vcApi.profile(row)));
+      });
+
+      // Summary + Edit for a picked (not yet edited) variation.
+      card.innerHTML = "";
+      var row = selected ? vcApi.rowByKey(selected) : null;
+      card.hidden = !row || !!(editing && editing.key === selected);
+      if (row && !card.hidden) {
+        var prof = vcApi.profile(row);
+        var info = document.createElement("div");
+        info.className = "app-vbar__info";
+        var h = document.createElement("p");
+        h.className = "app-vbar__title";
+        h.textContent = "Variation " + rowNo(row) + " · " + rowLabel(row);
+        info.appendChild(h);
+        var meta = [];
+        var sku = vcApi.input(row, "sku"), price = vcApi.input(row, "price"), inv = vcApi.input(row, "inventory");
+        var skuV = sku ? (sku.value.trim() || sku.placeholder) : "";
+        if (skuV && skuV !== "SKU-001") meta.push("SKU " + skuV);
+        if (price && price.value.trim()) meta.push("Price " + price.value.trim());
+        else if (price) meta.push("Price " + (str((q("price") || {}).value).trim() || "-") + " (main product's)");
+        if (inv) meta.push("Stock " + (inv.value.trim() || "0"));
+        var m = document.createElement("p");
+        m.className = "app-field-hint";
+        var changed = changedLabels(prof);
+        m.textContent = (meta.length ? meta.join(" · ") + ". " : "") +
+          (changed.length ? "Own values: " + changed.join(", ") + ". Everything else follows the main product." : "Every detail follows the main product.");
+        info.appendChild(m);
+        card.appendChild(info);
+        var acts = document.createElement("div");
+        acts.className = "app-vbar__acts";
+        acts.appendChild(button("pal-btn", "Edit this variation", function () { enter(selected); }));
+        if (prof) acts.appendChild(button("pal-btn pal-btn--ghost", "Reset to main product", function () { reset(selected); }));
+        card.appendChild(acts);
+      }
+
+      // Banner while a variation is loaded into the form.
+      banner.innerHTML = "";
+      banner.hidden = !editing;
+      if (editing) {
+        var erow = vcApi.rowByKey(editing.key);
+        var txt = document.createElement("div");
+        txt.className = "app-vmode__txt";
+        var t1 = document.createElement("p");
+        t1.className = "app-vmode__title";
+        t1.textContent = "Editing variation " + (erow ? rowNo(erow) + " · " + rowLabel(erow) : "");
+        var t2 = document.createElement("p");
+        t2.className = "app-field-hint";
+        t2.textContent = "Every field is pre-filled with the main product's value. Whatever you change here is saved for this variation only and shown when shoppers pick it; whatever you leave as it is keeps following the main product (and changes when the main product changes). Unticking Active stops this variation being sold.";
+        txt.appendChild(t1); txt.appendChild(t2);
+        banner.appendChild(txt);
+        var acts2 = document.createElement("div");
+        acts2.className = "app-vbar__acts";
+        acts2.appendChild(button("pal-btn", "Done", function () { leave(); selected = ""; render(); }));
+        acts2.appendChild(button("pal-btn pal-btn--ghost", "Reset to main product", function () { if (editing) reset(editing.key); }));
+        banner.appendChild(acts2);
+      }
+    }
+
+    var renderQueued = false;
+    vcApi.onSerialize = function () {
+      if (renderQueued) return;
+      renderQueued = true;
+      setTimeout(function () { renderQueued = false; render(); }, 0);
+    };
+
+    // Saving while a variation is open stores it first (capture phase, so it
+    // runs before the step validation and the SKU check read the form).
+    form.addEventListener("submit", function () {
+      if (editing) { leave(); selected = ""; }
+    }, true);
+
+    render();
+  })();
+
   show(0);
+})();
+</script>
+<script nonce="{{ csp_nonce }}">
+// Return policy: returnable or replacement-only (non-returnable is no longer
+// offered). The window (days) follows the policy; the server enforces the same
+// rules (ProductForm.clean), so the product page, its return-policy badge and
+// its schema always agree. A ticked "Returnable" / "Replacement Only" trust
+// badge locks the policy to match (the two badges exclude each other).
+(function () {
+  var form = document.getElementById("product-form");
+  if (!form) return;
+  var typeSel = form.querySelector('[name="return_type"]');
+  var daysIn = form.querySelector('[name="return_days"]');
+  if (!typeSel || !daysIn) return;
+  var daysWrap = daysIn.closest(".pal-field");
+  // The separate replacement window belonged to non-returnable products only.
+  var repIn = form.querySelector('[name="replacement_days"]');
+  var repWrap = repIn ? repIn.closest(".pal-field") : null;
+  if (repIn) {
+    if (repWrap) repWrap.style.display = "none";
+    repIn.required = false;
+    repIn.disabled = true;
+  }
+  var daysLabel = daysWrap ? daysWrap.querySelector(".pal-field__label") : null;
+  var lastTyped = daysIn.value && daysIn.value !== "0" ? daysIn.value : "";
+  function setLabel(text) { if (daysLabel && daysLabel.firstChild) daysLabel.firstChild.nodeValue = text; }
+
+  var lockHint = document.createElement("span");
+  lockHint.className = "app-field-hint app-warranty-lock";
+  lockHint.hidden = true;
+  typeSel.insertAdjacentElement("afterend", lockHint);
+  function policyBoxes() {
+    return Array.prototype.slice.call(form.querySelectorAll('input[name="trusted_icons"][data-return-policy]'));
+  }
+  function badgePolicy() {
+    var on = policyBoxes().filter(function (b) { return b.checked; })[0];
+    return on ? { rt: on.getAttribute("data-return-policy"), label: on.getAttribute("data-label") || on.value } : null;
+  }
+
+  function sync() {
+    var locked = badgePolicy();
+    if (locked) {
+      if (!typeSel.hasAttribute("data-prev")) typeSel.setAttribute("data-prev", typeSel.value);
+      typeSel.value = locked.rt;
+      typeSel.classList.add("is-locked");
+      typeSel.setAttribute("aria-readonly", "true");
+      lockHint.textContent = "Set by the “" + locked.label + "” trust badge. Untick it under Trusted badges to change the return policy.";
+      lockHint.hidden = false;
+    } else if (typeSel.classList.contains("is-locked")) {
+      typeSel.classList.remove("is-locked");
+      typeSel.removeAttribute("aria-readonly");
+      if (typeSel.hasAttribute("data-prev")) { typeSel.value = typeSel.getAttribute("data-prev"); typeSel.removeAttribute("data-prev"); }
+      lockHint.hidden = true;
+    }
+    var rt = typeSel.value;
+    if (rt === "returnable" || rt === "replacement") {
+      daysIn.readOnly = false;
+      daysIn.classList.remove("is-locked");
+      if (daysIn.value === "0") daysIn.value = lastTyped;
+      daysIn.required = true;
+      setLabel((rt === "replacement" ? "Replacement days" : "Return days") + " ");
+      if (daysWrap) daysWrap.style.display = "";
+    } else {
+      daysIn.readOnly = false;
+      daysIn.required = false;
+      daysIn.classList.remove("is-locked");
+      daysIn.value = "";
+      if (daysWrap) daysWrap.style.display = "none";
+    }
+  }
+
+  // A badge-locked select can't be changed by hand; snap it back.
+  typeSel.addEventListener("change", function () {
+    var locked = badgePolicy();
+    if (locked) typeSel.value = locked.rt;
+    sync();
+  });
+  daysIn.addEventListener("input", function () { if (!daysIn.readOnly) lastTyped = daysIn.value; });
+  form.addEventListener("change", function (e) {
+    var t = e.target;
+    if (!t || t.name !== "trusted_icons") return;
+    // "Returnable" and "Replacement Only" exclude each other.
+    if (t.checked && t.hasAttribute("data-return-policy")) {
+      policyBoxes().forEach(function (b) {
+        if (b !== t && b.checked) {
+          b.checked = false;
+          b.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
+    }
+    sync();
+  });
+  sync();
 })();
 </script>
 {% endblock %}

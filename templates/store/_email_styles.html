@@ -1,0 +1,246 @@
+{% comment %}
+Shared design for every Email-marketing page, so they read as one carefully
+structured surface  modelled on the content editor's Home-sections tab
+(templates/store/editor.html): bordered white cards on the grey page, a 12-column
+field grid, mono uppercase labels, squared hairline inputs, the repeatable
+item-card + dashed "add another" pattern (the reviews / testimonials feel), and a
+sticky two-pane composer. Included inside a page that provides `csp_nonce`.
+Everything is namespaced under `.emx`.
+{% endcomment %}
+<style nonce="{{ csp_nonce }}">
+  .emx { --emx-gap: 1.15rem; }
+
+  /* ── Section cards ─────────────────────────────────────────────── */
+  .emx-card { border: 1px solid var(--pal-line); background: var(--pal-panel, #fff); }
+  .emx-card + .emx-card { margin-top: var(--emx-gap); }
+  .emx-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem; border-bottom: 1px solid var(--pal-line); }
+  .emx-card__titles { min-width: 0; }
+  .emx-card__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.12rem; letter-spacing: -0.01em; color: var(--pal-ink); }
+  .emx-card__hint { font-size: 0.85rem; line-height: 1.5; color: var(--pal-muted); margin-top: 0.25rem; max-width: 62ch; }
+  .emx-card__body { padding: 1.2rem; }
+
+  /* ── Field grid (12 columns, like the editor) ──────────────────── */
+  .emx-fields { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 1.15rem; row-gap: 1.2rem; align-items: start; }
+  .emx-field { grid-column: 1 / -1; display: flex; flex-direction: column; min-width: 0; }
+  .emx-field--6 { grid-column: span 6; }
+  .emx-field--5 { grid-column: span 5; }
+  .emx-field--4 { grid-column: span 4; }
+  .emx-field--3 { grid-column: span 3; }
+  .emx-field--8 { grid-column: span 8; }
+  @media (max-width: 52rem) { .emx-fields, .emx-item__body { grid-template-columns: 1fr; } .emx-field { grid-column: 1 / -1 !important; } }
+  .emx-label { display: block; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 0.45rem; }
+
+  .emx-input, .emx-textarea, .emx-select {
+    width: 100%; font: inherit; font-size: 0.85rem; color: var(--pal-ink);
+    background: var(--pal-panel, #fff); border: 1px solid var(--pal-line); border-radius: 0;
+    padding: 0.55rem 0.8rem; transition: border-color 140ms ease, box-shadow 140ms ease; }
+  .emx-input::placeholder, .emx-textarea::placeholder { color: var(--pal-faint); }
+  .emx-input:focus, .emx-textarea:focus, .emx-select:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .emx-textarea { min-height: 7rem; resize: vertical; line-height: 1.6; }
+  .emx-textarea--code { font-family: var(--pal-font-mono); font-size: 0.8rem; min-height: 15rem; }
+  .emx-select { appearance: none; cursor: pointer; padding-right: 2rem;
+    background-image: linear-gradient(45deg, transparent 50%, var(--pal-muted) 50%), linear-gradient(135deg, var(--pal-muted) 50%, transparent 50%);
+    background-position: calc(100% - 1rem) 55%, calc(100% - 0.65rem) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+  .emx-help { font-size: 0.78rem; line-height: 1.5; color: var(--pal-faint); margin-top: 0.4rem; }
+  .emx-help a, .emx-link { color: var(--pal-accent); border-bottom: 1px solid currentColor; text-decoration: none; }
+
+  /* ── Repeatable item cards (the reviews / testimonials pattern) ── */
+  .emx-list { display: flex; flex-direction: column; gap: 0.9rem; }
+  .emx-item { border: 1px solid var(--pal-line); background: var(--pal-panel, #fff); }
+  .emx-item__head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.55rem 0.55rem 0.55rem 0.95rem; border-bottom: 1px solid var(--pal-line); background: var(--pal-paper-2, #ececea); }
+  .emx-item__title { font-family: var(--pal-font-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
+  .emx-item__rm { border: 0; background: none; color: var(--pal-faint); cursor: pointer; padding: 0.3rem 0.5rem; display: inline-flex; align-items: center; }
+  .emx-item__rm:hover { color: #b42318; }
+  .emx-item__rm svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .emx-item__body { padding: 1rem; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 1rem; row-gap: 1.15rem; align-items: start; }
+
+  .emx-add { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.22rem; cursor: pointer;
+    border: 1px dashed var(--pal-line); background: none; border-radius: 0; padding: 0.9rem; margin-top: 0.2rem;
+    transition: border-color 140ms ease, background 140ms ease; }
+  .emx-add:hover { border-color: var(--pal-accent); background: rgb(75 43 245 / 0.03); }
+  .emx-add__main { font-family: var(--pal-font-mono); font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-accent); display: inline-flex; align-items: center; gap: 0.4rem; }
+  .emx-add__main svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .emx-add__sub { font-size: 0.74rem; color: var(--pal-faint); text-align: center; }
+
+  /* ── Checkboxes / small controls ───────────────────────────────── */
+  .emx-check { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; padding: 0.2rem 0; }
+  .emx-check input { width: 1.05rem; height: 1.05rem; accent-color: var(--pal-accent); flex: none; }
+  .emx-check__label { font-size: 0.9rem; color: var(--pal-ink); }
+  .emx-checklist { border: 1px solid var(--pal-line-soft); max-height: 15rem; overflow: auto; padding: 0.4rem 0.75rem; }
+
+  /* ── Buttons row ───────────────────────────────────────────────── */
+  .emx-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .emx-actions--stack { flex-direction: column; }
+  .emx-actions--stack .pal-btn { width: 100%; justify-content: center; }
+
+  /* ── Inline row (input + button) ───────────────────────────────── */
+  .emx-inline { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  .emx-inline .emx-input { flex: 1; min-width: 12rem; }
+  .emx-inline .emx-select { flex: 1; min-width: 12rem; }
+
+  /* ── Email-design picker (selectable template rows, name + preview) ── */
+  .emx-tpl-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .emx-tpl { display: flex; align-items: stretch; gap: 0.4rem; }
+  .emx-tpl.is-busy { opacity: 0.6; pointer-events: none; }
+  .emx-tpl__pick { flex: 1; display: flex; min-width: 0; cursor: pointer; }
+  .emx-tpl__radio { position: absolute; opacity: 0; pointer-events: none; }
+  .emx-tpl__box { flex: 1; display: flex; align-items: center; gap: 0.6rem; min-width: 0;
+    border: 1px solid var(--pal-line); padding: 0.7rem 0.85rem;
+    transition: border-color 140ms ease, background 140ms ease; }
+  .emx-tpl__pick:hover .emx-tpl__box { border-color: var(--pal-muted); }
+  .emx-tpl__tick { flex: none; width: 1rem; height: 1rem; border: 1px solid var(--pal-line);
+    border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+  .emx-tpl__tick::after { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: transparent; transition: background 140ms ease; }
+  .emx-tpl__name { min-width: 0; font-size: 0.9rem; font-weight: 500; color: var(--pal-ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .emx-tpl__radio:checked + .emx-tpl__box { border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); background: rgb(75 43 245 / 0.03); }
+  .emx-tpl__radio:checked + .emx-tpl__box .emx-tpl__tick { border-color: var(--pal-accent); }
+  .emx-tpl__radio:checked + .emx-tpl__box .emx-tpl__tick::after { background: var(--pal-accent); }
+  .emx-tpl__desc { min-width: 0; margin-left: auto; font-size: 0.78rem; color: var(--pal-faint);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 40rem) { .emx-tpl__desc { display: none; } }
+
+  /* ── Built-in promo design: field editor + live preview ───────────── */
+  #emc-promo .emx-card__body { container-type: inline-size; }
+  .emx-promo { display: grid; gap: 1.5rem; align-items: start; }
+  @container (min-width: 50rem) {
+    .emx-promo { grid-template-columns: minmax(0, 1fr) minmax(17rem, 24rem); }
+    .emx-promo__preview { position: sticky; top: 1rem; }
+    .emx-promo .emx-fields { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  }
+  .emx-promo__fields { min-width: 0; }
+  .emx-promo__sec { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--pal-accent); padding-top: 1.1rem; margin: 1.3rem 0 0.9rem; border-top: 1px solid var(--pal-line-soft); }
+  .emx-promo__sec:first-child { padding-top: 0; margin-top: 0; border-top: 0; }
+  .emx-promo__note { margin-top: 0; }
+  .emx-promo__img { display: flex; gap: 0.5rem; align-items: stretch; }
+  .emx-promo__img .emx-input { flex: 1; min-width: 0; }
+  .emx-promo__thumb { flex: none; width: 2.6rem; border: 1px solid var(--pal-line); background: var(--pal-paper-2, #ececea) center / cover no-repeat; }
+  @media (max-width: 40rem) { .emx-promo__img { flex-wrap: wrap; } }
+  .emx-promo__hls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
+  @container (max-width: 40rem) { .emx-promo__hls { grid-template-columns: 1fr; } }
+  .emx-promo__hl { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; border: 1px solid var(--pal-line-soft); padding: 0.75rem; }
+  .emx-promo__hl .emx-label { margin-bottom: 0; }
+  .emx-promo__icons { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .emx-promo__icon { cursor: pointer; }
+  .emx-promo__icon input { position: absolute; opacity: 0; pointer-events: none; }
+  .emx-promo__icon img { display: block; box-sizing: content-box; padding: 0.3rem; border: 1px solid var(--pal-line); background: #fff; transition: border-color 140ms ease; }
+  .emx-promo__icon:hover img { border-color: var(--pal-muted); }
+  .emx-promo__icon input:checked + img { border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .emx-promo__icon input:focus-visible + img { outline: 2px solid var(--pal-accent); outline-offset: 1px; }
+  .emx-promo__preview { min-width: 0; }
+  .emx-promo__bar { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .emx-promo__bar-label { margin: 0; }
+  .emx-promo__toggle { display: inline-flex; border: 1px solid var(--pal-line); }
+  .emx-promo__toggle button { font: inherit; font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.35rem 0.6rem; border: 0; background: var(--pal-panel, #fff); color: var(--pal-muted); cursor: pointer; }
+  .emx-promo__toggle button + button { border-left: 1px solid var(--pal-line); }
+  .emx-promo__toggle button.is-on { background: var(--pal-ink, #17171a); color: #fff; }
+  .emx-promo__frame { position: relative; overflow: hidden; border: 1px solid var(--pal-line); background: #f3efeb; }
+  .emx-promo__frame iframe { display: block; border: 0; background: #f3efeb; transform-origin: 0 0; }
+  .emx-promo__frame.is-loading::after { content: "Updating…"; position: absolute; top: 0.5rem; right: 0.5rem; font-family: var(--pal-font-mono);
+    font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); background: #fff; border: 1px solid var(--pal-line); padding: 0.2rem 0.45rem; }
+  .emx-tpl__radio:focus-visible + .emx-tpl__box { border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .emx-tpl__eye { flex: none; display: inline-flex; align-items: center; padding: 0 0.8rem;
+    border: 1px solid var(--pal-line); color: var(--pal-muted); background: var(--pal-panel, #fff);
+    transition: color 140ms ease, border-color 140ms ease; }
+  .emx-tpl__eye:hover { color: var(--pal-accent); border-color: var(--pal-accent); }
+
+  /* ── Two-pane composer (main + sticky side) ────────────────────── */
+  .emx-layout { display: grid; grid-template-columns: minmax(0, 1fr) 21rem; gap: 1.25rem; align-items: start; }
+  @media (max-width: 64rem) { .emx-layout { grid-template-columns: 1fr; } .emx-side { position: static !important; } }
+  .emx-main { min-width: 0; display: flex; flex-direction: column; gap: var(--emx-gap); }
+  .emx-side { display: flex; flex-direction: column; gap: var(--emx-gap); position: sticky; top: 1rem; }
+
+  /* ── Segmented radio cards (campaign type) ─────────────────────── */
+  .emx-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .emx-seg--3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 52rem) { .emx-seg--3 { grid-template-columns: 1fr; } }
+  @media (max-width: 40rem) { .emx-seg { grid-template-columns: 1fr; } }
+  .emx-seg__opt input { position: absolute; opacity: 0; pointer-events: none; }
+  .emx-seg__box { display: block; height: 100%; border: 1px solid var(--pal-line); padding: 0.8rem 0.9rem; cursor: pointer; transition: border-color 140ms ease, background 140ms ease; }
+  .emx-seg__box:hover { border-color: var(--pal-muted); }
+  .emx-seg__box strong { display: block; font-family: var(--pal-font-display); font-weight: 500; font-size: 0.98rem; color: var(--pal-ink); }
+  .emx-seg__box em { font-style: normal; font-size: 0.8rem; color: var(--pal-muted); }
+  .emx-seg__opt input:checked + .emx-seg__box { border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); background: rgb(75 43 245 / 0.03); }
+
+  /* ── AI builder strip ──────────────────────────────────────────── */
+  .emx-ai { border: 1px solid var(--pal-line); border-left: 2px solid var(--pal-accent); padding: 0.9rem 1rem; background: var(--pal-paper-2, #ececea); }
+  .emx-ai__row { display: flex; gap: 0.6rem; }
+  @media (max-width: 40rem) { .emx-ai__row { flex-direction: column; } }
+  .emx-ai__row .emx-input { flex: 1; }
+
+  /* ── Template picker (button + listbox, per-row eye preview) ────── */
+  .emx-tpick { position: relative; }
+  .emx-tpick__btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font: inherit; font-size: 0.85rem; padding: 0.55rem 0.8rem; border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel, #fff); color: var(--pal-ink); cursor: pointer; text-align: left; }
+  .emx-tpick__btn:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .emx-tpick__caret { color: var(--pal-muted); }
+  .emx-tpick__panel { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; margin: 0; padding: 0; list-style: none; max-height: 18rem; overflow: auto; background: var(--pal-panel, #fff); border: 1px solid var(--pal-ink); box-shadow: 8px 8px 0 -1px rgb(10 10 11 / 0.06); }
+  .emx-tpick__opt { display: flex; align-items: stretch; border-bottom: 1px solid var(--pal-line-soft); }
+  .emx-tpick__opt:last-child { border-bottom: 0; }
+  .emx-tpick__pick { flex: 1; text-align: left; font: inherit; font-size: 0.85rem; background: none; border: 0; padding: 0.6rem 0.85rem; cursor: pointer; color: var(--pal-ink); }
+  .emx-tpick__pick:hover { background: var(--pal-paper-2, #ececea); color: var(--pal-accent); }
+  .emx-tpick__eye { display: inline-flex; align-items: center; padding: 0 0.75rem; color: var(--pal-muted); border-left: 1px solid var(--pal-line-soft); }
+  .emx-tpick__eye:hover { color: var(--pal-accent); }
+
+  .is-busy { opacity: 0.6; pointer-events: none; }
+
+  /* ── Tabbed item editor (drip days / recipients) ────────────────────
+     Mirrors the content editor's FAQ-style numbered tabs: items are numbered
+     tabs, only the active one's fields show, with add / delete / reorder. */
+  .emx-tabed__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
+  .emx-tabed__htitle { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); display: inline-flex; align-items: center; gap: 0.5rem; }
+  .emx-tabed__htitle svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+  .emx-tabed__count { color: var(--pal-ink); }
+  .emx-tabed__tools { display: inline-flex; gap: 0.3rem; }
+  .emx-tabed__tool { border: 1px solid var(--pal-line); background: var(--pal-panel, #fff); cursor: pointer; width: 1.85rem; height: 1.85rem; display: grid; place-items: center; color: var(--pal-muted); }
+  .emx-tabed__tool:hover:not(:disabled) { color: var(--pal-ink); border-color: var(--pal-muted); }
+  .emx-tabed__tool:disabled { opacity: 0.35; cursor: default; }
+  .emx-tabed__tool--del:hover:not(:disabled) { color: #b42318; border-color: #b42318; }
+  .emx-tabed__tool svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .emx-tabed__tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+  .emx-tabed__tab { display: inline-flex; align-items: center; gap: 0.5rem; max-width: 16rem; border: 1px solid var(--pal-line); background: var(--pal-panel, #fff); padding: 0.45rem 0.7rem; cursor: pointer; color: var(--pal-muted); }
+  .emx-tabed__tab.is-active { border-color: var(--pal-accent); color: var(--pal-ink); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .emx-tabed__tabn { display: inline-grid; place-items: center; width: 1.2rem; height: 1.2rem; border-radius: 50%; background: var(--pal-ink, #17171a); color: #fff; font-family: var(--pal-font-mono); font-size: 0.55rem; flex: none; }
+  .emx-tabed__tab.is-active .emx-tabed__tabn { background: var(--pal-accent); }
+  .emx-tabed__tabl { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .emx-tabed__add { display: inline-flex; align-items: center; gap: 0.4rem; border: 1px dashed var(--pal-line); background: none; padding: 0.45rem 0.8rem; cursor: pointer; color: var(--pal-accent); font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .emx-tabed__add:hover { border-color: var(--pal-accent); }
+  .emx-tabed__add svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .emx-tabed__panel > .emx-item { display: none; }
+  .emx-tabed__panel > .emx-item.is-active { display: block; }
+
+  /* ── Product picker (custom dropdown; single- or multi-select) ─────── */
+  .emx-pick { position: relative; }
+  .emx-pick__count { font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.06em; color: var(--pal-faint); text-transform: none; }
+  .emx-pick__btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    font: inherit; font-size: 0.85rem; padding: 0.55rem 0.8rem; border: 1px solid var(--pal-line); border-radius: 0;
+    background: var(--pal-panel, #fff); color: var(--pal-ink); cursor: pointer; text-align: left; }
+  .emx-pick__btn:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .emx-pick__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .emx-pick__caret { color: var(--pal-muted); flex: none; }
+  .emx-pick__panel { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; margin: 0; padding: 0;
+    max-height: 18rem; overflow: auto; background: var(--pal-panel, #fff); border: 1px solid var(--pal-ink);
+    box-shadow: 8px 8px 0 -1px rgb(10 10 11 / 0.06); display: flex; flex-direction: column; }
+  /* The `display:flex` above would otherwise beat the [hidden] attribute's
+     default display:none, leaving the dropdown permanently open. */
+  .emx-pick__panel[hidden] { display: none; }
+  .emx-pick__opt { display: flex; align-items: center; gap: 0.6rem; width: 100%; text-align: left;
+    font: inherit; font-size: 0.85rem; background: none; border: 0; border-bottom: 1px solid var(--pal-line-soft);
+    padding: 0.55rem 0.8rem; cursor: pointer; color: var(--pal-ink); }
+  .emx-pick__opt:last-child { border-bottom: 0; }
+  .emx-pick__opt:hover { background: var(--pal-paper-2, #ececea); }
+  .emx-pick__check { flex: none; width: 1rem; height: 1rem; border: 1px solid var(--pal-line);
+    display: inline-flex; align-items: center; justify-content: center; }
+  .emx-pick__opt.is-selected .emx-pick__check { border-color: var(--pal-accent); background: var(--pal-accent); }
+  .emx-pick__opt.is-selected .emx-pick__check::after { content: ""; width: 0.34rem; height: 0.6rem;
+    border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+  .emx-pick__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .emx-pick__opt.is-selected .emx-pick__name { color: var(--pal-accent); }
+  .emx-pick__price { flex: none; font-family: var(--pal-font-mono); font-size: 0.66rem; color: var(--pal-muted); }
+  .emx-pick__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+  .emx-pick__chip { display: inline-flex; align-items: center; gap: 0.4rem; border: 1px solid var(--pal-line);
+    padding: 0.25rem 0.5rem; font-size: 0.78rem; color: var(--pal-ink); background: var(--pal-panel, #fff); }
+  .emx-pick__chip-x { border: 0; background: none; cursor: pointer; color: var(--pal-faint); font-size: 1rem; line-height: 1; padding: 0 0.1rem; }
+  .emx-pick__chip-x:hover { color: #b42318; }
+</style>

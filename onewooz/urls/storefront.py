@@ -2,7 +2,7 @@
 
 Served for ``<slug>.onewooz.site`` and for every verified custom domain. The
 site is resolved from the Host header by HostRoutingMiddleware and attached as
-``request.site``, so paths here are written exactly as a visitor sees them —
+``request.site``, so paths here are written exactly as a visitor sees them 
 no slug prefix, no path rewriting.
 
 The platform this replaces faked these routes by mutating ``request.path_info``
@@ -23,6 +23,10 @@ urlpatterns = [
     path("health/live/", health.live, name="health_live"),
     path("", include("storefront.urls")),
 ]
+
+# Surface-aware error pages  see onewooz.urls.marketing.
+handler404 = "core.errors.handler404"
+handler500 = "core.errors.handler500"
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

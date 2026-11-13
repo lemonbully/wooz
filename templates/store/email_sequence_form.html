@@ -1,0 +1,260 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · {% if is_edit %}Edit sequence{% else %}New sequence{% endif %}{% endblock %}
+{% block crumb %}Email marketing{% endblock %}
+
+{% block main %}
+<div class="app-page emx" id="emq" data-steps="{{ steps_json }}">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Drip sequence</p>
+      <h1 class="app-head__title pal-mt-4">{% if is_edit %}Edit sequence{% else %}New sequence{% endif %}</h1>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:email_sequences' site.id %}" class="pal-btn pal-btn--ghost">Back</a>
+    </div>
+  </div>
+
+  <form method="post" action="{% if is_edit %}{% url 'store:email_sequence_edit' site.id sequence.id %}{% else %}{% url 'store:email_sequence_new' site.id %}{% endif %}" id="emq-form">
+    {% csrf_token %}
+    <input type="hidden" name="steps" id="emq-steps-input">
+
+    <div class="emx-card">
+      <div class="emx-card__head">
+        <div class="emx-card__titles">
+          <h2 class="emx-card__title">Sequence details</h2>
+          <p class="emx-card__hint">A name for your own reference  customers never see it.</p>
+        </div>
+      </div>
+      <div class="emx-card__body">
+        <div class="emx-fields">
+          <div class="emx-field">
+            <label class="emx-label" for="q-name">Sequence name</label>
+            <input class="emx-input" id="q-name" name="name" value="{{ sequence.name|default:'' }}" placeholder="Welcome series" required>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="emx-card">
+      <div class="emx-card__head">
+        <div class="emx-card__titles">
+          <h2 class="emx-card__title">Steps</h2>
+          <p class="emx-card__hint">Each step is one day’s email. Add a day as a tab, then set its subject, design and message. Pick a design for the day, or leave it unset to send a simple branded email from the plain message.</p>
+        </div>
+      </div>
+      <div class="emx-card__body">
+        <div class="emx-tabed" id="emq-tabed">
+          <div class="emx-tabed__head">
+            <span class="emx-tabed__htitle">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9h18"/></svg>
+              <span>Days</span> <span class="emx-tabed__count"></span>
+            </span>
+            <div class="emx-tabed__tools">
+              <button type="button" class="emx-tabed__tool emx-tabed__tool--del" data-del title="Delete this day">
+                <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+              </button>
+              <button type="button" class="emx-tabed__tool" data-prev title="Move left">
+                <svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>
+              </button>
+              <button type="button" class="emx-tabed__tool" data-next title="Move right">
+                <svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="emx-tabed__tabs" id="emq-tabs"></div>
+          <div class="emx-tabed__panel" id="emq-steps"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="emx-actions" style="justify-content:flex-end;margin-top:1.15rem;">
+      <button type="submit" class="pal-btn">Save sequence <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+    </div>
+  </form>
+</div>
+
+<template id="emq-step-tpl">
+  <div class="emx-item">
+    <div class="emx-item__body">
+      <div class="emx-field emx-field--3">
+        <label class="emx-label">Day</label>
+        <input class="emx-input" type="number" min="1" max="365" data-f="day" value="1">
+      </div>
+      <div class="emx-field emx-field--8" style="grid-column: span 9;">
+        <label class="emx-label">Subject</label>
+        <input class="emx-input" data-f="subject" placeholder="Subject line for this day">
+      </div>
+      <div class="emx-field">
+        <label class="emx-label">Email design</label>
+        <div class="emx-inline">
+          <select class="emx-select" data-f="template" aria-label="Email design">
+            <option value=""> choose a design </option>
+          </select>
+          <a class="emx-tpl__eye" data-eye href="#" target="_blank" rel="noopener" title="Preview in a new page" aria-label="Preview design" hidden>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </a>
+        </div>
+        <input type="hidden" data-f="html">
+      </div>
+      <div class="emx-field">
+        <label class="emx-label">Plain message (used when no design is selected)</label>
+        <textarea class="emx-input emx-textarea" data-f="message" rows="3" placeholder="A short message wrapped in your branded email design."></textarea>
+      </div>
+    </div>
+  </div>
+</template>
+
+{% include "store/_email_styles.html" %}
+
+<script type="application/json" id="emq-templates">[{% for t in templates %}{"id": "{{ t.id }}", "name": "{{ t.name|escapejs }}", "json": "{% url 'store:email_template_json' site.id t.id %}", "preview": "{% url 'store:email_template_preview' site.id t.id %}"}{% if not forloop.last %}, {% endif %}{% endfor %}]</script>
+
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var root = document.getElementById("emq");
+    if (!root) return;
+    var panel = document.getElementById("emq-steps");
+    var tabsEl = document.getElementById("emq-tabs");
+    var tpl = document.getElementById("emq-step-tpl");
+    var form = document.getElementById("emq-form");
+    var hidden = document.getElementById("emq-steps-input");
+    var tabed = document.getElementById("emq-tabed");
+    var countEl = tabed.querySelector(".emx-tabed__count");
+    var delBtn = tabed.querySelector("[data-del]");
+    var prevBtn = tabed.querySelector("[data-prev]");
+    var nextBtn = tabed.querySelector("[data-next]");
+
+    // Published email designs, for the per-step design picker.
+    var templates = [];
+    try { templates = JSON.parse(document.getElementById("emq-templates").textContent || "[]"); } catch (e) { templates = []; }
+    var tById = {};
+    templates.forEach(function (t) { tById[t.id] = t; });
+
+    var active = 0;
+    function cards() { return Array.prototype.slice.call(panel.querySelectorAll(".emx-item")); }
+
+    function tabLabel(card, i) {
+      var subject = (card.querySelector('[data-f="subject"]').value || "").trim();
+      var day = (card.querySelector('[data-f="day"]').value || "").trim();
+      return subject || ("Day " + (day || (i + 1)));
+    }
+
+    function renderTabs() {
+      var cs = cards();
+      tabsEl.innerHTML = "";
+      cs.forEach(function (card, i) {
+        var t = document.createElement("button");
+        t.type = "button";
+        t.className = "emx-tabed__tab" + (i === active ? " is-active" : "");
+        var n = document.createElement("span"); n.className = "emx-tabed__tabn"; n.textContent = i + 1;
+        var l = document.createElement("span"); l.className = "emx-tabed__tabl"; l.textContent = tabLabel(card, i);
+        t.appendChild(n); t.appendChild(l);
+        t.addEventListener("click", function () { setActive(i); });
+        tabsEl.appendChild(t);
+      });
+      var add = document.createElement("button");
+      add.type = "button"; add.className = "emx-tabed__add";
+      add.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>Add day</span>';
+      add.addEventListener("click", addStep);
+      tabsEl.appendChild(add);
+      if (countEl) countEl.textContent = cs.length;
+    }
+
+    function showActive() {
+      var cs = cards();
+      if (active >= cs.length) active = Math.max(0, cs.length - 1);
+      cs.forEach(function (card, i) { card.classList.toggle("is-active", i === active); });
+      delBtn.disabled = cs.length <= 1;
+      prevBtn.disabled = active <= 0;
+      nextBtn.disabled = active >= cs.length - 1;
+    }
+    function refresh() { showActive(); renderTabs(); }
+    function setActive(i) { active = i; refresh(); }
+
+    function makeCard(data) {
+      data = data || {};
+      var node = tpl.content.firstElementChild.cloneNode(true);
+      node.querySelector('[data-f="day"]').value = data.day || (cards().length + 1);
+      node.querySelector('[data-f="subject"]').value = data.subject || "";
+      node.querySelector('[data-f="html"]').value = data.html || "";
+      node.querySelector('[data-f="message"]').value = data.message || "";
+
+      // Design picker: build options, preselect the saved design, and keep the
+      // hidden html holder in sync with the chosen design.
+      var sel = node.querySelector('[data-f="template"]');
+      var eye = node.querySelector("[data-eye]");
+      var htmlHolder = node.querySelector('[data-f="html"]');
+      templates.forEach(function (t) {
+        var opt = document.createElement("option");
+        opt.value = t.id; opt.textContent = t.name;
+        sel.appendChild(opt);
+      });
+      if (data.template_id && tById[data.template_id]) { sel.value = data.template_id; }
+      function syncEye() {
+        var t = tById[sel.value];
+        if (t) { eye.href = t.preview; eye.hidden = false; } else { eye.hidden = true; }
+      }
+      syncEye();
+      sel.addEventListener("change", function () {
+        syncEye();
+        var t = tById[sel.value];
+        if (!t) { htmlHolder.value = ""; return; }
+        sel.disabled = true;
+        fetch(t.json, { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { sel.disabled = false; if (d && d.ok) { htmlHolder.value = d.html || ""; } })
+          .catch(function () { sel.disabled = false; });
+      });
+      return node;
+    }
+
+    function addStep() {
+      panel.appendChild(makeCard({ day: cards().length + 1 }));
+      active = cards().length - 1;
+      refresh();
+    }
+
+    delBtn.addEventListener("click", function () {
+      var cs = cards();
+      if (cs.length <= 1) return;
+      cs[active].remove();
+      if (active >= cards().length) active = cards().length - 1;
+      if (active < 0) active = 0;
+      refresh();
+    });
+    function move(dir) {
+      var cs = cards(); var i = active, j = i + dir;
+      if (j < 0 || j >= cs.length) return;
+      if (dir < 0) panel.insertBefore(cs[i], cs[j]); else panel.insertBefore(cs[j], cs[i]);
+      active = j; refresh();
+    }
+    prevBtn.addEventListener("click", function () { move(-1); });
+    nextBtn.addEventListener("click", function () { move(1); });
+
+    // Keep the tab labels live as the active day's fields change.
+    panel.addEventListener("input", function (e) { if (e.target.closest && e.target.closest(".emx-item")) renderTabs(); });
+
+    var initial = [];
+    try { initial = JSON.parse(root.getAttribute("data-steps") || "[]"); } catch (e) { initial = []; }
+    if (initial.length) { initial.forEach(function (s) { panel.appendChild(makeCard(s)); }); }
+    else { panel.appendChild(makeCard({ day: 1 })); }
+    refresh();
+
+    form.addEventListener("submit", function () {
+      var steps = [];
+      cards().forEach(function (el) {
+        var day = parseInt(el.querySelector('[data-f="day"]').value, 10);
+        var subject = (el.querySelector('[data-f="subject"]').value || "").trim();
+        if (!day || !subject) return;
+        steps.push({
+          day: day,
+          subject: subject,
+          html: el.querySelector('[data-f="html"]').value || "",
+          message: (el.querySelector('[data-f="message"]').value || "").trim()
+        });
+      });
+      hidden.value = JSON.stringify(steps);
+    });
+  })();
+</script>
+{% endblock %}

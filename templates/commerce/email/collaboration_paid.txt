@@ -1,0 +1,16 @@
+{% autoescape off %}Your payout has been sent.
+
+{% if collab_name %}Hi {{ collab_name }},
+
+{% endif %}{{ store_name }} has paid you ₹{{ amount }} for your collaboration earnings{% if paid_on %} on {{ paid_on }}{% endif %}.
+
+Total paid to you so far: ₹{{ total_paid }}
+Outstanding balance: ₹{{ outstanding }}
+{% if note %}
+Note from the store: {{ note }}
+{% endif %}
+The payment is made directly by the store (bank transfer or UPI), so allow your bank's usual time for it to show up. Your myUGCstore dashboard is updated:
+{{ dashboard_url }}
+
+{{ store_name }}
+{% endautoescape %}

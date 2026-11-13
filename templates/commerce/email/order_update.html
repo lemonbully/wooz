@@ -1,0 +1,98 @@
+{% extends "email/base.html" %}
+{% comment %}Customer order update (commerce.order_notify). kind: updated | cancelled | returned | shipped | delivered.
+Context: brand, customer_name, order_number, changes [{label, before, after}], items
+[{title, variant_label, quantity, unit_price, line_total}], sym, subtotal, discount, tax,
+shipping, total, paid_online, order_url, tracking {courier, awb, url, etd}, reply_to (bool),
+support_phone, powered_by.{% endcomment %}
+{% block preheader %}{% if kind == 'updated' %}Your {{ brand }} order #{{ order_number }} has been updated.{% elif kind == 'cancelled' %}Your {{ brand }} order #{{ order_number }} has been cancelled.{% elif kind == 'shipped' %}Your {{ brand }} order #{{ order_number }} is on its way.{% elif kind == 'delivered' %}Your {{ brand }} order #{{ order_number }} has been delivered.{% else %}Your {{ brand }} order #{{ order_number }} was returned to the store.{% endif %}{% endblock %}
+{% block kicker %}{% if kind == 'updated' %}Order updated{% elif kind == 'cancelled' %}Order cancelled{% elif kind == 'shipped' %}Order shipped{% elif kind == 'delivered' %}Order delivered{% else %}Order returned{% endif %}{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text=brand %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:22px; letter-spacing:-0.02em; line-height:1.18; color:#0a0a0b; margin:0 0 16px 0;">
+    {% if kind == 'updated' %}Your order has been updated{% elif kind == 'cancelled' %}Your order has been cancelled{% elif kind == 'shipped' %}Your order is on its way{% elif kind == 'delivered' %}Your order has been delivered{% else %}Your order was returned to {{ brand }}{% endif %}
+  </h1>
+
+  <div style="margin:0 0 18px 0; color:#26262a;">
+    Hi{% if customer_name %} {{ customer_name }}{% endif %},
+    {% if kind == 'updated' %}
+      {{ brand }} has updated your order <strong>#{{ order_number }}</strong>. Here's what changed:
+    {% elif kind == 'cancelled' %}
+      your order <strong>#{{ order_number }}</strong> from {{ brand }} has been cancelled and won't be delivered.
+    {% elif kind == 'shipped' %}
+      good news: your order <strong>#{{ order_number }}</strong> from {{ brand }} has been handed to the courier and is on its way to you.
+    {% elif kind == 'delivered' %}
+      your order <strong>#{{ order_number }}</strong> from {{ brand }} has been delivered. We hope you love it!
+    {% else %}
+      the courier couldn't deliver your order <strong>#{{ order_number }}</strong>, so the parcel has been returned to {{ brand }}.
+    {% endif %}
+  </div>
+
+  {% if kind == 'updated' and changes %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d7d7d3; border-collapse:collapse; margin:0 0 20px 0;">
+    {% for c in changes %}
+    <tr>
+      <td style="padding:10px 14px; border-bottom:1px solid #ececea; vertical-align:top; font-size:13px; color:#66666b; width:34%;">{{ c.label }}</td>
+      <td style="padding:10px 14px; border-bottom:1px solid #ececea; vertical-align:top; font-size:14px; color:#26262a;">
+        {% if c.before %}<span style="color:#9a9aa0; text-decoration:line-through;">{{ c.before }}</span><br>{% endif %}
+        {% if c.after %}<strong style="color:#0a0a0b;">{{ c.after }}</strong>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  {% if tracking and kind == 'shipped' %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #d7d7d3; border-collapse:collapse; margin:0 0 20px 0;">
+    {% if tracking.courier %}<tr><td style="padding:10px 14px; border-bottom:1px solid #ececea; font-size:13px; color:#66666b; width:34%;">Courier</td><td style="padding:10px 14px; border-bottom:1px solid #ececea; font-size:14px; color:#0a0a0b;">{{ tracking.courier }}</td></tr>{% endif %}
+    {% if tracking.awb %}<tr><td style="padding:10px 14px; border-bottom:1px solid #ececea; font-size:13px; color:#66666b; width:34%;">Tracking number</td><td style="padding:10px 14px; border-bottom:1px solid #ececea; font-size:14px; color:#0a0a0b; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace;">{{ tracking.awb }}</td></tr>{% endif %}
+    {% if tracking.etd %}<tr><td style="padding:10px 14px; font-size:13px; color:#66666b; width:34%;">Expected delivery</td><td style="padding:10px 14px; font-size:14px; color:#0a0a0b;">{{ tracking.etd }}</td></tr>{% endif %}
+  </table>
+  {% if tracking.url %}{% include "email/_button.html" with url=tracking.url label="Track your order" %}{% endif %}
+  {% endif %}
+
+  {% if items %}
+  <div style="margin:0 0 6px 0; font-size:13px; letter-spacing:0.04em; text-transform:uppercase; color:#66666b;">{% if kind == 'updated' %}Your order now{% else %}Order details{% endif %}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #d7d7d3;">
+    {% for it in items %}
+    <tr>
+      <td style="padding:12px 0; border-bottom:1px solid #ececea; vertical-align:top;">
+        <div style="font-size:15px; font-weight:600; color:#0a0a0b;">{{ it.title }}</div>
+        {% if it.variant_label %}<div style="font-size:13px; color:#66666b; margin-top:2px;">{{ it.variant_label }}</div>{% endif %}
+        <div style="font-size:13px; color:#66666b; margin-top:2px;">Qty {{ it.quantity }} &times; {{ sym }}{{ it.unit_price }}</div>
+      </td>
+      <td style="padding:12px 0; border-bottom:1px solid #ececea; text-align:right; vertical-align:top; font-size:15px; font-weight:600; color:#0a0a0b; white-space:nowrap;">{{ sym }}{{ it.line_total }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+    <tr><td style="padding:3px 0; color:#66666b; font-size:14px;">Subtotal</td><td style="padding:3px 0; text-align:right; color:#26262a; font-size:14px;">{{ sym }}{{ subtotal }}</td></tr>
+    {% if discount %}<tr><td style="padding:3px 0; color:#66666b; font-size:14px;">Discount</td><td style="padding:3px 0; text-align:right; color:#0a7d33; font-size:14px;">- {{ sym }}{{ discount }}</td></tr>{% endif %}
+    {% if credit %}<tr><td style="padding:3px 0; color:#66666b; font-size:14px;">Store credit</td><td style="padding:3px 0; text-align:right; color:#0a7d33; font-size:14px;">- {{ sym }}{{ credit }}</td></tr>{% endif %}
+    {% if tax %}<tr><td style="padding:3px 0; color:#66666b; font-size:14px;">GST</td><td style="padding:3px 0; text-align:right; color:#26262a; font-size:14px;">{{ sym }}{{ tax }}</td></tr>{% endif %}
+    {% if shipping %}<tr><td style="padding:3px 0; color:#66666b; font-size:14px;">Shipping</td><td style="padding:3px 0; text-align:right; color:#26262a; font-size:14px;">{{ sym }}{{ shipping }}</td></tr>{% endif %}
+    <tr><td style="padding:8px 0 0 0; border-top:1px solid #d7d7d3; font-size:16px; font-weight:700; color:#0a0a0b;">Total</td><td style="padding:8px 0 0 0; border-top:1px solid #d7d7d3; text-align:right; font-size:16px; font-weight:700; color:#0a0a0b;">{{ sym }}{{ total }}</td></tr>
+  </table>
+  {% endif %}
+
+  {% if kind == 'cancelled' or kind == 'returned' %}
+  <div style="margin:20px 0 0 0; color:#26262a;">
+    {% if paid_online %}You paid {{ sym }}{{ paid_online }} online for this order. {% if reply_to %}Reply to this email{% else %}Contact {{ brand }}{% endif %} about your refund.{% endif %}
+    {% if kind == 'returned' %}{% if reply_to %} Reply to this email{% else %} Contact {{ brand }}{% endif %} if you'd still like to receive it.{% endif %}
+    {% if not paid_online and kind == 'cancelled' %}If you didn't expect this, {% if reply_to %}reply to this email{% else %}contact {{ brand }}{% endif %}.{% endif %}
+    {% if support_phone %}<br>Phone: {{ support_phone }}{% endif %}
+  </div>
+  {% endif %}
+
+  {% if kind == 'delivered' %}
+  <div style="margin:20px 0 0 0; color:#26262a;">Something not right? {% if reply_to %}Reply to this email{% else %}Contact {{ brand }}{% endif %} and we'll help.{% if support_phone %}<br>Phone: {{ support_phone }}{% endif %}</div>
+  {% endif %}
+
+  {% comment %}A shipped email already leads with "Track your order"; one button is enough.{% endcomment %}
+  {% if order_url %}{% if kind != 'shipped' or not tracking.url %}{% include "email/_button.html" with url=order_url label="View your order" %}{% endif %}{% endif %}
+{% endblock %}
+{% block footer %}
+  <div style="color:#66666b;">{{ brand }}</div>
+  {% if powered_by %}<div style="color:#9a9aa0;">Powered by OneWooz</div>{% endif %}
+{% endblock %}
+{% block sub_footer %}{% if reply_to %}Reply to this email to reach {{ brand }}.{% else %}This is an automated update from {{ brand }}.{% endif %}{% endblock %}

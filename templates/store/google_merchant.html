@@ -1,31 +1,328 @@
 {% extends "store/_shell.html" %}
+{% load static %}
 {% block title %}{{ site.name }} · Google Merchant{% endblock %}
 {% block crumb %}Google Merchant{% endblock %}
 
+{% comment %}
+Google Merchant Center (commerce.views.integrations + commerce.google_merchant).
+States: integration not configured on the platform → not connected (one-click
+"Connect with Google") → signed in, choose an account → connected (website
+claim, sync progress, approval tally, per-product status and Google's issues,
+settings, disconnect). Live sync progress is polled by js/app/google-merchant.js.
+{% endcomment %}
+
 {% block main %}
-<div class="app-page">
-  <div class="app-head"><div>
-    <p class="pal-mono pal-mono--accent">Grow</p>
-    <h1 class="app-head__title pal-mt-4">Google Merchant</h1>
-    <p class="app-head__lead">Sync your catalogue to Google Merchant Center so products can appear in Shopping and free listings.</p>
-  </div></div>
+<style nonce="{{ csp_nonce }}">
+  .gm-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+  @media (min-width: 64rem) { .gm-grid--2 { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+  .gm-card { background: var(--pal-panel); border: 1px solid var(--pal-line); padding: clamp(1rem, 0.8rem + 1vw, 1.6rem); min-width: 0; }
+  .gm-card__title { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.3rem); letter-spacing: -0.02em; color: var(--pal-ink); display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  .gm-card__lead { margin-top: 0.4rem; font-size: 0.88rem; line-height: 1.55; color: var(--pal-muted); }
+  .gm-hero { display: flex; gap: 1.1rem; align-items: flex-start; }
+  .gm-logo { flex: none; width: 3rem; height: 3rem; display: grid; place-items: center; border: 1px solid var(--pal-line); background: #fff; }
+  .gm-logo svg { width: 1.6rem; height: 1.6rem; }
+  .gm-gbtn { display: inline-flex; align-items: center; gap: 0.7rem; margin-top: 1.25rem; padding: 0.7rem 1.2rem; border: 1px solid #dadce0; background: #fff; color: #1f1f1f; font: 500 0.95rem/1 "Inter", system-ui, sans-serif; cursor: pointer; border-radius: 4px; }
+  .gm-gbtn:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(60,64,67,.2); }
+  .gm-gbtn svg { width: 1.15rem; height: 1.15rem; }
+  @media (max-width: 30rem) { .gm-gbtn { width: 100%; justify-content: center; } .gm-hero { flex-direction: column; } }
+  .gm-steps { display: grid; gap: 0.6rem; margin-top: 1.1rem; padding: 0; list-style: none; }
+  .gm-steps li { display: flex; gap: 0.6rem; font-size: 0.87rem; line-height: 1.5; color: var(--pal-ink-2); }
+  .gm-steps li::before { content: "✓"; flex: none; width: 1.2rem; height: 1.2rem; display: grid; place-items: center; font-size: 0.7rem; color: #0f7a53; background: rgb(15 122 83 / 0.1); border-radius: 50%; margin-top: 0.1rem; }
+  .gm-note { margin-top: 1rem; padding: 0.75rem 0.9rem; font-size: 0.83rem; line-height: 1.5; color: var(--pal-ink-2); background: var(--pal-paper); border: 1px solid var(--pal-line-soft); }
+  .gm-note a, .gm-link { color: var(--pal-accent); border-bottom: 1px solid currentColor; }
+  .gm-code { display: block; margin-top: 0.35rem; padding: 0.5rem 0.6rem; font-family: var(--pal-font-mono); font-size: 0.75rem; background: var(--pal-panel); border: 1px solid var(--pal-line); overflow-wrap: anywhere; }
+  .gm-dl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem 1.5rem; margin-top: 1rem; }
+  @media (min-width: 40rem) { .gm-dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .gm-dl dt { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-faint); }
+  .gm-dl dd { margin-top: 0.2rem; font-size: 0.9rem; color: var(--pal-ink); overflow-wrap: anywhere; }
+  .gm-acc { display: grid; gap: 0.5rem; margin-top: 1rem; }
+  .gm-acc label { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.85rem; border: 1px solid var(--pal-line); cursor: pointer; min-width: 0; }
+  .gm-acc label:has(input:checked) { border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .gm-acc__name { font-size: 0.92rem; font-weight: 500; color: var(--pal-ink); overflow-wrap: anywhere; }
+  .gm-acc__id { font-family: var(--pal-font-mono); font-size: 0.7rem; color: var(--pal-muted); }
+  .gm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 1rem; }
+  .gm-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin-top: 1rem; }
+  @media (min-width: 40rem) { .gm-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (min-width: 80rem) { .gm-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+  .gm-tile { display: block; padding: 0.75rem 0.85rem; border: 1px solid var(--pal-line-soft); background: var(--pal-paper); text-decoration: none; min-width: 0; }
+  .gm-tile:hover { border-color: var(--pal-line); }
+  .gm-tile__n { font-family: var(--pal-font-display); font-size: 1.4rem; font-weight: 500; color: var(--pal-ink); }
+  .gm-tile__l { font-size: 0.75rem; color: var(--pal-muted); }
+  .gm-tile--ok .gm-tile__n { color: #0f7a53; } .gm-tile--bad .gm-tile__n { color: #a5271b; } .gm-tile--warn .gm-tile__n { color: #8a5a00; }
+  .gm-progress { margin-top: 1rem; }
+  .gm-progress__bar { height: 6px; background: var(--pal-paper-2); overflow: hidden; }
+  .gm-progress__fill { height: 100%; width: 0; background: var(--pal-accent); transition: width .4s ease; }
+  .gm-progress__txt { margin-top: 0.4rem; font-size: 0.8rem; color: var(--pal-muted); }
+  .gm-err { margin-top: 0.8rem; font-size: 0.83rem; color: #a5271b; }
+  .gm-filter { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
+  .gm-filter a { padding: 0.3rem 0.65rem; font-size: 0.78rem; border: 1px solid var(--pal-line); color: var(--pal-ink-2); text-decoration: none; }
+  .gm-filter a[aria-current="true"] { border-color: var(--pal-accent); color: var(--pal-accent); }
+  .gm-issue { margin-top: 0.3rem; font-size: 0.78rem; line-height: 1.45; color: var(--pal-ink-2); }
+  .gm-issue b { font-weight: 600; }
+  .gm-issue--DISAPPROVED, .gm-issue--ERROR { color: #a5271b; }
+  .gm-issue a { color: var(--pal-accent); }
+  .gm-danger { border-color: rgb(165 39 27 / 0.3); }
+  .gm-check { display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 0.8rem; font-size: 0.85rem; color: var(--pal-ink-2); }
+</style>
 
-  <div class="app-block">
-    <div class="app-card__head">
-      <h2 class="app-card__title">Connection</h2>
-      <span class="app-badge app-badge--{% if config.status == 'connected' %}ok{% elif config.status == 'error' %}danger{% else %}muted{% endif %}">{{ config.get_status_display }}</span>
+<div class="app-page" data-gm
+     data-status-url="{% if is_connected %}{% url 'store:google_merchant_status' site.id %}{% endif %}"
+     data-running="{% if config.sync_state == 'running' %}1{% endif %}">
+  {% csrf_token %}
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Grow</p>
+      <h1 class="app-head__title pal-mt-4">Google Merchant Center</h1>
+      <p class="app-head__lead">List your products on Google Shopping, free listings and Search, kept in sync automatically.</p>
     </div>
-    {% if config.last_synced_at %}<div class="app-card__body"><p class="app-sub">Last synced {{ config.last_synced_at|date:"d M Y, H:i" }}</p>{% if config.last_error %}<p class="app-field-err">{{ config.last_error }}</p>{% endif %}</div>{% endif %}
+    <div class="app-head__actions">
+      <span class="app-badge {% if is_connected %}app-badge--active{% elif is_pending %}app-badge--invited{% elif config.status == 'error' %}app-badge--danger{% else %}app-badge--muted{% endif %}">{% if is_connected %}Connected{% elif is_pending %}Choose an account{% elif config.status == 'error' %}Needs attention{% else %}Not connected{% endif %}</span>
+    </div>
   </div>
 
-  <div class="app-block">
-    <form method="post" class="app-form app-card" style="padding:1.5rem;">
-      {% csrf_token %}
-      {% include "store/_form.html" with wide_fields="service_account_json" %}
-      <div class="app-form__foot">
-        <button class="pal-btn" type="submit">Save &amp; connect</button>
+  {% if not gm_configured %}
+    {# ── Platform OAuth client not configured ───────────────────────────── #}
+    <div class="app-block"><div class="gm-card">
+      <h2 class="gm-card__title">Google sign-in isn't set up yet</h2>
+      <p class="gm-card__lead">Connecting Google Merchant Center needs OneWooz's Google sign-in to be configured. This is a one-time platform setting; please contact support if you see this message.</p>
+      {% if request.user.is_staff %}
+        <div class="gm-note">
+          <b>For the OneWooz team:</b> set <code>ONEWOOZ_GOOGLE_OAUTH_CLIENT_ID</code> and <code>ONEWOOZ_GOOGLE_OAUTH_CLIENT_SECRET</code> (a “Web application” OAuth client in a Cloud project with the Merchant API and Site Verification API enabled). Authorised redirect URI:
+          <span class="gm-code">{{ redirect_uri }}</span>
+        </div>
+      {% endif %}
+    </div></div>
+
+  {% elif is_connected %}
+    {# ── Connected ──────────────────────────────────────────────────────── #}
+    <div class="app-block gm-grid gm-grid--2">
+      <section class="gm-card" aria-labelledby="gm-sync-title">
+        <h2 class="gm-card__title" id="gm-sync-title">Product sync</h2>
+        <p class="gm-card__lead">{{ product_count }} active product{{ product_count|pluralize }} in your store. {% if config.auto_sync %}Changes sync to Google automatically.{% else %}Auto-sync is off: use “Sync now” after changes.{% endif %}</p>
+
+        <div class="gm-tiles" data-gm-tiles>
+          <a class="gm-tile gm-tile--ok" href="?state=approved"><div class="gm-tile__n" data-gm-n="approved">{{ summary.approved|default:0 }}</div><div class="gm-tile__l">Approved</div></a>
+          <a class="gm-tile" href="?state=pending"><div class="gm-tile__n" data-gm-n="pending">{{ summary.pending|default:0 }}</div><div class="gm-tile__l">Pending review</div></a>
+          <a class="gm-tile gm-tile--warn" href="?state=warning"><div class="gm-tile__n" data-gm-n="warning">{{ summary.warning|default:0 }}</div><div class="gm-tile__l">With warnings</div></a>
+          <a class="gm-tile gm-tile--bad" href="?state=disapproved"><div class="gm-tile__n" data-gm-n="disapproved">{{ summary.disapproved|default:0 }}</div><div class="gm-tile__l">Disapproved</div></a>
+          <a class="gm-tile gm-tile--warn" href="?state=invalid"><div class="gm-tile__n" data-gm-n="invalid">{{ summary.invalid|default:0 }}</div><div class="gm-tile__l">Missing details</div></a>
+          <a class="gm-tile gm-tile--bad" href="?state=error"><div class="gm-tile__n" data-gm-n="error">{{ summary.error|default:0 }}</div><div class="gm-tile__l">Sync failed</div></a>
+        </div>
+
+        <div class="gm-progress" data-gm-progress {% if config.sync_state != 'running' %}hidden{% endif %}>
+          <div class="gm-progress__bar"><div class="gm-progress__fill" data-gm-fill></div></div>
+          <p class="gm-progress__txt" data-gm-progress-txt>Starting sync…</p>
+        </div>
+        <p class="gm-progress__txt" data-gm-last>{% if config.last_synced_at %}Last synced {{ config.last_synced_at|date:"d M Y, h:i A" }}{% else %}Not synced yet{% endif %}</p>
+        <p class="gm-err" data-gm-error {% if not config.last_error %}hidden{% endif %}>{{ config.last_error }}</p>
+
+        <div class="gm-row">
+          <button type="button" class="pal-btn" data-gm-sync data-url="{% url 'store:google_merchant_sync' site.id %}">Sync now</button>
+          <button type="button" class="pal-btn pal-btn--ghost" data-gm-sync data-force="1" data-url="{% url 'store:google_merchant_sync' site.id %}" title="Re-send every product, even unchanged ones">Re-send all</button>
+          <button type="button" class="pal-btn pal-btn--ghost" data-gm-refresh data-url="{% url 'store:google_merchant_refresh_statuses' site.id %}">Refresh statuses</button>
+          <label class="gm-check" style="margin:0 0 0 auto;align-items:center">
+            <span class="ow-switch">
+              <input type="checkbox" id="gmAutoSync" data-url="{% url 'store:google_merchant_auto_sync' site.id %}" {% if config.auto_sync %}checked{% endif %}>
+              <span class="ow-switch__track"></span>
+            </span>
+            Auto-sync
+          </label>
+        </div>
+        {% if mc_products_url %}<p class="gm-card__lead" style="margin-top:0.9rem">Google reviews new products within a few days. <a class="gm-link" href="{{ mc_products_url }}" target="_blank" rel="noopener">Open product diagnostics in Merchant Center</a></p>{% endif %}
+      </section>
+
+      <div class="gm-grid">
+        <section class="gm-card" aria-labelledby="gm-acct-title">
+          <h2 class="gm-card__title" id="gm-acct-title">Account</h2>
+          <dl class="gm-dl">
+            <div><dt>Merchant Center</dt><dd>{{ config.account_name|default:"Account" }} · {{ config.merchant_id }}</dd></div>
+            <div><dt>Google account</dt><dd>{{ config.google_email|default:"Connected" }}</dd></div>
+            <div><dt>Target</dt><dd>{{ config.get_default_country_display|default:config.default_country }} · {{ config.default_language|upper }}</dd></div>
+            <div><dt>Feed</dt><dd>{{ config.effective_feed_label }} (API data source)</dd></div>
+          </dl>
+        </section>
+
+        <section class="gm-card" aria-labelledby="gm-web-title">
+          <h2 class="gm-card__title" id="gm-web-title">Website {% if config.website_claimed %}<span class="app-badge app-badge--active">Verified &amp; claimed</span>{% else %}<span class="app-badge app-badge--invited">Not claimed</span>{% endif %}</h2>
+          <p class="gm-card__lead">Google only shows products from a verified, claimed website.</p>
+          <dl class="gm-dl"><div style="grid-column:1/-1"><dt>Store URL</dt><dd>{{ config.website_url|default:"Not set" }}</dd></div></dl>
+          {% if config.website_error %}<p class="gm-err">{{ config.website_error }}</p>{% endif %}
+          {% if not config.website_claimed %}
+            {% if not has_site_verification %}<p class="gm-card__lead">Website verification permission wasn't granted. Reconnect and allow “Manage the list of sites and domains you control”, or verify the site in Merchant Center.</p>{% endif %}
+            <form method="post" action="{% url 'store:google_merchant_claim' site.id %}" class="gm-row">{% csrf_token %}
+              <button type="submit" class="pal-btn pal-btn--ghost">Verify &amp; claim</button>
+            </form>
+          {% endif %}
+        </section>
       </div>
-    </form>
-  </div>
+    </div>
+
+    <div class="app-block gm-grid gm-grid--2">
+      <section class="gm-card" aria-labelledby="gm-prod-title">
+        <h2 class="gm-card__title" id="gm-prod-title">Products on Google</h2>
+        <nav class="gm-filter" aria-label="Filter by status">
+          <a href="?"{% if not state_filter %} aria-current="true"{% endif %}>All</a>
+          {% for value, label in state_choices %}{% if value != 'removed' %}<a href="?state={{ value }}"{% if state_filter == value %} aria-current="true"{% endif %}>{{ label }}</a>{% endif %}{% endfor %}
+        </nav>
+        {% if statuses %}
+          <div class="app-tablewrap" style="margin-top:1rem">
+            <table class="app-table">
+              <thead><tr><th>Product</th><th>Status</th><th>Issues</th><th>Synced</th></tr></thead>
+              <tbody>
+                {% for row in statuses %}
+                  <tr>
+                    <td><a class="app-table__strong" href="{% url 'store:product_edit' site.id row.product_id %}">{{ row.product.title }}</a>{% if row.offer_ids|length > 1 %}<div class="app-sub">{{ row.offer_ids|length }} variations</div>{% endif %}</td>
+                    <td><span class="app-badge {% if row.state == 'approved' %}app-badge--active{% elif row.state == 'disapproved' or row.state == 'error' %}app-badge--danger{% elif row.state == 'warning' or row.state == 'invalid' %}app-badge--invited{% else %}app-badge--muted{% endif %}">{{ row.get_state_display }}</span></td>
+                    <td>
+                      {% for issue in row.issues|slice:":3" %}
+                        <div class="gm-issue gm-issue--{{ issue.severity }}"><b>{{ issue.description }}</b>{% if issue.attribute %} ({{ issue.attribute }}){% endif %}{% if issue.documentation %} · <a href="{{ issue.documentation }}" target="_blank" rel="noopener">How to fix</a>{% endif %}</div>
+                      {% empty %}
+                        {% if row.last_error %}<div class="gm-issue gm-issue--ERROR">{{ row.last_error }}</div>{% else %}<span class="app-sub">None</span>{% endif %}
+                      {% endfor %}
+                    </td>
+                    <td class="app-sub">{{ row.last_synced_at|date:"d M, H:i"|default:"" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if status_page %}{% include "store/_pagination.html" with page=status_page %}{% endif %}
+        {% else %}
+          <p class="gm-card__lead" style="margin-top:1rem">{% if state_filter %}No products with this status.{% else %}No products synced yet. Click “Sync now” to send your catalogue to Google.{% endif %}</p>
+        {% endif %}
+      </section>
+
+      <div class="gm-grid">
+        <section class="gm-card" aria-labelledby="gm-set-title">
+          <h2 class="gm-card__title" id="gm-set-title">Settings</h2>
+          <form method="post" action="{% url 'store:google_merchant' site.id %}">
+            {% csrf_token %}
+            <label class="pal-field"><span class="pal-field__label">{{ form.default_country.label }}</span>{{ form.default_country }}</label>
+            <label class="pal-field"><span class="pal-field__label">{{ form.default_language.label }}</span>{{ form.default_language }}</label>
+            <label class="gm-check">{{ form.auto_sync }} <span>{{ form.auto_sync.label }}: new and edited products, price and stock changes and deletions are sent to Google.</span></label>
+            <p class="gm-card__lead">Prices are sent in your product currency, including GST. Changing the country or language re-sends every product.</p>
+            <div class="gm-row"><button type="submit" class="pal-btn pal-btn--ghost">Save settings</button></div>
+          </form>
+        </section>
+
+        <section class="gm-card" aria-labelledby="gm-todo-title">
+          <h2 class="gm-card__title" id="gm-todo-title">Finish in Merchant Center</h2>
+          <ul class="gm-steps">
+            <li><span>Add your business name, address and phone. <a class="gm-link" href="{{ mc_business_url }}" target="_blank" rel="noopener">Business info</a></span></li>
+            <li><span>Set up shipping (delivery cost and times). <a class="gm-link" href="{{ mc_shipping_url }}" target="_blank" rel="noopener">Shipping</a></span></li>
+            <li><span>Add your return policy and enable free listings / Shopping ads.</span></li>
+          </ul>
+        </section>
+
+        <section class="gm-card gm-danger" aria-labelledby="gm-dc-title">
+          <h2 class="gm-card__title" id="gm-dc-title">Disconnect</h2>
+          <form method="post" action="{% url 'store:google_merchant_disconnect' site.id %}" data-gm-disconnect>
+            {% csrf_token %}
+            <label class="gm-check"><input type="checkbox" name="remove_products" value="1"> <span>Also remove my products from Google Merchant Center</span></label>
+            <div class="gm-row"><button type="submit" class="pal-btn pal-btn--danger">Disconnect Google</button></div>
+          </form>
+        </section>
+      </div>
+    </div>
+
+  {% elif is_pending %}
+    {# ── Signed in, choose an account ───────────────────────────────────── #}
+    <div class="app-block"><div class="gm-card">
+      <h2 class="gm-card__title">Choose your Merchant Center account</h2>
+      <p class="gm-card__lead">Signed in as <b>{{ config.google_email|default:"your Google account" }}</b>.{% if accounts %} Pick the account your products should go to.{% endif %}</p>
+      {% if config.last_error %}<p class="gm-err">{{ config.last_error }}</p>{% endif %}
+      <form method="post" action="{% url 'store:google_merchant_select_account' site.id %}">
+        {% csrf_token %}
+        {% if accounts %}
+          <div class="gm-acc" role="radiogroup" aria-label="Merchant Center accounts">
+            {% for a in accounts %}
+              <label><input type="radio" name="account_id" value="{{ a.id }}"{% if forloop.first %} checked{% endif %}>
+                <span><span class="gm-acc__name">{{ a.name }}</span>{% if a.test %} <span class="app-badge app-badge--muted">Test</span>{% endif %}<br><span class="gm-acc__id">ID {{ a.id }}</span></span>
+              </label>
+            {% endfor %}
+          </div>
+        {% else %}
+          {% if gm_registration_pending %}
+          <div class="gm-note">Your Merchant Center accounts can't be listed until this finishes. If you already have a Merchant Center account, you can enter its ID below now and connect again once it's ready.</div>
+          {% else %}
+          <div class="gm-note">No Merchant Center account was found for this Google account. <a href="https://merchants.google.com/" target="_blank" rel="noopener">Create a free account</a>, then click “Connect with Google” again, or enter its ID below.</div>
+          {% endif %}
+          <label class="pal-field"><span class="pal-field__label">Merchant Center ID</span><input class="pal-input" name="manual_account_id" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 123456789" autocomplete="off"></label>
+        {% endif %}
+        <div class="gm-row"><button type="submit" class="pal-btn">Connect this account</button></div>
+      </form>
+      <form method="post" action="{% url 'store:google_merchant_connect' site.id %}" class="gm-row">{% csrf_token %}
+        <button type="submit" class="pal-btn pal-btn--ghost">Use a different Google account</button>
+      </form>
+    </div></div>
+
+    {% if gm_can_register %}
+    {% comment %}
+      One-time platform setup (OneWooz team only): registers OneWooz's Google
+      Cloud project with OneWooz's OWN Merchant Center account. Done once; after
+      that every store can connect. Google requires the Google account signed in
+      above to be an ADMIN there, a production account, and a verified website.
+    {% endcomment %}
+    <div class="app-block"><div class="gm-card">
+      <h2 class="gm-card__title">One-time setup: register OneWooz with Google</h2>
+      <p class="gm-card__lead">Google needs OneWooz's Cloud project registered once with <b>OneWooz's own</b> Merchant Center account (never a store owner's). It uses the Google account signed in above (<b>{{ config.google_email|default:"your Google account" }}</b>), which must be an <b>Admin</b> of that account. The account must be a real (not test) account with a <b>verified website</b>.</p>
+      <form method="post" action="{% url 'store:google_merchant_register_platform' site.id %}">
+        {% csrf_token %}
+        {% if gm_platform_account_id %}
+          <p class="gm-card__lead">Platform account: <b>{{ gm_platform_account_id }}</b></p>
+        {% else %}
+          <label class="pal-field"><span class="pal-field__label">OneWooz's Merchant Center ID</span><input class="pal-input" name="platform_account_id" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 123456789" value="{{ config.merchant_id }}" autocomplete="off" required></label>
+        {% endif %}
+        <label class="pal-field"><span class="pal-field__label">Developer contact email (an Admin of that account)</span><input class="pal-input" type="email" name="developer_email" value="{{ config.google_email }}" autocomplete="off"></label>
+        <div class="gm-row"><button type="submit" class="pal-btn">Register OneWooz with Google</button></div>
+      </form>
+    </div></div>
+    {% endif %}
+
+  {% else %}
+    {# ── Not connected ──────────────────────────────────────────────────── #}
+    <div class="app-block gm-grid gm-grid--2">
+      <div class="gm-card">
+        <div class="gm-hero">
+          <span class="gm-logo" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.4 5.7c4.3-4 6.9-9.9 6.9-17.2z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+          </span>
+          <div>
+            <h2 class="gm-card__title">Connect Google Merchant Center</h2>
+            <p class="gm-card__lead">One click: sign in with Google, allow access, and we do the rest.</p>
+          </div>
+        </div>
+        {% if config.last_error %}<p class="gm-err">{{ config.last_error }}</p>{% endif %}
+        <form method="post" action="{% url 'store:google_merchant_connect' site.id %}">
+          {% csrf_token %}
+          <button type="submit" class="gm-gbtn">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.4 5.7c4.3-4 6.9-9.9 6.9-17.2z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+            Connect with Google
+          </button>
+        </form>
+        <ul class="gm-steps">
+          <li>Finds your Merchant Center account automatically</li>
+          <li>Creates a product feed for this store</li>
+          <li>Verifies and claims your store's website</li>
+          <li>Sends every product with its full details: title, description, images, price and sale price (GST included), stock, brand, variations (colour, size…), category, highlights, specifications, dimensions and weight</li>
+          <li>Keeps Google up to date whenever you add, edit or delete a product</li>
+        </ul>
+      </div>
+      <div class="gm-card">
+        <h2 class="gm-card__title">Before you connect</h2>
+        <ul class="gm-steps">
+          <li><span>A Google Merchant Center account. <a class="gm-link" href="https://merchants.google.com/" target="_blank" rel="noopener">Create one free</a> if you don't have it yet.</span></li>
+          <li>Sign in with a Google account that has <b>admin</b> access to it.</li>
+          <li>On Google's screen, keep both permissions ticked: managing your product listings, and verifying your website.</li>
+          <li>Publish your store, so Google can reach your website and product pages.</li>
+        </ul>
+      </div>
+    </div>
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/app/google-merchant.js' %}" defer></script>
 {% endblock %}

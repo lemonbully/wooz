@@ -1,0 +1,19 @@
+{% comment %}
+Auto-generated, outcome-oriented recommendations. Expects `insights`  a list
+of {level, title, body}. level ∈ good | warn | risk | tip.
+{% endcomment %}
+<div class="app-block">
+  <div class="app-block__head">
+    <h2 class="app-block__title">What to do next</h2>
+    <p class="app-block__note">Generated from your data  prioritised by impact.</p>
+  </div>
+  <div class="an-insights">
+    {% for ins in insights %}
+    <div class="an-insight an-insight--{{ ins.level }}">
+      <span class="an-insight__tag">{% if ins.level == "good" %}Working{% elif ins.level == "warn" %}Watch{% elif ins.level == "risk" %}Fix{% else %}Opportunity{% endif %}</span>
+      <h3 class="an-insight__title">{{ ins.title }}</h3>
+      <p class="an-insight__body">{{ ins.body }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>

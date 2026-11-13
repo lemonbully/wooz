@@ -1,0 +1,41 @@
+{% comment %}
+Marketing head SEO block  canonical, robots, keywords, Open Graph, Twitter card
+and the JSON-LD @graph. Everything is supplied by web.context_processors.seo
+(the `seo` dict + `schema_jsonld` string), which runs only on the marketing
+surface and fails open, so this partial simply renders nothing meaningful if the
+context is absent. Included from web/_shell.html's {% block head %}.
+
+The JSON-LD is a data block (type="application/ld+json"), not executable script,
+so the CSP script-src neither blocks nor flags it; the nonce is added only to
+honour the repo-wide "every inline script carries a nonce" convention, and
+search engines ignore the attribute. "<" is escaped to < in the payload, so
+|safe cannot break out of the tag.
+{% endcomment %}
+{% if seo %}
+<link rel="canonical" href="{{ seo.canonical }}">
+<meta name="robots" content="{{ seo.robots }}">
+{% if seo.keywords %}<meta name="keywords" content="{{ seo.keywords }}">{% endif %}
+
+{# Open Graph  link previews on social + a signal answer engines read #}
+<meta property="og:site_name" content="{{ seo.site_name }}">
+<meta property="og:type" content="{{ seo.og_type }}">
+<meta property="og:title" content="{{ seo.og_title|default:seo.title }}">
+<meta property="og:description" content="{{ seo.og_description|default:seo.description }}">
+<meta property="og:url" content="{{ seo.canonical }}">
+<meta property="og:image" content="{{ seo.og_image }}">
+<meta property="og:locale" content="{{ seo.locale }}">
+
+{# Twitter card #}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ seo.twitter_title|default:seo.title }}">
+<meta name="twitter:description" content="{{ seo.twitter_description|default:seo.description }}">
+<meta name="twitter:image" content="{{ seo.twitter_image|default:seo.og_image }}">
+{% endif %}
+{% if schema_jsonld %}
+<script type="application/ld+json" nonce="{{ csp_nonce }}">{{ schema_jsonld|safe }}</script>
+{% endif %}
+{% comment %} Schema pasted in Django admin → onewooz.com SEO, one block per pasted
+script. Validated and "<"-escaped on the way in (web.seo_overrides.parse_schema). {% endcomment %}
+{% for block in seo.custom_schema %}
+<script type="application/ld+json" nonce="{{ csp_nonce }}">{{ block|safe }}</script>
+{% endfor %}

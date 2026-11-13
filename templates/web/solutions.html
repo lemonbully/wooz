@@ -1,7 +1,6 @@
 {% extends "web/_shell.html" %}
 {% load onewooz %}
 
-{% block title %}Solutions · OneWooz{% endblock %}
 
 {% block main %}
 
@@ -19,7 +18,7 @@
 {# --------------------------------------------------------------- D2C #}
 <section class="pal-section pal-ruled" id="d2c">
   <div class="pal-container">
-    <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>D2C — direct to consumer</span></div>
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>D2C  direct to consumer</span></div>
     <h2 class="pal-h2 pal-mt-6" style="max-width:18ch;" data-reveal>A shop that takes money, end to end.</h2>
     <div class="pal-grid pal-grid--3 pal-mt-12" data-reveal>
       <div class="pal-cell"><div class="pal-cell__idx">01</div><div class="pal-cell__title">Cart &amp; checkout</div><div class="pal-cell__desc">A full retail path with cards, UPI and cash on delivery, plus part-payment where you want it.</div></div>
@@ -27,7 +26,7 @@
       <div class="pal-cell"><div class="pal-cell__idx">03</div><div class="pal-cell__title">Offers</div><div class="pal-cell__desc">Discount codes, store credit and wishlists, ready to run a launch or a sale.</div></div>
       <div class="pal-cell"><div class="pal-cell__idx">04</div><div class="pal-cell__title">Fulfilment</div><div class="pal-cell__desc">Courier pickup, labels in the right format, and tracking pushed to the customer.</div></div>
       <div class="pal-cell"><div class="pal-cell__idx">05</div><div class="pal-cell__title">After-sales</div><div class="pal-cell__desc">Returns, replacements and warranty requests handled in one queue.</div></div>
-      <div class="pal-cell"><div class="pal-cell__idx">06</div><div class="pal-cell__title">Growth</div><div class="pal-cell__desc">Analytics, SEO and social previews so the store is found and the numbers are legible.</div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">06</div><div class="pal-cell__title">Growth</div><div class="pal-cell__desc">Analytics, SEO and built-in <a href="{% url 'web:platform' %}#email-marketing">email marketing</a>, so the store is found, buyers come back and the numbers are legible.</div></div>
     </div>
   </div>
 </section>
@@ -35,7 +34,7 @@
 {# --------------------------------------------------------------- B2B #}
 <section class="pal-section pal-ruled pal-section--ink" id="b2b">
   <div class="pal-container">
-    <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>B2B — business to business</span></div>
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>B2B  business to business</span></div>
     <h2 class="pal-h2 pal-mt-6" style="max-width:20ch;" data-reveal>A catalogue that brings enquiries.</h2>
     <div class="pal-grid pal-grid--3 pal-mt-12" data-reveal>
       <div class="pal-cell"><div class="pal-cell__idx">01</div><div class="pal-cell__title">Full catalogue</div><div class="pal-cell__desc">Every product with specifications, downloads and the depth a technical buyer expects.</div></div>
@@ -50,7 +49,7 @@
 
 {# ------------------------------------------------------------ B2B flow #}
 {% comment %}
-The B2B lifecycle as a schematic — enquiry to reorder — matching the D2C order
+The B2B lifecycle as a schematic  enquiry to reorder  matching the D2C order
 pipeline on the home page. A packet travels the path (SVG animateMotion).
 {% endcomment %}
 <section class="pal-section pal-ruled pal-blueprint" id="b2b-flow">
@@ -76,7 +75,7 @@ pipeline on the home page. A packet travels the path (SVG animateMotion).
         <circle class="packet" r="6"><animateMotion dur="5s" repeatCount="indefinite"><mpath href="#b2bPath"/></animateMotion></circle>
       </svg>
 
-      {% comment %} Mobile fallback — vertical, full-size type (see .pal-pipe-m). {% endcomment %}
+      {% comment %} Mobile fallback  vertical, full-size type (see .pal-pipe-m). {% endcomment %}
       <div class="pal-pipe-m">
         <span class="pal-pipe-m__flow" aria-hidden="true"></span>
         <ol>

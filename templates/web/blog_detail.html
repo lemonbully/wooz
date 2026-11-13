@@ -1,0 +1,30 @@
+{% extends "web/_shell.html" %}
+
+{% block title %}{% if seo.custom_title %}{{ seo.title }}{% else %}{{ post.title }} · OneWooz Blog{% endif %}{% endblock %}
+
+{% block main %}
+<section class="pal-section">
+  <article class="pal-container" style="max-width:52rem;">
+    <nav class="pal-breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1rem;font-size:.85rem;">
+      <a href="{% url 'web:home' %}">Home</a>
+      <span aria-hidden="true"> / </span>
+      <a href="{% url 'web:blog_list' %}">Blog</a>
+      <span aria-hidden="true"> / </span>
+      <span aria-current="page">{{ post.title }}</span>
+    </nav>
+
+    <h1 class="pal-h1">{{ post.title }}</h1>
+    <div style="margin-top:.5rem;font-size:.85rem;color:var(--pal-ink-500,#6b7280);">
+      {% if post.author %}{{ post.author }} · {% endif %}{{ post.published_at|date:"M d, Y" }}
+    </div>
+
+    {% if post.cover_image %}
+    <img src="{{ post.cover_image.url }}" alt="{{ post.title }}" style="width:100%;max-height:24rem;object-fit:cover;border-radius:.75rem;margin-top:1.5rem;">
+    {% endif %}
+
+    <div class="pal-prose" style="margin-top:1.75rem;">
+      {{ post.content|safe }}
+    </div>
+  </article>
+</section>
+{% endblock %}

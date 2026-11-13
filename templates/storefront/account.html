@@ -1,0 +1,867 @@
+{% extends store_base|default:"storefront/theme_base.html" %}
+{% load static %}
+{% load website_filters %}
+
+{% comment %}
+Storefront customer account ("My Account"). Two layouts from one markup:
+
+Desktop (>= 64rem): a profile card + section menu on the left (My Orders,
+Wishlist, Store Credit, Profile & Addresses, Account Settings, Sign Out) and,
+on the right, the "My Account" heading, four stat tiles and the open section.
+
+Phone / tablet (< 64rem): a greeting card (opens the account menu), 2 x 2 stat
+tiles, the open section and a fixed bottom bar (Home, Orders, Wishlist,
+Account). "Account" shows the same menu card the desktop sidebar uses.
+
+Sections are deep-linked by hash: #orders #wishlist #credits #profile
+#settings (#menu on phones; the old #account-details opens Profile). Without
+JavaScript every section simply shows one after another.
+
+My Orders: status chips (GET ?status=, "Returned" = shipment back to seller;
+phones fold Paid / Delivered / Cancelled / Returned into "More"), instant
+search by product or order number, one card per order with the first item's
+photo. Track Order shows only on SHIPPED orders and opens the courier's own
+tracking page in a new tab (order.track_url, see
+storefront.account_profile.annotate_order_cards).
+
+Profile & Addresses and Account Settings share storefront/_account_profile.html
+(one copy on the page; its data-ap-part="profile|settings" blocks are shown
+per section).
+
+Look = the D2C themes' own: black + neutral greys only (no brand tint),
+small uppercase tracked labels, light headings, hairlines, 6px corners; font
+inherited from the theme (Work Sans). Phones: the Account menu has a Back link.
+Hooks other code relies on are unchanged: acct-* sign-in ids,
+data-view-order / order-detail-<id> / order-modal, data-orq-*
+(storefront/_order_request*.html), data-wish + .wishlist-remove-btn.
+{% endcomment %}
+
+{% block page_content %}
+{% website_base_path website request as website_base %}
+{% with sym=website.currency|currency_symbol %}
+<style nonce="{{ csp_nonce }}">
+  /* Signed-in account: the D2C themes' own look. Inherited font (Work Sans),
+     black + warm neutral greys only, small uppercase tracked labels, light
+     headings, hairline borders, 6px corners, no tints or shadows. */
+  .acc{--acc-accent:#111827;--acc-ink:#111827;--acc-text:#374151;--acc-muted:#6b7280;--acc-line:#e8e8e8;--acc-soft:#f6f6f5;max-width:80rem;margin:0 auto;padding:1rem 1rem 2.5rem;color:var(--acc-ink);font-size:.875rem}
+  @media (min-width:64rem){.acc{padding:2.5rem clamp(1.5rem,3vw,3rem) 4rem}}
+  .acc *{box-sizing:border-box}
+  .acc [hidden]{display:none!important}
+  .acc .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .acc-sprite{position:absolute;width:0;height:0;overflow:hidden}
+  .acc-i{width:1.1rem;height:1.1rem;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .acc a:focus-visible,.acc button:focus-visible,.acc input:focus-visible{outline:1px solid #111827;outline-offset:3px}
+
+  /* Layout */
+  .acc-layout{display:block}
+  .acc-layout > *{min-width:0}
+  @media (min-width:64rem){.acc-layout{display:grid;grid-template-columns:15rem minmax(0,1fr);gap:clamp(2rem,3.5vw,3.25rem);align-items:start}}
+
+  /* Profile card + section menu (desktop sidebar; the "Account" menu on phones) */
+  .acc-side{display:none}
+  @media (min-width:64rem){.acc-side{display:block;position:sticky;top:calc(var(--header-height,0px) + 1.5rem)}}
+  .acc-back{display:none}
+  .acc-card{background:#fff;border:1px solid var(--acc-line);border-radius:6px;overflow:hidden}
+  .acc-me{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:.75rem;align-items:center;padding:1.1rem;border-bottom:1px solid var(--acc-line)}
+  .acc-me .acc-avatar{grid-row:1 / 3}
+  .acc-avatar{flex:none;width:2.5rem;height:2.5rem;border-radius:9999px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:500;line-height:1}
+  .acc-me__hi{margin:0;align-self:end;font-size:.89rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;line-height:1.3}
+  .acc-me__mail{margin:.2rem 0 0;align-self:start;font-size:.74rem;color:var(--acc-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .acc-menu{padding:.5rem}
+  .acc-menu ul{list-style:none;margin:0;padding:0;display:grid;gap:.1rem}
+  .acc-mlink{display:flex;align-items:center;gap:.75rem;width:100%;padding:.7rem .75rem;border-radius:4px;color:var(--acc-ink);background:none;text-decoration:none;font-size:.82rem;font-weight:400;text-transform:uppercase;letter-spacing:.03em;transition:background-color .15s ease,color .15s ease}
+  .acc-mlink:hover{background:var(--acc-soft);color:var(--acc-ink)}
+  .acc-mlink[aria-current="page"]{background:var(--acc-soft);color:var(--acc-ink);font-weight:500}
+  .acc-mlink .acc-i{width:1rem;height:1rem}
+  .acc-pill{margin-left:auto;font-size:.66rem;letter-spacing:.04em;color:var(--acc-muted)}
+  .acc-menu__rule{height:1px;margin:.4rem .75rem;background:var(--acc-line)}
+
+  /* Heading (desktop) / greeting card (phones) */
+  .acc-head h1{margin:0;font-size:clamp(1.15rem,1rem + .5vw,1.45rem);font-weight:400;text-transform:uppercase;letter-spacing:.03em;line-height:1.3}
+  .acc-head p{margin:.45rem 0 0;font-size:.8rem;color:var(--acc-muted)}
+  .acc-greet{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border:1px solid var(--acc-line);border-radius:6px;background:#fff;color:var(--acc-ink);text-decoration:none}
+  .acc-greet:hover{color:var(--acc-ink)}
+  .acc-greet .acc-avatar{width:2.4rem;height:2.4rem}
+  .acc-greet__txt{flex:1 1 auto;min-width:0}
+  .acc-greet__hi{display:block;font-size:.89rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;line-height:1.3}
+  .acc-greet__mail{display:block;margin-top:.2rem;font-size:.74rem;color:var(--acc-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .acc-greet > .acc-i{width:.95rem;height:.95rem;color:var(--acc-muted)}
+  @media (max-width:63.99rem){.acc-head{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}}
+  @media (min-width:64rem){.acc-greet{display:none}}
+
+  /* Stat tiles */
+  .acc-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;margin:.75rem 0 1.75rem}
+  @media (min-width:40rem){.acc-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  @media (min-width:64rem){.acc-stats{gap:.75rem;margin:1.75rem 0 2.5rem}}
+  .acc-stat{display:flex;align-items:center;gap:.65rem;min-width:0;padding:.75rem .8rem;border:1px solid var(--acc-line);border-radius:6px;background:#fff;color:var(--acc-ink);text-decoration:none;transition:border-color .15s ease}
+  .acc-stat:hover{border-color:#bdbdbd;color:var(--acc-ink)}
+  .acc-stat.is-active{border-color:#111827}
+  .acc-stat__ic{flex:none;width:2rem;height:2rem;border:1px solid var(--acc-line);border-radius:9999px;display:flex;align-items:center;justify-content:center}
+  .acc-stat__ic .acc-i{width:.95rem;height:.95rem}
+  .acc-stat__txt{min-width:0}
+  .acc-stat b{display:block;font-size:.95rem;font-weight:500;line-height:1.2}
+  .acc-stat__lbl{display:block;margin-top:.2rem;font-size:.7rem;line-height:1.3;text-transform:uppercase;letter-spacing:.03em;color:var(--acc-text)}
+  @media (min-width:64rem){
+    .acc-stat{gap:.85rem;padding:1rem 1.1rem}
+    .acc-stat__ic{width:2.4rem;height:2.4rem}
+    .acc-stat b{font-size:1.1rem}
+    .acc-stat__lbl{font-size:.75rem}
+  }
+
+  /* Section heading */
+  .acc-panel{min-width:0}
+  .acc-panel + .acc-panel{margin-top:2.25rem}
+  .js-tabs .acc-panel + .acc-panel{margin-top:0}
+  .acc-phead{display:flex;align-items:flex-end;justify-content:space-between;gap:.75rem 1rem;margin:0 0 1rem}
+  .acc-phead__t{flex:1 1 0;min-width:0}
+  .acc-phead h2{margin:0;font-size:1.08rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;line-height:1.3}
+  .acc-phead p{margin:.4rem 0 0;font-size:.78rem;color:var(--acc-muted)}
+  @media (min-width:64rem){.acc-phead{margin-bottom:1.25rem}}
+  @media (max-width:63.99rem){.acc-dk{display:none}}
+
+  /* Order search */
+  .acc-search{position:relative;flex:0 1 17rem}
+  .acc-search input{width:100%;height:2.4rem;padding:0 .9rem 0 2.3rem;border:1px solid var(--acc-line);border-radius:6px;background:#fff;color:var(--acc-ink);font-family:inherit;font-size:.78rem}
+  .acc-search input::placeholder{color:var(--acc-muted)}
+  .acc-search input:focus{outline:none;border-color:#111827}
+  .acc-search .acc-i{position:absolute;left:.8rem;top:50%;transform:translateY(-50%);width:.95rem;height:.95rem;color:var(--acc-muted);pointer-events:none}
+  .acc-sbtn{display:none}
+  @media (max-width:63.99rem){
+    .acc-phead--orders{flex-wrap:wrap;align-items:center}
+    .acc-sbtn{display:inline-flex;flex:none;align-items:center;justify-content:center;width:2.25rem;height:2.25rem;border-radius:9999px;border:1px solid var(--acc-line);background:#fff;color:var(--acc-ink);cursor:pointer}
+    .acc-sbtn .acc-i{width:.95rem;height:.95rem}
+    .acc-sbtn[aria-expanded="true"]{border-color:#111827}
+    .acc-search{display:none;flex:1 1 100%}
+    .acc-search.is-open{display:block}
+  }
+
+  /* Status chips */
+  .acc-chipbar{position:relative;margin:0 0 1.25rem}
+  .acc-chips{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
+  .acc-chip{display:inline-flex;align-items:center;justify-content:center;gap:.3rem;height:2rem;padding:0 .95rem;border:1px solid var(--acc-line);border-radius:9999px;background:#fff;color:var(--acc-text);font-family:inherit;font-size:.77rem;font-weight:400;text-transform:uppercase;letter-spacing:.03em;text-decoration:none;white-space:nowrap;cursor:pointer;transition:border-color .15s ease,color .15s ease}
+  .acc-chip:hover{border-color:#111827;color:#111827}
+  .acc-chip[aria-current="true"]{background:#111827;border-color:#111827;color:#fff;font-weight:500}
+  .acc-chip .acc-i{width:.8rem;height:.8rem}
+  .acc-morebtn{display:none}
+  .acc-moremenu{position:absolute;right:0;top:calc(100% + .4rem);z-index:30;min-width:10rem;padding:.3rem;border:1px solid var(--acc-line);border-radius:6px;background:#fff;box-shadow:0 10px 24px -16px rgba(0,0,0,.3)}
+  .acc-moremenu a{display:block;padding:.6rem .75rem;border-radius:4px;color:var(--acc-text);text-decoration:none;font-size:.79rem;text-transform:uppercase;letter-spacing:.03em}
+  .acc-moremenu a:hover{background:var(--acc-soft);color:#111827}
+  .acc-moremenu a[aria-current="true"]{background:var(--acc-soft);color:#111827;font-weight:500}
+  @media (max-width:63.99rem){
+    .acc-chipbar{margin-bottom:1rem}
+    .acc-chips{flex-wrap:nowrap;gap:.3rem;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:.1rem 0}
+    .acc-chips::-webkit-scrollbar{display:none}
+    .acc-chip{flex:1 0 auto;height:2rem;padding:0 .6rem;font-size:.7rem;letter-spacing:.02em}
+    .acc-chip[data-more]{display:none}
+    .acc-morebtn{display:inline-flex}
+  }
+  @media (min-width:64rem){.acc-moremenu{display:none!important}}
+
+  /* Order cards */
+  .acc-orders{display:grid;gap:.75rem}
+  .acc-oc{display:grid;grid-template-columns:4.25rem minmax(0,1fr) auto;grid-template-areas:"head head badge" "thumb item chev" "thumb price chev" "acts acts acts" "extra extra extra";column-gap:.85rem;row-gap:0;padding:.9rem;border:1px solid var(--acc-line);border-radius:6px;background:#fff}
+  .acc-oc__head{grid-area:head;min-width:0;margin:0 0 .75rem}
+  .acc-oc__no{margin:0;font-size:.91rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;line-height:1.3}
+  .acc-oc__date{margin:.25rem 0 0;font-size:.72rem;color:var(--acc-muted)}
+  .acc-oc .orq-tag{margin-left:.45rem;vertical-align:middle}
+  .acc .orq-tag{background:var(--acc-soft);color:var(--acc-text);border-color:var(--acc-line);font-size:.7rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+  .acc-badge{grid-area:badge;justify-self:end;align-self:start;display:inline-flex;align-items:center;gap:.4rem;padding:.28rem .6rem;border-radius:9999px;background:var(--acc-soft);color:#3a3a3a;font-size:.7rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;line-height:1.2;white-space:nowrap}
+  .acc-badge::before{content:"";width:.36rem;height:.36rem;border-radius:9999px;background:#a3a3a3}
+  .acc-badge--shipped::before{background:#111827}
+  .acc-badge--delivered::before{background:#4d7c5a}
+  .acc-badge--cancelled::before{background:#b4473d}
+  .acc-badge--returned::before{background:#a47a2c}
+  .acc-oc__thumb{grid-area:thumb;align-self:center;display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1/1;padding:0;border:0;border-radius:4px;overflow:hidden;background:var(--acc-soft);color:var(--acc-muted);cursor:pointer}
+  .acc-oc__thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .acc-oc__thumb .acc-i{width:1.3rem;height:1.3rem}
+  .acc-oc__item{grid-area:item;align-self:end;margin:0;font-size:.72rem;line-height:1.5;color:var(--acc-ink);min-width:0}
+  .acc-oc__name{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-transform:uppercase;letter-spacing:.03em}
+  .acc-oc__qty{margin-left:.45rem;white-space:nowrap;color:var(--acc-muted)}
+  .acc-oc__more{display:block;margin-top:.15rem;font-size:.68rem;color:var(--acc-muted)}
+  .acc-oc__price{grid-area:price;align-self:start;margin:.3rem 0 0;font-size:.82rem;font-weight:500;line-height:1.3;white-space:nowrap}
+  .acc-oc__chev{grid-area:chev;align-self:center;display:flex;align-items:center;justify-content:center;width:2rem;height:2rem;margin-right:-.35rem;padding:0;border:0;border-radius:9999px;background:none;color:var(--acc-muted);cursor:pointer}
+  .acc-oc__chev .acc-i{width:.95rem;height:.95rem}
+  .acc-oc__acts{grid-area:acts;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:.5rem;margin-top:.85rem}
+  .acc-oc__extra{grid-area:extra;margin-top:.8rem;padding-top:.7rem;border-top:1px solid var(--acc-line)}
+  .acc-oc__extra .orq-status{margin:.1rem 0 0;font-size:.72rem;color:var(--acc-muted)}
+  .acc-oc__extra .orq-actions{margin-top:.5rem}
+  .acc-oc .orq-btn{border-radius:6px;padding:.45rem .8rem;font-family:inherit;font-size:.74rem;text-transform:uppercase;letter-spacing:.03em;border-color:var(--acc-line);color:var(--acc-text)}
+  .acc-oc .orq-btn--danger{color:#b4473d}
+  .acc-oc .orq-btn--support{border-color:#111827;color:#111827}
+  .acc-oc .orq-btn--support:hover{background:#111827;color:#fff}
+  .acc-oc .orq-reply{border-radius:4px;border-color:var(--acc-line);background:var(--acc-soft);color:var(--acc-text);font-size:.76rem}
+  .acc-oc .orq-reply__label{text-transform:uppercase;letter-spacing:.03em;font-size:.66rem;color:var(--acc-muted)}
+  /* Request / support popup in the D2C themes' look: 6px corners, black
+     actions, small uppercase tracked labels, hairlines, inherited font. */
+  #orq-modal .orq-modal__panel{border-radius:6px;box-shadow:none;border:1px solid var(--acc-line,#e8e8e8);font-family:inherit}
+  #orq-modal .orq-modal__title{font-size:.86rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+  #orq-modal .orq-modal__head,#orq-modal .orq-modal__foot{border-color:#e8e8e8}
+  #orq-modal .orq-modal__x{border-radius:9999px;border-color:#e8e8e8}
+  #orq-modal .orq-modal__body label{font-size:.7rem;text-transform:uppercase;letter-spacing:.03em;color:#6b7280}
+  #orq-modal .orq-modal__body select,#orq-modal .orq-modal__body textarea{border-radius:6px;border-color:#e8e8e8;font-family:inherit;font-size:.82rem;text-transform:none;letter-spacing:normal}
+  #orq-modal .orq-modal__body select:focus,#orq-modal .orq-modal__body textarea:focus{outline:1px solid #111827;outline-offset:1px}
+  #orq-modal .orq-btn,#orq-modal .orq-modal__submit{border-radius:6px;font-family:inherit;font-size:.74rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+  #orq-modal .orq-btn{border-color:#111827;color:#111827}
+  #orq-modal .orq-modal__submit{background:#111827}
+  #orq-modal .orq-modal__submit:hover{background:#333}
+  @media (min-width:48rem){
+    .acc-oc{grid-template-columns:5.25rem minmax(0,1fr) auto auto;grid-template-rows:auto 1fr;grid-template-areas:"thumb head head badge" "thumb item price acts" "extra extra extra extra";column-gap:1.25rem;padding:1rem 1.15rem}
+    .acc-oc__head{align-self:start;margin:.1rem 0 0}
+    .acc-oc__thumb{align-self:start}
+    .acc-oc__item{align-self:center}
+    .acc-oc__price{align-self:center;margin:0}
+    .acc-oc__chev{display:none}
+    .acc-oc__acts{display:flex;align-self:center;gap:.5rem;margin:0}
+  }
+
+  /* Buttons */
+  .acc-btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:2.25rem;padding:.45rem 1rem;border-radius:6px;border:1px solid #111827;background:#fff;color:#111827;font-family:inherit;font-size:.74rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;line-height:1.2;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background-color .15s ease,color .15s ease}
+  .acc-btn:hover{background:#111827;color:#fff}
+  .acc-btn--primary{background:#111827;color:#fff}
+  .acc-btn--primary:hover{background:#333;border-color:#333;color:#fff}
+  .acc-btn .acc-i{width:.9rem;height:.9rem}
+  .acc-btn:disabled{opacity:.5;cursor:not-allowed}
+
+  /* Empty states */
+  .acc-empty{padding:2.25rem 1rem;border:1px solid var(--acc-line);border-radius:6px;text-align:center;background:#fff}
+  .acc-empty__icon{width:2.5rem;height:2.5rem;margin:0 auto .85rem;border:1px solid var(--acc-line);border-radius:9999px;display:flex;align-items:center;justify-content:center;color:var(--acc-ink)}
+  .acc-empty__icon .acc-i{width:1rem;height:1rem}
+  .acc-empty h3{margin:0 0 .35rem;font-size:.89rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+  .acc-empty p{margin:0 0 1.1rem;font-size:.78rem;color:var(--acc-muted)}
+
+  /* Wishlist */
+  .acc-wish{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+  @media (min-width:40rem){.acc-wish{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media (min-width:80rem){.acc-wish{grid-template-columns:repeat(4,minmax(0,1fr));gap:.9rem}}
+  .acc-witem{display:flex;flex-direction:column;border:1px solid var(--acc-line);border-radius:6px;background:#fff;overflow:hidden}
+  .acc-witem__img{display:block;aspect-ratio:1/1;background:var(--acc-soft);overflow:hidden}
+  .acc-witem__img img{width:100%;height:100%;object-fit:cover;display:block}
+  .acc-witem__body{display:flex;flex-direction:column;gap:.3rem;flex:1;padding:.7rem .75rem .8rem}
+  .acc-witem__title{font-size:.82rem;line-height:1.45;text-transform:uppercase;letter-spacing:.03em;color:var(--acc-ink);text-decoration:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .acc-witem__price{font-size:.8rem;font-weight:500}
+  .acc-witem__acts{display:flex;gap:.4rem;margin-top:auto;padding-top:.45rem}
+  .acc-witem__acts .acc-btn{flex:1 1 auto;min-height:2.1rem;padding:.35rem .5rem;font-size:.7rem;letter-spacing:.03em}
+
+  /* Store credit */
+  .acc-credits{display:grid;gap:.6rem}
+  @media (min-width:40rem){.acc-credits{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .acc-credit{padding:1.1rem 1.2rem;border-radius:6px;background:#111827;color:#fff}
+  .acc-credit b{display:block;font-size:1.2rem;font-weight:400;letter-spacing:.02em}
+  .acc-credit span{display:block;margin-top:.3rem;font-size:.74rem;text-transform:uppercase;letter-spacing:.03em;opacity:.75}
+  .acc-note{margin:.85rem 0 0;padding:.75rem .9rem;border:1px solid var(--acc-line);border-radius:6px;background:var(--acc-soft);font-size:.76rem;line-height:1.55;color:var(--acc-text)}
+
+  /* Profile & Addresses / Account Settings share one copy of the settings section */
+  .acc-panel .ap{--ap-accent:#111827;--ap-ink:#111827;--ap-text:#374151;--ap-muted:#6b7280;--ap-line:#e8e8e8;margin:0;max-width:none}
+  .acc-panel .ap-head{display:none}
+  .acc-panel .ap-card{border-color:var(--acc-line);border-radius:6px;padding:1.1rem}
+  .acc-panel .ap-cardhead h3,.acc-panel .ap-danger h3{font-size:.84rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;color:var(--acc-ink)}
+  .acc-panel .ap-field > span{font-size:.72rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;color:var(--acc-text)}
+  .acc-panel .ap-input,.acc-panel .ap-select{height:2.5rem;border-color:var(--acc-line);border-radius:6px;font-size:.82rem}
+  .acc-panel .ap-input:focus,.acc-panel .ap-select:focus{border-color:#111827;box-shadow:none}
+  .acc-panel .ap-emailrow{border-radius:6px;background:var(--acc-soft)}
+  .acc-panel .ap-emailrow b{font-size:.82rem;font-weight:500}
+  .acc-panel .ap-btn{min-height:2.25rem;padding:.45rem 1rem;border-radius:6px;font-size:.74rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+  .acc-panel .ap-btn--ghost{border-color:#111827}
+  .acc-panel .ap-btn--link{min-height:auto;padding:0;text-transform:none;letter-spacing:0;font-size:.76rem;font-weight:500}
+  .acc-panel .ap-addr{border-radius:6px;border-color:var(--acc-line)}
+  .acc-panel .ap-addr.is-default{border-color:#111827;box-shadow:none}
+  .acc-panel .ap-addr p{font-size:.8rem}
+  .acc-panel .ap-tag{border-radius:4px;font-size:.7rem;text-transform:uppercase;letter-spacing:.03em;background:var(--acc-soft);color:var(--acc-text)}
+  .acc-panel .ap-tag--label{background:#111827;color:#fff}
+  .acc-panel .ap-tag--default{background:var(--acc-soft);color:#111827;border:1px solid #111827}
+  .acc-panel .ap-empty{border-style:solid;border-color:var(--acc-line);border-radius:6px;font-size:.78rem}
+  .acc-panel .ap-danger{border-color:var(--acc-line);background:#fff}
+  .acc-panel .ap-danger p{font-size:.78rem;color:var(--acc-muted)}
+  .acc-panel .ap-btn--dangerghost{border-color:var(--acc-line);color:#b4473d}
+  .acc-panel .ap-btn--dangerghost:hover{border-color:#b4473d}
+  .acc[data-acc-view="profile"] [data-acc-only="settings"],
+  .acc[data-acc-view="settings"] [data-acc-only="profile"]{display:none!important}
+  .acc[data-acc-view="profile"] [data-ap-part="settings"],
+  .acc[data-acc-view="settings"] [data-ap-part="profile"]{display:none!important}
+  .acc[data-acc-view="settings"] .ap-split-only{display:flex}
+  .acc[data-acc-view="settings"] .ap-field--email{margin-top:0}
+  .acc[data-acc-view="settings"] .ap-grid{grid-template-columns:minmax(0,1fr)}
+  .acc-signout{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.25rem;padding:1.1rem;border:1px solid var(--acc-line);border-radius:6px;background:#fff}
+  .acc-signout h3{margin:0 0 .25rem;font-size:.84rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+  .acc-signout p{margin:0;font-size:.78rem;color:var(--acc-muted)}
+
+  /* Phones: account menu view (a plain list with a Back link) + bottom bar */
+  @media (max-width:63.99rem){
+    .acc[data-acc-view="menu"] .acc-side{display:block}
+    .acc[data-acc-view="menu"] .acc-greet,
+    .acc[data-acc-view="menu"] .acc-stats,
+    .acc[data-acc-view="menu"] .acc-panel{display:none!important}
+    .acc[data-acc-view="menu"] .acc-back{display:inline-flex;align-items:center;gap:.35rem;margin:0 0 .9rem;padding:.4rem .1rem;color:#111827;text-decoration:none;font-size:.79rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+    .acc[data-acc-view="menu"] .acc-back .acc-i{width:.9rem;height:.9rem}
+    .acc[data-acc-view="menu"] .acc-menu{padding:0 1rem}
+    .acc[data-acc-view="menu"] .acc-menu ul{gap:0}
+    .acc[data-acc-view="menu"] .acc-mlink{padding:1rem 0;border-radius:0;border-bottom:1px solid var(--acc-line);background:none;color:#111827;font-weight:400}
+    .acc[data-acc-view="menu"] .acc-menu li:last-child .acc-mlink{border-bottom:0}
+    .acc[data-acc-view="menu"] .acc-mlink::after{content:"";flex:none;width:.4rem;height:.4rem;margin-left:.75rem;border-top:1px solid currentColor;border-right:1px solid currentColor;transform:rotate(45deg);opacity:.45}
+    .acc[data-acc-view="menu"] .acc-mlink:not(:has(.acc-pill))::after{margin-left:auto}
+    .acc[data-acc-view="menu"] .acc-menu > .acc-mlink{border-bottom:0}
+    .acc[data-acc-view="menu"] .acc-menu > .acc-mlink::after{display:none}
+    .acc[data-acc-view="menu"] .acc-menu__rule{margin:0 0}
+  }
+  .acc-bnav{position:fixed;left:0;right:0;bottom:0;z-index:900;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:.25rem .5rem calc(.25rem + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid var(--acc-line)}
+  .acc-bnav a{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;padding:.55rem .25rem;color:var(--acc-muted);text-decoration:none;font-size:.7rem;font-weight:400;text-transform:uppercase;letter-spacing:.03em;line-height:1.1}
+  .acc-bnav a:hover{color:#111827}
+  .acc-bnav a[aria-current="page"]{color:#111827;font-weight:500}
+  .acc-bnav a[aria-current="page"]::before{content:"";position:absolute;top:-.26rem;left:32%;right:32%;height:2px;background:#111827}
+  .acc-bnav .acc-i{width:1.2rem;height:1.2rem}
+  @media (min-width:64rem){.acc-bnav{display:none}}
+
+  /* Signed out (unchanged from the original sign-in card) */
+  .acc:has(.acc-auth){max-width:72rem;padding:1.25rem 1rem 3rem}
+  .acc-auth{--acc-accent:var(--primary-color,#111827);--acc-ink:#111827;--acc-text:#374151;--acc-muted:#6b7280;--acc-line:#e5e7eb;color:var(--acc-ink)}
+  .acc-auth{max-width:27rem;margin:1.5rem auto 2rem;padding:1.5rem;border:1px solid var(--acc-line);border-radius:1.25rem;background:#fff;box-shadow:0 0px 5px 1px rgba(0,0,0,0.15)}
+  .acc-auth{text-align:center}
+  .acc-auth__icon{width:3.25rem;height:3.25rem;border-radius:9999px;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem}
+  .acc-auth__icon svg{width:1.5rem;height:1.5rem}
+  .acc-auth h1{margin:0;font-size:1.4rem;font-weight:700;letter-spacing:-.01em}
+  .acc-auth > p{margin:.35rem 0 1rem;font-size:.9rem;line-height:1.5;color:var(--acc-muted)}
+  .acc-input{width:100%;height:3rem;padding:0 .9rem;border:1px solid #d1d5db;border-radius:.75rem;font-size:1rem;font-family:inherit;color:var(--acc-ink);background:#fff;text-align:center}
+  .acc-input:focus{outline:none;border-color:var(--acc-accent);box-shadow:0 0 0 3px rgba(17,24,39,.08)}
+  .acc-input--code{text-align:center;letter-spacing:.4em;font-size:1.15rem}
+  .acc-submit{width:100%;min-height:3rem;border-radius:.75rem;border:0;background:#000;color:#fff;font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .acc-link{width:100%;min-height:2.6rem;border-radius:.75rem;border:1px solid #d1d5db;background:#fff;color:var(--acc-ink);font-size:.88rem;font-weight:500;font-family:inherit;cursor:pointer}
+  .acc-auth form{display:grid;gap:.65rem}
+  .acc-auth .hidden{display:none}
+  .acc-fine{margin:1rem 0 0;font-size:.76rem;color:var(--acc-muted);text-align:center}
+
+  /* Order details modal (a bottom sheet on phones) */
+  .acc-modal__panel{width:min(42rem,calc(100% - 1.5rem))}
+  @media (max-width:40rem){
+    .acc-modal__panel{left:0!important;right:0;top:auto!important;bottom:0;transform:none!important;width:100%;max-width:none;border-radius:1.1rem 1.1rem 0 0!important}
+  }
+  @media (prefers-reduced-motion:reduce){.acc-btn,.acc-stat,.acc-mlink,.acc-chip{transition:none}}
+  {% if customer_email %}
+  /* Room for the fixed bottom bar so it never covers the page's last lines */
+  @media (max-width:63.99rem){body{padding-bottom:calc(4rem + env(safe-area-inset-bottom,0px))}}
+  {% endif %}
+</style>
+
+<svg class="acc-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="acc-i-box" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></symbol>
+  <symbol id="acc-i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+  <symbol id="acc-i-wallet" viewBox="0 0 24 24"><path d="M19 7V5.5A1.5 1.5 0 0 0 17.5 4h-12A2.5 2.5 0 0 0 3 6.5v11A2.5 2.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V9a2 2 0 0 0-2-2H5.5A2.5 2.5 0 0 1 3 6.5"/><path d="M15.5 12H21v4h-5.5a2 2 0 0 1 0-4z"/></symbol>
+  <symbol id="acc-i-card" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/><path d="M6.5 15h3"/></symbol>
+  <symbol id="acc-i-pin" viewBox="0 0 24 24"><path d="M12 22s-7-5.5-7-12a7 7 0 0 1 14 0c0 6.5-7 12-7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="acc-i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="acc-i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="acc-i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol>
+  <symbol id="acc-i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.2-4.2"/></symbol>
+  <symbol id="acc-i-right" viewBox="0 0 24 24"><path d="M9 5.5l6.5 6.5L9 18.5"/></symbol>
+  <symbol id="acc-i-left" viewBox="0 0 24 24"><path d="M15 5.5L8.5 12l6.5 6.5"/></symbol>
+  <symbol id="acc-i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="acc-i-home" viewBox="0 0 24 24"><path d="M3.5 10.5L12 3.5l8.5 7"/><path d="M5.5 9v10.5a1 1 0 0 0 1 1H10V15h4v5.5h3.5a1 1 0 0 0 1-1V9"/></symbol>
+  <symbol id="acc-i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+</svg>
+
+<section class="acc" data-acc>
+  {% if customer_email %}
+  <div class="acc-layout">
+
+    {# ---------------- Profile card + section menu ---------------- #}
+    <aside class="acc-side" aria-label="Account menu">
+      <a class="acc-back" href="#orders" data-acc-go="orders"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-left"/></svg>Back</a>
+      <div class="acc-card">
+        <div class="acc-me">
+          <div class="acc-avatar" aria-hidden="true">{{ account_first_name|default:customer_email|first|upper }}</div>
+          <p class="acc-me__hi">Hi, {{ account_first_name|default:"there" }}</p>
+          <p class="acc-me__mail">{{ customer_email }}</p>
+        </div>
+        <nav class="acc-menu" aria-label="Account sections">
+          <ul>
+            <li><a class="acc-mlink" href="#orders" data-acc-go="orders" data-acc-link="orders" aria-current="page"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-box"/></svg>My Orders</a></li>
+            <li><a class="acc-mlink" href="#wishlist" data-acc-go="wishlist" data-acc-link="wishlist"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-heart"/></svg>Wishlist<span class="acc-pill" data-acc-wish-count>{{ wishlist|length }}</span></a></li>
+            <li><a class="acc-mlink" href="#credits" data-acc-go="credits" data-acc-link="credits"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-card"/></svg>Store Credit<span class="acc-pill">{{ sym }}{{ credit_total|floatformat:"-2" }}</span></a></li>
+            <li><a class="acc-mlink" href="#profile" data-acc-go="profile" data-acc-link="profile"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-user"/></svg>Profile &amp; Addresses</a></li>
+            <li><a class="acc-mlink" href="#settings" data-acc-go="settings" data-acc-link="settings"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-gear"/></svg>Account Settings</a></li>
+          </ul>
+          <div class="acc-menu__rule" role="presentation"></div>
+          <a class="acc-mlink" href="{% url 'public_account_logout' %}"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-out"/></svg>Sign Out</a>
+        </nav>
+      </div>
+    </aside>
+
+    <div class="acc-main">
+      <header class="acc-head">
+        <h1>My Account</h1>
+        <p>Manage your orders, wishlist, addresses, and account details in one place.</p>
+      </header>
+
+      <a class="acc-greet" href="#menu" data-acc-go="menu" aria-label="Open account menu">
+        <span class="acc-avatar" aria-hidden="true">{{ account_first_name|default:customer_email|first|upper }}</span>
+        <span class="acc-greet__txt">
+          <span class="acc-greet__hi">Hi, {{ account_first_name|default:"there" }}</span>
+          <span class="acc-greet__mail">{{ customer_email }}</span>
+        </span>
+        <svg class="acc-i" aria-hidden="true"><use href="#acc-i-right"/></svg>
+      </a>
+
+      <nav class="acc-stats" aria-label="Account summary">
+        <a class="acc-stat is-active" href="#orders" data-acc-go="orders" data-acc-stat="orders">
+          <span class="acc-stat__ic"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-box"/></svg></span>
+          <span class="acc-stat__txt"><b>{{ orders_count }}</b><span class="acc-stat__lbl">Total Orders</span></span>
+        </a>
+        <a class="acc-stat" href="#wishlist" data-acc-go="wishlist" data-acc-stat="wishlist">
+          <span class="acc-stat__ic"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-heart"/></svg></span>
+          <span class="acc-stat__txt"><b data-acc-wish-count>{{ wishlist|length }}</b><span class="acc-stat__lbl">Wishlist Items</span></span>
+        </a>
+        <a class="acc-stat" href="#credits" data-acc-go="credits" data-acc-stat="credits">
+          <span class="acc-stat__ic"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-wallet"/></svg></span>
+          <span class="acc-stat__txt"><b>{{ sym }}{{ credit_total|floatformat:"-2" }}</b><span class="acc-stat__lbl">Store Credit</span></span>
+        </a>
+        <a class="acc-stat" href="#profile" data-acc-go="profile" data-acc-stat="profile">
+          <span class="acc-stat__ic"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-pin"/></svg></span>
+          <span class="acc-stat__txt"><b>{{ saved_addresses|length }}</b><span class="acc-stat__lbl">Saved Addresses</span></span>
+        </a>
+      </nav>
+
+      {# ------------------------------ My Orders ------------------------------ #}
+      <section class="acc-panel" id="orders" aria-labelledby="acc-orders-title" data-acc-panel="orders">
+        <div class="acc-phead acc-phead--orders">
+          <div class="acc-phead__t">
+            <h2 id="acc-orders-title">My Orders</h2>
+            <p>Track, manage, or get help with your <span class="acc-dk">recent </span>orders.</p>
+          </div>
+          {% if orders %}
+          <button type="button" class="acc-sbtn" data-acc-sbtn aria-expanded="false" aria-controls="acc-order-search" aria-label="Search orders"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-search"/></svg></button>
+          <div class="acc-search" data-acc-searchbox>
+            <svg class="acc-i" aria-hidden="true"><use href="#acc-i-search"/></svg>
+            <label class="sr-only" for="acc-order-search">Search orders</label>
+            <input id="acc-order-search" type="search" placeholder="Search by product or order no." autocomplete="off" data-acc-search>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="acc-chipbar">
+          <nav class="acc-chips" aria-label="Filter orders by status">
+            <a class="acc-chip" href="?#orders"{% if not status_filter %} aria-current="true"{% endif %}><span>All<span class="acc-dk">&nbsp;Orders</span></span></a>
+            {% for val, label in order_chips %}
+            <a class="acc-chip" href="?status={{ val }}#orders"{% if val in order_chips_more %} data-more{% endif %}{% if status_filter == val %} aria-current="true"{% endif %}>{{ label }}</a>
+            {% endfor %}
+            <button type="button" class="acc-chip acc-morebtn" data-acc-more aria-expanded="false" aria-controls="acc-moremenu"{% if status_filter in order_chips_more %} aria-current="true"{% endif %}>
+              {% if status_filter in order_chips_more %}{% for val, label in order_chips %}{% if val == status_filter %}{{ label }}{% endif %}{% endfor %}{% else %}More{% endif %}
+              <svg class="acc-i" aria-hidden="true"><use href="#acc-i-down"/></svg>
+            </button>
+          </nav>
+          <div class="acc-moremenu" id="acc-moremenu" data-acc-moremenu hidden>
+            {% for val, label in order_chips %}{% if val in order_chips_more %}
+            <a href="?status={{ val }}#orders"{% if status_filter == val %} aria-current="true"{% endif %}>{{ label }}</a>
+            {% endif %}{% endfor %}
+          </div>
+        </div>
+
+        {% if orders %}
+        <div class="acc-orders" data-acc-orders>
+          {% for order in orders %}
+          <article class="acc-oc" data-search="{{ order.search_text }}" aria-labelledby="acc-oc-{{ order.id }}">
+            <div class="acc-oc__head">
+              <h3 class="acc-oc__no" id="acc-oc-{{ order.id }}">Order #{{ order.display_number }}{% if order.is_replacement %}<span class="orq-tag">Replacement</span>{% endif %}</h3>
+              <p class="acc-oc__date">Placed on {{ order.created_at|date:"j M Y, g:i A" }}</p>
+            </div>
+            {% if order.is_returned %}
+              <span class="acc-badge acc-badge--returned">Returned</span>
+            {% else %}
+              <span class="acc-badge acc-badge--{{ order.status }}">{% if order.status == 'created' %}Placed{% else %}{{ order.get_status_display }}{% endif %}</span>
+            {% endif %}
+
+            <button type="button" class="acc-oc__thumb" data-view-order="{{ order.id }}" aria-label="View details of order #{{ order.display_number }}">
+              {% if order.first_item.thumb %}<img src="{{ order.first_item.thumb.url }}" alt="" loading="lazy" decoding="async">{% else %}<svg class="acc-i" aria-hidden="true"><use href="#acc-i-box"/></svg>{% endif %}
+            </button>
+            <p class="acc-oc__item">
+              {% if order.first_item %}
+                <span class="acc-oc__name">{{ order.first_item.title }}{% if order.first_item.variant_label %} ({{ order.first_item.variant_label }}){% endif %}<span class="acc-oc__qty">× {{ order.first_item.quantity }}</span></span>
+                {% if order.more_items %}<span class="acc-oc__more">+ {{ order.more_items }} more item{{ order.more_items|pluralize }}</span>{% endif %}
+              {% else %}
+                <span class="acc-oc__name">Order items</span>
+              {% endif %}
+            </p>
+            <p class="acc-oc__price">{{ sym }}{{ order.total }}</p>
+            <button type="button" class="acc-oc__chev" data-view-order="{{ order.id }}" aria-label="Open order #{{ order.display_number }}"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-right"/></svg></button>
+
+            <div class="acc-oc__acts">
+              <button type="button" class="acc-btn acc-btn--primary" data-view-order="{{ order.id }}">View Details</button>
+              {% if order.status == 'shipped' and order.track_url %}
+              <a class="acc-btn" href="{{ order.track_url }}" target="_blank" rel="noopener noreferrer">Track Order</a>
+              {% endif %}
+              {% if order.status == 'delivered' %}
+              {# Tax invoice, delivered orders only: the store's GSTIN / PAN / MSME + legal name (Store settings) and a GST breakup. #}
+              <a class="acc-btn" href="{% url 'public_order_invoice' order.id %}" target="_blank" rel="noopener">Invoice</a>
+              {% endif %}
+            </div>
+
+            {# Requests on this order: cancellation / replacement when eligible, and support on every order. #}
+            <div class="acc-oc__extra">{% include "storefront/_order_request_status.html" %}</div>
+
+            <!-- Server-rendered detail, cloned into the modal on demand -->
+            <div id="order-detail-{{ order.id }}" class="hidden" hidden>
+              <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><div class="text-gray-500">Order #</div><div class="font-medium">{{ order.display_number }}</div></div>
+                <div><div class="text-gray-500">Status</div><div class="font-medium">{% if order.is_returned %}Returned{% elif order.status == 'created' %}Placed{% else %}{{ order.get_status_display }}{% endif %}</div></div>
+                <div class="col-span-2"><div class="text-gray-500">Placed at</div><div class="font-medium">{{ order.created_at|date:"M d, Y h:i A" }}</div></div>
+                <div class="col-span-2"><div class="text-gray-500">Customer</div><div class="font-medium">{{ order.customer_name }}{% if order.customer_email %} • {{ order.customer_email }}{% endif %}{% if order.customer_phone %} • {{ order.customer_phone }}{% endif %}</div></div>
+                {% if order.shipping_address or order.shipping_city %}
+                <div class="col-span-2"><div class="text-gray-500">Shipping address</div><div class="font-medium">{{ order.shipping_address }}{% if order.shipping_city %}{% if order.shipping_address %}, {% endif %}{{ order.shipping_city }}{% endif %}{% if order.shipping_state %}, {{ order.shipping_state }}{% endif %} {{ order.shipping_pincode }}</div></div>
+                {% endif %}
+              </div>
+              <div class="mt-4">
+                <h4 class="text-sm font-semibold mb-2">Items</h4>
+                <div class="divide-y">
+                  {% for item in order.items.all %}
+                  <div class="py-2 flex items-center justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                      <div class="text-sm text-gray-900 line-clamp-2">{{ item.title }}</div>
+                      {% if item.variant_label %}<div class="text-xs text-gray-500">{{ item.variant_label }}</div>{% endif %}
+                      <div class="text-xs text-gray-600">Qty: {{ item.quantity }}</div>
+                    </div>
+                    <div class="text-right"><div class="text-sm font-medium">{{ sym }}{{ item.line_total }}</div><div class="text-xs text-gray-500">{{ sym }}{{ item.unit_price }} ea</div></div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div><div class="text-gray-500">Subtotal</div><div class="font-medium">{{ sym }}{{ order.subtotal }}</div></div>
+                <div><div class="text-gray-500">Discount</div><div class="font-medium">{{ sym }}{{ order.discount_amount }}</div></div>
+                {% if order.credit_discount_amount %}<div><div class="text-gray-500">Store credit</div><div class="font-medium">−{{ sym }}{{ order.credit_discount_amount }}</div></div>{% endif %}
+                <div><div class="text-gray-500">Tax</div><div class="font-medium">{{ sym }}{{ order.tax_amount }}</div></div>
+                <div><div class="text-gray-500">Shipping</div><div class="font-medium">{{ sym }}{{ order.shipping_amount }}</div></div>
+                <div class="col-span-2 border-t border-gray-100 pt-2"><div class="text-gray-900 font-semibold">Total</div><div class="text-base font-bold">{{ sym }}{{ order.total }}</div></div>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        <div class="acc-empty" data-acc-nomatch hidden>
+          <div class="acc-empty__icon"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-search"/></svg></div>
+          <h3>No matching orders</h3><p>Try a product name or an order number like 12.</p>
+        </div>
+        {% else %}
+        <div class="acc-empty">
+          <div class="acc-empty__icon"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-box"/></svg></div>
+          {% if status_filter %}
+            <h3>No orders with this status</h3><p>Try another filter to see the rest of your orders.</p>
+            <a class="acc-btn" href="?#orders">Show all orders</a>
+          {% else %}
+            <h3>No orders yet</h3><p>When you place an order, you can track it right here.</p>
+            <a class="acc-btn acc-btn--primary" href="{{ website_base }}products/">Start shopping</a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </section>
+
+      {# ------------------------------ Wishlist ------------------------------ #}
+      <section class="acc-panel" id="wishlist" aria-labelledby="acc-wish-title" data-acc-panel="wishlist">
+        <div class="acc-phead"><div class="acc-phead__t"><h2 id="acc-wish-title">My Wishlist</h2><p>Products you saved for later.</p></div></div>
+        <div id="acct-wishlist" class="acc-wish"{% if not wishlist %} hidden{% endif %}>
+          {% for w in wishlist %}
+          <div class="acc-witem" data-wish="{{ w.product_id }}">
+            <a class="acc-witem__img" href="{{ w.url }}" aria-label="{{ w.title }}">{% if w.image1 %}<img src="{{ w.image1.url }}" alt="" loading="lazy">{% endif %}</a>
+            <div class="acc-witem__body">
+              <a class="acc-witem__title" href="{{ w.url }}">{{ w.title }}</a>
+              <span class="acc-witem__price">{{ sym }}{{ w.price }}</span>
+              <div class="acc-witem__acts">
+                <a class="acc-btn acc-btn--primary" href="{{ w.url }}">View</a>
+                <button type="button" class="acc-btn wishlist-remove-btn" data-remove-url="{{ website_base }}wishlist/remove/{{ w.product_id }}/" aria-label="Remove {{ w.title }} from wishlist">Remove</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="acc-empty" data-acc-wish-empty{% if wishlist %} hidden{% endif %}>
+          <div class="acc-empty__icon"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-heart"/></svg></div>
+          <h3>Your wishlist is empty</h3><p>Tap the heart on any product to save it here.</p>
+          <a class="acc-btn acc-btn--primary" href="{{ website_base }}products/">Explore products</a>
+        </div>
+      </section>
+
+      {# ------------------------------ Store credit ------------------------------ #}
+      <section class="acc-panel" id="credits" aria-labelledby="acc-credit-title" data-acc-panel="credits">
+        <div class="acc-phead"><div class="acc-phead__t"><h2 id="acc-credit-title">Store Credit</h2><p>Credit and discounts the store has given you.</p></div></div>
+        {% if customer_credits %}
+        <div class="acc-credits">
+          {% for cr in customer_credits %}
+          <div class="acc-credit">
+            <b>{% if cr.credit_type == 'percent' %}{{ cr.credit_value }}% off{% else %}{{ sym }}{{ cr.remaining_amount|default:cr.credit_value }}{% endif %}</b>
+            <span>{% if cr.credit_type == 'percent' %}Discount{% else %}Available credit{% endif %}{% if cr.valid_until %} · Valid until {{ cr.valid_until|date:"j M Y" }}{% else %} · No expiry{% endif %}</span>
+            {% if cr.note %}<span>{{ cr.note }}</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <p class="acc-note">Your credit comes off automatically at checkout while you are signed in with this email.</p>
+        {% else %}
+        <div class="acc-empty">
+          <div class="acc-empty__icon"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-wallet"/></svg></div>
+          <h3>No store credit right now</h3><p>When the store gives you credit, it will show here and apply automatically at checkout.</p>
+        </div>
+        {% endif %}
+      </section>
+
+      {# -------------- Profile & Addresses / Account Settings (one shared section) -------------- #}
+      <section class="acc-panel" id="profile" aria-label="Profile and account settings" data-acc-panel="profile settings">
+        <span id="settings" aria-hidden="true"></span>
+        <div class="acc-phead" data-acc-only="profile"><div class="acc-phead__t"><h2>Profile &amp; Addresses</h2><p>Your details and the addresses you deliver to.</p></div></div>
+        <div class="acc-phead" data-acc-only="settings"><div class="acc-phead__t"><h2>Account Settings</h2><p>Your sign-in email and account options.</p></div></div>
+        {% include "storefront/_account_profile.html" %}
+        <div class="acc-signout" data-acc-only="settings">
+          <div><h3>Sign out</h3><p>Sign out of your account on this device.</p></div>
+          <a class="acc-btn" href="{% url 'public_account_logout' %}"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-out"/></svg>Sign Out</a>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  {# ---------------- Phones: bottom bar ---------------- #}
+  <nav class="acc-bnav" aria-label="Account navigation">
+    <a href="{{ website_base }}"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-home"/></svg>Home</a>
+    <a href="#orders" data-acc-go="orders" data-acc-link="orders" aria-current="page"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-box"/></svg>Orders</a>
+    <a href="#wishlist" data-acc-go="wishlist" data-acc-link="wishlist"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-heart"/></svg>Wishlist</a>
+    <a href="#menu" data-acc-go="menu" data-acc-link="menu credits profile settings"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-user"/></svg>Account</a>
+  </nav>
+
+  {% else %}
+    {# ---------------- Signed out: email → OTP ---------------- #}
+    <div class="acc-auth">
+      <div class="acc-auth__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+      <h1>Sign in to your account</h1>
+      <p>Enter your email and we’ll send you a one-time code. No password needed.</p>
+      <div id="acct-msg" class="hidden mb-3 rounded-md px-4 py-3 text-sm"></div>
+
+      <form id="acct-email-form">
+        {% csrf_token %}
+        <label class="sr-only" for="acct-email">Email</label>
+        <input id="acct-email" class="acc-input" type="email" name="email" required autocomplete="email" placeholder="you@example.com">
+        <button type="submit" id="acct-send-btn" class="acc-submit">
+          <span id="acct-send-spinner" class="hidden mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+          <span id="acct-send-text">Send code</span>
+        </button>
+      </form>
+
+      <form id="acct-otp-form" class="hidden">
+        {% csrf_token %}
+        <input type="hidden" name="email" value="">
+        <label class="sr-only" for="acct-otp">One-time code</label>
+        <input id="acct-otp" class="acc-input acc-input--code" type="text" name="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,8}" required placeholder="------">
+        <button type="submit" class="acc-submit">Verify &amp; sign in</button>
+        <button type="button" id="acct-resend" class="acc-link">Use a different email</button>
+      </form>
+      <p class="acc-fine">We’ll only use your email for your orders and account.</p>
+    </div>
+  {% endif %}
+</section>
+
+{% if customer_email %}{% include "storefront/_order_request.html" %}{% endif %}
+
+<!-- Order details modal (a bottom sheet on phones) -->
+<div id="order-modal" class="fixed inset-0 z-[10000] hidden" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
+  <div class="absolute inset-0 bg-black/60" data-order-modal-close></div>
+  <div class="acc-modal__panel absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white w-[92%] max-w-2xl rounded-lg shadow-lg">
+    <div class="flex items-center justify-between px-4 py-3 border-b">
+      <h3 class="text-base font-semibold" id="order-modal-title">Order details</h3>
+      <button type="button" class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-50" aria-label="Close" data-order-modal-close>
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="max-h-[70vh] overflow-y-auto p-4" id="order-modal-body"></div>
+    <div class="p-4 border-t text-right">
+      <button type="button" class="px-4 py-2 rounded-md border hover:bg-gray-50" data-order-modal-close>Close</button>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var base = '{{ website_base }}';
+  var token = '{{ csrf_token }}';
+  function post(url, fd) {
+    return fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': token }, credentials: 'same-origin', body: fd })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+  }
+  function each(list, fn) { Array.prototype.forEach.call(list || [], fn); }
+
+  // ---- Sections (deep-linkable: #orders #wishlist #credits #profile #settings, #menu on phones) ----
+  var root = document.querySelector('[data-acc]');
+  var panels = root ? root.querySelectorAll('[data-acc-panel]') : [];
+  var NAMES = ['orders', 'wishlist', 'credits', 'profile', 'settings', 'menu'];
+  var desk = window.matchMedia ? window.matchMedia('(min-width: 64rem)') : { matches: true };
+  function resolve(name) {
+    if (name === 'account-details') name = 'profile';
+    if (NAMES.indexOf(name) < 0) name = 'orders';
+    if (name === 'menu' && desk.matches) name = 'orders';
+    return name;
+  }
+  function nameFromHash() { return resolve((window.location.hash || '').replace('#', '')); }
+  function current() { return root.getAttribute('data-acc-view') || 'orders'; }
+  function show(name, opts) {
+    if (!panels.length) return;
+    opts = opts || {};
+    name = resolve(name);
+    root.setAttribute('data-acc-view', name);
+    each(panels, function (p) { p.hidden = p.getAttribute('data-acc-panel').split(' ').indexOf(name) < 0; });
+    each(root.querySelectorAll('[data-acc-link]'), function (a) {
+      if (a.getAttribute('data-acc-link').split(' ').indexOf(name) >= 0) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    each(root.querySelectorAll('[data-acc-stat]'), function (t) { t.classList.toggle('is-active', t.getAttribute('data-acc-stat') === name); });
+    if (opts.push && history.pushState) {
+      history.pushState(null, '', window.location.pathname + window.location.search + '#' + name);
+    }
+    if (opts.scroll) {
+      // Bring the top of the account area into view if the shopper scrolled past it.
+      var y = root.getBoundingClientRect().top + window.pageYOffset - 80;
+      if (window.pageYOffset > y) window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }
+  }
+  if (panels.length) {
+    root.classList.add('js-tabs');
+    show(nameFromHash());
+    root.addEventListener('click', function (e) {
+      var go = e.target.closest('[data-acc-go]');
+      if (!go) return;
+      e.preventDefault();
+      var name = resolve(go.getAttribute('data-acc-go'));
+      if (name !== current()) show(name, { push: true, scroll: true });
+      else show(name, { scroll: true });
+    });
+    window.addEventListener('popstate', function () { show(nameFromHash()); });
+    window.addEventListener('hashchange', function () { show(nameFromHash()); });
+    var onDesk = function () { if (desk.matches && current() === 'menu') show('orders'); };
+    if (desk.addEventListener) desk.addEventListener('change', onDesk); else if (desk.addListener) desk.addListener(onDesk);
+  }
+
+  // ---- Order search (by product name or order number) ----
+  var search = document.querySelector('[data-acc-search]');
+  var searchBox = document.querySelector('[data-acc-searchbox]');
+  var searchBtn = document.querySelector('[data-acc-sbtn]');
+  var noMatch = document.querySelector('[data-acc-nomatch]');
+  if (search) {
+    var cards = document.querySelectorAll('[data-acc-orders] .acc-oc');
+    search.addEventListener('input', function () {
+      var term = search.value.trim().toLowerCase().replace(/^#/, '');
+      var shown = 0;
+      each(cards, function (c) {
+        var hit = !term || (c.getAttribute('data-search') || '').indexOf(term) >= 0;
+        c.hidden = !hit;
+        if (hit) shown++;
+      });
+      if (noMatch) noMatch.hidden = shown !== 0;
+    });
+  }
+  if (searchBtn && searchBox) searchBtn.addEventListener('click', function () {
+    var open = !searchBox.classList.contains('is-open');
+    searchBox.classList.toggle('is-open', open);
+    searchBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open && search) search.focus();
+  });
+
+  // ---- "More" status chips (phones) ----
+  var moreBtn = document.querySelector('[data-acc-more]');
+  var moreMenu = document.querySelector('[data-acc-moremenu]');
+  function closeMore() { if (moreMenu && !moreMenu.hidden) { moreMenu.hidden = true; moreBtn.setAttribute('aria-expanded', 'false'); } }
+  if (moreBtn && moreMenu) {
+    moreBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = moreMenu.hidden;
+      moreMenu.hidden = !open;
+      moreBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) { if (!moreMenu.contains(e.target)) closeMore(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMore(); });
+  }
+
+  // ---- Sign-in (email → OTP) ----
+  var emailForm = document.getElementById('acct-email-form');
+  var otpForm = document.getElementById('acct-otp-form');
+  var msg = document.getElementById('acct-msg');
+  function showMsg(text, ok) {
+    if (!msg) return;
+    msg.textContent = text; msg.classList.remove('hidden');
+    msg.className = 'mb-3 rounded-md px-4 py-3 text-sm ' + (ok ? 'bg-black text-white' : 'bg-red-50 text-red-700 ring-1 ring-red-200');
+  }
+  var sendBtn = document.getElementById('acct-send-btn');
+  var sendSpinner = document.getElementById('acct-send-spinner');
+  var sendText = document.getElementById('acct-send-text');
+  function setSendLoading(isLoading) {
+    if (!sendBtn) return;
+    sendBtn.disabled = !!isLoading;
+    if (sendSpinner) sendSpinner.classList.toggle('hidden', !isLoading);
+    if (sendText) sendText.textContent = isLoading ? 'Sending…' : 'Send code';
+    sendBtn.classList.toggle('opacity-70', !!isLoading);
+    sendBtn.classList.toggle('cursor-not-allowed', !!isLoading);
+  }
+  if (emailForm) emailForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = emailForm.querySelector('input[name=email]').value.trim();
+    var fd = new FormData(); fd.append('email', email);
+    setSendLoading(true);
+    post(base + 'account/send-otp/', fd).then(function (res) {
+      if (res.ok && res.data.success) {
+        showMsg('Code sent. Check your email.', true);
+        otpForm.querySelector('input[name=email]').value = email;
+        emailForm.classList.add('hidden'); otpForm.classList.remove('hidden');
+        var code = otpForm.querySelector('input[name=otp]'); if (code) code.focus();
+      } else { showMsg((res.data && res.data.error) || 'Could not send the code.', false); }
+    }).catch(function () { showMsg('Could not send the code. Please try again.', false); })
+      .finally(function () { setSendLoading(false); });
+  });
+  if (otpForm) otpForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var fd = new FormData(otpForm);
+    post(base + 'account/verify-otp/', fd).then(function (res) {
+      if (res.ok && res.data.success) {
+        // Back to where the shopper came from (same store only).
+        try {
+          var next = new URLSearchParams(window.location.search).get('next');
+          if (next) { var to = new URL(next, window.location.href); if (to.origin === window.location.origin) { window.location.href = to.href; return; } }
+        } catch (_) {}
+        window.location.href = res.data.redirect || (base + 'account/');
+      } else { showMsg((res.data && res.data.error) || 'Incorrect code.', false); }
+    }).catch(function () { showMsg('Could not verify the code. Please try again.', false); });
+  });
+  var resend = document.getElementById('acct-resend');
+  if (resend) resend.addEventListener('click', function () {
+    otpForm.classList.add('hidden'); emailForm.classList.remove('hidden');
+    if (msg) msg.classList.add('hidden'); setSendLoading(false);
+  });
+
+  // ---- Wishlist remove (keeps the counts and empty state in step) ----
+  function syncWishCount() {
+    var grid = document.getElementById('acct-wishlist');
+    var n = grid ? grid.querySelectorAll('[data-wish]').length : 0;
+    each(document.querySelectorAll('[data-acc-wish-count]'), function (el) { el.textContent = n; });
+    var empty = document.querySelector('[data-acc-wish-empty]');
+    if (grid) grid.hidden = n === 0;
+    if (empty) empty.hidden = n !== 0;
+  }
+  each(document.querySelectorAll('.wishlist-remove-btn'), function (b) {
+    b.addEventListener('click', function () {
+      b.disabled = true;
+      post(b.getAttribute('data-remove-url'), new FormData()).then(function () {
+        var row = b.closest('[data-wish]'); if (row) row.remove();
+        syncWishCount();
+      }).catch(function () { b.disabled = false; });
+    });
+  });
+
+  // ---- Order details modal ----
+  var modal = document.getElementById('order-modal');
+  var modalBody = document.getElementById('order-modal-body');
+  function openModal() { modal.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
+  function closeModal() { modal.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); modalBody.innerHTML = ''; }
+  each(document.querySelectorAll('[data-order-modal-close]'), function (el) { el.addEventListener('click', closeModal); });
+  window.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-view-order]');
+    if (!t) return;
+    e.preventDefault();
+    var src = document.getElementById('order-detail-' + t.getAttribute('data-view-order'));
+    if (!src) return;
+    modalBody.innerHTML = src.innerHTML;
+    openModal();
+  });
+})();
+</script>
+{% endwith %}
+{% endblock %}

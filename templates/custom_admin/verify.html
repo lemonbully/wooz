@@ -1,0 +1,74 @@
+{% extends "custom_admin/_auth.html" %}
+
+{% block title %}Enter your code · OneWooz Admin{% endblock %}
+
+{% block card %}
+  <p class="owa-kicker">Step 2 of 2</p>
+  <h1 class="owa-auth__h">Check your email</h1>
+  <p class="owa-auth__p">We sent a 6-digit code to <strong>{{ email }}</strong>. Enter it to finish signing in.</p>
+
+  {% if error %}<p class="owa-alert owa-alert--error" role="alert">{{ error }}</p>{% endif %}
+
+  <form method="post" action="{% url 'custom_admin:sign_in_verify' %}" data-otp-form>
+    {% csrf_token %}
+    <span class="owa-field__label">Six-digit code</span>
+    {% comment %}
+    Six single-digit boxes. The real value posts through the hidden `code`
+    field, kept in sync by the script. Copy / paste / cut / drop are blocked.
+    {% endcomment %}
+    <div class="owa-otp" data-otp-boxes role="group" aria-label="Six-digit code">
+      {% for i in "123456" %}
+        <input class="owa-otp__box" type="text" inputmode="numeric" pattern="[0-9]*"
+               maxlength="1" aria-label="Digit {{ forloop.counter }}"
+               autocomplete="off" {% if forloop.first %}autofocus{% endif %} data-otp-cell>
+      {% endfor %}
+    </div>
+    <input type="hidden" name="code" id="code" data-otp-value>
+    <button type="submit" class="owa-btn owa-btn--accent owa-btn--block">Sign in <span class="owa-btn__arw" aria-hidden="true">→</span></button>
+  </form>
+
+  <div class="owa-auth__foot">
+    <a href="{% url 'custom_admin:sign_in' %}">← Start again</a>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var form = document.querySelector("[data-otp-form]");
+    if (!form) return;
+    var cells = Array.prototype.slice.call(form.querySelectorAll("[data-otp-cell]"));
+    var hidden = form.querySelector("[data-otp-value]");
+    if (!cells.length || !hidden) return;
+
+    function sync() { hidden.value = cells.map(function (c) { return c.value; }).join(""); }
+
+    // Block every clipboard / drag path so a code cannot be pasted in.
+    function block(e) { e.preventDefault(); }
+    cells.forEach(function (cell, i) {
+      ["paste", "copy", "cut", "drop", "dragover", "contextmenu"].forEach(function (ev) {
+        cell.addEventListener(ev, block);
+      });
+      cell.addEventListener("input", function () {
+        cell.value = (cell.value || "").replace(/[^0-9]/g, "").slice(0, 1);
+        if (cell.value && i < cells.length - 1) cells[i + 1].focus();
+        sync();
+      });
+      cell.addEventListener("keydown", function (e) {
+        if (e.key === "Backspace" && !cell.value && i > 0) {
+          cells[i - 1].focus();
+          cells[i - 1].value = "";
+          sync();
+          e.preventDefault();
+        } else if (e.key === "ArrowLeft" && i > 0) {
+          cells[i - 1].focus(); e.preventDefault();
+        } else if (e.key === "ArrowRight" && i < cells.length - 1) {
+          cells[i + 1].focus(); e.preventDefault();
+        }
+      });
+    });
+    form.addEventListener("submit", sync);
+  })();
+</script>
+{% endblock %}

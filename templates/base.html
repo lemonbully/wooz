@@ -1,32 +1,53 @@
-{% load static %}<!doctype html>
+{% load static onewooz %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}OneWooz{% endblock %}</title>
-  <meta name="description" content="{% block description %}OneWooz builds and publishes a working online store for D2C brands and B2B retailers. Answer a few questions, get a real site on your own domain.{% endblock %}">
+  <title>{% block title %}{{ seo.title|default:"OneWooz" }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{{ seo.description|default:"OneWooz builds and publishes a working online store for D2C brands and B2B retailers. Answer a few questions, get a real site on your own domain." }}{% endblock %}">
   {% block meta %}{% endblock %}
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {% comment %}
+  Platform analytics (Microsoft Clarity + Google Analytics) belong to the public
+  marketing site only. Gated to the marketing surface so they never load on the
+  owner dashboard (app.onewooz.com), the admin, or a tenant storefront  those
+  carry customer/owner data that must not flow to a third party. The CSP admits
+  the analytics hosts on the marketing surface only, to match (see core.middleware).
+  {% endcomment %}
+  {% if surface == "marketing" %}
+  <script type="text/javascript" nonce="{{ csp_nonce }}">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "yi4dzfab4w");
+  </script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-1QF5H5K9YQ" nonce="{{ csp_nonce }}"></script>
+  <script nonce="{{ csp_nonce }}">
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-1QF5H5K9YQ');
+  </script>
+  {% endif %}
 
   {% comment %}
-  Hand-authored and self-hosted — no build step, so the page is styled the
+  Hand-authored and self-hosted  no build step, so the page is styled the
   moment the repository is checked out. A CDN-compiled utility framework would
   also force 'unsafe-eval' into the Content-Security-Policy.
   {% endcomment %}
   <link rel="stylesheet" href="{% static 'css/onewooz.css' %}">
 
   {% comment %}
-  Theme-aware favicon: the white-theme mark for light devices, the dark-theme
-  mark for dark mode. Browsers that ignore the media attribute fall back to the
-  light one listed last.
+  Favicon: the one uploaded in admin → onewooz.com SEO, else the built-in
+  theme-aware pair (light mark for light devices, dark-theme mark for dark mode).
   {% endcomment %}
-  <link rel="icon" type="image/png" media="(prefers-color-scheme: dark)" href="{% static 'img/OneWooz_favicon_dark_theme.png' %}">
-  <link rel="icon" type="image/png" media="(prefers-color-scheme: light)" href="{% static 'img/OneWooz_favicon_white_theme.png' %}">
-  <link rel="icon" type="image/png" href="{% static 'img/OneWooz_favicon_white_theme.png' %}">
-  <link rel="apple-touch-icon" href="{% static 'img/OneWooz_favicon_white_theme.png' %}">
+  {% brand_favicon_links %}
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -34,7 +55,7 @@
 
   {% comment %}
   Every inline script must carry nonce="{{ csp_nonce }}". One that forgets is
-  blocked by the browser rather than silently running — which is the whole
+  blocked by the browser rather than silently running  which is the whole
   point of a nonce instead of 'unsafe-inline'.
   {% endcomment %}
   {% block scripts %}{% endblock %}

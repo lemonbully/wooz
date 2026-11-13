@@ -1,4 +1,5 @@
 {% extends "accounts/_auth_shell.html" %}
+{% load static %}
 
 {% block title %}Add an authenticator app · OneWooz{% endblock %}
 {% block auth_title %}Add an authenticator app{% endblock %}
@@ -13,18 +14,18 @@
     <p class="eyebrow" style="color:var(--text-muted);">Setup key</p>
     <code class="code-block">{{ secret }}</code>
     <p class="hint">
-      Keep this private — anyone holding it can generate your codes.
+      Keep this private  anyone holding it can generate your codes.
     </p>
   </div>
 
   <form method="post" class="auth__form">
     {% csrf_token %}
-    <div class="field">
-      <label class="label" for="code">Code from your app</label>
-      <input class="input input--code" type="text" name="code" id="code"
-             inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
-             autocomplete="one-time-code" required autofocus>
-    </div>
+    <p class="label mt-6">Code from your app</p>
+    {% include "accounts/_otp_field.html" %}
     <button type="submit" class="btn btn--primary btn--block mt-6">Confirm and turn on</button>
   </form>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{% static 'js/otp-boxes.js' %}"></script>
 {% endblock %}

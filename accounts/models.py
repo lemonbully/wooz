@@ -15,6 +15,9 @@ from core.models import BaseModel
 __all__ = [
     "User",
     "UserManager",
+    "DashboardUser",
+    "AdminOperator",
+    "DjangoSuperuser",
     "TOTPDevice",
     "WebAuthnCredential",
     "TrustedDevice",
@@ -53,8 +56,8 @@ class UserManager(BaseUserManager):
         if password:
             user.set_password(password)
         else:
-            # A passwordless account is legitimate — magic link and passkey
-            # users may never set one — but it must be unusable rather than
+            # A passwordless account is legitimate  magic link and passkey
+            # users may never set one  but it must be unusable rather than
             # blank, so no empty-password login can ever succeed.
             user.set_unusable_password()
         user.save(using=self._db)
@@ -101,11 +104,47 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     password_changed_at = models.DateTimeField(null=True, blank=True)
 
     # When true, a second factor is demanded even if the account has none
-    # enrolled — the user is sent to enrolment instead of the dashboard.
+    # enrolled  the user is sent to enrolment instead of the dashboard.
     require_mfa = models.BooleanField(default=False)
 
     signup_source = models.CharField(max_length=40, blank=True, default="")
     last_seen_at = models.DateTimeField(null=True, blank=True)
+
+    # -- Profile preferences ------------------------------------------------
+    #: IANA name used to render dates/times in the owner's local zone.
+    timezone = models.CharField(max_length=40, blank=True, default="Asia/Kolkata")
+
+    # -- Notifications ------------------------------------------------------
+    class Digest(models.TextChoices):
+        INSTANT = "instant", "As it happens"
+        DAILY = "daily", "Daily digest"
+        OFF = "off", "Off"
+
+    #: Where account + store-activity notifications are delivered. Blank falls
+    #: back to the sign-in email, so the account is never left unreachable.
+    notification_email = models.EmailField(blank=True, default="")
+    notification_digest = models.CharField(
+        max_length=10, choices=Digest.choices, default=Digest.INSTANT
+    )
+    # Per-category switches, so an owner can keep the alerts that matter and
+    # mute the rest.
+    notify_security = models.BooleanField(default=True)
+    notify_orders = models.BooleanField(default=True)
+    notify_store_activity = models.BooleanField(default=True)
+    notify_billing = models.BooleanField(default=True)
+    notify_product_news = models.BooleanField(default=False)
+
+    # The store the owner last worked on / switched to. Persisted on the account
+    # (not just the session) so the chosen store stays selected across logout and
+    # login, until the owner opens a different one. Stored as a raw UUID rather
+    # than a ForeignKey to avoid an accounts→tenancy schema dependency; it is
+    # always validated against the owner's live stores on read, so a stale or
+    # deleted-store id simply falls back to the most recent store.
+    active_site_id = models.UUIDField(null=True, blank=True, editable=False)
+    # The exact store-dashboard page last open ("<site id>|<path>"), so the
+    # dashboard's "Resume where you left off" returns there, not just to the
+    # store overview. Written by commerce.middleware.LastStorePageMiddleware.
+    active_site_path = models.CharField(max_length=540, blank=True, default="", editable=False)
 
     objects = UserManager()
 
@@ -135,6 +174,29 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
         return self.full_name or self.email.split("@", 1)[0]
 
     @property
+    def effective_notification_email(self) -> str:
+        """Where notifications actually go  the chosen address, else sign-in."""
+        return (self.notification_email or self.email or "").strip().lower()
+
+    def wants(self, category: str) -> bool:
+        """Whether this account wants a given notification category by email.
+
+        ``category`` is one of ``security | orders | store_activity | billing |
+        product_news``. ``off`` digest silences everything except security, which
+        is a safety signal the owner should always be able to see.
+        """
+        flag = {
+            "security": self.notify_security,
+            "orders": self.notify_orders,
+            "store_activity": self.notify_store_activity,
+            "billing": self.notify_billing,
+            "product_news": self.notify_product_news,
+        }.get(category, False)
+        if category == "security":
+            return bool(flag)
+        return bool(flag) and self.notification_digest != self.Digest.OFF
+
+    @property
     def is_email_verified(self) -> bool:
         return self.email_verified_at is not None
 
@@ -153,6 +215,56 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     def mfa_is_required(self) -> bool:
         """Staff always need a second factor; everyone else opts in."""
         return self.is_staff or self.require_mfa or self.has_second_factor
+
+
+# ---------------------------------------------------------------------------
+# Admin-facing role views over the single User table
+# ---------------------------------------------------------------------------
+# There is, and remains, exactly one authenticated account model (``User`` /
+# ``AUTH_USER_MODEL``). The three classes below are *proxy* models: they add no
+# column, no table and no migration to the schema  they exist only so Django's
+# admin can present the one users table as three separate, filtered lists
+# (store owners, subdomain admin operators, and Django superusers) instead of
+# one undifferentiated pile. Authentication, sign-in and every ``get_user_model``
+# caller are wholly unaffected; each proxy simply *is* a ``User``.
+#
+# The three roles are distinguished purely by the existing permission flags and
+# are mutually exclusive and exhaustive:
+#   * DashboardUser   a customer / store owner:      is_staff=False
+#   * AdminOperator   an arcane-subdomain operator:  is_staff=True,  is_superuser=False
+#   * DjangoSuperuser full DB/admin access:          is_superuser=True
+# (a superuser is always is_staff=True, so is_staff=False cleanly isolates
+# ordinary owners). The admin applies these filters; see custom_admin.admin.
+
+
+class DashboardUser(User):
+    """Proxy view of store-owner accounts (the SaaS customers). Admin listing
+    only  shares the ``User`` table and changes nothing about auth."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "dashboard user"
+        verbose_name_plural = "Dashboard users (store owners)"
+
+
+class AdminOperator(User):
+    """Proxy view of arcane-subdomain admin operators (``is_staff`` accounts
+    that are not full superusers). Admin listing only."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "admin operator"
+        verbose_name_plural = "Admin operators (subdomain)"
+
+
+class DjangoSuperuser(User):
+    """Proxy view of full Django superusers  the accounts that may manage the
+    database and models. Admin listing only."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "Django superuser"
+        verbose_name_plural = "Django superusers"
 
 
 class TOTPDevice(BaseModel):
@@ -300,7 +412,7 @@ class LoginActivity(BaseModel):
     device = models.CharField(max_length=120, blank=True, default="")
     country_code = models.CharField(max_length=2, blank=True, default="")
 
-    #: Set when the attempt looks unlike the account's history — new country,
+    #: Set when the attempt looks unlike the account's history  new country,
     #: new device, or a burst of failures preceding it.
     is_suspicious = models.BooleanField(default=False, db_index=True)
     surface = models.CharField(max_length=20, blank=True, default="")
@@ -318,3 +430,84 @@ class LoginActivity(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.email_attempted or '-'} {self.method} {self.outcome}"
+
+
+class Notification(BaseModel):
+    """An in-dashboard notification shown in the owner's top-navbar bell.
+
+    Created two ways:
+
+    * **From the Django admin**  a manual notice to one owner, with a headline,
+      a description, and an optional attachment link (rendered as a
+      "View attachment" button that opens in a new tab).
+    * **Automatically by the platform**  a new order, a low-stock warning, or a
+      shipment status update (see :mod:`commerce.notify`). Those carry a ``kind``
+      and, where relevant, a snapshot of the store and an in-app ``action_url``.
+
+    Read state is per row; the bell shows the unread count and marks items read
+    when the owner opens it.
+    """
+
+    class Level(models.TextChoices):
+        INFO = "info", "Info"
+        SUCCESS = "success", "Success"
+        WARNING = "warning", "Warning"
+
+    class Kind(models.TextChoices):
+        ADMIN = "admin", "Admin message"
+        ORDER = "order", "Order"
+        STOCK = "stock", "Low stock"
+        SHIPMENT = "shipment", "Shipment update"
+        SYSTEM = "system", "System"
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="notifications"
+    )
+    headline = models.CharField(
+        max_length=160, help_text="Short title shown in bold in the bell."
+    )
+    description = models.TextField(
+        blank=True, default="", help_text="The notification body."
+    )
+    attachment_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        default="",
+        help_text="Optional link. Shown as a “View attachment” button that opens in a new tab.",
+    )
+    action_url = models.CharField(
+        max_length=1000,
+        blank=True,
+        default="",
+        help_text="Optional in-app link the headline points to (e.g. an order page).",
+    )
+    level = models.CharField(max_length=12, choices=Level.choices, default=Level.INFO)
+    kind = models.CharField(
+        max_length=16, choices=Kind.choices, default=Kind.ADMIN, db_index=True
+    )
+    # Snapshot of the store this relates to (if any). Stored by id + name rather
+    # than a cross-app FK, mirroring AuditEvent, so accounts stays decoupled from
+    # tenancy and a deleted store never orphans a notification.
+    site_id_ref = models.CharField(max_length=36, blank=True, default="", db_index=True)
+    site_name = models.CharField(max_length=200, blank=True, default="")
+
+    is_read = models.BooleanField(default=False, db_index=True)
+    read_at = models.DateTimeField(null=True, blank=True, editable=False)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "notification"
+        verbose_name_plural = "notifications"
+        indexes = [
+            models.Index(fields=("user", "is_read", "-created_at")),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.headline} → {self.user_id}"
+
+    def mark_read(self, *, save: bool = True) -> None:
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            if save:
+                self.save(update_fields=["is_read", "read_at", "updated_at"])

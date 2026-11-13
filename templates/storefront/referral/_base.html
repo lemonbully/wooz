@@ -1,0 +1,67 @@
+{% load static %}<!doctype html>
+{% comment %}
+Base chrome for a UGC collaborator storefront's SHARED pages (cart, checkout,
+account, order confirmation). These templates extend store_base and fill the
+page_content block; build_context points store_base here on a referral request,
+so they render INSIDE the collaborator's phone-card store  never the owner's
+themed site, and never a bare full-width page.
+
+The card frame matches storefront.html / _page_shell.html (centered on desktop,
+full-screen on mobile) but is drawn with plain CSS here so it does not depend on
+the storefront's custom Tailwind config  the shared templates' standard utility
+classes still come from the self-hosted css/tailwind.css build. Both the content
+and page_content blocks render, so a template using either is never dropped (the
+old base only had content, which is why the account page came up blank).
+{% endcomment %}
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	{% firstof website.content.site_name website.content.websiteName site_title "Store" as site_name %}
+	<title>{% if page_title %}{{ site_name }} - {{ page_title }}{% else %}{{ site_name }}{% endif %}</title>
+	{% if website.content.favicon %}<link rel="icon" href="{{ website.content.favicon }}" type="image/x-icon">{% endif %}
+	<link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={% now 'U' %}">
+	<link rel="stylesheet" href="{% static 'css/storefront-richtext.css' %}?v={% now 'U' %}">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<meta name="robots" content="noindex, nofollow">
+	<meta name="color-scheme" content="light only">
+	<style>
+		body{font-family:'Poppins',ui-sans-serif,system-ui,-apple-system,sans-serif;background:#f5f2ec;margin:0}
+		.ref-stage{min-height:100svh;display:flex;align-items:center;justify-content:center;}
+		.ref-card{position:relative;background:#fff;width:100vw;height:100svh;display:flex;flex-direction:column;overflow:hidden;}
+		@media (min-width:640px){
+			.ref-stage{padding:24px;}
+			.ref-card{width:92vw;max-width:420px;min-width:320px;height:88vh;max-height:860px;min-height:560px;border-radius:32px;box-shadow:0 30px 80px -30px rgba(0,0,0,.45);border:1px solid rgba(0,0,0,.08);}
+		}
+		.ref-scroll{flex:1 1 auto;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;}
+		.ref-scroll::-webkit-scrollbar{width:0;height:0;}
+	</style>
+	{% block extra_head %}{% endblock %}
+</head>
+<body>
+	<div class="ref-stage">
+		<div class="ref-card">
+			<header class="flex items-center justify-between px-5 py-3 border-b shrink-0 bg-white">
+				<a href="{% url 'public_website' %}" class="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-700" aria-label="Back to store">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</a>
+				<h1 class="text-[15px] font-semibold text-black truncate max-w-[220px] text-center">{% if page_title %}{{ page_title }}{% else %}{{ site_name }}{% endif %}</h1>
+				{% comment %} {# Spacer balances the back button; the cart is the floating button below. #} {% endcomment %}
+				<span class="w-9 shrink-0" aria-hidden="true"></span>
+			</header>
+
+			<div class="ref-scroll">
+				{% block page_content %}{% endblock %}
+				{% block content %}{% endblock %}
+				{% include 'storefront/referral/_footer.html' %}
+			</div>
+			{% include 'storefront/referral/_cart_drawer.html' %}
+		</div>
+	</div>
+
+	{% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,592 @@
+{% extends "web/_shell.html" %}
+{% load onewooz %}
+
+{% block title %}{{ page_title }} · OneWooz{% endblock %}
+
+{% block main %}
+
+{% if invite_error %}
+<section class="pal-section pal-ruled">
+  <div class="pal-container" style="max-width:34rem;text-align:center;padding-block:clamp(3rem,2rem+5vw,6rem)">
+    <p class="pal-mono pal-mono--accent">Checkout link</p>
+    <h1 class="pal-pagehead__title" style="margin-top:.6rem">This link isn’t active</h1>
+    <p class="pal-lead" style="margin-top:1rem">
+      Your invitation link has expired or has already been used. Ask us to send a
+      fresh one, or visit our pricing page to choose a plan.
+    </p>
+    <div class="pal-btn-row" style="justify-content:center;margin-top:1.75rem">
+      <a href="{% url 'web:pricing' %}" class="pal-btn">See pricing <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+    </div>
+  </div>
+</section>
+
+{% else %}
+<style nonce="{{ csp_nonce }}">
+  /* Invite summary card. NOTE: inside clamp()/calc() the +/- operators need a
+     space on both sides  "1rem+2vw" is invalid and silently drops the rule. */
+  .iv-wrap{max-width:32rem;margin:0 auto;padding:clamp(2.5rem, 1.5rem + 5vw, 5rem) 1.25rem}
+  .iv-card{position:relative;border:1px solid var(--pal-ink);background:var(--pal-panel);
+    padding:clamp(1.75rem, 1.25rem + 2vw, 2.75rem);box-shadow:14px 14px 0 -1px rgb(10 10 11 / .08)}
+  .iv-card::before,.iv-card::after{content:"";position:absolute;width:11px;height:11px;pointer-events:none}
+  .iv-card::before{top:-1px;left:-1px;border-top:1.5px solid var(--pal-accent);border-left:1.5px solid var(--pal-accent)}
+  .iv-card::after{bottom:-1px;right:-1px;border-bottom:1.5px solid var(--pal-accent);border-right:1.5px solid var(--pal-accent)}
+  .iv-kick{font-family:var(--pal-font-mono);font-size:.6rem;font-weight:500;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--pal-accent);margin:0 0 .85rem}
+  .iv-plan{font-family:var(--pal-font-display);font-weight:500;font-size:clamp(1.55rem, 1.2rem + 1.6vw, 2rem);
+    letter-spacing:-.03em;line-height:1.05;margin:0;color:var(--pal-ink)}
+  .iv-cycle{font-family:var(--pal-font-mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--pal-muted);margin:.6rem 0 0}
+  .iv-cycle strong{color:var(--pal-ink);font-weight:500}
+  /* Invitation banner  replaces the up-front price breakdown. Tells the buyer
+     they were personally invited to this plan, with plan details (no price). */
+  .iv-banner{margin-top:1.6rem;border:1px solid var(--pal-accent);background:var(--pal-paper);
+    padding:1rem 1.1rem;display:flex;gap:.75rem;align-items:flex-start}
+  .iv-banner__ico{flex:0 0 auto;width:1.4rem;height:1.4rem;color:var(--pal-accent)}
+  .iv-banner__ico svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.6;
+    stroke-linecap:round;stroke-linejoin:round}
+  .iv-banner__t{font-family:var(--pal-font-body);font-size:.92rem;line-height:1.5;color:var(--pal-ink);margin:0}
+  .iv-banner__t strong{font-weight:600}
+  .iv-feats{list-style:none;margin:1.5rem 0 0;padding:0;display:grid;gap:.7rem;
+    border-top:1px solid var(--pal-line);padding-top:1.25rem}
+  .iv-feats li{display:flex;gap:.6rem;align-items:flex-start;font-family:var(--pal-font-body);
+    font-size:.9rem;line-height:1.45;color:var(--pal-ink-2, var(--pal-ink))}
+  .iv-feats li .iv-tick{flex:0 0 auto;width:1.05rem;height:1.05rem;margin-top:.12rem;color:var(--pal-accent)}
+  .iv-feats li .iv-tick svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round}
+  .iv-feats li.is-off{color:var(--pal-faint);text-decoration:line-through}
+  .iv-feats li.is-off .iv-tick{color:var(--pal-faint)}
+  .iv-rows{margin-top:1.75rem;padding-top:.5rem;border-top:1px solid var(--pal-line)}
+  .iv-r{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:.85rem 0}
+  .iv-r + .iv-r:not(.iv-r--total){border-top:1px solid var(--pal-line-soft, var(--pal-line))}
+  .iv-r > span:first-child{font-family:var(--pal-font-mono);font-size:.64rem;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--pal-muted)}
+  .iv-r > span:last-child{font-family:var(--pal-font-display);font-size:1.05rem;color:var(--pal-ink);font-feature-settings:"tnum"}
+  .iv-r--total{margin-top:.65rem;padding-top:1.1rem;border-top:1.5px solid var(--pal-ink)}
+  .iv-r--total > span:first-child{color:var(--pal-ink)}
+  .iv-r--total > span:last-child{font-size:1.6rem;font-weight:500;letter-spacing:-.02em}
+  .iv-free{color:var(--positive) !important}
+  .iv-to{font-family:var(--pal-font-mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--pal-faint);margin:1.5rem 0 0}
+  .iv-to strong{color:var(--pal-ink);font-weight:500}
+  .iv-cta{width:100%;justify-content:center;margin-top:1.6rem}
+  .iv-note{font-family:var(--pal-font-mono);font-size:.56rem;letter-spacing:.05em;line-height:1.7;
+    text-transform:uppercase;color:var(--pal-faint);margin-top:1rem}
+
+  /* ── Purchase modals (mirrors the pricing-page checkout) ── */
+  .ow-modal{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;
+    padding:1.25rem;background:rgb(10 10 11 / .62);animation:ow-fade .16s ease}
+  .ow-modal[hidden]{display:none}
+  .ow-modal__box{position:relative;width:100%;max-width:26rem;background:var(--pal-panel);
+    border:1px solid var(--pal-ink);box-shadow:14px 14px 0 -1px rgb(10 10 11 / .08);
+    padding:clamp(1.25rem,1rem + 1.4vw,1.7rem);max-height:90vh;overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:none;-ms-overflow-style:none;animation:ow-rise .28s cubic-bezier(.16,1,.3,1)}
+  .ow-modal__box::-webkit-scrollbar{width:0;height:0;display:none}
+  .ow-modal__box--wide{max-width:38rem}
+  .ow-modal__box--form{max-width:34rem}
+  .ow-modal__box::before,.ow-modal__box::after{content:"";position:absolute;width:11px;height:11px;pointer-events:none;z-index:2}
+  .ow-modal__box::before{top:0;left:0;border-top:1.5px solid var(--pal-accent);border-left:1.5px solid var(--pal-accent)}
+  .ow-modal__box::after{bottom:0;right:0;border-bottom:1.5px solid var(--pal-accent);border-right:1.5px solid var(--pal-accent)}
+  @keyframes ow-fade{from{opacity:0}to{opacity:1}}
+  @keyframes ow-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .ow-modal__head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;
+    padding-bottom:.85rem;border-bottom:1px solid var(--pal-line);margin-bottom:1.1rem}
+  .ow-kick{font-family:var(--pal-font-mono);font-size:.6rem;font-weight:500;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--pal-accent);margin:0 0 .45rem}
+  .ow-modal__title{font-family:var(--pal-font-display);font-weight:500;font-size:1.32rem;letter-spacing:-.03em;
+    line-height:1.02;margin:0;color:var(--pal-ink)}
+  .ow-modal__sub{font-family:var(--pal-font-mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--pal-muted);margin:.5rem 0 0;line-height:1.5}
+  .ow-modal__sub strong{color:var(--pal-ink);font-weight:500}
+  .ow-modal__x{appearance:none;border:1px solid var(--pal-line);background:transparent;width:2rem;height:2rem;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;font-size:1.15rem;line-height:1;cursor:pointer;
+    color:var(--pal-muted);transition:color .16s ease,border-color .16s ease}
+  .ow-modal__x:hover{color:var(--pal-accent);border-color:var(--pal-accent)}
+  .ow-f{margin-top:.9rem}
+  .ow-f:first-of-type{margin-top:0}
+  .ow-f label{display:block;font-family:var(--pal-font-mono);font-size:.6rem;font-weight:500;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--pal-muted);margin-bottom:.4rem}
+  .ow-f label span{text-transform:none;letter-spacing:0;color:var(--pal-faint);font-weight:500}
+  .ow-in{width:100%;font-family:var(--pal-font-body);font-size:.9rem;padding:.6rem .75rem;border-radius:0;
+    border:1px solid var(--pal-line);background:var(--pal-panel);color:var(--pal-ink)}
+  .ow-in::placeholder{color:var(--pal-faint)}
+  .ow-in:focus{outline:none;border-color:var(--pal-accent);box-shadow:inset 0 0 0 1px var(--pal-accent)}
+  .ow-in[readonly]{background:var(--pal-paper);color:var(--pal-muted)}
+  .ow-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem 1rem}
+  .ow-form-grid .ow-f{margin-top:0}
+  .ow-form-grid .ow-f--full{grid-column:1 / -1}
+  .ow-err{font-family:var(--pal-font-mono);font-size:.64rem;letter-spacing:.03em;line-height:1.55;color:#b0271d;
+    margin-top:.85rem;border-left:2px solid #b0271d;padding-left:.65rem}
+  .ow-err[hidden]{display:none}
+  .ow-ok{font-family:var(--pal-font-mono);font-size:.64rem;letter-spacing:.03em;color:var(--positive);
+    margin-top:.85rem;border-left:2px solid var(--positive);padding-left:.65rem}
+  .ow-ok[hidden]{display:none}
+  .ow-rows{margin-top:.25rem}
+  .ow-r{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;
+    padding:.72rem 0;border-bottom:1px solid var(--pal-line-soft)}
+  .ow-r > span:first-child{font-family:var(--pal-font-mono);font-size:.64rem;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--pal-muted)}
+  .ow-r > span:last-child{font-family:var(--pal-font-display);font-size:1rem;color:var(--pal-ink);font-feature-settings:"tnum"}
+  .ow-r--total{border-bottom:0;padding-top:1rem;margin-top:.3rem;border-top:1px solid var(--pal-ink)}
+  .ow-r--total > span:last-child{font-size:1.55rem;font-weight:500;letter-spacing:-.02em}
+  .ow-note{font-family:var(--pal-font-mono);font-size:.56rem;letter-spacing:.05em;line-height:1.6;
+    text-transform:uppercase;color:var(--pal-faint);margin-top:1rem}
+  .ow-btn-full{width:100%;justify-content:center;margin-top:1.15rem}
+  .ow-modal__foot{display:flex;gap:.75rem;margin-top:1.25rem}
+  .ow-modal__foot .pal-btn{flex:1;justify-content:center;margin-top:0}
+  .ow-agree-body{max-height:52vh;overflow-y:auto;overflow-x:hidden;padding:1.25rem;border:1px solid var(--pal-line);
+    background:var(--pal-paper);font-family:var(--pal-font-body);font-size:.92rem;line-height:1.65;color:var(--pal-ink-2);
+    scrollbar-width:none;-ms-overflow-style:none}
+  .ow-agree-body::-webkit-scrollbar{width:0;height:0;display:none}
+  .ow-agree-body h3,.ow-agree-body h4{font-family:var(--pal-font-display);font-weight:500;font-size:1.1rem;
+    letter-spacing:-.02em;margin:.15rem 0 .8rem;color:var(--pal-ink)}
+  .ow-agree-body p{margin:0 0 .85rem}
+  .ow-agree-body p:last-child{margin-bottom:0}
+  .ow-agree-load{display:flex;justify-content:center;align-items:center;min-height:6rem;
+    font-family:var(--pal-font-mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--pal-faint)}
+  .ow-otp-row{display:flex;gap:.5rem;justify-content:space-between;margin:0}
+  .ow-otp-in{width:100%;text-align:center;font-family:var(--pal-font-display);font-size:1.45rem;font-weight:500;
+    padding:.7rem 0;border-radius:0;border:1px solid var(--pal-line);background:var(--pal-panel);
+    color:var(--pal-ink);font-feature-settings:"tnum"}
+  .ow-otp-in:focus{outline:none;border-color:var(--pal-accent);box-shadow:inset 0 0 0 1px var(--pal-accent)}
+  .ow-otp-sent{font-family:var(--pal-font-mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--pal-muted);margin-top:1.15rem;text-align:center}
+  .ow-otp-sent strong{color:var(--pal-ink);font-weight:500}
+  .ow-resend{background:none;border:0;padding:0;font-family:var(--pal-font-mono);font-size:.62rem;font-weight:500;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--pal-accent);cursor:pointer;border-bottom:1px solid currentColor}
+  .ow-resend:hover{color:var(--pal-ink)}
+  .ow-resend:disabled{color:var(--pal-faint);cursor:default;border-color:transparent}
+  @media (max-width:34rem){.ow-form-grid{grid-template-columns:1fr;gap:.85rem}}
+  @media (max-width:30rem){
+    .ow-modal{padding:.6rem}.ow-modal__box{padding:1.25rem 1.05rem}.ow-modal__title{font-size:1.22rem}
+    .ow-otp-row{gap:.35rem}.ow-otp-in{font-size:1.15rem;padding:.55rem 0}
+  }
+  @media (prefers-reduced-motion:reduce){.ow-modal,.ow-modal__box{animation:none}}
+</style>
+
+<section class="iv-wrap">
+  <div class="iv-card">
+    <p class="iv-kick">{% if is_free %}Your invitation · Free{% else %}Your invitation{% endif %}</p>
+    <h1 class="iv-plan">{{ plan.name }}</h1>
+    <p class="iv-cycle"><strong id="iv-cycle">{{ cycle_label }}</strong></p>
+
+    <div class="iv-banner">
+      <span class="iv-banner__ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h20"/><path d="M9 12v2"/><path d="M15 12v2"/></svg>
+      </span>
+      <p class="iv-banner__t">
+        We’ve personally invited you to the <strong>{{ plan.name }}</strong> plan.
+        Everything it includes is set up and waiting for you  just confirm to get started.
+      </p>
+    </div>
+
+    {% if plan.tagline %}<p class="iv-cycle" style="margin-top:1.1rem">{{ plan.tagline }}</p>{% endif %}
+
+    <ul class="iv-feats">
+      {% for f in plan.features.all %}
+        <li{% if not f.included %} class="is-off"{% endif %}>
+          <span class="iv-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span>{{ f.text }}</span>
+        </li>
+      {% empty %}
+        <li>
+          <span class="iv-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span>{% if plan.number_of_stores == 1 %}One store{% else %}{{ plan.number_of_stores }} stores{% endif %} to build and publish</span>
+        </li>
+        {% if plan.number_of_collaborations %}
+        <li>
+          <span class="iv-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span>Up to {{ plan.number_of_collaborations }} collaborator{{ plan.number_of_collaborations|pluralize }}</span>
+        </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+
+    <p class="iv-to">Issued to <strong>{{ invite.email }}</strong></p>
+
+    <button type="button" class="pal-btn iv-cta" id="iv-start">
+      {% if is_free %}Activate free{% else %}Continue to checkout{% endif %}
+      <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span>
+    </button>
+    <p class="iv-note">
+      {% if is_free %}Next: review the agreement and verify your email  there’s nothing to pay.
+      {% else %}Next: review the agreement, verify your email, then pay securely via Cashfree. We never store your card details.{% endif %}
+      This link is valid for a limited time.
+    </p>
+  </div>
+</section>
+
+{# Config + endpoints for the checkout JS. #}
+<span id="ow-billing" hidden
+      data-token="{{ token }}"
+      data-slug="{{ plan.slug }}"
+      data-name="{{ plan.name }}"
+      data-cycle="{{ plan.duration }}"
+      data-one-time="{% if is_one_time %}1{% else %}0{% endif %}"
+      data-free="{% if is_free %}1{% else %}0{% endif %}"
+      data-cycle-label="{{ cycle_label }}"
+      data-quote-url="{{ quote_url }}"
+      data-session-url="{{ session_url }}"
+      data-agreement-url="{{ agreement_url }}"
+      data-otp-send-url="{{ otp_send_url }}"
+      data-otp-verify-url="{{ otp_verify_url }}"></span>
+<form id="ow-csrf" hidden>{% csrf_token %}</form>
+
+{# 01  Details (email is fixed to the invite) #}
+<div class="ow-modal" id="ow-md-details" hidden aria-modal="true" role="dialog" aria-labelledby="ow-md-details-title">
+  <div class="ow-modal__box ow-modal__box--form">
+    <div class="ow-modal__head">
+      <div>
+        <p class="ow-kick">Checkout  01 / Details</p>
+        <h2 class="ow-modal__title" id="ow-md-details-title">Your details</h2>
+        <p class="ow-modal__sub"><strong>{{ plan.name }}</strong> · <span>{{ cycle_label }}</span></p>
+      </div>
+      <button type="button" class="ow-modal__x" data-close aria-label="Close">&times;</button>
+    </div>
+    <div class="ow-form-grid">
+      <div class="ow-f">
+        <label for="ow-email">Email address</label>
+        <input class="ow-in" type="email" id="ow-email" value="{{ invite.email }}" readonly autocomplete="email">
+      </div>
+      <div class="ow-f">
+        <label for="ow-phone">Phone number</label>
+        <input class="ow-in" type="tel" id="ow-phone" autocomplete="tel" placeholder="10-digit mobile">
+      </div>
+      <div class="ow-f ow-f--full">
+        <label for="ow-name">Name <span>(optional)</span></label>
+        <input class="ow-in" type="text" id="ow-name" autocomplete="name" placeholder="Full name">
+      </div>
+    </div>
+    <div class="ow-err" id="ow-md-err" role="alert" hidden></div>
+    <button type="button" class="pal-btn ow-btn-full" id="ow-continue">Continue</button>
+  </div>
+</div>
+
+{# 02  Agreement #}
+<div class="ow-modal" id="ow-md-agree" hidden aria-modal="true" role="dialog" aria-labelledby="ow-md-agree-title">
+  <div class="ow-modal__box ow-modal__box--wide">
+    <div class="ow-modal__head">
+      <div>
+        <p class="ow-kick">Checkout  02 / Agreement</p>
+        <h2 class="ow-modal__title" id="ow-md-agree-title">User agreement</h2>
+        <p class="ow-modal__sub">Please review and accept to continue.</p>
+      </div>
+      <button type="button" class="ow-modal__x" data-close aria-label="Close">&times;</button>
+    </div>
+    <div class="ow-agree-body" id="ow-agree-body"><div class="ow-agree-load">Loading agreement…</div></div>
+    <div class="ow-err" id="ow-agree-err" role="alert" hidden></div>
+    <div class="ow-modal__foot">
+      <button type="button" class="pal-btn pal-btn--ghost" id="ow-agree-back">Back</button>
+      <button type="button" class="pal-btn" id="ow-agree-accept">I accept</button>
+    </div>
+  </div>
+</div>
+
+{# 03  Summary #}
+<div class="ow-modal" id="ow-md-breakdown" hidden aria-modal="true" role="dialog" aria-labelledby="ow-md-breakdown-title">
+  <div class="ow-modal__box">
+    <div class="ow-modal__head">
+      <div>
+        <p class="ow-kick">Checkout  03 / Summary</p>
+        <h2 class="ow-modal__title" id="ow-md-breakdown-title">Order summary</h2>
+        <p class="ow-modal__sub"><strong>{{ plan.name }}</strong> · <span>{{ cycle_label }}</span></p>
+      </div>
+      <button type="button" class="ow-modal__x" data-close aria-label="Close">&times;</button>
+    </div>
+    <div class="ow-rows">
+      <div class="ow-r"><span id="ow-b-base-label">Price</span><span id="ow-b-base">₹0.00</span></div>
+      <div class="ow-r" id="ow-b-gst-row"><span>GST (<span id="ow-b-gst-rate">18</span>%)</span><span id="ow-b-gst">₹0.00</span></div>
+      <div class="ow-r ow-r--total"><span>Total</span><span id="ow-b-total">₹0.00</span></div>
+    </div>
+    <div class="ow-err" id="ow-bd-err" role="alert" hidden></div>
+    <div class="ow-modal__foot">
+      <button type="button" class="pal-btn pal-btn--ghost" id="ow-back">Back</button>
+      <button type="button" class="pal-btn" id="ow-proceed">Proceed</button>
+    </div>
+  </div>
+</div>
+
+{# 04  Verify #}
+<div class="ow-modal" id="ow-md-otp" hidden aria-modal="true" role="dialog" aria-labelledby="ow-md-otp-title">
+  <div class="ow-modal__box">
+    <div class="ow-modal__head">
+      <div>
+        <p class="ow-kick">Checkout  04 / Verify</p>
+        <h2 class="ow-modal__title" id="ow-md-otp-title">Verify your email</h2>
+        <p class="ow-modal__sub">Enter the 6-digit code we emailed you.</p>
+      </div>
+      <button type="button" class="ow-modal__x" data-close aria-label="Close">&times;</button>
+    </div>
+    <div class="ow-otp-row" id="ow-otp-row">
+      <input class="ow-otp-in" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1" aria-label="OTP digit 1">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 2">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 3">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 4">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 5">
+      <input class="ow-otp-in" type="text" inputmode="numeric" maxlength="1" aria-label="OTP digit 6">
+    </div>
+    <p class="ow-otp-sent">Sent to <strong id="ow-otp-email"></strong></p>
+    <div class="ow-ok" id="ow-otp-ok" hidden></div>
+    <div class="ow-err" id="ow-otp-err" role="alert" hidden></div>
+    <button type="button" class="pal-btn ow-btn-full" id="ow-otp-verify">{% if is_free %}Verify &amp; activate{% else %}Verify &amp; pay{% endif %}</button>
+    <p class="ow-otp-sent" style="margin-top:.9rem">Didn’t get it? <button type="button" class="ow-resend" id="ow-otp-resend">Resend code</button></p>
+  </div>
+</div>
+
+{% if not is_free %}
+<script nonce="{{ csp_nonce }}" src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+{% endif %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var qs = function (s, r) { return (r || document).querySelector(s); };
+    var qsa = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+    var CFG = qs("#ow-billing");
+    if (!CFG) return;
+    var TOKEN = CFG.getAttribute("data-token");
+    var IS_FREE = CFG.getAttribute("data-free") === "1";
+    var QUOTE_URL = CFG.getAttribute("data-quote-url");
+    var SESSION_URL = CFG.getAttribute("data-session-url");
+    var AGREEMENT_URL = CFG.getAttribute("data-agreement-url");
+    var OTP_SEND_URL = CFG.getAttribute("data-otp-send-url");
+    var OTP_VERIFY_URL = CFG.getAttribute("data-otp-verify-url");
+    var SLUG = CFG.getAttribute("data-slug");
+    var CSRF = (qs("#ow-csrf [name=csrfmiddlewaretoken]") || {}).value || "";
+
+    function fmt(v) {
+      var n = parseFloat(v);
+      if (isNaN(n)) return v;
+      var parts = n.toFixed(2).split("."), whole = parts[0], dec = parts[1];
+      var last3 = whole.slice(-3), rest = whole.slice(0, -3);
+      if (rest) last3 = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last3;
+      return dec === "00" ? last3 : last3 + "." + dec;
+    }
+    function post(url, obj) {
+      var body = new URLSearchParams();
+      Object.keys(obj).forEach(function (k) { body.set(k, obj[k]); });
+      return fetch(url, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": CSRF, "X-Requested-With": "XMLHttpRequest",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: body.toString(), credentials: "same-origin",
+      }).then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); });
+    }
+    function showErr(el, msg) { if (el) { el.textContent = msg; el.hidden = false; } }
+    function hideErr(el) { if (el) { el.hidden = true; el.textContent = ""; } }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+    function digits(v) { return (v || "").replace(/\D+/g, ""); }
+
+    var mDetails = qs("#ow-md-details"), mAgree = qs("#ow-md-agree"),
+        mBreak = qs("#ow-md-breakdown"), mOtp = qs("#ow-md-otp");
+    var ALL = [mDetails, mAgree, mBreak, mOtp];
+    function open(m) { if (m) m.hidden = false; }
+    function close(m) { if (m) m.hidden = true; }
+    function closeAll() { ALL.forEach(close); }
+    qsa("[data-close]").forEach(function (x) { x.addEventListener("click", closeAll); });
+    ALL.forEach(function (m) { if (m) m.addEventListener("click", function (e) { if (e.target === m) close(m); }); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAll(); });
+
+    var VERIFIED = "";
+    var els = {
+      email: qs("#ow-email"), phone: qs("#ow-phone"), name: qs("#ow-name"),
+      mdErr: qs("#ow-md-err"), bdErr: qs("#ow-bd-err"),
+      bBase: qs("#ow-b-base"), bBaseLabel: qs("#ow-b-base-label"),
+      bGstRow: qs("#ow-b-gst-row"), bGst: qs("#ow-b-gst"), bGstRate: qs("#ow-b-gst-rate"), bTotal: qs("#ow-b-total"),
+      proceed: qs("#ow-proceed"),
+      agreeBody: qs("#ow-agree-body"), agreeErr: qs("#ow-agree-err"), agreeAccept: qs("#ow-agree-accept"),
+      otpErr: qs("#ow-otp-err"), otpOk: qs("#ow-otp-ok"), otpEmail: qs("#ow-otp-email"),
+      otpVerify: qs("#ow-otp-verify"), otpResend: qs("#ow-otp-resend"),
+    };
+    var otpInputs = qsa(".ow-otp-in", qs("#ow-otp-row"));
+
+    // Open the flow from the page CTA.
+    var startBtn = qs("#iv-start");
+    if (startBtn) startBtn.addEventListener("click", function () {
+      hideErr(els.mdErr);
+      open(mDetails);
+      if (els.phone) els.phone.focus();
+    });
+
+    // Continue -> agreement.
+    var agreementLoaded = false;
+    var contBtn = qs("#ow-continue");
+    if (contBtn) contBtn.addEventListener("click", function () {
+      var email = (els.email.value || "").trim();
+      var phone = digits(els.phone.value);
+      if (!validEmail(email)) { showErr(els.mdErr, "This link needs a valid email address."); return; }
+      if (phone.length < 10 || phone.length > 15) { showErr(els.mdErr, "Enter a valid phone number."); return; }
+      hideErr(els.mdErr);
+      VERIFIED = "";
+      close(mDetails); open(mAgree); loadAgreement();
+    });
+
+    function loadAgreement() {
+      hideErr(els.agreeErr);
+      if (agreementLoaded) return;
+      if (els.agreeBody) els.agreeBody.innerHTML = '<div class="ow-agree-load">Loading agreement…</div>';
+      fetch(AGREEMENT_URL, { headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.ok || !d.agreement) throw new Error("no agreement");
+          var a = d.agreement;
+          if (els.agreeBody) els.agreeBody.innerHTML = "<h3>" + escapeHtml(a.title || "User agreement") + "</h3>" + (a.content || "");
+          agreementLoaded = true;
+        })
+        .catch(function () {
+          if (els.agreeBody) els.agreeBody.innerHTML = "";
+          showErr(els.agreeErr, "Couldn’t load the agreement. Please try again.");
+        });
+    }
+
+    var agreeBack = qs("#ow-agree-back");
+    if (agreeBack) agreeBack.addEventListener("click", function () { close(mAgree); open(mDetails); });
+
+    // Accept -> fetch the (custom) breakdown and show the summary.
+    if (els.agreeAccept) els.agreeAccept.addEventListener("click", function () {
+      hideErr(els.agreeErr);
+      els.agreeAccept.disabled = true;
+      post(QUOTE_URL, { token: TOKEN })
+        .then(function (r) {
+          if (!r.data || !r.data.ok) { showErr(els.agreeErr, (r.data && r.data.error) || "Something went wrong. Please try again."); return; }
+          fillBreakdown(r.data.quote);
+          hideErr(els.bdErr);
+          close(mAgree); open(mBreak);
+        })
+        .catch(function () { showErr(els.agreeErr, "Network error. Please try again."); })
+        .then(function () { els.agreeAccept.disabled = false; });
+    });
+
+    function fillBreakdown(q) {
+      els.bBaseLabel.textContent = "Price (" + q.months + " month" + (q.months === 1 ? "" : "s") + ")";
+      els.bBase.textContent = "₹" + fmt(q.base);
+      els.bGstRate.textContent = q.gst_rate;
+      els.bGst.textContent = "₹" + fmt(q.gst_amount);
+      var total = parseFloat(q.total);
+      if (total <= 0) {
+        if (els.bGstRow) els.bGstRow.hidden = true;
+        els.bTotal.textContent = "Free";
+      } else {
+        if (els.bGstRow) els.bGstRow.hidden = false;
+        els.bTotal.textContent = "₹" + fmt(q.total);
+      }
+    }
+
+    var backBtn = qs("#ow-back");
+    if (backBtn) backBtn.addEventListener("click", function () { close(mBreak); open(mAgree); });
+
+    // ── OTP ──
+    function otpValue() { return otpInputs.map(function (i) { return i.value; }).join(""); }
+    function resetOtp() { otpInputs.forEach(function (i) { i.value = ""; }); }
+    otpInputs.forEach(function (input, i) {
+      input.addEventListener("input", function () {
+        input.value = input.value.replace(/\D+/g, "").slice(0, 1);
+        if (input.value && i < otpInputs.length - 1) otpInputs[i + 1].focus();
+      });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Backspace" && !input.value && i > 0) otpInputs[i - 1].focus();
+      });
+      input.addEventListener("paste", function (e) {
+        var raw = ((e.clipboardData || window.clipboardData) || {}).getData ? (e.clipboardData || window.clipboardData).getData("text") : "";
+        var ds = (raw || "").replace(/\D+/g, "");
+        if (ds.length < 2) return;
+        e.preventDefault();
+        for (var k = 0; k < otpInputs.length; k++) otpInputs[k].value = ds[k] || "";
+        otpInputs[Math.min(ds.length, otpInputs.length) - 1].focus();
+      });
+    });
+
+    function sendOtp(isResend) {
+      hideErr(els.otpErr);
+      if (els.otpOk) els.otpOk.hidden = true;
+      return post(OTP_SEND_URL, {
+        slug: SLUG, email: (els.email.value || "").trim(), phone: digits(els.phone.value),
+      }).then(function (r) {
+        var d = r.data || {};
+        if (!d.ok) { throw new Error(d.error || (d.errors && (d.errors.email || d.errors.phone)) || "Couldn’t send the code. Please try again."); }
+        if (isResend && els.otpOk) { els.otpOk.textContent = "A new code is on its way."; els.otpOk.hidden = false; }
+        return true;
+      });
+    }
+
+    if (els.proceed) els.proceed.addEventListener("click", function () {
+      hideErr(els.bdErr);
+      els.proceed.disabled = true;
+      var original = els.proceed.textContent;
+      els.proceed.textContent = "Sending code…";
+      sendOtp(false).then(function () {
+        resetOtp();
+        if (els.otpEmail) els.otpEmail.textContent = (els.email.value || "").trim();
+        hideErr(els.otpErr);
+        if (els.otpOk) els.otpOk.hidden = true;
+        close(mBreak); open(mOtp);
+        if (otpInputs[0]) otpInputs[0].focus();
+      }).catch(function (e) {
+        showErr(els.bdErr, (e && e.message) || "Couldn’t send the code. Please try again.");
+      }).then(function () {
+        els.proceed.disabled = false;
+        els.proceed.textContent = original;
+      });
+    });
+
+    if (els.otpResend) els.otpResend.addEventListener("click", function () {
+      els.otpResend.disabled = true;
+      sendOtp(true).catch(function (e) { showErr(els.otpErr, (e && e.message) || "Couldn’t resend the code."); })
+        .then(function () { setTimeout(function () { els.otpResend.disabled = false; }, 1200); });
+    });
+
+    if (els.otpVerify) els.otpVerify.addEventListener("click", function () {
+      var code = otpValue();
+      if (!/^\d{6}$/.test(code)) { showErr(els.otpErr, "Enter the 6-digit code."); return; }
+      hideErr(els.otpErr);
+      if (els.otpOk) els.otpOk.hidden = true;
+      els.otpVerify.disabled = true;
+      var original = els.otpVerify.textContent;
+      els.otpVerify.textContent = "Verifying…";
+      post(OTP_VERIFY_URL, { email: (els.email.value || "").trim(), otp: code })
+        .then(function (r) {
+          var d = r.data || {};
+          if (!d.ok || !d.verified) throw new Error(d.error || "That code is incorrect. Please try again.");
+          VERIFIED = d.verified;
+          els.otpVerify.textContent = IS_FREE ? "Activating…" : "Starting payment…";
+          return finish();
+        })
+        .catch(function (e) {
+          showErr(els.otpErr, (e && e.message) || "Network error. Please try again.");
+          els.otpVerify.disabled = false;
+          els.otpVerify.textContent = original;
+        });
+    });
+
+    // Create the order: settle free, or hand off to Cashfree hosted checkout.
+    function finish() {
+      return post(SESSION_URL, {
+        token: TOKEN,
+        name: (els.name && els.name.value || "").trim(),
+        email: (els.email.value || "").trim(),
+        phone: digits(els.phone.value),
+        verified: VERIFIED,
+      }).then(function (r) {
+        var d = r.data || {};
+        if (!d.ok) {
+          if (d.verify_required) VERIFIED = "";
+          throw new Error(d.error || (d.errors && (d.errors.email || d.errors.phone)) || "We couldn’t complete this. Please try again.");
+        }
+        if (d.free && d.redirect) { window.location.href = d.redirect; return true; }
+        if (!d.payment_session_id) throw new Error("We couldn’t start the payment. Please try again.");
+        if (typeof Cashfree !== "function") throw new Error("Couldn’t open the payment window. Please try again.");
+        var cf = Cashfree({ mode: d.mode });
+        cf.checkout({ paymentSessionId: d.payment_session_id, redirectTarget: "_self" });
+        return true;
+      });
+    }
+  })();
+</script>
+{% endif %}
+
+{% endblock %}

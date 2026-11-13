@@ -1,0 +1,36 @@
+{% extends "email/base.html" %}
+{% block preheader %}You're verified. Your collaboration with {{ store_name }} is live.{% endblock %}
+{% block kicker %}Collaboration{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text="Verified" %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:23px; letter-spacing:-0.02em; line-height:1.15; color:#0a0a0b; margin:0 0 16px 0;">You have been successfully verified</h1>
+
+  {% if collab_name %}<p style="margin:0 0 16px 0;">Hi {{ collab_name }},</p>{% endif %}
+  <p style="margin:0 0 16px 0;">Your collaboration with <strong style="color:#0a0a0b;">{{ store_name }}</strong> is now active. Your referral store is live, and every order placed through it earns you <strong style="color:#0a0a0b;">{{ commission_label }}</strong>.</p>
+
+  <p style="margin:0 0 8px 0;">Open your myUGCstore dashboard to track your orders and earnings, customise your store and request payouts:</p>
+  {% include "email/_button.html" with url=dashboard_url label="Open your dashboard" %}
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 0 0; border:1px solid #d7d7d3; border-collapse:collapse;">
+    <tr>
+      <td style="width:34%; padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">Dashboard</td>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; word-break:break-all;"><a href="{{ dashboard_url }}" style="color:#4b2bf5; text-decoration:none;">{{ dashboard_url }}</a></td>
+    </tr>
+    {% if store_url %}
+    <tr>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">Your store</td>
+      <td style="padding:11px 14px; border-bottom:1px solid #d7d7d3; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; word-break:break-all;"><a href="{{ store_url }}" style="color:#4b2bf5; text-decoration:none;">{{ store_url }}</a></td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td style="padding:11px 14px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:#66666b;">Sign in with</td>
+      <td style="padding:11px 14px; font-family:'SFMono-Regular',ui-monospace,Consolas,Menlo,monospace; font-size:12px; color:#0a0a0b; word-break:break-all;">{{ email }}</td>
+    </tr>
+  </table>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0 0;">
+    <tr>
+      <td style="border-left:2px solid #4b2bf5; padding:1px 0 1px 14px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.55; color:#66666b;">To sign in, enter this email address on the dashboard and we'll send you a one-time code. No password needed. Share your store link with your audience to start earning.</td>
+    </tr>
+  </table>
+{% endblock %}

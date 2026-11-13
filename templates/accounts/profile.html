@@ -1,0 +1,321 @@
+{% extends "ud/_shell.html" %}
+{% block title %}Profile · OneWooz{% endblock %}
+{% block crumb %}Profile{% endblock %}
+
+{% block main %}
+<style nonce="{{ csp_nonce }}">
+  .pf-grid { display: flex; flex-wrap: wrap; gap: 1.1rem 1.25rem; align-items: start; }
+  /* The global ".field + .field" stacking margin would push every second field
+     in a row down out of line; spacing here comes from the flex gap instead. */
+  .pf-grid .field + .field { margin-top: 0 !important; }
+  .pf-field { flex: 1 1 15rem; min-width: 0; }
+  .pf-field--full { flex-basis: 100%; }
+  .pf-foot { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid var(--pal-line); display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  .pf-readonly { opacity: 0.75; }
+  .pf-snap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px; background: var(--pal-line); border: 1px solid var(--pal-line); margin-top: 1.25rem; }
+  .pf-stat { background: var(--pal-panel); padding: 1rem 1.1rem; }
+  .pf-stat__k { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-faint); }
+  .pf-stat__v { margin-top: 0.4rem; font-size: 0.98rem; font-weight: 500; color: var(--pal-ink); }
+  .pf-stat__v.ok { color: #1f8a4c; }
+  .pf-stat__v.warn { color: #b26a00; }
+  .pf-toggles { margin-top: 0.5rem; display: flex; flex-direction: column; }
+  .pf-toggle { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.75rem 0; border-top: 1px solid var(--pal-line-soft); cursor: pointer; }
+  .pf-toggle:first-child { border-top: 0; }
+  .pf-toggle input { margin-top: 0.15rem; width: 1.05rem; height: 1.05rem; accent-color: var(--pal-accent); flex: none; }
+  .pf-toggle__t { font-size: 0.92rem; color: var(--pal-ink); }
+  .pf-toggle__d { display: block; margin-top: 0.15rem; font-size: 0.78rem; color: var(--pal-muted); }
+  .pf-badge { display: inline-block; font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.12rem 0.4rem; border: 1px solid var(--pal-line); color: var(--pal-muted); vertical-align: middle; margin-left: 0.4rem; }
+  .pf-badge--ok { border-color: #1f8a4c; color: #1f8a4c; }
+  .pf-note { margin-top: 0.5rem; font-size: 0.8rem; color: var(--pal-faint); }
+  select.input { appearance: auto; }
+
+  /* ── Subscription ── */
+  .pf-sub-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+  .pf-sub-plan { font-family: var(--pal-font-display, inherit); font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; color: var(--pal-ink); }
+  .pf-sub-kind { margin-top: 0.35rem; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-muted); }
+  .pf-sub-status { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--pal-font-mono); font-size: 0.58rem; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase; padding: 0.28rem 0.55rem; border: 1px solid var(--pal-line); color: var(--pal-muted); white-space: nowrap; }
+  .pf-sub-status.ok { border-color: #1f8a4c; color: #1f8a4c; }
+  .pf-sub-status.warn { border-color: #b26a00; color: #b26a00; }
+  .pf-sub-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1px; background: var(--pal-line); border: 1px solid var(--pal-line); margin-top: 1.25rem; }
+  .pf-sub-fact { background: var(--pal-panel); padding: 0.9rem 1rem; }
+  .pf-sub-fact__k { font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-faint); }
+  .pf-sub-fact__v { margin-top: 0.35rem; font-size: 0.95rem; font-weight: 500; color: var(--pal-ink); }
+  .pf-sub-stores { list-style: none; margin: 1.1rem 0 0; padding: 0; border: 1px solid var(--pal-line); }
+  .pf-sub-store { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 1rem; padding: 0.8rem 1rem; border-top: 1px solid var(--pal-line-soft); }
+  .pf-sub-store:first-child { border-top: 0; }
+  .pf-sub-store__name { font-size: 0.95rem; font-weight: 500; color: var(--pal-ink); }
+  .pf-sub-store__meta { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--pal-muted); }
+  .pf-sub-store__plan { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-accent); border: 1px solid var(--pal-line); padding: 0.2rem 0.45rem; }
+  .pf-sub-locked { margin-top: 1.1rem; padding: 0.9rem 1rem; border: 1px solid var(--pal-line); background: var(--pal-paper); }
+  .pf-sub-locked__k { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-faint); }
+  .pf-sub-locked__list { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--pal-muted); line-height: 1.5; }
+</style>
+
+<div class="container section--tight">
+  <div class="container--narrow" style="padding-inline:0;">
+
+    <h1 class="h1">Profile</h1>
+    <p class="lead mt-3">Your account, how we reach you, and how you sign in.</p>
+
+    {% if messages %}
+      <div class="mt-5">
+        {% for message in messages %}
+          <p class="alert {% if message.tags == 'error' %}alert--error{% endif %}" role="status">{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# ── Account snapshot ─────────────────────────────────────────── #}
+    <section class="card card--pad-lg mt-7">
+      <h2 class="h3">Account</h2>
+      <p class="feature__body measure">A quick read on your account’s standing and protection.</p>
+      <div class="pf-snap-grid">
+        <div class="pf-stat">
+          <div class="pf-stat__k">Email</div>
+          <div class="pf-stat__v {% if snapshot.email_verified %}ok{% else %}warn{% endif %}">{% if snapshot.email_verified %}Verified{% else %}Unverified{% endif %}</div>
+        </div>
+        <div class="pf-stat">
+          <div class="pf-stat__k">Two-factor</div>
+          <div class="pf-stat__v {% if snapshot.has_second_factor %}ok{% else %}warn{% endif %}">{% if snapshot.has_second_factor %}On{% else %}Off{% endif %}</div>
+        </div>
+        <div class="pf-stat">
+          <div class="pf-stat__k">Passkeys</div>
+          <div class="pf-stat__v">{{ snapshot.passkey_count }}</div>
+        </div>
+        <div class="pf-stat">
+          <div class="pf-stat__k">Trusted devices</div>
+          <div class="pf-stat__v">{{ snapshot.trusted_count }}</div>
+        </div>
+        <div class="pf-stat">
+          <div class="pf-stat__k">Stores</div>
+          <div class="pf-stat__v">{{ snapshot.store_count }}</div>
+        </div>
+        <div class="pf-stat">
+          <div class="pf-stat__k">Member since</div>
+          <div class="pf-stat__v">{{ snapshot.member_since|date:"M Y" }}</div>
+        </div>
+        <div class="pf-stat">
+          <div class="pf-stat__k">Last sign-in</div>
+          <div class="pf-stat__v">{% if snapshot.last_login_at %}{{ snapshot.last_login_at|date:"j M, H:i" }}{% else %}{% endif %}</div>
+        </div>
+      </div>
+    </section>
+
+    {# ── Subscription ─────────────────────────────────────────────── #}
+    <section class="card card--pad-lg mt-5">
+      <div class="pf-sub-head">
+        <div>
+          <h2 class="h3">Subscription</h2>
+          <p class="feature__body measure" style="margin-bottom:0">
+            Your plan applies across your whole account  every store below runs on it. This is what each store
+            can do; upgrade any time to unlock more.
+          </p>
+        </div>
+        <div>
+          {% if subscription.is_expired %}
+            <span class="pf-sub-status warn">Expired</span>
+          {% elif subscription.is_paid %}
+            <span class="pf-sub-status ok">Active</span>
+          {% else %}
+            <span class="pf-sub-status">Free plan</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="pf-sub-plan mt-5">{{ subscription.plan_name }}</div>
+      <div class="pf-sub-kind">{{ subscription.kind_label }}</div>
+
+      <div class="pf-sub-facts">
+        <div class="pf-sub-fact">
+          <div class="pf-sub-fact__k">Stores</div>
+          <div class="pf-sub-fact__v">{% if stores_allowed %}{{ stores_used }} / {{ stores_allowed }}{% else %}{{ stores_used }}{% endif %}</div>
+        </div>
+        <div class="pf-sub-fact">
+          <div class="pf-sub-fact__k">Collaborators</div>
+          <div class="pf-sub-fact__v">{{ subscription.number_of_collaborations }}</div>
+        </div>
+        <div class="pf-sub-fact">
+          <div class="pf-sub-fact__k">{% if subscription.is_expired %}Ended{% elif subscription.is_paid %}Renews{% else %}Billing{% endif %}</div>
+          <div class="pf-sub-fact__v">{% if subscription.period_end %}{{ subscription.period_end|date:"j M Y" }}{% else %}{% endif %}</div>
+        </div>
+      </div>
+
+      {% if subscription_stores %}
+      <ul class="pf-sub-stores">
+        {% for s in subscription_stores %}
+        <li class="pf-sub-store">
+          <span>
+            <span class="pf-sub-store__name">{{ s.name }}</span><br>
+            <span class="pf-sub-store__meta">{{ s.get_business_model_display }} · {{ s.get_status_display }}</span>
+          </span>
+          <span class="pf-sub-store__plan">{{ subscription.plan_name }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="pf-note">You don’t have any stores yet. Create one from your dashboard to get started.</p>
+      {% endif %}
+
+      {% if locked_feature_labels %}
+      <div class="pf-sub-locked">
+        <div class="pf-sub-locked__k">Locked on your plan  upgrade to unlock</div>
+        <div class="pf-sub-locked__list">{{ locked_feature_labels|join:" · " }}</div>
+      </div>
+      {% endif %}
+
+      <div class="pf-foot">
+        <a href="{% url 'ud:upgrade' %}" class="btn btn--primary">
+          {% if subscription.is_expired %}Renew your plan{% elif subscription.is_paid %}Change plan{% else %}Upgrade your plan{% endif %}
+        </a>
+        {% if subscription_bill %}
+        <button type="button" class="btn btn--secondary" data-open-bill aria-haspopup="dialog">View bill</button>
+        {% elif subscription_bill_preview %}
+        <button type="button" class="btn btn--secondary" data-open-bill aria-haspopup="dialog">Preview bill</button>
+        {% endif %}
+      </div>
+      {% if subscription_bill %}
+      <p class="pf-note">Latest bill: {{ subscription_bill.invoice_number }} · {{ subscription_bill.plan_name }} ({{ subscription_bill.cycle_label }}) · ₹{{ subscription_bill.paid }} paid{% if subscription_bill.invoice_date %} on {{ subscription_bill.invoice_date|date:"j M Y" }}{% endif %}</p>
+      {% with bill=subscription_bill %}{% include "billing/_subscription_bill.html" %}{% endwith %}
+      {% elif subscription_bill_preview %}
+      <p class="pf-note">Localhost only: this account has no paid bill yet, so “Preview bill” shows a sample bill (with your details) to check the layout and the PDF download.</p>
+      {% with bill=subscription_bill_preview %}{% include "billing/_subscription_bill.html" %}{% endwith %}
+      {% endif %}
+    </section>
+
+    {# ── Your details ─────────────────────────────────────────────── #}
+    <section class="card card--pad-lg mt-5">
+      <h2 class="h3">Your details</h2>
+      <form method="post" class="mt-5">
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="profile">
+        <div class="pf-grid">
+          <div class="field pf-field">
+            <label class="label" for="full_name">Full name</label>
+            <input class="input" type="text" id="full_name" name="full_name" value="{{ request.user.full_name }}" maxlength="150" placeholder="Your name">
+          </div>
+          <div class="field pf-field">
+            <label class="label" for="phone">Phone</label>
+            <input class="input" type="tel" id="phone" name="phone" value="{{ request.user.phone }}" maxlength="20" placeholder="+91 …">
+          </div>
+          <div class="field pf-field">
+            <label class="label" for="timezone">Time zone</label>
+            <select class="input" id="timezone" name="timezone">
+              {% for tz in timezones %}<option value="{{ tz }}" {% if request.user.timezone == tz %}selected{% endif %}>{{ tz }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field pf-field pf-readonly">
+            <label class="label" for="email">Sign-in email {% if snapshot.email_verified %}<span class="pf-badge pf-badge--ok">Verified</span>{% endif %}</label>
+            <input class="input" type="email" id="email" value="{{ request.user.email }}" readonly>
+            <p class="pf-note">Your sign-in email is fixed for security. Contact support to change it.</p>
+          </div>
+        </div>
+        <div class="pf-foot"><button class="btn btn--primary" type="submit">Save details</button></div>
+      </form>
+    </section>
+
+    {# ── Notifications ────────────────────────────────────────────── #}
+    <section class="card card--pad-lg mt-5">
+      <h2 class="h3">Notifications</h2>
+      <p class="feature__body measure">
+        Choose where account and store updates are emailed, and exactly which ones. These mirror the
+        recent activity on your dashboard.
+      </p>
+      <form method="post" class="mt-5">
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="notifications">
+        <div class="pf-grid">
+          <div class="field pf-field">
+            <label class="label" for="notification_email">Notification email</label>
+            <input class="input" type="email" id="notification_email" name="notification_email"
+                   value="{{ request.user.notification_email }}" placeholder="{{ request.user.email }}">
+            <p class="pf-note">Leave blank to use your sign-in email ({{ request.user.email }}).</p>
+          </div>
+          <div class="field pf-field">
+            <label class="label" for="notification_digest">Delivery</label>
+            <select class="input" id="notification_digest" name="notification_digest">
+              {% for value, label in digest_choices %}
+                <option value="{{ value }}" {% if request.user.notification_digest == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <p class="pf-note">“As it happens” emails instantly; “Daily digest” sends one summary a day.</p>
+          </div>
+        </div>
+
+        <div class="pf-toggles">
+          <label class="pf-toggle">
+            <input type="checkbox" name="notify_orders" {% if request.user.notify_orders %}checked{% endif %}>
+            <span><span class="pf-toggle__t">Orders &amp; enquiries</span><span class="pf-toggle__d">New orders, cancellations, enquiries and return/cancel requests.</span></span>
+          </label>
+          <label class="pf-toggle">
+            <input type="checkbox" name="notify_store_activity" {% if request.user.notify_store_activity %}checked{% endif %}>
+            <span><span class="pf-toggle__t">Store activity</span><span class="pf-toggle__d">Domain changes, new reviews, collaborations and other store events.</span></span>
+          </label>
+          <label class="pf-toggle">
+            <input type="checkbox" name="notify_billing" {% if request.user.notify_billing %}checked{% endif %}>
+            <span><span class="pf-toggle__t">Billing</span><span class="pf-toggle__d">Commerce fee bills and payment updates from OneWooz.</span></span>
+          </label>
+          <label class="pf-toggle">
+            <input type="checkbox" name="notify_security" {% if request.user.notify_security %}checked{% endif %}>
+            <span><span class="pf-toggle__t">Security alerts <span class="pf-badge">Recommended</span></span><span class="pf-toggle__d">New sign-ins and credential changes. Keep these on to spot anything you didn’t do.</span></span>
+          </label>
+          <label class="pf-toggle">
+            <input type="checkbox" name="notify_product_news" {% if request.user.notify_product_news %}checked{% endif %}>
+            <span><span class="pf-toggle__t">Product news &amp; tips</span><span class="pf-toggle__d">Occasional updates on new OneWooz features. No spam.</span></span>
+          </label>
+        </div>
+
+        <div class="pf-foot">
+          <button class="btn btn--primary" type="submit">Save preferences</button>
+        </div>
+      </form>
+      <form method="post" class="mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="test_notification">
+        <button class="btn btn--secondary" type="submit">Send a test notification</button>
+      </form>
+    </section>
+
+    {# ── Password ─────────────────────────────────────────────────── #}
+    <section class="card card--pad-lg mt-5">
+      <h2 class="h3">{% if snapshot.has_password %}Change password{% else %}Set a password{% endif %}</h2>
+      <p class="feature__body measure">
+        {% if snapshot.has_password %}Use a strong, unique password.{% else %}You sign in with a link or passkey. Set a password if you’d like another way in.{% endif %}
+      </p>
+      <form method="post" class="mt-5">
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="password">
+        <div class="pf-grid">
+          {% if snapshot.has_password %}
+          <div class="field pf-field pf-field--full">
+            <label class="label" for="current_password">Current password</label>
+            <input class="input" type="password" id="current_password" name="current_password" autocomplete="current-password">
+          </div>
+          {% endif %}
+          <div class="field pf-field">
+            <label class="label" for="new_password">New password</label>
+            <input class="input" type="password" id="new_password" name="new_password" autocomplete="new-password">
+          </div>
+          <div class="field pf-field">
+            <label class="label" for="confirm_password">Confirm new password</label>
+            <input class="input" type="password" id="confirm_password" name="confirm_password" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="pf-foot"><button class="btn btn--primary" type="submit">{% if snapshot.has_password %}Update password{% else %}Set password{% endif %}</button></div>
+      </form>
+    </section>
+
+    {# ── Sign-in & devices ────────────────────────────────────────── #}
+    <section class="card card--pad-lg mt-5">
+      <div class="page-head">
+        <div>
+          <h2 class="h3">Sign-in &amp; devices</h2>
+          <p class="feature__body measure">Passkeys, authenticator app, trusted devices and recent sign-in activity.</p>
+        </div>
+        <a href="{% url 'accounts:security' %}" class="btn btn--secondary">Manage security</a>
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}

@@ -4,8 +4,17 @@
 {% block title %}Edit content · {{ site.name }} · OneWooz{% endblock %}
 {% block crumb %}Edit content{% endblock %}
 
+{% block head %}{{ block.super }}
+{% comment %}
+The editor's styles load in <head> (render-blocking) rather than as a <style>
+block after the markup: from the body, the browser painted the header before
+the rules arrived and the page flashed unstyled for a second on every visit.
+{% endcomment %}
+<link rel="stylesheet" href="{% static 'css/editor.css' %}">
+{% endblock %}
+
 {% block main %}
-<div class="ed" id="ed">
+<div class="ed" id="ed" data-upgrade-url="{{ upgrade_url }}">
   {% csrf_token %}
 
   <header class="ed-top">
@@ -19,11 +28,17 @@
     </div>
   </header>
 
-  {# ---- Horizontal tab strip (scroll-hinted) ---- #}
-  <div class="ow-scroller is-horizontal ed-tabs-wrap" data-scroller>
-    <nav class="ed-tabs ow-scroller__area" id="ed-tabs" data-scroller-area aria-label="Content sections"></nav>
-    <button type="button" class="ow-hint ow-hint--start" aria-label="Scroll left for more"><span class="ow-hint__arw">←</span> More</button>
-    <button type="button" class="ow-hint ow-hint--end" aria-label="Scroll right for more"><span class="ow-hint__arw">→</span> More</button>
+  {# ---- Section tabs with left/right steppers (one item per click) ---- #}
+  <div class="ed-tabs-wrap">
+    <div class="ed-tabs-nav">
+      <button type="button" class="ed-tabs-arrow" data-ed-prev aria-label="Previous section" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+      </button>
+      <nav class="ed-tabs" id="ed-tabs" aria-label="Content sections">{# Invisible stand-in that holds the strip at a real tab's height until the script draws the tabs (removed then). #}<span class="ed-tab" data-ed-tab-placeholder aria-hidden="true"><span class="ed-tab__ico"></span><span>&nbsp;</span></span></nav>
+      <button type="button" class="ed-tabs-arrow" data-ed-next aria-label="Next section">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+    </div>
   </div>
 
   <div class="ed-body">
@@ -34,129 +49,8 @@
 {{ sections|json_script:"ed-sections" }}
 {{ content_data|json_script:"ed-content" }}
 {{ datasets|json_script:"ed-datasets" }}
+{{ demo_media|json_script:"ed-demo" }}
 
-<style nonce="{{ csp_nonce }}">
-  /* Palantir treatment (see onewooz_design.md): squared, hairline-ruled, mono
-     metadata labels, one accent, no soft shadows. Uses the .pal tokens. */
-  .ed { display: flex; flex-direction: column; min-height: calc(100dvh - 61px); background: var(--pal-paper, #f4f4f2); }
-
-  .ed-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
-    padding: 1.5rem 2rem 1.25rem; border-bottom: 1px solid var(--pal-line); background: var(--pal-panel, #fff); }
-  .ed-top__title h1 { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2rem); letter-spacing: -0.03em; color: var(--pal-ink); margin-top: 0.35rem; }
-  .ed-top__right { display: flex; align-items: center; gap: 1rem; }
-  .ed-save { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); white-space: nowrap; }
-  .ed-save__dot { width: 7px; height: 7px; background: var(--positive, #0f7a53); flex: none; }
-  .ed-save[data-state="saving"] .ed-save__dot { background: var(--pal-accent); }
-  .ed-save[data-state="error"] .ed-save__dot { background: #b42318; }
-
-  /* Horizontal tabs */
-  .ed-tabs-wrap { border-bottom: 1px solid var(--pal-line); background: var(--pal-panel, #fff); }
-  .ed-tabs { display: flex; gap: 0; padding: 0 1.25rem; }
-  .ed-tab { display: inline-flex; align-items: center; gap: 0.5rem; white-space: nowrap; cursor: pointer;
-    padding: 0.95rem 0.95rem; border: 0; border-bottom: 2px solid transparent; background: none;
-    font-family: var(--pal-font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--pal-muted); transition: color 140ms ease, border-color 140ms ease; }
-  .ed-tab:hover { color: var(--pal-ink); }
-  .ed-tab[aria-current="true"] { color: var(--pal-ink); border-bottom-color: var(--pal-accent); }
-  .ed-tab__ico { width: 16px; height: 16px; flex: none; opacity: 0.85; }
-  .ed-tab__ico svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-
-  /* Fields */
-  .ed-body { flex: 1; overflow-y: auto; }
-  .ed-fields { margin: 0 auto; padding: 2.25rem 2rem 5rem; }
-  @media (max-width: 40rem) { .ed-fields { padding: 1.5rem 1.1rem 4rem; } }
-  .ed-panel { display: none; }
-  .ed-panel.is-active { display: block; }
-  .ed-panel__head { margin-bottom: 1.75rem; padding-bottom: 1rem; border-bottom: 1px solid var(--pal-line); }
-  .ed-panel__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.35rem; letter-spacing: -0.02em; color: var(--pal-ink); }
-  .ed-panel__hint { font-size: 0.9rem; line-height: 1.55; color: var(--pal-muted); margin-top: 0.4rem; max-width: 60ch; }
-
-  .ed-field { margin-bottom: 1.6rem; }
-  .ed-field__label { display: block; font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 0.45rem; }
-  .ed-field__help { font-size: 0.78rem; line-height: 1.5; color: var(--pal-faint); margin-top: 0.4rem; }
-
-  .ed-input, .ed-textarea, .ed-select {
-    width: 100%; font: inherit; font-size: 0.92rem; color: var(--pal-ink);
-    background: var(--pal-panel, #fff); border: 1px solid var(--pal-line); border-radius: 0;
-    padding: 0.7rem 0.8rem; transition: border-color 140ms ease, box-shadow 140ms ease; }
-  .ed-input::placeholder, .ed-textarea::placeholder { color: var(--pal-faint); }
-  .ed-input:focus, .ed-textarea:focus, .ed-select:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
-  .ed-textarea { min-height: 6.5rem; resize: vertical; line-height: 1.6; }
-  .ed-textarea--code { font-family: var(--pal-font-mono); font-size: 0.8rem; min-height: 8rem; }
-  .ed-select { appearance: none; cursor: pointer; padding-right: 2rem;
-    background-image: linear-gradient(45deg, transparent 50%, var(--pal-muted) 50%), linear-gradient(135deg, var(--pal-muted) 50%, transparent 50%);
-    background-position: calc(100% - 1rem) 55%, calc(100% - 0.65rem) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
-
-  .ed-color { display: flex; align-items: center; gap: 0.6rem; }
-  .ed-color__swatch { position: relative; width: 42px; height: 40px; flex: none; border: 1px solid var(--pal-line); overflow: hidden; cursor: pointer; }
-  .ed-color__swatch input { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); border: 0; padding: 0; cursor: pointer; }
-  .ed-color .ed-input { max-width: 9.5rem; font-family: var(--pal-font-mono); text-transform: uppercase; }
-
-  .ed-image { display: flex; gap: 0.8rem; align-items: flex-start; }
-  .ed-image__tile { width: 68px; height: 68px; flex: none; border: 1px solid var(--pal-line); background: var(--pal-paper-2, #ececea);
-    display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; color: var(--pal-faint); }
-  .ed-image__tile:hover { border-color: var(--pal-accent); color: var(--pal-accent); }
-  .ed-image__tile img { width: 100%; height: 100%; object-fit: cover; }
-  .ed-image__tile svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; }
-  .ed-image__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.4rem; }
-  .ed-image__row { display: flex; gap: 0.4rem; }
-
-  .ed-check { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
-  .ed-check input { width: 1.05rem; height: 1.05rem; accent-color: var(--pal-accent); flex: none; }
-  .ed-check__label { font-size: 0.9rem; color: var(--pal-ink); }
-
-  .ed-group { border: 1px solid var(--pal-line); padding: 1.15rem 1.15rem 0.1rem; background: var(--pal-panel, #fff); }
-
-  .ed-list { display: flex; flex-direction: column; gap: 0.9rem; }
-  .ed-card { border: 1px solid var(--pal-line); background: var(--pal-panel, #fff); }
-  .ed-card__head { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.55rem 0.6rem 0.9rem; border-bottom: 1px solid var(--pal-line); background: var(--pal-paper-2, #ececea); }
-  .ed-card__title { font-family: var(--pal-font-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
-  .ed-card__rm { border: 0; background: none; color: var(--pal-faint); cursor: pointer; padding: 0.3rem 0.5rem; display: inline-flex; }
-  .ed-card__rm:hover { color: #b42318; }
-  .ed-card__rm svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; }
-  .ed-card__body { padding: 1rem; }
-  .ed-card__body .ed-field:last-child { margin-bottom: 0; }
-  .ed-add { display: inline-flex; align-items: center; gap: 0.4rem; align-self: flex-start; cursor: pointer; margin-top: 0.2rem;
-    border: 1px dashed var(--pal-line); background: none; border-radius: 0; padding: 0.65rem 0.95rem;
-    font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-accent);
-    transition: border-color 140ms ease, color 140ms ease; }
-  .ed-add:hover { border-color: var(--pal-accent); }
-  .ed-add svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
-
-  /* Rich-text (TinyMCE mounts over this; also a graceful fallback if it can't load) */
-  .ed-richtext { width: 100%; min-height: 9rem; font: inherit; font-size: 0.9rem; color: var(--pal-ink);
-    background: var(--pal-panel, #fff); border: 1px solid var(--pal-line); border-radius: 0; padding: 0.7rem 0.8rem; line-height: 1.6; }
-  .tox-tinymce { border: 1px solid var(--pal-line) !important; border-radius: 0 !important; }
-
-  /* Policies accordion — one open at a time */
-  .ed-acc { border: 1px solid var(--pal-line); }
-  .ed-acc__item + .ed-acc__item { border-top: 1px solid var(--pal-line); }
-  .ed-acc__hdr { width: 100%; display: flex; align-items: center; justify-content: space-between; cursor: pointer;
-    padding: 0.95rem 1.1rem; background: var(--pal-panel, #fff); border: 0; text-align: left;
-    font-family: var(--pal-font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-ink); }
-  .ed-acc__hdr:hover { background: var(--pal-paper-2, #ececea); }
-  .ed-acc__item.is-open > .ed-acc__hdr { color: var(--pal-accent-ink, #3a1fd0); background: var(--pal-paper-2, #ececea); }
-  .ed-acc__chev { width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 160ms ease; }
-  .ed-acc__item.is-open > .ed-acc__hdr .ed-acc__chev { transform: rotate(-135deg); }
-  .ed-acc__body { display: none; padding: 1.15rem; border-top: 1px solid var(--pal-line); }
-  .ed-acc__item.is-open > .ed-acc__body { display: block; }
-  .ed-acc__body .ed-field:last-child { margin-bottom: 0; }
-
-  /* Nested tree (Core pages → Subpages → Child pages) */
-  .ed-card .ed-card { background: var(--pal-paper, #f4f4f2); }
-  .ed-card .ed-card .ed-card { background: var(--pal-panel, #fff); }
-  .ed-card__body > .ed-field[data-field-wrap="subpages"],
-  .ed-card__body > .ed-field[data-field-wrap="children"] {
-    margin-top: 1.15rem; padding-top: 0.95rem; border-top: 1px solid var(--pal-line); }
-  .ed-field[data-field-wrap="subpages"] > .ed-field__label,
-  .ed-field[data-field-wrap="children"] > .ed-field__label { color: var(--pal-accent-ink, #3a1fd0); }
-  .ed-field[data-field-wrap="subpages"] > .ed-list,
-  .ed-field[data-field-wrap="children"] > .ed-list { border-left: 2px solid var(--pal-line); padding-left: 0.85rem; }
-</style>
-
-{% comment %} {# Free (GPL) TinyMCE build from jsDelivr — no API key. Loaded before the editor
-   script so window.tinymce is ready when a rich-text field is opened. #} {% endcomment %}
-<script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js" referrerpolicy="origin"></script>
 
 <script nonce="{{ csp_nonce }}">
 (function () {
@@ -164,6 +58,15 @@
   var SECTIONS = JSON.parse(document.getElementById("ed-sections").textContent);
   var CONTENT = JSON.parse(document.getElementById("ed-content").textContent) || {};
   var DATASETS = JSON.parse(document.getElementById("ed-datasets").textContent) || {};
+  var DEMO = JSON.parse(document.getElementById("ed-demo").textContent) || {};
+  // Neutral placeholder shown in any empty media slot until a real file is picked.
+  // Empty upload slots show these (the owner's design): image, landscape
+  // video, and portrait video (reels and mobile videos).
+  var PLACEHOLDER = "{% static 'img/placeholders/upload-image.webp' %}";
+  var PLACEHOLDER_VIDEO = "{% static 'img/placeholders/upload-video.webp' %}";
+  var PLACEHOLDER_REEL = "{% static 'img/placeholders/upload-reel.webp' %}";
+  // The live storefront's base URL (ends in "/"), for "view page" links.
+  var STOREFRONT_URL = "{{ storefront_url|escapejs }}";
   var root = document.getElementById("ed");
   var tabsEl = document.getElementById("ed-tabs");
   var fieldsEl = document.getElementById("ed-fields");
@@ -172,7 +75,10 @@
   var csrf = (root.querySelector("[name=csrfmiddlewaretoken]") || {}).value || "";
   var saveBase = "{% url 'store:editor_save_section' site.id 'SECTION' %}";
   var uploadUrl = "{% url 'store:editor_upload' site.id %}";
+  var mapPreviewUrl = "{% url 'store:editor_map_preview' site.id %}";
   var siteId = "{{ site.id }}";
+  // Where a locked (not-in-plan) tab's "Upgrade" button leads.
+  var UPGRADE_URL = root.getAttribute("data-upgrade-url") || "";
   var UID = 0;
   var activePanelKey = null;
 
@@ -181,6 +87,11 @@
     menubar: "edit view insert format tools table",
     plugins: "advlist autolink lists link image charmap preview anchor searchreplace visualblocks visualchars code fullscreen insertdatetime media table emoticons help wordcount",
     toolbar: "undo redo | blocks fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | blockquote hr | removeformat code fullscreen preview",
+    // Wrap toolbar buttons onto multiple rows on narrow screens instead of
+    // letting them overflow the editor width (the "Blocks"/"Fontsize" buttons
+    // used to spill out of the panel on tablets/phones).
+    toolbar_mode: "wrap",
+    width: "100%",
     height: 360,
     menubar_sticky: true,
     branding: false,
@@ -207,13 +118,50 @@
       });
     }
   };
+  // TinyMCE (free GPL build, jsDelivr, no API key) is loaded on demand: only
+  // the Blogs / Policies / Pages tabs use it, and as a parser-blocking <script>
+  // it used to hold the whole editor back until it had downloaded. Pinned to an
+  // exact version so browsers and the CDN cache it long-term.
+  var TINY_SRC = "https://cdn.jsdelivr.net/npm/tinymce@6.8.6/tinymce.min.js";
+  var tinyLoading = null;
+  function loadTiny() {
+    if (window.tinymce) return Promise.resolve(window.tinymce);
+    if (!tinyLoading) {
+      tinyLoading = new Promise(function (resolve, reject) {
+        var s = document.createElement("script");
+        s.src = TINY_SRC;
+        s.referrerPolicy = "origin";
+        s.onload = function () { if (window.tinymce) resolve(window.tinymce); else { tinyLoading = null; reject(new Error("tinymce")); } };
+        s.onerror = function () { tinyLoading = null; s.remove(); reject(new Error("tinymce")); };
+        document.head.appendChild(s);
+      });
+    }
+    return tinyLoading;
+  }
+  // Still the one the owner is looking at? A load can finish after they moved
+  // on, and an editor mounted in a hidden or collapsed box renders at zero
+  // height and never recovers (see activate()).
+  function richtextVisible(ta) {
+    if (!ta.isConnected) return false;
+    // No boxes = it, or an ancestor (inactive panel, hidden list card), is display:none.
+    if (!ta.getClientRects().length) return false;
+    var acc = ta.closest(".ed-acc__item");
+    if (acc && !acc.classList.contains("is-open")) return false;
+    var card = ta.closest(".bl__card, .pg__card");
+    if (card && !card.classList.contains("is-open")) return false;
+    return true;
+  }
   function initRichtextIn(scope) {
-    if (!scope || !window.tinymce) return;
-    scope.querySelectorAll("textarea.ed-richtext").forEach(function (ta) {
-      if (ta.dataset.tmceReady) return;
-      ta.dataset.tmceReady = "1";
-      window.tinymce.init(Object.assign({ target: ta }, TINY_CONFIG));
-    });
+    if (!scope) return;
+    var tas = scope.querySelectorAll("textarea.ed-richtext");
+    if (!tas.length) return;
+    loadTiny().then(function (tinymce) {
+      Array.prototype.forEach.call(tas, function (ta) {
+        if (ta.dataset.tmceReady || !richtextVisible(ta)) return;
+        ta.dataset.tmceReady = "1";
+        tinymce.init(Object.assign({ target: ta }, TINY_CONFIG));
+      });
+    }).catch(function () { /* the plain textarea stays usable */ });
   }
   function destroyRichtextIn(scope) {
     if (!scope || !window.tinymce) return;
@@ -241,12 +189,32 @@
     seo:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
     policies:'<path d="M8 3h8l4 4v14H4V3z"/><path d="M8 12h8M8 16h8"/>',
     certifications:'<circle cx="12" cy="9" r="6"/><path d="m8.5 14-1.5 7 5-3 5 3-1.5-7"/>',
-    scripts:'<path d="m9 8-4 4 4 4"/><path d="m15 8 4 4-4 4"/>'
+    scripts:'<path d="m9 8-4 4 4 4"/><path d="m15 8 4 4-4 4"/>',
+    newsletter:'<rect x="3" y="5" width="18" height="14" rx="1"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/><path d="M16 15h3"/>'
   };
 
   function el(t,c,a){var e=document.createElement(t); if(c)e.className=c; if(a)Object.keys(a).forEach(function(k){e.setAttribute(k,a[k]);}); return e;}
   function svg(p,w){return '<svg viewBox="0 0 24 24" width="'+(w||16)+'" height="'+(w||16)+'">'+p+'</svg>';}
   function v(x){return x===undefined||x===null?"":x;}
+
+  // A small trash icon laid ON a media preview (top-right corner). Clicking it
+  // clears that slot (the stored value is blanked and autosaved) without
+  // opening the picker the tile itself opens.
+  var TRASH = '<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>';
+  // A slot cleared with that icon carries this marker (never a URL) so the
+  // server records "removed by the owner" and the live storefront shows nothing
+  // there, instead of the demo photo an untouched empty slot gets. Every
+  // preview treats it as empty (see realMedia). Matches editor.py REMOVED_MEDIA.
+  var REMOVED_MEDIA = "__removed__";
+  function realMedia(u) { u = u == null ? "" : String(u); return u === REMOVED_MEDIA ? "" : u; }
+  function mediaDelBtn(label, onDelete) {
+    var b = el("button", "ed-media-del", { type: "button", title: label, "aria-label": label });
+    b.innerHTML = svg(TRASH, 14);
+    b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); onDelete(); });
+    // Enter / Space on the icon must not bubble to the tile's own key handler.
+    b.addEventListener("keydown", function (e) { e.stopPropagation(); });
+    return b;
+  }
 
   function scalarInput(field, value) {
     var t = field.type;
@@ -256,7 +224,92 @@
     }
     if (t === "textarea") {
       var ta = el("textarea", "ed-textarea", { "data-field": field.name });
+      if (field.placeholder) ta.placeholder = field.placeholder;
+      if (field.maxlength) ta.maxLength = field.maxlength;
       ta.value = v(value); return ta;
+    }
+    if (t === "tags") {
+      // A chip / token input: type a value + Enter or comma to add it as a
+      // removable pill; the value is stored on a hidden [data-field] as a
+      // comma-joined string, so save/gather and the storefront (which splits on
+      // ",") treat it like any text field.
+      var tbox = el("div", "ed-tags");
+      var tchips = el("div", "ed-tags__chips");
+      var thidden = el("input", null, { type: "hidden", "data-field": field.name });
+      var tinput = el("input", "ed-tags__input", { type: "text", placeholder: field.placeholder || "Type and press Enter…" });
+      var tlist = [];
+      if (Array.isArray(value)) tlist = value.map(function (s) { return String(s).trim(); }).filter(Boolean);
+      else String(v(value)).split(",").forEach(function (s) { s = s.trim(); if (s) tlist.push(s); });
+      function tSync() { thidden.value = tlist.join(", "); thidden.dispatchEvent(new Event("input", { bubbles: true })); }
+      function tRender() {
+        Array.prototype.slice.call(tchips.querySelectorAll(".ed-tags__chip")).forEach(function (c) { c.remove(); });
+        tlist.forEach(function (tag, i) {
+          var chip = el("span", "ed-tags__chip");
+          var lbl = el("span", "ed-tags__chip-t"); lbl.textContent = tag; chip.appendChild(lbl);
+          var x = el("button", "ed-tags__x", { type: "button", "aria-label": "Remove " + tag });
+          x.innerHTML = svg('<path d="M6 6 18 18M18 6 6 18"/>', 12);
+          x.addEventListener("click", function () { tlist.splice(i, 1); tRender(); tSync(); tinput.focus(); });
+          chip.appendChild(x);
+          tchips.insertBefore(chip, tinput);
+        });
+      }
+      function tAdd(raw) {
+        (raw || "").split(",").forEach(function (s) { s = s.trim(); if (s && tlist.indexOf(s) === -1) tlist.push(s); });
+        tinput.value = ""; tRender(); tSync();
+      }
+      tinput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === ",") { e.preventDefault(); if (tinput.value.trim()) tAdd(tinput.value); }
+        else if (e.key === "Backspace" && !tinput.value && tlist.length) { tlist.pop(); tRender(); tSync(); }
+      });
+      // Commit on comma paste; stop the raw keystrokes from triggering a save
+      // (only tSync's hidden-input event should).
+      tinput.addEventListener("input", function (e) { e.stopPropagation(); if (tinput.value.indexOf(",") !== -1) tAdd(tinput.value); });
+      tinput.addEventListener("blur", function () { if (tinput.value.trim()) tAdd(tinput.value); });
+      // Clicking anywhere in the box focuses the input.
+      tbox.addEventListener("click", function (e) { if (e.target === tbox || e.target === tchips) tinput.focus(); });
+      tchips.appendChild(tinput);
+      tbox.appendChild(tchips); tbox.appendChild(thidden);
+      tRender();
+      return tbox;
+    }
+    if (t === "segtoggle") {
+      // A segmented "one active at a time" toggle (like the hero banner's
+      // Image/Video switch). A hidden <select data-field> carries the value, so
+      // gather and show_if treat it exactly like a normal select; the buttons
+      // just drive it. Each option may carry an "icon" (SVG path).
+      var segWrap = el("div", "ed-seg");
+      // data-no-enhance keeps custom-select.js from turning this into a visible
+      // dropdown; it stays a hidden native <select> that only carries the value.
+      var segSel = el("select", null, { "data-field": field.name, "data-no-enhance": "" }); segSel.style.display = "none";
+      var segOpts = field.options || [];
+      segOpts.forEach(function (o) {
+        var opt = el("option"); opt.value = o.value; opt.textContent = o.label;
+        if (String(v(value)) === String(o.value)) opt.selected = true;
+        segSel.appendChild(opt);
+      });
+      if (!v(value) && segOpts[0]) segSel.value = segOpts[0].value;
+      var segBar = el("div", "bn-seg");
+      function segSync() {
+        Array.prototype.forEach.call(segBar.children, function (b) {
+          b.classList.toggle("is-on", b.getAttribute("data-seg") === (segSel.value || (segOpts[0] && segOpts[0].value)));
+        });
+      }
+      segOpts.forEach(function (o) {
+        var b = el("button", "bn-seg__btn", { type: "button", "data-seg": o.value });
+        b.innerHTML = (o.icon ? svg(o.icon, 14) : "") + "<span>" + o.label + "</span>";
+        b.addEventListener("click", function () {
+          if (segSel.value === o.value) return;
+          segSel.value = o.value;
+          segSel.dispatchEvent(new Event("change", { bubbles: true }));
+          segSel.dispatchEvent(new Event("input", { bubbles: true }));
+          segSync();
+        });
+        segBar.appendChild(b);
+      });
+      segSel.addEventListener("change", segSync);
+      segWrap.appendChild(segSel); segWrap.appendChild(segBar);
+      segSync();
+      return segWrap;
     }
     if (t === "select") {
       var sel = el("select", "ed-select", { "data-field": field.name });
@@ -269,6 +322,42 @@
       });
       return sel;
     }
+    if (t === "select_cards") {
+      // Visual radio-cards: each option shows a small SVG mockup of the layout,
+      // its name and a one-line description. A hidden [data-field] input carries
+      // the chosen value so the autosave reader treats it like any other field.
+      var cardsWrap = el("div", "ed-styles");
+      var hidden = el("input", null, { type: "hidden", "data-field": field.name });
+      var optsc = field.options || [];
+      hidden.value = v(value) || (optsc[0] && optsc[0].value) || "";
+      cardsWrap.appendChild(hidden);
+      optsc.forEach(function (o) {
+        var card = el("button", "ed-style", { type: "button", "data-card-value": o.value, "aria-pressed": String(hidden.value) === String(o.value) ? "true" : "false" });
+        if (String(hidden.value) === String(o.value)) card.classList.add("is-selected");
+        card.appendChild(el("span", "ed-style__tick", { "aria-hidden": "true" }));
+        var prev = el("span", "ed-style__preview"); prev.innerHTML = o.preview || "";
+        card.appendChild(prev);
+        var meta = el("div", "ed-style__meta");
+        var title = el("span", "ed-style__title"); title.textContent = o.label || o.value;
+        meta.appendChild(title);
+        if (o.desc) { var d = el("span", "ed-style__desc"); d.textContent = o.desc; meta.appendChild(d); }
+        card.appendChild(meta);
+        card.addEventListener("click", function () {
+          hidden.value = o.value;
+          Array.prototype.forEach.call(cardsWrap.querySelectorAll(".ed-style"), function (c) {
+            var on = c.getAttribute("data-card-value") === o.value;
+            c.classList.toggle("is-selected", on);
+            c.setAttribute("aria-pressed", on ? "true" : "false");
+          });
+          hidden.dispatchEvent(new Event("input", { bubbles: true }));
+          hidden.dispatchEvent(new Event("change", { bubbles: true }));
+          // Save directly too, so persistence never depends on event bubbling.
+          if (field._section) queueSave(field._section);
+        });
+        cardsWrap.appendChild(card);
+      });
+      return cardsWrap;
+    }
     if (t === "checkbox") {
       var lab = el("label", "ed-check");
       var cb = el("input", null, { type: "checkbox", "data-field": field.name }); cb.checked = !!value;
@@ -279,67 +368,2423 @@
       var box = el("div", "ed-color");
       var sw = el("span", "ed-color__swatch");
       var picker = el("input", null, { type: "color" });
-      var text = el("input", "ed-input", { type: "text", "data-field": field.name, placeholder: "#000000" });
+      var text = el("input", "ed-input", { type: "text", "data-field": field.name, placeholder: field.placeholder || "#000000" });
       text.value = v(value);
       picker.value = /^#[0-9a-fA-F]{6}$/.test(v(value)) ? value : "#4b2bf5";
-      sw.style.background = text.value || "#4b2bf5";
-      picker.addEventListener("input", function () { text.value = picker.value; sw.style.background = picker.value; text.dispatchEvent(new Event("input", { bubbles: true })); });
-      text.addEventListener("input", function () { if (/^#[0-9a-fA-F]{3,8}$/.test(text.value)) sw.style.background = text.value; });
+      // A field with a placeholder (e.g. "Auto") reads blank as "automatic":
+      // its swatch shows a neutral pattern instead of a made-up colour.
+      function paintSwatch() {
+        var blank = !String(text.value || "").trim();
+        sw.classList.toggle("is-auto", blank && !!field.placeholder);
+        if (blank) sw.style.background = field.placeholder ? "" : "#4b2bf5";
+        else if (/^#[0-9a-fA-F]{3,8}$/.test(text.value)) sw.style.background = text.value;
+      }
+      paintSwatch();
+      picker.addEventListener("input", function () { text.value = picker.value; paintSwatch(); text.dispatchEvent(new Event("input", { bubbles: true })); });
+      text.addEventListener("input", paintSwatch);
       sw.appendChild(picker); box.appendChild(sw); box.appendChild(text); return box;
     }
     if (t === "image") {
-      var wrap = el("div", "ed-image");
-      var tile = el("span", "ed-image__tile", { title: "Upload image" });
-      if (value) { var im0 = el("img"); im0.src = value; tile.appendChild(im0); }
-      else tile.innerHTML = svg('<rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>', 20);
-      var body = el("div", "ed-image__body");
-      var rowr = el("div", "ed-image__row");
-      var input = el("input", "ed-input", { type: "text", "data-field": field.name, placeholder: "Image URL…" }); input.value = v(value);
-      var btn = el("button", "pal-btn pal-btn--ghost", { type: "button" }); btn.textContent = "Upload"; btn.style.padding = "0.5rem 0.8rem";
+      // Compact picker: the image preview with "Choose from library" directly
+      // beneath it. No URL field  the value is carried on a hidden input so the
+      // autosave reader still finds it via [data-field]. The preview shape can
+      // mirror usage (landscape / portrait) via field.ratio, and its grid span
+      // (field.span) lets e.g. the four brand logos share one row.
+      //
+      // variant "dropzone": a large upload target (icon + "Upload image" + format
+      // hints + corner brackets). The tile opens the device file picker; the
+      // library stays available via the button below.
+      var drop = field.variant === "dropzone";
+      var wrap = el("div", "ed-image" + (drop ? " ed-image--drop" : ""));
+      if (field.ratio === "landscape") wrap.classList.add("ed-image--landscape");
+      else if (field.ratio === "portrait") wrap.classList.add("ed-image--portrait");
+      var tile = el("span", "ed-image__tile", { title: "Choose image", role: "button", tabindex: "0" });
+      var hidden = el("input", null, { type: "hidden", "data-field": field.name });
+      hidden.value = v(value);
+      // Show the uploaded image when there is one; otherwise the neutral
+      // placeholder (or the dropzone prompt), so every empty slot reads as "pick
+      // an image here" (the value stays blank until they choose a real image).
+      function render(u){
+        u = realMedia(u);
+        tile.innerHTML = "";
+        if (u) {
+          tile.classList.remove("is-empty"); tile.classList.add("has-image");
+          var im = el("img"); im.src = u; im.alt = ""; tile.appendChild(im);
+          tile.appendChild(mediaDelBtn("Remove image", function () { setImg(REMOVED_MEDIA); }));
+          return;
+        }
+        tile.classList.remove("has-image");
+        if (drop) {
+          tile.classList.add("is-empty");
+        }
+        var imp = el("img", "ed-ph"); imp.src = PLACEHOLDER; imp.alt = "Upload image"; tile.appendChild(imp);
+      }
+      render(hidden.value);
       var file = el("input", null, { type: "file", accept: "image/*" }); file.style.display = "none";
-      function setImg(u){ input.value = u; tile.innerHTML = ""; var im = el("img"); im.src = u; tile.appendChild(im); input.dispatchEvent(new Event("input", { bubbles: true })); }
-      tile.addEventListener("click", function(){ file.click(); });
-      btn.addEventListener("click", function(){ file.click(); });
-      input.addEventListener("input", function(){ if (input.value){ tile.innerHTML=""; var im=el("img"); im.src=input.value; tile.appendChild(im);} });
+      function setImg(u){ hidden.value = u; render(u); hidden.dispatchEvent(new Event("input", { bubbles: true })); }
+      // Direct upload path (the dropzone's primary action; also a fallback when
+      // the media modal isn't mounted).
+      // Some fields (the Brand tab's logo/favicon) keep their original format
+      // rather than being transcoded to WebP  a favicon must stay a real PNG/ICO.
+      var noWebp = !!field.no_webp;
       file.addEventListener("change", function(){
         if (!file.files || !file.files[0]) return;
-        var fd = new FormData(); fd.append("file", file.files[0]); setStatus("saving");
+        var fd = new FormData(); fd.append("file", file.files[0]);
+        if (noWebp) fd.append("no_webp", "1");
+        setStatus("saving");
         fetch(uploadUrl, { method:"POST", headers:{ "X-CSRFToken": csrf }, body: fd })
           .then(function(r){ return r.json(); }).then(function(d){ if (d && d.url) setImg(d.url); else setStatus("error"); })
           .catch(function(){ setStatus("error"); });
       });
-      rowr.appendChild(input); rowr.appendChild(btn);
-      body.appendChild(rowr); body.appendChild(file);
-      wrap.appendChild(tile); wrap.appendChild(body); return wrap;
+      // Universal media library: pick an existing asset (or upload one there)
+      // and drop its URL straight in  every image goes through the one store-wide
+      // modal mounted in the shell.
+      function openLibrary(){
+        if (window.OneWoozMedia && window.OneWoozMedia.open) {
+          window.OneWoozMedia.open({ kind: "image", title: "Select image", noWebp: noWebp, onSelect: function(a){ if (a && a.url) setImg(a.url); } });
+        } else { file.click(); }
+      }
+      var lib = el("button", "ed-image__pick" + (drop ? " ed-image__pick--drop" : ""), { type: "button" });
+      lib.innerHTML = (drop ? svg('<path d="M4 7h5l2-2h4a1 1 0 0 1 1 1v1"/><rect x="3" y="7" width="18" height="13" rx="1"/>', 14) + "<span>Choose from library</span>" : "Choose from library");
+      lib.addEventListener("click", openLibrary);
+      // Dropzone → device picker; the standard compact picker → library.
+      var tileAction = drop ? function(){ file.click(); } : openLibrary;
+      tile.addEventListener("click", tileAction);
+      tile.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tileAction(); } });
+      wrap.appendChild(tile); wrap.appendChild(hidden); wrap.appendChild(lib); wrap.appendChild(file);
+      return wrap;
     }
+    if (t === "file") {
+      // A document upload (e.g. a certificate's PDF): the stored URL rides on a
+      // hidden [data-field] input like every other media control. The tile shows
+      // the file's name and type (an image file previews as a thumbnail), with
+      // Upload / Replace, View and Remove. PDFs are validated server-side.
+      var fwrap = el("div", "ed-file");
+      var fhidden = el("input", null, { type: "hidden", "data-field": field.name });
+      fhidden.value = v(value);
+      var ftile = el("div", "ed-file__tile");
+      var fact = el("div", "ed-file__acts");
+      var ferr = el("p", "ed-file__err"); ferr.hidden = true;
+      var finput = el("input", null, { type: "file", accept: field.accept || "application/pdf,image/*" });
+      finput.style.display = "none";
+      function fIsImg(u) { return /\.(png|jpe?g|webp|gif|svg|avif)$/i.test(String(u || "").split(/[?#]/)[0]); }
+      function fName(u) {
+        var p = String(u || "").split(/[?#]/)[0];
+        try { p = decodeURIComponent(p); } catch (e) {}
+        return p.substring(p.lastIndexOf("/") + 1) || "file";
+      }
+      function frender(u) {
+        ftile.innerHTML = ""; fact.innerHTML = "";
+        ftile.classList.toggle("is-empty", !u);
+        var ico = el("span", "ed-file__ico");
+        if (u && fIsImg(u)) { var fim = el("img"); fim.src = u; fim.alt = ""; ico.appendChild(fim); }
+        else ico.innerHTML = svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>' + (u ? '<path d="M8 13h8M8 17h5"/>' : '<path d="M12 18v-6m0 0-2.5 2.5M12 12l2.5 2.5"/>'), 22);
+        var meta = el("span", "ed-file__meta");
+        var nm = el("span", "ed-file__name"); nm.textContent = u ? fName(u) : "No file uploaded yet";
+        var sub = el("span", "ed-file__sub"); sub.textContent = u ? (fIsImg(u) ? "Image file" : "PDF document") : "PDF or image · Max 10 MB";
+        meta.appendChild(nm); meta.appendChild(sub);
+        ftile.appendChild(ico); ftile.appendChild(meta);
+
+        var up = el("button", "ed-file__btn ed-file__btn--main", { type: "button" });
+        up.innerHTML = svg('<path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>', 14) + "<span>" + (u ? "Replace file" : "Upload file") + "</span>";
+        up.addEventListener("click", function () { finput.click(); });
+        fact.appendChild(up);
+        if (u) {
+          var view = el("a", "ed-file__btn", { href: u, target: "_blank", rel: "noopener noreferrer" });
+          view.innerHTML = svg('<path d="M14 3h7v7M10 14 21 3M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6"/>', 14) + "<span>View</span>";
+          fact.appendChild(view);
+          // Remove sits on the file itself, like every other media slot.
+          ftile.appendChild(mediaDelBtn("Remove file", function () { fset(""); }));
+        }
+      }
+      function fset(u) { fhidden.value = u; frender(u); fhidden.dispatchEvent(new Event("input", { bubbles: true })); }
+      function ffail(msg) { ferr.textContent = msg || "Upload failed. Please try again."; ferr.hidden = false; setStatus("error"); }
+      finput.addEventListener("change", function () {
+        var f = finput.files && finput.files[0];
+        finput.value = "";
+        if (!f) return;
+        ferr.hidden = true;
+        if (f.size > 10 * 1024 * 1024) { ffail("That file is larger than 10 MB."); return; }
+        var fd = new FormData(); fd.append("file", f);
+        setStatus("saving");
+        fetch(uploadUrl, { method: "POST", headers: { "X-CSRFToken": csrf }, body: fd })
+          .then(function (r) { return r.json().catch(function () { return { error: "Please upload a PDF or an image." }; }); })
+          .then(function (d) { if (d && d.url) fset(d.url); else ffail(d && d.error); })
+          .catch(function () { ffail(); });
+      });
+      frender(fhidden.value);
+      fwrap.appendChild(ftile); fwrap.appendChild(fact); fwrap.appendChild(ferr);
+      fwrap.appendChild(fhidden); fwrap.appendChild(finput);
+      return fwrap;
+    }
+    if (t === "video") {
+      // Same shape as the image picker, but opens the media library filtered to
+      // videos and previews the pick in a muted <video>. The value (a URL) rides
+      // on a hidden [data-field] input so the autosave reader finds it. On the
+      // storefront this plays autoplay/muted/looping.
+      var vwrap = el("div", "ed-image " + (field.ratio === "portrait" ? "ed-image--portrait" : "ed-image--landscape"));
+      var vtile = el("span", "ed-image__tile", { title: "Choose video", role: "button", tabindex: "0" });
+      var vhidden = el("input", null, { type: "hidden", "data-field": field.name });
+      vhidden.value = v(value);
+      function vrender(u){
+        u = realMedia(u);
+        vtile.innerHTML = "";
+        if (u) {
+          // Autoplay muted loop, so the preview plays just like the storefront.
+          var vv = el("video", null, { src: u, muted: "", playsinline: "", loop: "", autoplay: "", preload: "metadata" });
+          vv.muted = true; vv.autoplay = true;
+          vtile.appendChild(vv);
+          vtile.appendChild(mediaDelBtn("Remove video", function () { vset(REMOVED_MEDIA); }));
+          vtile.classList.add("has-image");
+        } else {
+          vtile.classList.remove("has-image");
+          // Portrait slots (reels, mobile videos) get the 9:16 placeholder.
+          var vPortrait = field.ratio === "portrait" || /^mobile_/.test(field.name || "");
+          var vph = el("img", "ed-ph"); vph.src = vPortrait ? PLACEHOLDER_REEL : PLACEHOLDER_VIDEO; vph.alt = "Upload video"; vtile.appendChild(vph);
+        }
+      }
+      vrender(vhidden.value);
+      var vfile = el("input", null, { type: "file", accept: "video/*" }); vfile.style.display = "none";
+      function vset(u){ vhidden.value = u; vrender(u); vhidden.dispatchEvent(new Event("input", { bubbles: true })); }
+      vfile.addEventListener("change", function(){
+        if (!vfile.files || !vfile.files[0]) return;
+        var fd = new FormData(); fd.append("file", vfile.files[0]); setStatus("saving");
+        fetch(uploadUrl, { method:"POST", headers:{ "X-CSRFToken": csrf }, body: fd })
+          .then(function(r){ return r.json(); }).then(function(d){ if (d && d.url) vset(d.url); else setStatus("error"); })
+          .catch(function(){ setStatus("error"); });
+      });
+      function vopen(){
+        if (window.OneWoozMedia && window.OneWoozMedia.open) {
+          window.OneWoozMedia.open({ kind: "video", title: "Select video", onSelect: function(a){ if (a && a.url) vset(a.url); } });
+        } else { vfile.click(); }
+      }
+      var vlib = el("button", "ed-image__pick", { type: "button" }); vlib.textContent = "Choose from library";
+      vlib.addEventListener("click", vopen);
+      vtile.addEventListener("click", vopen);
+      vtile.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); vopen(); } });
+      vwrap.appendChild(vtile); vwrap.appendChild(vhidden); vwrap.appendChild(vlib); vwrap.appendChild(vfile);
+      return vwrap;
+    }
+    if (t === "range") {
+      // A slider with a live numeric read-out. The <input type=range> carries
+      // the [data-field] so autosave/gather read it like any other input.
+      var rwrap = el("div", "ed-range");
+      var mn = field.min != null ? field.min : 0;
+      var mx = field.max != null ? field.max : 10;
+      var stp = field.step != null ? field.step : 1;
+      var rin = el("input", "ed-range__input", {
+        type: "range", "data-field": field.name,
+        min: String(mn), max: String(mx), step: String(stp)
+      });
+      var rv = v(value);
+      rin.value = (rv === "" || rv == null) ? String(field.default != null ? field.default : mn) : rv;
+      var rout = el("span", "ed-range__val"); rout.textContent = rin.value;
+      rin.addEventListener("input", function () { rout.textContent = rin.value; });
+      rwrap.appendChild(rin); rwrap.appendChild(rout);
+      return rwrap;
+    }
+    if (t === "map") return mapInput(field, value);
+    if (t === "schedule") return scheduleInput(field, value);
     var inp = el("input", "ed-input", { type: t === "number" ? "number" : "text", "data-field": field.name });
+    if (field.placeholder) inp.placeholder = field.placeholder;
+    if (field.maxlength && t !== "number") inp.maxLength = field.maxlength;
     inp.value = v(value); return inp;
   }
 
+  // Weekly schedule field: a switch + from/to times per day. The value rides in
+  // a hidden [data-field] input as JSON ([{day, start, end}] for the days that
+  // are on), so autosave/gather read it like any other field; every change
+  // fires a bubbling "input" so the panel's autosave picks it up.
+  var WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  function scheduleInput(field, value) {
+    var saved = {};
+    var list = value;
+    if (typeof list === "string") { try { list = JSON.parse(list || "[]"); } catch (e) { list = []; } }
+    (Array.isArray(list) ? list : []).forEach(function (s) { if (s && s.day) saved[s.day] = s; });
+
+    var wrap = el("div", "ed-sched");
+    var store = el("input", "", { type: "hidden", "data-field": field.name });
+    wrap.appendChild(store);
+    var head = el("div", "ed-sched__head");
+    ["Day", "From", "To"].forEach(function (h) { var s = el("span"); s.textContent = h; head.appendChild(s); });
+    wrap.appendChild(head);
+
+    var rows = WEEK.map(function (day) {
+      var on = !!saved[day];
+      var row = el("div", "ed-sched__row" + (on ? "" : " is-off"));
+      var lab = el("label", "ed-sched__day");
+      var cb = el("input", "", { type: "checkbox", "aria-label": day + " available" });
+      cb.checked = on;
+      var name = el("span"); name.textContent = day;
+      lab.appendChild(cb); lab.appendChild(name);
+      var from = el("input", "ed-input", { type: "time", step: "900", "aria-label": day + " from" });
+      var to = el("input", "ed-input", { type: "time", step: "900", "aria-label": day + " to" });
+      from.value = on ? saved[day].start : "10:00";
+      to.value = on ? saved[day].end : "18:00";
+      from.disabled = to.disabled = !on;
+      row.appendChild(lab); row.appendChild(from); row.appendChild(to);
+      wrap.appendChild(row);
+      return { day: day, row: row, cb: cb, from: from, to: to };
+    });
+
+    var foot = el("div", "ed-sched__foot");
+    var sum = el("span", "ed-sched__sum");
+    sum.setAttribute("aria-live", "polite");
+    var acts = el("span", "ed-sched__acts");
+    function action(label, fn) {
+      var b = el("button", "ed-sched__btn", { type: "button" }); b.textContent = label;
+      b.addEventListener("click", function () { fn(); sync(true); });
+      acts.appendChild(b);
+    }
+    action("Weekdays", function () { rows.forEach(function (r, i) { r.cb.checked = i < 5; }); });
+    action("Copy first to all on", function () {
+      var first = rows.filter(function (r) { return r.cb.checked; })[0];
+      if (!first) return;
+      rows.forEach(function (r) { if (r.cb.checked) { r.from.value = first.from.value; r.to.value = first.to.value; } });
+    });
+    action("Clear", function () { rows.forEach(function (r) { r.cb.checked = false; }); });
+    foot.appendChild(sum); foot.appendChild(acts);
+    wrap.appendChild(foot);
+
+    function short(d) { return d.slice(0, 3); }
+    function summarise(on) {
+      if (!on.length) return "Not set: switch on the days the officer is available.";
+      // Group consecutive days that share the same hours: "Mon–Fri 10:00–18:00 · Sat 10:00–14:00".
+      var groups = [];
+      on.forEach(function (s) {
+        var g = groups[groups.length - 1];
+        var idx = WEEK.indexOf(s.day);
+        if (g && g.start === s.start && g.end === s.end && WEEK.indexOf(g.last) === idx - 1) { g.last = s.day; }
+        else groups.push({ first: s.day, last: s.day, start: s.start, end: s.end });
+      });
+      return groups.map(function (g) {
+        var days = g.first === g.last ? short(g.first) : short(g.first) + "–" + short(g.last);
+        return days + " " + g.start + "–" + g.end;
+      }).join(" · ");
+    }
+    function sync(fire) {
+      var out = [], bad = false;
+      rows.forEach(function (r) {
+        var on = r.cb.checked;
+        r.row.classList.toggle("is-off", !on);
+        r.from.disabled = r.to.disabled = !on;
+        var wrong = on && !(r.from.value && r.to.value && r.to.value > r.from.value);
+        r.from.classList.toggle("is-bad", wrong);
+        r.to.classList.toggle("is-bad", wrong);
+        if (on && !wrong) out.push({ day: r.day, start: r.from.value, end: r.to.value });
+        if (wrong) bad = true;
+      });
+      store.value = JSON.stringify(out);
+      sum.textContent = bad ? "Check the highlighted days: the end time must be after the start." : summarise(out);
+      sum.classList.toggle("is-error", bad);
+      if (fire) store.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    rows.forEach(function (r) {
+      r.cb.addEventListener("change", function () { sync(true); });
+      // Typing fires a bubbling "input" (which queues autosave) before
+      // "change": sync the hidden JSON on both so a save never reads stale hours.
+      ["input", "change"].forEach(function (ev) {
+        r.from.addEventListener(ev, function () { sync(ev === "change"); });
+        r.to.addEventListener(ev, function () { sync(ev === "change"); });
+      });
+    });
+    sync(false);
+    return wrap;
+  }
+
+  // Google Maps field: the link/embed-code input (the [data-field] that
+  // autosave reads) plus a live preview of the map exactly as the storefront's
+  // contact page will frame it. The server converts whatever was pasted (share
+  // link, place URL, embed code, address) into the embeddable URL.
+  function mapInput(field, value) {
+    var wrap = el("div", "ed-map");
+    var inp = el("input", "ed-input", { type: "text", "data-field": field.name, autocomplete: "off", spellcheck: "false" });
+    inp.placeholder = field.placeholder || "https://maps.app.goo.gl/…";
+    inp.value = v(value);
+    var frame = el("div", "ed-map__frame");
+    var empty = el("div", "ed-map__empty");
+    var status = el("p", "ed-map__status");
+    status.setAttribute("aria-live", "polite");
+    frame.appendChild(empty);
+    wrap.appendChild(inp); wrap.appendChild(frame); wrap.appendChild(status);
+
+    var timer = null, seq = 0, shown = "";
+    function showEmpty(text) {
+      frame.querySelectorAll("iframe").forEach(function (f) { f.remove(); });
+      shown = "";
+      empty.textContent = text;
+      empty.hidden = false;
+    }
+    function showMap(url) {
+      if (url === shown) { empty.hidden = true; return; }
+      frame.querySelectorAll("iframe").forEach(function (f) { f.remove(); });
+      var ifr = el("iframe", "", {
+        src: url, loading: "lazy", title: "Map preview", allowfullscreen: "",
+        referrerpolicy: "no-referrer-when-downgrade"
+      });
+      frame.appendChild(ifr);
+      shown = url;
+      empty.hidden = true;
+    }
+    function setStatus2(text, isError, link) {
+      status.textContent = text || "";
+      status.classList.toggle("is-error", !!isError);
+      if (link) {
+        status.appendChild(document.createTextNode(text ? " " : ""));
+        var a = el("a", "", { href: link, target: "_blank", rel: "noopener" });
+        a.textContent = "Open in Google Maps ↗";
+        status.appendChild(a);
+      }
+    }
+    function refresh() {
+      var raw = String(inp.value || "").trim();
+      if (!raw) {
+        showEmpty("Paste a Google Maps link above to show your location here.");
+        setStatus2("");
+        return;
+      }
+      var mine = ++seq;
+      setStatus2("Loading map preview…");
+      fetch(mapPreviewUrl + "?link=" + encodeURIComponent(raw), {
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" }
+      })
+        .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+        .then(function (data) {
+          if (mine !== seq) return;  // a newer edit superseded this request
+          if (data && data.ok && data.embed) {
+            showMap(data.embed);
+            setStatus2("This map is shown on your Contact page.", false, data.link);
+          } else {
+            showEmpty("No map to show yet.");
+            setStatus2((data && data.error) || "Couldn’t load a map for that link.", true);
+          }
+        })
+        .catch(function () {
+          if (mine !== seq) return;
+          setStatus2("Couldn’t load the map preview. Check your connection.", true);
+        });
+    }
+    inp.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(refresh, 600); });
+    // Render the saved map straight away.
+    setTimeout(refresh, 0);
+    return wrap;
+  }
+
+  // How many of the 12 grid columns a field occupies, so short inputs pair up
+  // and fill the row rather than leaving dead space. Explicit `span`/`width`
+  // from the schema win; otherwise a sensible per-type default.
+  var SPANS = { sm: 3, md: 6, lg: 8, xl: 10, full: 12 };
+  function spanFor(field) {
+    if (field.span) return field.span;
+    if (field.width && SPANS[field.width]) return SPANS[field.width];
+    switch (field.type) {
+      case "color": return 4;
+      case "number": return 4;
+      case "checkbox": return 6;
+      case "image": return 4;
+      case "video": return 4;
+      default: return 12;   // text/select/url/textarea/richtext/list/object/cards
+    }
+  }
+
   function fieldBlock(field, value) {
+    // A "heading" field is a visual divider between groups merged into one tab
+    // (e.g. Hero / About / FAQ inside Home sections). It holds no value and no
+    // [data-field], so gather/save skip it.
+    if (field.type === "heading") {
+      var hd = el("div", "ed-subhead");
+      var ht = el("span", "ed-subhead__title"); ht.textContent = field.label || ""; hd.appendChild(ht);
+      if (field.help) { var hh = el("p", "ed-subhead__help"); hh.textContent = field.help; hd.appendChild(hh); }
+      return hd;
+    }
     var wrap = el("div", "ed-field", { "data-field-wrap": field.name });
-    if (field.type !== "checkbox") {
+    wrap.style.gridColumn = "span " + spanFor(field);
+    // Tag the field with its accordion group (banner editor). On desktop the
+    // group wrappers dissolve; on mobile they become collapsible accordions.
+    if (field.group) wrap.setAttribute("data-group", field.group);
+    // A portrait image (e.g. the mobile banner) stretches to the height of its
+    // wider landscape sibling in the same row, so both previews line up.
+    if (field.type === "image" && field.ratio === "portrait") wrap.classList.add("ed-field--fill");
+    // Fields tied to a specific hero style (e.g. Style 3 only) are shown/hidden
+    // by syncStyleOnly against the section's hero_banner_style picker.
+    if (field.style_only) wrap.setAttribute("data-style-only", field.style_only);
+    var selfLabelled = field.type === "seo_pages" || field.editor === "seo_home" || (field.type === "list" && (field.editor === "banner" || field.editor === "tabs" || field.editor === "announcement" || field.editor === "reels" || field.editor === "blogs" || field.editor === "pages" || field.editor === "certificates"));
+    if (!field.hide_label && field.type !== "checkbox" && !selfLabelled) {
       var lab = el("label", "ed-field__label"); lab.textContent = field.label || field.name; wrap.appendChild(lab);
     }
-    if (field.type === "object") {
+    if (field.type === "object" && field.editor === "seo_home") {
+      // SEO tab, "Same for every page": the brand set in the Home-page form.
+      buildSeoPagesEditor(wrap, field, value, { single: true });
+    } else if (field.type === "object") {
       var group = el("div", "ed-group", { "data-object": field.name });
       var obj = (value && typeof value === "object") ? value : {};
       field.subfields.forEach(function (sf) { group.appendChild(fieldBlock(sf, obj[sf.name])); });
       wrap.appendChild(group);
       wireConditionals(group, field.subfields);
+    } else if (field.type === "seo_pages") {
+      buildSeoPagesEditor(wrap, field, value);
+    } else if (field.type === "list" && field.editor === "banner") {
+      buildBannerEditor(wrap, field, value);
+    } else if (field.type === "list" && field.editor === "tabs") {
+      buildTabsEditor(wrap, field, value);
+    } else if (field.type === "list" && field.editor === "announcement") {
+      buildAnnouncementEditor(wrap, field, value);
+    } else if (field.type === "list" && field.editor === "reels") {
+      buildReelsEditor(wrap, field, value);
+    } else if (field.type === "list" && field.editor === "blogs") {
+      buildBlogsEditor(wrap, field, value);
+    } else if (field.type === "list" && field.editor === "pages") {
+      buildPagesEditor(wrap, field, value);
+    } else if (field.type === "list" && field.editor === "certificates") {
+      buildCertificatesEditor(wrap, field, value);
     } else if (field.type === "list") {
       var list = el("div", "ed-list", { "data-list": field.name });
       (Array.isArray(value) ? value : []).forEach(function (item, i) { list.appendChild(listRow(field, item, i)); });
       wrap.appendChild(list);
       var add = el("button", "ed-add", { type: "button" });
       add.innerHTML = svg('<path d="M12 5v14M5 12h14"/>', 14) + "<span>Add " + (field.item_label || "item").toLowerCase() + "</span>";
-      add.addEventListener("click", function () { var row = listRow(field, {}, list.children.length); list.appendChild(row); renumber(list, field); initRichtextIn(row); queueSave(field._section); });
+      add.addEventListener("click", function () { var row = listRow(field, {}, list.children.length); list.appendChild(row); renumber(list, field); initRichtextIn(row); var pnl = list.closest(".ed-panel"); if (pnl) syncStyleOnly(pnl); queueSave(field._section); });
       wrap.appendChild(add);
     } else {
       wrap.appendChild(scalarInput(field, value));
+      // A maxlength textarea gets a live "n / max" counter sharing one row with
+      // its help text (help left, counter right), as in the split editor.
+      if (field.type === "textarea" && field.maxlength) {
+        var foot = el("div", "ed-field__foot");
+        if (field.help) { var fhelp = el("p", "ed-field__help"); fhelp.textContent = field.help; foot.appendChild(fhelp); }
+        var cnt = el("span", "ed-field__count");
+        var taEl = wrap.querySelector("textarea[data-field='" + field.name + "']");
+        var upd = function () { cnt.textContent = (taEl ? taEl.value.length : 0) + " / " + field.maxlength; };
+        upd(); if (taEl) taEl.addEventListener("input", upd);
+        foot.appendChild(cnt); wrap.appendChild(foot);
+        return wrap;
+      }
     }
     if (field.help) { var hp = el("p", "ed-field__help"); hp.textContent = field.help; wrap.appendChild(hp); }
     return wrap;
+  }
+
+  // ---- Hero colours: automatic, readable on whatever the copy sits on ------
+  // A banner colour left blank is "auto": worked out from the background the
+  // copy actually sits on in the chosen style (the split hero's solid panel, or
+  // the image behind its overlay tint). A chosen text colour that is unreadable
+  // on the split panel falls back to auto. Mirrors storefront/hero_colors.py,
+  // which renders the live homepage  keep the two in step.
+  var HERO_PANEL_DEFAULT = "#F5F1EA";
+  var HERO_ON_DARK = { title: "#ffffff", description: "#e5e7eb", accent: "#d1d5db", button_bg: "#ffffff", button_text: "#111827" };
+  var HERO_ON_LIGHT = { title: "#111827", description: "#4b5563", accent: "#6b7280", button_bg: "#111827", button_text: "#ffffff" };
+  var HERO_ROLE_FIELD = { title: "title_color", description: "description_color", accent: "title_color", button_bg: "button_bg_color", button_text: "button_text_color" };
+  // The per-banner fields a style switch puts back to auto.
+  var HERO_STYLE_COLOR_FIELDS = ["title_color", "description_color", "button_bg_color", "button_text_color", "description_mobile_bg_color"];
+  function heroHex(val) {
+    var m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(val || "").trim());
+    if (!m) return null;
+    var h = m[1];
+    if (h.length === 3) h = h.replace(/./g, function (c) { return c + c; });
+    return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); });
+  }
+  function heroLum(rgb) {
+    function ch(c) { c = c / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+    return 0.2126 * ch(rgb[0]) + 0.7152 * ch(rgb[1]) + 0.0722 * ch(rgb[2]);
+  }
+  function heroContrast(a, b) { var x = heroLum(a), y = heroLum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  function heroBestOn(rgb) { return heroContrast([255, 255, 255], rgb) >= heroContrast([17, 24, 39], rgb) ? "#ffffff" : "#111827"; }
+  function heroOverlayAlpha(val) {
+    if (val == null || String(val).trim() === "") val = 5;
+    var n = parseFloat(val);
+    if (isNaN(n) || n <= 0) return 0;
+    var lvl = n > 10 ? Math.min(n, 100) / 10 : n;
+    return Math.max(0, Math.min(lvl, 10)) / 10 * 0.8;
+  }
+  // `get(name)` reads one of the banner's field values.
+  function heroBg(get, style, panelBg) {
+    if (style === "style3") return { rgb: heroHex(panelBg) || heroHex(HERO_PANEL_DEFAULT), certain: true };
+    var ov = heroHex(get("overlay_color")) || [0, 0, 0], a = heroOverlayAlpha(get("overlay_opacity"));
+    // A photo's brightness is unknown: assume mid grey with the tint over it.
+    return { rgb: [128, 128, 128].map(function (b, i) { return Math.round(b * (1 - a) + ov[i] * a); }), certain: false };
+  }
+  function heroAuto(get, style, panelBg) {
+    var bg = heroBg(get, style, panelBg).rgb;
+    var dark = heroContrast([255, 255, 255], bg) >= heroContrast([17, 24, 39], bg);
+    if (style !== "style3" && heroLum(bg) < 0.45) dark = true;
+    return dark ? HERO_ON_DARK : HERO_ON_LIGHT;
+  }
+  function heroColor(get, style, panelBg, role) {
+    var auto = heroAuto(get, style, panelBg);
+    var chosen = String(get(HERO_ROLE_FIELD[role]) || "").trim();
+    var rgb = heroHex(chosen);
+    if (!rgb) return auto[role];
+    if (role === "button_text") {
+      var btn = heroHex(heroColor(get, style, panelBg, "button_bg"));
+      return (btn && heroContrast(rgb, btn) < 3) ? heroBestOn(btn) : chosen;
+    }
+    if (role !== "button_bg") {
+      var bg = heroBg(get, style, panelBg);
+      if (bg.certain && heroContrast(rgb, bg.rgb) < 3) return auto[role];
+    }
+    return chosen;
+  }
+  // Switching the hero style resets every banner's colours to auto (so the
+  // copy is readable on the new style's background) and sets the overlay the
+  // style wants: none for the split hero (its image sits beside the text, not
+  // under it), and a readable tint for the full-image styles if it was off.
+  function resetHeroForStyle(panel, style) {
+    Array.prototype.forEach.call(panel.querySelectorAll("[data-list='hero_banners'] > .ed-card"), function (card) {
+      HERO_STYLE_COLOR_FIELDS.forEach(function (n) {
+        var inp = card.querySelector("[data-field='" + n + "']");
+        if (!inp || inp.value === "") return;
+        inp.value = "";
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      var ov = card.querySelector("[data-field='overlay_opacity']");
+      if (ov) {
+        var want = style === "style3" ? "0" : (parseFloat(ov.value) > 0 ? ov.value : "4");
+        if (String(ov.value) !== want) { ov.value = want; ov.dispatchEvent(new Event("input", { bubbles: true })); }
+      }
+    });
+  }
+
+  // ---- Banner editor: device-preview + slides strip + slide content -------
+  // Renders the hero_banners list as the mockup's two-pane UI. The right pane is
+  // the real .ed-list of .ed-card slides (built by listRow), so autosave/gather,
+  // the media library and every field keep working exactly as before  only the
+  // arrangement and a live preview are added. Only the active slide is visible.
+  var BN_DIMS = { desktop: "1920 × 800", tablet: "1024 × 768", mobile: "768 × 1024" };
+  // Field groups → the mobile accordion sections (id must match the schema's
+  // "group" key). Order here is the order the sections appear.
+  var BN_GROUPS = [
+    { id: "imgtext", label: "Image & Text", icon: '<rect x="3" y="4" width="18" height="14" rx="1"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m4 17 5-5 4 4 3-3 4 4"/>' },
+    { id: "colors", label: "Colors", icon: '<circle cx="13.5" cy="6.5" r=".6"/><circle cx="17" cy="10" r=".6"/><circle cx="8" cy="6.5" r=".6"/><circle cx="6" cy="11" r=".6"/><path d="M12 3a9 9 0 0 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.2 0-1 .8-1.7 1.8-1.7H16a5 5 0 0 0 5-5c0-3.9-4-7-9-7z"/>' },
+    { id: "button", label: "Button", icon: '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/>' }
+  ];
+  function bnDevIco(kind) {
+    if (kind === "desktop") return svg('<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/>', 14);
+    if (kind === "tablet") return svg('<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M11 18h2"/>', 14);
+    return svg('<rect x="7" y="3" width="10" height="18" rx="1.5"/><path d="M11 18h2"/>', 14);
+  }
+  function bnCap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function buildBannerEditor(wrap, field, value) {
+    wrap.classList.add("bn");
+    var state = { active: 0, device: "desktop" };
+
+    // ----- Left column: preview + slides strip -----
+    var left = el("div", "bn__left");
+    var pvhead = el("div", "bn__pvhead");
+    var pvlabel = el("span", "bn__pvlabel");
+    pvlabel.innerHTML = svg('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 14) + "<span>Preview</span>";
+    var devs = el("div", "bn__devs");
+    var devBtns = {};
+    // A <select> mirrors the button group; the buttons show on desktop and the
+    // dropdown on narrow screens (see CSS), both driving the same device state.
+    // data-no-enhance keeps this a plain native <select> (custom-select.js
+    // enhances every other select into an always-visible ow-cs dropdown, which
+    // would otherwise show on desktop despite our display:none). Native lets the
+    // .bn__devsel show/hide rules do their job: buttons on desktop, this on mobile.
+    var devSel = el("select", "bn__devsel ed-select", { "data-no-enhance": "" });
+    // setDevice keeps the button group, the dropdown and the preview in sync no
+    // matter which control the change came from.
+    function setDevice(d) {
+      state.device = d;
+      Object.keys(devBtns).forEach(function (k) { devBtns[k].classList.toggle("is-on", k === d); });
+      if (devSel.value !== d) devSel.value = d;
+      renderPreview();
+    }
+    ["desktop", "tablet", "mobile"].forEach(function (d) {
+      var b = el("button", "bn__dev" + (d === "desktop" ? " is-on" : ""), { type: "button" });
+      b.innerHTML = bnDevIco(d) + '<span class="bn__devlbl">' + bnCap(d) + "<em>" + BN_DIMS[d] + "</em></span>";
+      b.addEventListener("click", function () { setDevice(d); });
+      devBtns[d] = b; devs.appendChild(b);
+      var opt = el("option", null, { value: d }); opt.textContent = bnCap(d) + " (" + BN_DIMS[d] + ")"; devSel.appendChild(opt);
+    });
+    devSel.value = state.device;
+    devSel.addEventListener("change", function () { setDevice(devSel.value); });
+    var devwrap = el("div", "bn__devwrap");
+    devwrap.appendChild(devs); devwrap.appendChild(devSel);
+    pvhead.appendChild(pvlabel); pvhead.appendChild(devwrap);
+    var stage = el("div", "bn__stage bn__stage--desktop");
+    // Preview header + stage share one white card (like the mockup), sitting on
+    // the grey page next to the separate slides card below.
+    var pvcard = el("div", "bn__pvcard");
+    pvcard.appendChild(pvhead); pvcard.appendChild(stage);
+    left.appendChild(pvcard);
+
+    var slides = el("div", "bn__slides");
+    var shead = el("div", "bn__slideshead");
+    var stitle = el("span", "bn__slidestitle");
+    stitle.innerHTML = svg('<rect x="3" y="4" width="18" height="14" rx="1"/><path d="M3 9h18"/>', 14) + '<span>Slides</span> <span class="bn__slidesn"></span>';
+    var stools = el("div", "bn__stools");
+    var delBtn = el("button", "bn__stool bn__stool--del", { type: "button", title: "Delete slide" });
+    delBtn.innerHTML = svg('<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>', 14);
+    var mvL = el("button", "bn__stool", { type: "button", title: "Move left" });
+    mvL.innerHTML = svg('<path d="m15 6-6 6 6 6"/>', 14);
+    var mvR = el("button", "bn__stool", { type: "button", title: "Move right" });
+    mvR.innerHTML = svg('<path d="m9 6 6 6-6 6"/>', 14);
+    stools.appendChild(delBtn); stools.appendChild(mvL); stools.appendChild(mvR);
+    shead.appendChild(stitle); shead.appendChild(stools);
+    var thumbs = el("div", "bn__thumbs");
+    slides.appendChild(shead); slides.appendChild(thumbs);
+    left.appendChild(slides);
+    var note = el("div", "bn__note");
+    note.innerHTML = '<span class="bn__note-ico" aria-hidden="true">' +
+      svg('<circle cx="12" cy="12" r="10"/><path d="M12 11v5M12 8h.01"/>', 16) + '</span>' +
+      '<span class="bn__note-txt">Recommended image size: 1920 × 800 (desktop) · 1024 × 768 (tablet) · 768 × 1024 (mobile). Use high-quality images or videos.</span>';
+    left.appendChild(note);
+
+    // ----- Right column: the real .ed-list of slide cards -----
+    var list = el("div", "ed-list", { "data-list": field.name });
+    var rhead = el("div", "bn__rhead");
+    var rtitle = el("span", "bn__rtitle"); rtitle.textContent = "Slide content";
+    var rslide = el("span", "bn__rslide");
+    rhead.appendChild(rtitle); rhead.appendChild(rslide);
+    list.appendChild(rhead);
+    (Array.isArray(value) ? value : []).forEach(function (item, i) {
+      var c = listRow(field, item, i); enhanceCard(c); list.appendChild(c);
+    });
+
+    wrap.appendChild(left);
+    wrap.appendChild(list);
+
+    function cards() { return Array.prototype.slice.call(list.querySelectorAll(":scope > .ed-card")); }
+    function panelOf() { return wrap.closest(".ed-panel"); }
+    function fieldVal(card, name) { var i = card.querySelector("[data-field='" + name + "']"); return i ? realMedia(i.value) : ""; }
+
+    // Turn the native media_type <select> into a segmented Image/Video toggle
+    // (the select stays in the DOM, hidden, so gather/show_if keep working).
+    function enhanceCard(card) {
+      var mtWrap = card.querySelector("[data-field-wrap='media_type']");
+      if (!mtWrap || mtWrap.dataset.bnSeg) return;
+      var sel = mtWrap.querySelector("select[data-field='media_type']");
+      if (!sel) return;
+      mtWrap.dataset.bnSeg = "1";
+      // Hide the whole native "Media type" dropdown field (label + select +
+      // help). The <select> stays in the DOM (so autosave still reads it); its
+      // value is driven by the segmented Image/Video toggle below.
+      mtWrap.style.display = "none";
+      var body = mtWrap.parentNode;
+      var block = el("div", "ed-field bn-mt"); block.style.gridColumn = "span 12";
+      var lbl = el("label", "ed-field__label"); lbl.textContent = "Media type"; block.appendChild(lbl);
+      var seg = el("div", "bn-seg");
+      [["image", "Image", '<rect x="3" y="4" width="18" height="14" rx="1"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m4 17 5-5 4 4 3-3 4 4"/>'],
+       ["video", "Video", '<rect x="3" y="5" width="14" height="14" rx="1"/><path d="m17 9 4-2v10l-4-2"/>']].forEach(function (o) {
+        var b = el("button", "bn-seg__btn", { type: "button", "data-seg": o[0] });
+        b.innerHTML = svg(o[2], 14) + "<span>" + o[1] + "</span>";
+        b.addEventListener("click", function () {
+          if (sel.value === o[0]) return;
+          sel.value = o[0];
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+          sel.dispatchEvent(new Event("input", { bubbles: true }));
+          syncSeg();
+        });
+        seg.appendChild(b);
+      });
+      block.appendChild(seg);
+      if (body) body.insertBefore(block, body.firstChild);
+      function syncSeg() {
+        Array.prototype.forEach.call(seg.children, function (b) {
+          b.classList.toggle("is-on", b.getAttribute("data-seg") === (sel.value || "image"));
+        });
+      }
+      sel.addEventListener("change", syncSeg);
+      syncSeg();
+
+      // Group the slide's fields into collapsible sections (Image & Text /
+      // Colors / Button). On desktop these dissolve back to the flat grid via
+      // display:contents; on narrow screens they become single-open accordions
+      // like the mobile mockup. Field wraps move only one level down, into a
+      // .bn-acc__body  gatherValue looks for them there too, so autosave still
+      // finds every value.
+      if (!card.querySelector(".bn-acc")) {
+        var acc = el("div", "bn-acc");
+        BN_GROUPS.forEach(function (g) {
+          var members = Array.prototype.slice.call(body.querySelectorAll(":scope > [data-group='" + g.id + "']"));
+          if (!members.length) return;
+          var item = el("div", "bn-acc__item", { "data-acc": g.id });
+          var hdr = el("button", "bn-acc__hdr", { type: "button" });
+          hdr.innerHTML = '<span class="bn-acc__lead">' + svg(g.icon, 16) +
+            '<span class="bn-acc__ttl">' + g.label + '</span></span>' +
+            '<span class="bn-acc__chev" aria-hidden="true"></span>';
+          var abody = el("div", "bn-acc__body");
+          members.forEach(function (m) { abody.appendChild(m); });
+          hdr.addEventListener("click", function () { bnAccToggle(item); });
+          item.appendChild(hdr); item.appendChild(abody);
+          acc.appendChild(item);
+        });
+        body.appendChild(acc);
+      }
+    }
+
+    // Single-open accordion: opening one section closes the others; clicking the
+    // open one closes it (so all can be collapsed, as in the mockup). Only has a
+    // visible effect on narrow screens  desktop keeps every section expanded.
+    function bnAccToggle(item) {
+      var acc = item.parentNode; if (!acc) return;
+      var willOpen = !item.classList.contains("is-open");
+      Array.prototype.forEach.call(acc.querySelectorAll(".bn-acc__item"), function (it) { it.classList.remove("is-open"); });
+      if (willOpen) item.classList.add("is-open");
+    }
+
+    function renderThumbs() {
+      var cs = cards();
+      thumbs.innerHTML = "";
+      cs.forEach(function (card, i) {
+        var t = el("button", "bn__thumb" + (i === state.active ? " is-active" : ""), { type: "button", title: "Slide " + (i + 1) });
+        var mt = fieldVal(card, "media_type") || "image";
+        var src = mt === "video" ? fieldVal(card, "video") : fieldVal(card, "image");
+        var im = el("img"); im.src = src || (mt === "video" ? PLACEHOLDER_VIDEO : PLACEHOLDER); im.alt = ""; t.appendChild(im);
+        var n = el("span", "bn__thumbn"); n.textContent = (i + 1); t.appendChild(n);
+        t.addEventListener("click", function () { setActive(i); });
+        thumbs.appendChild(t);
+      });
+      var add = el("button", "bn__addslide", { type: "button" });
+      add.innerHTML = svg('<path d="M12 5v14M5 12h14"/>', 16) + "<span>Add slide</span>";
+      add.addEventListener("click", addSlide);
+      thumbs.appendChild(add);
+      var nEl = stitle.querySelector(".bn__slidesn");
+      if (nEl) nEl.textContent = cs.length;
+    }
+
+    // The chosen hero layout + the split-hero panel colour live outside the
+    // slide cards (they are section-level fields), so read them from the panel.
+    function heroStyle() {
+      var p = panelOf();
+      var c = p && p.querySelector("[data-field='hero_banner_style']");
+      return (c && c.value) || "style1";
+    }
+    function s3PanelBg() {
+      var p = panelOf();
+      var c = p && p.querySelector("[data-field='hero_style3_left_bg']");
+      return (c && c.value) || "#F5F1EA";
+    }
+
+    function renderPreview() {
+      var cs = cards();
+      var style = heroStyle();
+      stage.className = "bn__stage bn__stage--" + state.device + " bn__stage--" + style;
+      stage.innerHTML = "";
+      var card = cs[state.active];
+      if (!card) return;
+      var mobile = state.device === "mobile";
+      var mt = fieldVal(card, "media_type") || "image";
+
+      // Media element, shared across styles.
+      function buildMedia() {
+        var media = el("div", "bn__media");
+        // Same rules as the live storefront (banner_*_src filters): desktop and
+        // tablet show only the desktop media; the phone shows its own, or the
+        // desktop media unless the phone slot was removed. An empty size of a
+        // banner that has other media shows nothing; the upload placeholder
+        // appears only while the banner has no media at all.
+        function sizeSrc(mKey, dKey) {
+          if (!mobile) return fieldVal(card, dKey);
+          var own = fieldVal(card, mKey);
+          if (own) return own;
+          var raw = card.querySelector("[data-field='" + mKey + "']");
+          if (raw && raw.value === REMOVED_MEDIA) return "";
+          return fieldVal(card, dKey);
+        }
+        var anyMedia = !!(fieldVal(card, mt === "video" ? "video" : "image") || fieldVal(card, mt === "video" ? "mobile_video" : "mobile_image"));
+        if (mt === "video") {
+          var src = sizeSrc("mobile_video", "video");
+          if (src) { var vv = el("video", null, { src: src, loop: "", playsinline: "", autoplay: "", preload: "metadata" }); vv.muted = true; media.appendChild(vv); }
+          else if (!anyMedia) { var vph = el("img"); vph.src = mobile ? PLACEHOLDER_REEL : PLACEHOLDER_VIDEO; media.appendChild(vph); }
+        } else {
+          var isrc = sizeSrc("mobile_image", "image");
+          if (isrc || !anyMedia) { var im = el("img"); im.src = isrc || PLACEHOLDER; media.appendChild(im); }
+        }
+        // Overlay sits inside the media, so it tints the image/video only and
+        // never the text (which lives outside .bn__media). 0–10 → 0.0–0.8.
+        var ovv = parseFloat(fieldVal(card, "overlay_opacity"));
+        if (ovv > 0) {
+          var o = el("div", "bn__overlay");
+          o.style.background = fieldVal(card, "overlay_color") || "#000000";
+          // Same linear scale as the storefront's banner_overlay_opacity
+          // filter: 0–10 → 0–0.8, so every step darkens the preview and even
+          // 10 leaves the banner media visible behind the tint.
+          o.style.opacity = String(Math.min(10, ovv) / 10 * 0.8);
+          media.appendChild(o);
+        }
+        return media;
+      }
+
+      // Copy block colours: the banner's own, or automatic ones readable on
+      // what the copy sits on in this style (heroColor, same rules as the
+      // storefront).
+      var panelBg = s3PanelBg();
+      function hc(role) { return heroColor(function (n) { return fieldVal(card, n); }, style, panelBg, role); }
+      function buildCopy(cls) {
+        var copy = el("div", cls);
+        // Accent text is a split-hero-only field on the storefront.
+        var accent = fieldVal(card, "accent_text");
+        if (accent && style === "style3") { var a = el("div", "bn__accent"); a.textContent = accent; a.style.color = hc("accent"); copy.appendChild(a); }
+        var title = fieldVal(card, "title");
+        if (title) { var h = el("div", "bn__title"); h.textContent = title; h.style.color = hc("title"); copy.appendChild(h); }
+        var desc = fieldVal(card, "description");
+        if (desc) { var d = el("div", "bn__desc"); d.textContent = desc; d.style.color = hc("description"); copy.appendChild(d); }
+        var bt = fieldVal(card, "button_text");
+        if (bt) { var bb = el("div", "bn__btn"); bb.textContent = bt; bb.style.background = hc("button_bg"); bb.style.color = hc("button_text"); copy.appendChild(bb); }
+        return copy;
+      }
+
+      if (style === "style3") {
+        // Split hero: a coloured copy panel beside the media (stacked on mobile).
+        // Copy is appended first so it sits on the left on desktop, image right.
+        var s3 = el("div", "bn__s3");
+        var s3copy = buildCopy("bn__s3-copy"); s3copy.style.background = s3PanelBg();
+        var s3media = el("div", "bn__s3-media"); s3media.appendChild(buildMedia());
+        // The glass image button centred on the image (text only).
+        var circleText = fieldVal(card, "circle_text").trim();
+        if (circleText) {
+          var circ = el("div", "bn__imgbtn"); circ.textContent = circleText;
+          var circColor = fieldVal(card, "circle_text_color");
+          if (circColor) circ.style.color = circColor;
+          s3media.appendChild(circ);
+        }
+        s3.appendChild(s3copy); s3.appendChild(s3media);
+        stage.appendChild(s3);
+      } else {
+        stage.appendChild(buildMedia());
+        stage.appendChild(buildCopy("bn__copy"));
+      }
+      if (cs.length > 1) {
+        var pv = el("button", "bn__nav bn__nav--prev", { type: "button", "aria-label": "Previous" });
+        pv.innerHTML = svg('<path d="m15 6-6 6 6 6"/>', 14);
+        pv.addEventListener("click", function () { setActive((state.active - 1 + cs.length) % cs.length); });
+        var nx = el("button", "bn__nav bn__nav--next", { type: "button", "aria-label": "Next" });
+        nx.innerHTML = svg('<path d="m9 6 6 6-6 6"/>', 14);
+        nx.addEventListener("click", function () { setActive((state.active + 1) % cs.length); });
+        stage.appendChild(pv); stage.appendChild(nx);
+        var dots = el("div", "bn__dots");
+        cs.forEach(function (_, i) {
+          var dd = el("button", "bn__dot" + (i === state.active ? " is-on" : ""), { type: "button", "aria-label": "Slide " + (i + 1) });
+          dd.addEventListener("click", function () { setActive(i); });
+          dots.appendChild(dd);
+        });
+        stage.appendChild(dots);
+      }
+    }
+
+    function showActive() {
+      var cs = cards();
+      if (state.active >= cs.length) state.active = Math.max(0, cs.length - 1);
+      cs.forEach(function (card, i) { card.classList.toggle("is-active", i === state.active); });
+      rslide.textContent = cs.length ? ("Slide " + (state.active + 1) + " of " + cs.length) : "";
+      delBtn.disabled = cs.length <= 1;
+      mvL.disabled = state.active <= 0;
+      mvR.disabled = state.active >= cs.length - 1;
+    }
+    function refresh() { showActive(); renderThumbs(); renderPreview(); }
+    function setActive(i) { state.active = i; refresh(); var c = cards()[i]; if (c) initRichtextIn(c); }
+
+    function addSlide() {
+      var row = listRow(field, {}, cards().length); enhanceCard(row); list.appendChild(row);
+      renumber(list, field);
+      var p = panelOf(); if (p) { initRichtextIn(row); syncStyleOnly(p); }
+      state.active = cards().length - 1; refresh(); queueSave(field._section);
+    }
+    delBtn.addEventListener("click", function () {
+      var cs = cards(); if (cs.length <= 1) return;
+      var card = cs[state.active]; destroyRichtextIn(card); card.remove();
+      renumber(list, field);
+      if (state.active >= cards().length) state.active = cards().length - 1;
+      refresh(); queueSave(field._section);
+    });
+    function move(dir) {
+      var cs = cards(); var i = state.active, j = i + dir;
+      if (j < 0 || j >= cs.length) return;
+      if (dir < 0) list.insertBefore(cs[i], cs[j]); else list.insertBefore(cs[j], cs[i]);
+      renumber(list, field); state.active = j; refresh(); queueSave(field._section);
+    }
+    mvL.addEventListener("click", function () { move(-1); });
+    mvR.addEventListener("click", function () { move(1); });
+
+    // Live preview + thumbnails as the active slide's fields change.
+    function liveUpdate(e) { if (e.target.closest && e.target.closest(".ed-card")) { renderPreview(); renderThumbs(); } }
+    wrap.addEventListener("input", liveUpdate);
+    wrap.addEventListener("change", liveUpdate);
+
+    // The hero style picker and the split-hero panel colour live outside this
+    // wrap (section-level fields), so the panel wires them to this hook to keep
+    // the preview in step. Also lets the initial render run once the panel  and
+    // that style control  is fully assembled (panelOf() resolves only then).
+    wrap._bnRefresh = refresh;
+
+    refresh();
+  }
+
+  // ---- Tabbed list editor (compact) ---------------------------------------
+  // A list where each item is a numbered tab; only the active item's fields are
+  // shown, with add / delete / reorder. Same .ed-list of .ed-card rows as the
+  // plain list (so autosave/gather are unchanged)  only the arrangement differs.
+  // Used for "Why choose us", "Testimonials" and "FAQ".
+  // ---- Per-page SEO editor (SEO tab, "Different for every page") ----------
+  // One tab per storefront page, grouped (Main pages, Policies, Content pages,
+  // Blog posts, Products, Categories) with a search box. Only the active page's
+  // form is in the DOM; every page's values live in `state` and are what the
+  // autosave gathers (wrap._seoGather). Blank fields use the page's auto value,
+  // which is shown as the placeholder and in the live search preview.
+  // With opts.single the same editor shows only the Home page's form (no page
+  // list, groups or search) and edits one flat object: the "Same for every
+  // page" brand set. Its placeholders come from DATASETS.seo_home_auto, the
+  // home page's auto values without the brand set.
+  function buildSeoPagesEditor(wrap, field, value, opts) {
+    var single = !!(opts && opts.single);
+    wrap.classList.add("sp");
+    if (single) wrap.classList.add("sp--single");
+    var groups = single
+      ? [{ group: "Main pages", pages: [{ key: "home", label: "Home", auto: DATASETS.seo_home_auto || {} }] }]
+      : (DATASETS.seo_pages || []).filter(function (g) { return g && g.pages && g.pages.length; });
+    var pagesByKey = {};
+    groups.forEach(function (g) { g.pages.forEach(function (p) { p._group = g.group; pagesByKey[p.key] = p; }); });
+    var fields = (field.subfields || []).filter(function (sf) { return sf.type !== "heading"; });
+
+    var state = {};
+    var src = (value && typeof value === "object" && !Array.isArray(value)) ? value : {};
+    if (single) {
+      var own = {};
+      fields.forEach(function (sf) {
+        var x = src[sf.name];
+        if (x !== "" && x !== false && x != null) own[sf.name] = x;
+      });
+      if (Object.keys(own).length) state.home = own;
+    } else {
+      Object.keys(src).forEach(function (k) {
+        if (src[k] && typeof src[k] === "object") state[k] = Object.assign({}, src[k]);
+      });
+    }
+    var ui = { group: 0, key: groups.length && groups[0].pages.length ? groups[0].pages[0].key : null, q: "" };
+
+    function isCustom(key) {
+      var o = state[key]; if (!o) return false;
+      return Object.keys(o).some(function (k) { var x = o[k]; return x !== "" && x !== false && x != null; });
+    }
+    function customCount(g) { return g.pages.filter(function (p) { return isCustom(p.key); }).length; }
+
+    // ---- head: title + search
+    var head = el("div", "sp__head");
+    var ttl = el("div", "sp__ttl");
+    ttl.innerHTML = '<span class="sp__title">' + svg('<path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/>', 14) + '<span>' + esc(field.label || "Page SEO") + '</span></span>' +
+      '<span class="sp__sub">' + (single
+        ? "Your home page's SEO. Every other page gets its own from its content, with these filling anything missing. Blank fields use the auto value shown in grey."
+        : "Pick a page, then edit its SEO. Blank fields use the auto value shown in grey.") + '</span>';
+    var search = el("input", "ed-input sp__search", { type: "search", placeholder: "Search pages…", "aria-label": "Search pages" });
+    head.appendChild(ttl);
+    if (!single) head.appendChild(search);
+
+    var groupBar = el("div", "sp__groups", { role: "tablist" });
+    var strip = el("div", "tb__tabs sp__tabs");
+    var form = el("div", "sp__form");
+    wrap.appendChild(head);
+    if (single) {
+      // Just the Home page's form: no page list, groups or search.
+      wrap.appendChild(form);
+    } else {
+      // Desktop: the chosen page's form fills the width and the page list is a
+      // column on the right; narrow screens stack them (list on top).
+      var body = el("div", "sp__body");
+      body.appendChild(strip); body.appendChild(form);
+      wrap.appendChild(groupBar); wrap.appendChild(body);
+    }
+
+    if (!groups.length) {
+      form.innerHTML = '<p class="ed-field__help">No pages found yet.</p>';
+    }
+
+    function esc(s) { var d = document.createElement("div"); d.textContent = String(s == null ? "" : s); return d.innerHTML; }
+
+    function renderGroups() {
+      groupBar.innerHTML = "";
+      groups.forEach(function (g, i) {
+        var b = el("button", "sp__group" + (!ui.q && i === ui.group ? " is-active" : ""), { type: "button", role: "tab" });
+        var n = customCount(g);
+        b.innerHTML = '<span>' + esc(g.group) + '</span><span class="sp__gcount">' + (n ? n + "/" : "") + g.pages.length + '</span>';
+        b.addEventListener("click", function () {
+          ui.group = i; ui.q = ""; search.value = "";
+          ui.key = g.pages[0] ? g.pages[0].key : null;
+          renderAll();
+        });
+        groupBar.appendChild(b);
+      });
+    }
+    function visiblePages() {
+      var q = ui.q.trim().toLowerCase();
+      if (q) {
+        var out = [];
+        groups.forEach(function (g) {
+          g.pages.forEach(function (p) { if (String(p.label).toLowerCase().indexOf(q) !== -1) out.push(p); });
+        });
+        return out;
+      }
+      return groups[ui.group] ? groups[ui.group].pages : [];
+    }
+    function renderTabs() {
+      strip.innerHTML = "";
+      var list = visiblePages();
+      if (!list.length) {
+        var none = el("p", "ed-field__help"); none.textContent = "No pages match “" + ui.q + "”.";
+        strip.appendChild(none); return;
+      }
+      if (!list.some(function (p) { return p.key === ui.key; })) ui.key = list[0].key;
+      list.forEach(function (p) {
+        var t = el("button", "tb__tab sp__tab" + (p.key === ui.key ? " is-active" : "") + (isCustom(p.key) ? " is-custom" : ""), { type: "button", title: p.label, "data-key": p.key });
+        t.innerHTML = '<span class="sp__dot" aria-hidden="true"></span><span class="tb__tabl"></span>';
+        t.querySelector(".tb__tabl").textContent = (ui.q ? p._group + " · " : "") + p.label;
+        t.addEventListener("click", function () { ui.key = p.key; renderTabs(); renderForm(); });
+        strip.appendChild(t);
+      });
+    }
+
+    function autoFor(page, name) {
+      var a = page.auto || {};
+      switch (name) {
+        case "og_title": return a.og_title || a.meta_title || "";
+        case "og_description": return a.og_description || a.meta_description || "";
+        case "twitter_title": return a.twitter_title || a.og_title || a.meta_title || "";
+        case "twitter_description": return a.twitter_description || a.og_description || a.meta_description || "";
+        case "twitter_image": return a.twitter_image || a.og_image || "";
+        case "canonical_url": return "This page's own URL";
+        default: return a[name] || "";
+      }
+    }
+    function renderForm() {
+      destroyRichtextIn(form);
+      form.innerHTML = "";
+      var page = pagesByKey[ui.key];
+      if (!page) return;
+      var vals = state[page.key] || {};
+
+      var bar = el("div", "sp__bar");
+      var bt = el("div", "sp__bartitle");
+      bt.innerHTML = '<span class="sp__pagegroup">' + esc(page._group) + '</span><span class="sp__pagename">' + esc(page.label) + '</span>';
+      var reset = el("button", "pal-btn pal-btn--ghost sp__reset", { type: "button" });
+      reset.textContent = "Reset to auto";
+      reset.disabled = !isCustom(page.key);
+      reset.addEventListener("click", function () {
+        delete state[page.key];
+        renderAll();
+        wrap.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      bar.appendChild(bt); bar.appendChild(reset);
+      form.appendChild(bar);
+
+      // Live Google-style preview of what this page shows in search.
+      var pv = el("div", "sp__preview", { "aria-live": "polite" });
+      pv.innerHTML = '<span class="sp__pvlabel">Search preview</span><span class="sp__pvtitle"></span><span class="sp__pvdesc"></span>';
+      form.appendChild(pv);
+      function renderPreview() {
+        pv.querySelector(".sp__pvtitle").textContent = (state[page.key] && state[page.key].meta_title) || autoFor(page, "meta_title") || page.label;
+        pv.querySelector(".sp__pvdesc").textContent = (state[page.key] && state[page.key].meta_description) || autoFor(page, "meta_description") || "";
+      }
+
+      var grid = el("div", "ed-group sp__grid");
+      (field.subfields || []).forEach(function (sf) {
+        var blk = fieldBlock(sf, vals[sf.name]);
+        if (sf.type !== "heading") {
+          var ctl = blk.querySelector("[data-field='" + sf.name + "']");
+          var auto = autoFor(page, sf.name);
+          if (ctl && (ctl.tagName === "TEXTAREA" || (ctl.tagName === "INPUT" && ctl.type !== "hidden" && ctl.type !== "checkbox"))) {
+            ctl.setAttribute("placeholder", auto ? "Auto: " + auto : "");
+          }
+          if (sf.type === "image") {
+            var hint = el("p", "ed-field__help");
+            hint.textContent = auto ? "Blank uses the page's own image." : "Blank: no share image for this page.";
+            blk.appendChild(hint);
+          }
+        }
+        grid.appendChild(blk);
+      });
+      form.appendChild(grid);
+      renderPreview();
+
+      function read() {
+        var o = {};
+        fields.forEach(function (sf) {
+          var ctl = grid.querySelector("[data-field='" + sf.name + "']");
+          if (!ctl) return;
+          var x = sf.type === "checkbox" ? !!ctl.checked : realMedia(ctl.value);
+          if (x !== "" && x !== false) o[sf.name] = x;
+        });
+        if (Object.keys(o).length) state[page.key] = o; else delete state[page.key];
+        reset.disabled = !isCustom(page.key);
+        renderPreview();
+      }
+      grid.addEventListener("input", read);
+      grid.addEventListener("change", read);
+      grid.addEventListener("input", function () { refreshMarks(); });
+      grid.addEventListener("change", function () { refreshMarks(); });
+    }
+    // Update the "customised" dots / counts without rebuilding the form.
+    function refreshMarks() {
+      Array.prototype.forEach.call(strip.querySelectorAll(".sp__tab"), function (t) {
+        var k = t.getAttribute("data-key");
+        if (k) t.classList.toggle("is-custom", isCustom(k));
+      });
+      Array.prototype.forEach.call(groupBar.querySelectorAll(".sp__group"), function (b, i) {
+        var g = groups[i]; if (!g) return;
+        var n = customCount(g);
+        var c = b.querySelector(".sp__gcount"); if (c) c.textContent = (n ? n + "/" : "") + g.pages.length;
+      });
+    }
+    function renderAll() { renderGroups(); renderTabs(); renderForm(); }
+
+    var qTimer = null;
+    search.addEventListener("input", function (e) {
+      e.stopPropagation();  // typing a search isn't an edit  don't autosave
+      clearTimeout(qTimer);
+      qTimer = setTimeout(function () { ui.q = search.value; renderGroups(); renderTabs(); renderForm(); }, 150);
+    });
+
+    wrap._seoGather = function () {
+      if (single) return isCustom("home") ? Object.assign({}, state.home) : {};
+      var out = {};
+      Object.keys(state).forEach(function (k) { if (isCustom(k)) out[k] = state[k]; });
+      return out;
+    };
+    renderAll();
+  }
+
+  function buildTabsEditor(wrap, field, value) {
+    wrap.classList.add("tb");
+    var state = { active: 0 };
+
+    var head = el("div", "tb__head");
+    var htitle = el("span", "tb__htitle");
+    htitle.innerHTML = svg('<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9h18"/>', 14) +
+      '<span>' + (field.label || "Items") + '</span> <span class="tb__count"></span>';
+    var tools = el("div", "tb__tools");
+    var delBtn = el("button", "tb__tool tb__tool--del", { type: "button", title: "Delete" });
+    delBtn.innerHTML = svg('<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>', 14);
+    var mvL = el("button", "tb__tool", { type: "button", title: "Move left" }); mvL.innerHTML = svg('<path d="m15 6-6 6 6 6"/>', 14);
+    var mvR = el("button", "tb__tool", { type: "button", title: "Move right" }); mvR.innerHTML = svg('<path d="m9 6 6 6-6 6"/>', 14);
+    tools.appendChild(delBtn); tools.appendChild(mvL); tools.appendChild(mvR);
+    head.appendChild(htitle); head.appendChild(tools);
+
+    var strip = el("div", "tb__tabs");
+    var list = el("div", "ed-list", { "data-list": field.name });
+    (Array.isArray(value) ? value : []).forEach(function (item, i) { list.appendChild(listRow(field, item, i)); });
+
+    wrap.appendChild(head); wrap.appendChild(strip); wrap.appendChild(list);
+
+    function cards() { return Array.prototype.slice.call(list.querySelectorAll(":scope > .ed-card")); }
+    function panelOf() { return wrap.closest(".ed-panel"); }
+    function tabLabel(card, i) {
+      var t = card.querySelector(".ed-card__body [data-field]");
+      var val = t && t.value ? String(t.value).trim() : "";
+      return val || ((field.item_label || "Item") + " " + (i + 1));
+    }
+    function renderTabs() {
+      var cs = cards(); strip.innerHTML = "";
+      cs.forEach(function (card, i) {
+        var t = el("button", "tb__tab" + (i === state.active ? " is-active" : ""), { type: "button" });
+        t.innerHTML = '<span class="tb__tabn">' + (i + 1) + '</span><span class="tb__tabl"></span>';
+        t.querySelector(".tb__tabl").textContent = tabLabel(card, i);
+        t.addEventListener("click", function () { setActive(i); });
+        strip.appendChild(t);
+      });
+      var add = el("button", "tb__add", { type: "button" });
+      add.innerHTML = svg('<path d="M12 5v14M5 12h14"/>', 15) + "<span>Add " + (field.item_label || "item").toLowerCase() + "</span>";
+      add.addEventListener("click", addItem);
+      strip.appendChild(add);
+      var c = htitle.querySelector(".tb__count"); if (c) c.textContent = cs.length;
+    }
+    function showActive() {
+      var cs = cards();
+      if (state.active >= cs.length) state.active = Math.max(0, cs.length - 1);
+      cs.forEach(function (card, i) { card.classList.toggle("is-active", i === state.active); });
+      delBtn.disabled = cs.length <= 1;
+      mvL.disabled = state.active <= 0;
+      mvR.disabled = state.active >= cs.length - 1;
+    }
+    function refresh() { showActive(); renderTabs(); }
+    function setActive(i) { state.active = i; refresh(); var c = cards()[i]; if (c) initRichtextIn(c); }
+    function addItem() {
+      var row = listRow(field, {}, cards().length); list.appendChild(row);
+      renumber(list, field); initRichtextIn(row);
+      state.active = cards().length - 1; refresh(); queueSave(field._section);
+    }
+    delBtn.addEventListener("click", function () {
+      var cs = cards(); if (cs.length <= 1) return;
+      var card = cs[state.active]; destroyRichtextIn(card); card.remove();
+      renumber(list, field);
+      if (state.active >= cards().length) state.active = cards().length - 1;
+      if (state.active < 0) state.active = 0;
+      refresh(); queueSave(field._section);
+    });
+    function move(dir) {
+      var cs = cards(); var i = state.active, j = i + dir;
+      if (j < 0 || j >= cs.length) return;
+      if (dir < 0) list.insertBefore(cs[i], cs[j]); else list.insertBefore(cs[j], cs[i]);
+      renumber(list, field); state.active = j; refresh(); queueSave(field._section);
+    }
+    mvL.addEventListener("click", function () { move(-1); });
+    mvR.addEventListener("click", function () { move(1); });
+    // Keep the tab labels live as the active item's fields change.
+    wrap.addEventListener("input", function (e) { if (e.target.closest && e.target.closest(".ed-card")) renderTabs(); });
+
+    refresh();
+  }
+
+  // ---- Announcement bar editor ---------------------------------------------
+  // Brand tab, top. A live preview of the bar, then the statements as the usual
+  // .ed-list > .ed-card rows (so autosave/gather are unchanged). The section's
+  // announcement_mode toggle decides what shows: Static = one statement (any
+  // others are kept, just set aside), Rotating = up to max_items statements
+  // looping left to right. Mirrors storefront/announcement.py.
+  var ANN_DEFAULT = "FREE SHIPPING ON ORDERS OVER ₹999";
+  function annSegments(text, word, url) {
+    text = String(text || "").replace(/\s+/g, " ").trim();
+    word = String(word || "").replace(/\s+/g, " ").trim();
+    url = String(url || "").trim();
+    if (!word || !url) return { before: text || word, word: "", after: "", url: "" };
+    if (!text) return { before: "", word: word, after: "", url: url };
+    var i = text.toLowerCase().indexOf(word.toLowerCase());
+    if (i < 0) return { before: text + " ", word: word, after: "", url: url, appended: true };
+    return { before: text.slice(0, i), word: text.slice(i, i + word.length), after: text.slice(i + word.length), url: url };
+  }
+  function annItemNode(s) {
+    var span = el("span", "an__item");
+    if (s.before) span.appendChild(document.createTextNode(s.before));
+    if (s.word) { var a = el("span", "an__link", { title: "Opens " + s.url + " in a new tab" }); a.textContent = s.word; span.appendChild(a); }
+    if (s.after) span.appendChild(document.createTextNode(s.after));
+    return span;
+  }
+
+  function buildAnnouncementEditor(wrap, field, value) {
+    // "tb" borrows the tabbed list editor's look (numbered tabs, one statement
+    // shown at a time, delete / move tools), like Why choose us > Points.
+    wrap.classList.add("an", "tb");
+    var max = field.max_items || 4;
+    var state = { active: 0 };
+
+    var pv = el("div", "an__pv");
+    var pvhead = el("div", "an__pvhead");
+    pvhead.innerHTML = '<span class="an__pvlabel">' +
+      svg('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 14) +
+      '<span>Preview</span></span><span class="an__pvmode"></span>';
+    var bar = el("div", "an__bar");
+    pv.appendChild(pvhead); pv.appendChild(bar);
+
+    var head = el("div", "tb__head an__head");
+    var htitle = el("span", "tb__htitle");
+    htitle.innerHTML = svg('<path d="M4 9h16M4 15h10"/>', 14) + '<span>' + (field.label || "Statements") + '</span> <span class="tb__count"></span>';
+    var tools = el("div", "tb__tools");
+    var delBtn = el("button", "tb__tool tb__tool--del", { type: "button", title: "Delete statement" });
+    delBtn.innerHTML = svg('<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>', 14);
+    var mvL = el("button", "tb__tool", { type: "button", title: "Move left" }); mvL.innerHTML = svg('<path d="m15 6-6 6 6 6"/>', 14);
+    var mvR = el("button", "tb__tool", { type: "button", title: "Move right" }); mvR.innerHTML = svg('<path d="m9 6 6 6-6 6"/>', 14);
+    tools.appendChild(delBtn); tools.appendChild(mvL); tools.appendChild(mvR);
+    head.appendChild(htitle); head.appendChild(tools);
+    var note = el("p", "an__note");
+    var strip = el("div", "tb__tabs");
+
+    var list = el("div", "ed-list an__list", { "data-list": field.name });
+    var items = (Array.isArray(value) ? value : []).slice(0, max);
+    if (!items.length) items = [{}];
+    items.forEach(function (item, i) { list.appendChild(listRow(field, item, i)); });
+
+    wrap.appendChild(pv); wrap.appendChild(head); wrap.appendChild(note);
+    wrap.appendChild(strip); wrap.appendChild(list);
+
+    function cards() { return Array.prototype.slice.call(list.querySelectorAll(":scope > .ed-card")); }
+    function val(card, name) { var i = card.querySelector("[data-field='" + name + "']"); return i ? i.value : ""; }
+    function isRotating() {
+      var p = wrap.closest(".ed-panel");
+      var s = p && p.querySelector("[data-field='announcement_mode']");
+      return !!s && s.value === "dynamic";
+    }
+
+    // A short note under a statement when its link can't work as typed.
+    function cardHint(card) {
+      var body = card.querySelector(":scope > .ed-card__body");
+      if (!body) return;
+      var h = body.querySelector(":scope > .an__hint");
+      if (!h) { h = el("p", "an__hint"); body.appendChild(h); }
+      var word = val(card, "link_word").trim(), url = val(card, "link_url").trim(), text = val(card, "text");
+      var msg = "";
+      if (word && !url) msg = "Add where the link opens, or the word shows as plain text.";
+      else if (url && !word) msg = "Add the word from the statement that should be the link.";
+      else if (word && text.trim() && text.toLowerCase().indexOf(word.toLowerCase()) < 0) msg = "“" + word + "” isn’t in this statement, so it is added at the end as the link.";
+      h.textContent = msg;
+      h.style.display = msg ? "" : "none";
+    }
+
+    function renderPreview(rotating) {
+      var cs = cards();
+      var segs = [];
+      cs.forEach(function (card, i) {
+        if (!rotating && i > 0) return;
+        var s = annSegments(val(card, "text"), val(card, "link_word"), val(card, "link_url"));
+        if (s.before || s.word || s.after) segs.push(s);
+      });
+      bar.innerHTML = "";
+      bar.classList.toggle("is-default", !segs.length);
+      if (!segs.length) segs = [{ before: ANN_DEFAULT, word: "", after: "" }];
+      pvhead.querySelector(".an__pvmode").textContent = rotating ? "Rotating · left to right" : "Static";
+      if (!rotating) { bar.appendChild(annItemNode(segs[0])); return; }
+      var repeat = Math.max(1, Math.ceil(8 / segs.length));
+      var run = [];
+      for (var r = 0; r < repeat; r++) run = run.concat(segs);
+      var chars = 0;
+      run.forEach(function (s) { chars += (s.before || "").length + (s.word || "").length + (s.after || "").length; });
+      var vp = el("div", "an__viewport");
+      var track = el("div", "an__track");
+      track.style.animationDuration = Math.max(12, Math.round((chars * 7.5 + run.length * 56) / 45)) + "s";
+      for (var g = 0; g < 2; g++) {
+        var grp = el("div", "an__group");
+        run.forEach(function (s) { grp.appendChild(annItemNode(s)); });
+        track.appendChild(grp);
+      }
+      vp.appendChild(track); bar.appendChild(vp);
+    }
+
+    function tabLabel(card, i) {
+      var t = val(card, "text").replace(/\s+/g, " ").trim();
+      return t || ((field.item_label || "Statement") + " " + (i + 1));
+    }
+    // Numbered tabs, one per statement, then "Add statement" (Rotating only,
+    // below the limit). Static has a single tab: statement 1.
+    function renderTabs(rotating, cs) {
+      strip.innerHTML = "";
+      cs.forEach(function (card, i) {
+        if (!rotating && i > 0) return;
+        var t = el("button", "tb__tab" + (i === state.active ? " is-active" : ""), { type: "button" });
+        t.innerHTML = '<span class="tb__tabn">' + (i + 1) + '</span><span class="tb__tabl"></span>';
+        t.querySelector(".tb__tabl").textContent = tabLabel(card, i);
+        t.addEventListener("click", function () { state.active = i; refresh(); });
+        strip.appendChild(t);
+      });
+      if (rotating && cs.length < max) {
+        var add = el("button", "tb__add", { type: "button" });
+        add.innerHTML = svg('<path d="M12 5v14M5 12h14"/>', 15) + "<span>Add statement</span>";
+        add.addEventListener("click", addItem);
+        strip.appendChild(add);
+      }
+    }
+
+    function refresh() {
+      var rotating = isRotating();
+      var cs = cards();
+      // Static shows statement 1 only; the rest stay saved for Rotating.
+      if (!rotating) state.active = 0;
+      if (state.active >= cs.length) state.active = Math.max(0, cs.length - 1);
+      cs.forEach(function (card, i) {
+        card.classList.toggle("is-active", i === state.active);
+        cardHint(card);
+      });
+      renderTabs(rotating, cs);
+      tools.style.display = rotating ? "" : "none";
+      delBtn.disabled = cs.length <= 1;
+      mvL.disabled = state.active <= 0;
+      mvR.disabled = state.active >= cs.length - 1;
+      var cnt = htitle.querySelector(".tb__count");
+      if (cnt) cnt.textContent = rotating ? (cs.length + " / " + max) : "1";
+      var extra = cs.length - 1;
+      note.textContent = rotating
+        ? "Up to " + max + " statements loop from left to right with a gap between them. The bar pauses while a shopper hovers it, so links are easy to click."
+        : "A static bar shows one statement." + (extra > 0
+            ? " Your other " + extra + " statement" + (extra > 1 ? "s are" : " is") + " kept and shown when you switch to Rotating."
+            : " Switch to Rotating to loop up to " + max + " statements.") +
+          " Leave it blank to show the default message.";
+      renderPreview(rotating);
+    }
+
+    function addItem() {
+      if (cards().length >= max) return;
+      var row = listRow(field, {}, cards().length);
+      list.appendChild(row); renumber(list, field);
+      state.active = cards().length - 1;
+      refresh(); queueSave(field._section);
+      var inp = row.querySelector("[data-field='text']"); if (inp) inp.focus();
+    }
+    delBtn.addEventListener("click", function () {
+      var cs = cards(); if (cs.length <= 1) return;
+      cs[state.active].remove();
+      renumber(list, field);
+      if (state.active >= cards().length) state.active = cards().length - 1;
+      refresh(); queueSave(field._section);
+    });
+    function move(dir) {
+      var cs = cards(); var i = state.active, j = i + dir;
+      if (j < 0 || j >= cs.length) return;
+      if (dir < 0) list.insertBefore(cs[i], cs[j]); else list.insertBefore(cs[j], cs[i]);
+      renumber(list, field); state.active = j; refresh(); queueSave(field._section);
+    }
+    mvL.addEventListener("click", function () { move(-1); });
+    mvR.addEventListener("click", function () { move(1); });
+    wrap.addEventListener("input", function (e) { if (e.target.closest && e.target.closest(".ed-card")) refresh(); });
+    // The Static / Rotating toggle is a sibling field of this one.
+    document.addEventListener("change", function (e) {
+      if (e.target && e.target.getAttribute && e.target.getAttribute("data-field") === "announcement_mode" && wrap.closest(".ed-panel") && wrap.closest(".ed-panel").contains(e.target)) refresh();
+    });
+
+    refresh();
+    // The mode toggle is only reachable once the panel is assembled.
+    setTimeout(refresh, 0);
+  }
+
+  // ---- Reels grid editor --------------------------------------------------
+  // A responsive grid of short-video cells (6 per row on desktop, 4 on tablet,
+  // 2 on mobile), each an autoplaying preview; an "Add reel" tile trails them.
+  // Cells are the usual .ed-list > .ed-card rows, so autosave/gather are unchanged.
+  function buildReelsEditor(wrap, field, value) {
+    wrap.classList.add("rl");
+    var list = el("div", "ed-list rl__grid", { "data-list": field.name });
+    function addTile() {
+      var add = el("button", "rl__add", { type: "button" });
+      add.innerHTML = svg('<path d="M12 5v14M5 12h14"/>', 20) + "<span>Add reel</span>";
+      add.addEventListener("click", function () {
+        var row = makeReel({});
+        list.insertBefore(row, add);
+        renumber(list, field); queueSave(field._section);
+        var tile = row.querySelector(".ed-image__tile"); if (tile) tile.click();
+      });
+      return add;
+    }
+    function makeReel(item) {
+      var card = listRow(field, item, list.querySelectorAll(":scope > .ed-card").length);
+      card.classList.add("rl__cell");
+      var rm = el("button", "rl__rm", { type: "button", title: "Remove reel", "aria-label": "Remove reel" });
+      rm.innerHTML = svg(TRASH, 14);
+      rm.addEventListener("click", function () { var l = card.parentNode; card.remove(); renumber(l, field); queueSave(field._section); });
+      card.appendChild(rm);
+      return card;
+    }
+    (Array.isArray(value) ? value : []).forEach(function (item) { list.appendChild(makeReel(item)); });
+    list.appendChild(addTile());
+    wrap.appendChild(list);
+  }
+
+  // ---- Blogs editor: a filterable list of accordion post cards -------------
+  // Each blog post is a collapsible card (one open at a time, remembered across
+  // reloads, animated open/close). The card body is one aligned 12-column grid
+  // (Title|Slug, Category|Author|Date, Cover|Excerpt, then the full-width Body).
+  // It reuses the real .ed-list > .ed-card > .ed-card__body path, so
+  // autosave/gather, the media library and richtext work unchanged (item field
+  // wraps live inside .blogedit; itemFieldWrap knows to look there).
+  function buildBlogsEditor(wrap, field, value) {
+    wrap.classList.add("bl");
+    var openKey = "ow-ed-blogopen:" + siteId;
+    var dragCard = null;
+
+    function fieldByName(n) {
+      for (var i = 0; i < field.item_fields.length; i++) if (field.item_fields[i].name === n) return field.item_fields[i];
+      return null;
+    }
+    function panelActive() {
+      var p = document.getElementById("ed-panel-" + field._section);
+      return !!(p && p.classList.contains("is-active"));
+    }
+    function fmtDate(s) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || "").trim());
+      if (!m) return String(s || "");
+      var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      var mo = parseInt(m[2], 10);
+      if (mo < 1 || mo > 12) return String(s || "");
+      return months[mo - 1] + " " + m[3] + ", " + m[1];
+    }
+    function todayStr() {
+      var d = new Date(); function p(n) { return (n < 10 ? "0" : "") + n; }
+      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+    }
+    function cards() { return Array.prototype.slice.call(list.querySelectorAll(":scope > .bl__card")); }
+    function indexOf(card) { return cards().indexOf(card); }
+
+    // ----- Toolbar -----
+    var bar = el("div", "bl__bar");
+    var searchBox = el("label", "bl__search");
+    searchBox.innerHTML = svg('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>', 15);
+    var searchIn = el("input", null, { type: "search", placeholder: "Search posts by title, category or author…" });
+    searchBox.appendChild(searchIn);
+    var filters = el("div", "bl__filters");
+    var catSel = el("select", "bl__filter", { "data-no-enhance": "", "aria-label": "Filter by category" });
+    var statusSel = el("select", "bl__filter", { "data-no-enhance": "", "aria-label": "Filter by status" });
+    statusSel.innerHTML = '<option value="">All status</option><option value="published">Published</option><option value="draft">Draft</option>';
+    var sortSel = el("select", "bl__filter", { "data-no-enhance": "", "aria-label": "Sort" });
+    sortSel.innerHTML = '<option value="manual">Last updated</option><option value="date_desc">Newest first</option><option value="date_asc">Oldest first</option><option value="title">Title A–Z</option>';
+    filters.appendChild(catSel); filters.appendChild(statusSel); filters.appendChild(sortSel);
+    var addTop = el("button", "bl__addbtn", { type: "button" });
+    addTop.innerHTML = svg('<path d="M12 5v14M5 12h14"/>', 15) + "<span>Add post</span>";
+    bar.appendChild(searchBox); bar.appendChild(filters); bar.appendChild(addTop);
+    wrap.appendChild(bar);
+
+    var empty = el("div", "bl__empty"); empty.textContent = "No posts match your filters."; empty.hidden = true;
+    wrap.appendChild(empty);
+
+    // ----- List -----
+    var list = el("div", "ed-list bl__list", { "data-list": field.name });
+    wrap.appendChild(list);
+
+    var addRow = el("button", "bl__addrow", { type: "button" });
+    addRow.innerHTML = '<span class="bl__addrow-plus">' + svg('<path d="M12 5v14M5 12h14"/>', 16) + '</span>' +
+      '<span class="bl__addrow-main">Add post</span>' +
+      '<span class="bl__addrow-sub">Create a new blog post and share your story with your customers.</span>';
+    wrap.appendChild(addRow);
+
+    // ----- Card factory -----
+    function makeCard(item) {
+      item = item || {};
+      var card = el("div", "ed-card bl__card");
+
+      var head = el("div", "bl__head");
+      var handle = el("span", "bl__handle", { title: "Drag to reorder", "aria-hidden": "true" });
+      handle.innerHTML = svg('<circle cx="9" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="15" cy="18" r="1.3"/>', 16);
+      var idxEl = el("span", "bl__idx");
+      var thumb = el("span", "bl__thumb is-empty"); var thumbImg = el("img"); thumbImg.alt = ""; thumb.appendChild(thumbImg);
+      var metaWrap = el("div", "bl__metahead");
+      var titleEl = el("div", "bl__htitle");
+      var subEl = el("div", "bl__sub");
+      metaWrap.appendChild(titleEl); metaWrap.appendChild(subEl);
+      var statusEl = el("button", "bl__status", { type: "button", title: "Toggle published / draft" });
+      var dateEl = el("div", "bl__date");
+      var acts = el("div", "bl__acts");
+      var dupBtn = el("button", "bl__ic", { type: "button", title: "Duplicate post", "aria-label": "Duplicate post" });
+      dupBtn.innerHTML = svg('<rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>', 15);
+      var delBtn = el("button", "bl__ic bl__ic--del", { type: "button", title: "Delete post", "aria-label": "Delete post" });
+      delBtn.innerHTML = svg('<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>', 15);
+      var chev = el("button", "bl__chev", { type: "button", "aria-label": "Expand or collapse" });
+      chev.innerHTML = svg('<path d="m6 9 6 6 6-6"/>', 16);
+      acts.appendChild(dupBtn); acts.appendChild(delBtn); acts.appendChild(chev);
+      head.appendChild(handle); head.appendChild(idxEl); head.appendChild(thumb); head.appendChild(metaWrap);
+      head.appendChild(statusEl); head.appendChild(dateEl); head.appendChild(acts);
+
+      var body = el("div", "ed-card__body bl__body");
+      // One aligned 12-column grid. Each field carries its own span (schema),
+      // so rows line up: Title | Slug, Category | Author | Date, Cover | Excerpt,
+      // then the Body full width  no half-width body, no leftover gaps.
+      var edit = el("div", "blogedit");
+      function fb(n) { var f = fieldByName(n); var b = fieldBlock(f, item[n]); b.setAttribute("data-item-field", n); return b; }
+      var wTitle = fb("title"), wSlug = fb("slug"), wCat = fb("category"), wAuthor = fb("author"),
+          wDate = fb("date"), wImage = fb("image"), wExcerpt = fb("excerpt"), wDesc = fb("description"), wStatus = fb("status");
+      // Cover image → the design's "preview + Replace image / Choose from library"
+      // layout. Reuses the standard image control (its hidden file input for the
+      // device upload, its library button), only re-arranged and re-labelled.
+      (function () {
+        var imgEl = wImage.querySelector(".ed-image");
+        if (!imgEl) return;
+        imgEl.classList.add("bl__cover");
+        var fileInput = imgEl.querySelector("input[type=file]");
+        var libBtn = imgEl.querySelector(".ed-image__pick");
+        var ctrls = el("div", "bl__coverctrls");
+        var repl = el("button", "bl__coverbtn", { type: "button" });
+        repl.innerHTML = svg('<path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>', 15) + "<span>Replace image</span>";
+        if (fileInput) repl.addEventListener("click", function () { fileInput.click(); });
+        ctrls.appendChild(repl);
+        if (libBtn) {
+          libBtn.classList.add("bl__coverbtn", "bl__coverbtn--lib");
+          libBtn.innerHTML = svg('<rect x="3" y="5" width="18" height="14" rx="1"/><circle cx="8.5" cy="10.5" r="1.6"/><path d="m4 18 5-5 3.5 3.5"/>', 15) + "<span>Choose from library</span>";
+          ctrls.appendChild(libBtn);
+        }
+        var hint = el("span", "bl__coverhint"); hint.innerHTML = "Recommended 1200 × 630 · PNG / JPG / WEBP · Max 5MB";
+        ctrls.appendChild(hint);
+        imgEl.appendChild(ctrls);
+      })();
+      wStatus.classList.add("bl__statusfield");
+      edit.appendChild(wTitle); edit.appendChild(wSlug);
+      edit.appendChild(wCat); edit.appendChild(wAuthor); edit.appendChild(wDate);
+      edit.appendChild(wImage); edit.appendChild(wExcerpt);
+      edit.appendChild(wDesc);
+      edit.appendChild(wStatus);
+      body.appendChild(edit);
+
+      card.appendChild(head); card.appendChild(body);
+      wireConditionals(body, field.item_fields);
+
+      var titleInput = wTitle.querySelector("[data-field=title]");
+      var catInput = wCat.querySelector("[data-field=category]");
+      var authorInput = wAuthor.querySelector("[data-field=author]");
+      var dateInput = wDate.querySelector("[data-field=date]");
+      var imgInput = wImage.querySelector("[data-field=image]");
+      var statusInput = wStatus.querySelector("[data-field=status]");
+      if (statusInput && !statusInput.value) statusInput.value = "published";
+
+      function refreshHead() {
+        titleEl.textContent = (titleInput && titleInput.value.trim()) || "Untitled post";
+        var cv = (catInput && catInput.value.trim()) || "";
+        var av = (authorInput && authorInput.value.trim()) || "";
+        subEl.textContent = cv + (cv && av ? "   ·   " : "") + (av ? "By " + av : "");
+        var dv = (dateInput && dateInput.value.trim()) || "";
+        dateEl.innerHTML = dv ? ('<span class="bl__date-main">' + fmtDate(dv) + '</span><span class="bl__date-sub">Last updated</span>') : "";
+        var iv = realMedia(imgInput && imgInput.value.trim());
+        if (iv) { thumb.classList.remove("is-empty"); thumbImg.src = iv; } else { thumb.classList.add("is-empty"); thumbImg.removeAttribute("src"); }
+        var sv = (statusInput && statusInput.value) || "published";
+        statusEl.textContent = sv === "draft" ? "Draft" : "Published";
+        statusEl.setAttribute("data-status", sv);
+      }
+      [titleInput, catInput, authorInput, dateInput].forEach(function (inp) { if (inp) inp.addEventListener("input", refreshHead); });
+      if (catInput) catInput.addEventListener("input", refreshCats);
+      if (imgInput) imgInput.addEventListener("input", refreshHead);
+      if (statusInput) statusInput.addEventListener("change", refreshHead);
+
+      statusEl.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (!statusInput) return;
+        statusInput.value = (statusInput.value === "draft") ? "published" : "draft";
+        refreshHead();
+        applyFilters();
+        queueSave(field._section);
+      });
+
+      function toggle() { openCard(card, !card.classList.contains("is-open")); }
+      head.addEventListener("click", function (e) {
+        if (e.target.closest(".bl__ic") || e.target.closest(".bl__status") || e.target.closest(".bl__handle")) return;
+        toggle();
+      });
+      chev.addEventListener("click", function (e) { e.stopPropagation(); toggle(); });
+
+      dupBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (window.tinymce) window.tinymce.triggerSave();
+        var data = gatherCard(card);
+        if (data.title) data.title = data.title + " (copy)";
+        data.slug = "";
+        var clone = makeCard(data);
+        if (card.nextSibling) list.insertBefore(clone, card.nextSibling); else list.appendChild(clone);
+        if (panelActive()) initRichtextIn(clone);
+        renumberBlogs(); refreshCats(); applyFilters(); queueSave(field._section);
+      });
+      delBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        destroyRichtextIn(card);
+        card.remove(); renumberBlogs(); refreshCats(); applyFilters(); queueSave(field._section);
+      });
+
+      // Drag to reorder (from the handle only).
+      handle.addEventListener("mousedown", function () { card.setAttribute("draggable", "true"); });
+      card.addEventListener("dragstart", function (e) {
+        dragCard = card; card.classList.add("is-dragging");
+        try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", ""); } catch (_) {}
+      });
+      card.addEventListener("dragend", function () {
+        card.classList.remove("is-dragging"); card.setAttribute("draggable", "false"); dragCard = null;
+        renumberBlogs(); queueSave(field._section);
+      });
+
+      card._blog = {
+        refreshHead: refreshHead,
+        search: function () { return (((titleInput && titleInput.value) || "") + " " + ((catInput && catInput.value) || "") + " " + ((authorInput && authorInput.value) || "")).toLowerCase(); },
+        cat: function () { return (catInput && catInput.value.trim()) || ""; },
+        status: function () { return (statusInput && statusInput.value) || "published"; },
+        date: function () { return (dateInput && dateInput.value.trim()) || ""; },
+        title: function () { return (titleInput && titleInput.value.trim()) || ""; }
+      };
+      refreshHead();
+      return card;
+    }
+
+    function gatherCard(card) {
+      var body = card.querySelector(":scope > .ed-card__body");
+      var obj = {};
+      field.item_fields.forEach(function (f) { var w = itemFieldWrap(body, f.name); obj[f.name] = w ? gatherValue(w, f) : ""; });
+      return obj;
+    }
+
+    function openCard(card, open) {
+      if (open) {
+        cards().forEach(function (c) { if (c !== card) c.classList.remove("is-open"); });
+        card.classList.add("is-open");
+        if (panelActive()) initRichtextIn(card);
+        try { localStorage.setItem(openKey, String(indexOf(card))); } catch (e) {}
+      } else {
+        card.classList.remove("is-open");
+        try { localStorage.setItem(openKey, ""); } catch (e) {}
+      }
+    }
+
+    function renumberBlogs() {
+      cards().forEach(function (c, i) { var n = c.querySelector(":scope > .bl__head > .bl__idx"); if (n) n.textContent = "#" + (i + 1); });
+    }
+
+    function refreshCats() {
+      var cur = catSel.value, done = {};
+      var html = ['<option value="">All categories</option>'];
+      cards().forEach(function (c) {
+        var cv = c._blog.cat();
+        if (cv && !done[cv.toLowerCase()]) {
+          done[cv.toLowerCase()] = 1;
+          var o = document.createElement("option"); o.value = cv; o.textContent = cv;
+          html.push(o.outerHTML);
+        }
+      });
+      catSel.innerHTML = html.join("");
+      catSel.value = done[cur.toLowerCase()] ? cur : "";
+    }
+
+    function applyFilters() {
+      var q = (searchIn.value || "").trim().toLowerCase();
+      var fc = catSel.value, fs = statusSel.value, sort = sortSel.value;
+      var arr = cards();
+      if (sort !== "manual") {
+        arr = arr.slice().sort(function (a, b) {
+          if (sort === "title") return a._blog.title().localeCompare(b._blog.title());
+          var da = a._blog.date(), db = b._blog.date();
+          return sort === "date_asc" ? da.localeCompare(db) : db.localeCompare(da);
+        });
+        arr.forEach(function (c) { list.insertBefore(c, addRowRef()); });
+        renumberBlogs();
+      }
+      var shown = 0;
+      cards().forEach(function (c) {
+        var ok = (!q || c._blog.search().indexOf(q) >= 0) &&
+                 (!fc || c._blog.cat() === fc) &&
+                 (!fs || c._blog.status() === fs);
+        c.hidden = !ok; if (ok) shown++;
+      });
+      empty.hidden = shown !== 0 || cards().length === 0;
+    }
+    // The add-row lives after the list in `wrap`, not inside it, so sorting
+    // inserts before nothing (append). Kept as a helper for clarity.
+    function addRowRef() { return null; }
+
+    function addPost() {
+      var card = makeCard({ status: "published", date: todayStr() });
+      list.appendChild(card);
+      renumberBlogs(); refreshCats(); applyFilters();
+      openCard(card, true);
+      queueSave(field._section);
+      try { card.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
+    }
+
+    // ----- Wire toolbar -----
+    searchIn.addEventListener("input", applyFilters);
+    catSel.addEventListener("change", applyFilters);
+    statusSel.addEventListener("change", applyFilters);
+    sortSel.addEventListener("change", function () { applyFilters(); if (sortSel.value !== "manual") queueSave(field._section); });
+    addTop.addEventListener("click", addPost);
+    addRow.addEventListener("click", addPost);
+
+    // Drag-over reordering (bound once on the list).
+    list.addEventListener("dragover", function (e) {
+      if (!dragCard) return;
+      e.preventDefault();
+      var after = null, min = Infinity;
+      cards().forEach(function (c) {
+        if (c === dragCard) return;
+        var r = c.getBoundingClientRect();
+        var offset = e.clientY - (r.top + r.height / 2);
+        if (offset < 0 && -offset < min) { min = -offset; after = c; }
+      });
+      if (after) list.insertBefore(dragCard, after); else list.appendChild(dragCard);
+    });
+    // Clear any lingering draggable flag after a handle press that didn't drag.
+    document.addEventListener("mouseup", function () {
+      if (dragCard) return;
+      Array.prototype.forEach.call(list.querySelectorAll(":scope > .bl__card[draggable='true']"), function (c) { c.setAttribute("draggable", "false"); });
+    });
+
+    // ----- Initial render -----
+    (Array.isArray(value) ? value : []).forEach(function (item) { list.appendChild(makeCard(item)); });
+    renumberBlogs(); refreshCats(); applyFilters();
+
+    // Restore the last-open card (all closed if none / out of range).
+    var storedIdx = -1;
+    try { var s = localStorage.getItem(openKey); storedIdx = (s === null || s === "") ? -1 : parseInt(s, 10); } catch (e) {}
+    if (storedIdx >= 0) { var all = cards(); if (all[storedIdx]) all[storedIdx].classList.add("is-open"); }
+  }
+
+  // ---- Certificates editor (B2B): the Blogs editor's accordion, per certificate
+  // Each certificate is a collapsible card (one open at a time, remembered
+  // across reloads, drag to reorder) whose body is the same 12-column
+  // .blogedit grid: Name full width, then the preview Image beside the File.
+  // It reuses the real .ed-list > .ed-card > .ed-card__body path, so
+  // autosave/gather and the media library work unchanged.
+  function buildCertificatesEditor(wrap, field, value) {
+    wrap.classList.add("bl", "ce");
+    var openKey = "ow-ed-certopen:" + siteId;
+    var dragCard = null;
+
+    function fieldByName(n) {
+      for (var i = 0; i < field.item_fields.length; i++) if (field.item_fields[i].name === n) return field.item_fields[i];
+      return null;
+    }
+    function panelActive() {
+      var p = document.getElementById("ed-panel-" + field._section);
+      return !!(p && p.classList.contains("is-active"));
+    }
+    function cards() { return Array.prototype.slice.call(list.querySelectorAll(":scope > .bl__card")); }
+    function indexOf(card) { return cards().indexOf(card); }
+    function isImg(u) { return /\.(png|jpe?g|webp|gif|svg|avif)$/i.test(String(u || "").split(/[?#]/)[0]); }
+
+    // ----- Toolbar -----
+    var bar = el("div", "bl__bar");
+    var searchBox = el("label", "bl__search");
+    searchBox.innerHTML = svg('<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>', 15);
+    var searchIn = el("input", null, { type: "search", placeholder: "Search certificates by name…" });
+    searchBox.appendChild(searchIn);
+    var countEl = el("span", "ce__count");
+    var addTop = el("button", "bl__addbtn", { type: "button" });
+    addTop.innerHTML = svg('<path d="M12 5v14M5 12h14"/>', 15) + "<span>Add certificate</span>";
+    bar.appendChild(searchBox); bar.appendChild(countEl); bar.appendChild(addTop);
+    wrap.appendChild(bar);
+
+    var empty = el("div", "bl__empty"); empty.textContent = "No certificates match your search."; empty.hidden = true;
+    wrap.appendChild(empty);
+
+    var list = el("div", "ed-list bl__list", { "data-list": field.name });
+    wrap.appendChild(list);
+
+    var addRow = el("button", "bl__addrow", { type: "button" });
+    addRow.innerHTML = '<span class="bl__addrow-plus">' + svg('<path d="M12 5v14M5 12h14"/>', 16) + '</span>' +
+      '<span class="bl__addrow-main">Add certificate</span>' +
+      '<span class="bl__addrow-sub">Upload an ISO, quality, compliance or registration certificate for trade buyers to verify.</span>';
+    wrap.appendChild(addRow);
+
+    function makeCard(item) {
+      item = item || {};
+      var card = el("div", "ed-card bl__card");
+
+      var head = el("div", "bl__head");
+      var handle = el("span", "bl__handle", { title: "Drag to reorder", "aria-hidden": "true" });
+      handle.innerHTML = svg('<circle cx="9" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="15" cy="18" r="1.3"/>', 16);
+      var idxEl = el("span", "bl__idx");
+      var thumb = el("span", "bl__thumb ce__thumb is-empty"); var thumbImg = el("img"); thumbImg.alt = ""; thumb.appendChild(thumbImg);
+      var thumbIco = el("span", "ce__thumbico"); thumbIco.innerHTML = svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 18);
+      thumb.appendChild(thumbIco);
+      var metaWrap = el("div", "bl__metahead");
+      var titleEl = el("div", "bl__htitle");
+      var subEl = el("div", "bl__sub");
+      metaWrap.appendChild(titleEl); metaWrap.appendChild(subEl);
+      var acts = el("div", "bl__acts");
+      var dupBtn = el("button", "bl__ic", { type: "button", title: "Duplicate certificate", "aria-label": "Duplicate certificate" });
+      dupBtn.innerHTML = svg('<rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>', 15);
+      var delBtn = el("button", "bl__ic bl__ic--del", { type: "button", title: "Delete certificate", "aria-label": "Delete certificate" });
+      delBtn.innerHTML = svg('<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>', 15);
+      var chev = el("button", "bl__chev", { type: "button", "aria-label": "Expand or collapse" });
+      chev.innerHTML = svg('<path d="m6 9 6 6 6-6"/>', 16);
+      acts.appendChild(dupBtn); acts.appendChild(delBtn); acts.appendChild(chev);
+      head.appendChild(handle); head.appendChild(idxEl); head.appendChild(thumb); head.appendChild(metaWrap); head.appendChild(acts);
+
+      var body = el("div", "ed-card__body bl__body");
+      var edit = el("div", "blogedit ce__edit");
+      function fb(n) { var f = fieldByName(n); var b = fieldBlock(f, item[n]); b.setAttribute("data-item-field", n); return b; }
+      var wTitle = fb("title"), wImage = fb("image"), wFile = fb("file");
+      edit.appendChild(wTitle); edit.appendChild(wImage); edit.appendChild(wFile);
+      body.appendChild(edit);
+      card.appendChild(head); card.appendChild(body);
+
+      var titleInput = wTitle.querySelector("[data-field=title]");
+      var imgInput = wImage.querySelector("[data-field=image]");
+      var fileInput = wFile.querySelector("[data-field=file]");
+
+      function refreshHead() {
+        titleEl.textContent = (titleInput && titleInput.value.trim()) || "Untitled certificate";
+        var iv = realMedia(imgInput && imgInput.value.trim());
+        var fv = (fileInput && fileInput.value.trim()) || "";
+        var show = iv || (isImg(fv) ? fv : "");
+        if (show) { thumb.classList.remove("is-empty"); thumbImg.src = show; } else { thumb.classList.add("is-empty"); thumbImg.removeAttribute("src"); }
+        subEl.textContent = fv ? (isImg(fv) ? "Image file attached" : "PDF attached") : (iv ? "Image only · no file" : "No file yet");
+        card.classList.toggle("ce__card--missing", !(iv || fv));
+      }
+      if (titleInput) titleInput.addEventListener("input", function () { refreshHead(); updateCount(); });
+      if (imgInput) imgInput.addEventListener("input", refreshHead);
+      if (fileInput) fileInput.addEventListener("input", refreshHead);
+
+      function toggle() { openCard(card, !card.classList.contains("is-open")); }
+      head.addEventListener("click", function (e) {
+        if (e.target.closest(".bl__ic") || e.target.closest(".bl__handle")) return;
+        toggle();
+      });
+      chev.addEventListener("click", function (e) { e.stopPropagation(); toggle(); });
+
+      dupBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var data = gatherCard(card);
+        if (data.title) data.title = data.title + " (copy)";
+        var clone = makeCard(data);
+        if (card.nextSibling) list.insertBefore(clone, card.nextSibling); else list.appendChild(clone);
+        renumber(); applyFilter(); queueSave(field._section);
+      });
+      delBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        card.remove(); renumber(); applyFilter(); queueSave(field._section);
+      });
+
+      handle.addEventListener("mousedown", function () { card.setAttribute("draggable", "true"); });
+      card.addEventListener("dragstart", function (e) {
+        dragCard = card; card.classList.add("is-dragging");
+        try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", ""); } catch (_) {}
+      });
+      card.addEventListener("dragend", function () {
+        card.classList.remove("is-dragging"); card.setAttribute("draggable", "false"); dragCard = null;
+        renumber(); queueSave(field._section);
+      });
+
+      card._cert = { title: function () { return (titleInput && titleInput.value.trim()) || ""; } };
+      refreshHead();
+      return card;
+    }
+
+    function gatherCard(card) {
+      var b = card.querySelector(":scope > .ed-card__body");
+      var obj = {};
+      field.item_fields.forEach(function (f) { var w = itemFieldWrap(b, f.name); obj[f.name] = w ? gatherValue(w, f) : ""; });
+      return obj;
+    }
+    function openCard(card, open) {
+      if (open) {
+        cards().forEach(function (c) { if (c !== card) c.classList.remove("is-open"); });
+        card.classList.add("is-open");
+        try { localStorage.setItem(openKey, String(indexOf(card))); } catch (e) {}
+      } else {
+        card.classList.remove("is-open");
+        try { localStorage.setItem(openKey, ""); } catch (e) {}
+      }
+    }
+    function renumber() {
+      cards().forEach(function (c, i) { var n = c.querySelector(":scope > .bl__head > .bl__idx"); if (n) n.textContent = "#" + (i + 1); });
+      updateCount();
+    }
+    function updateCount() {
+      var n = cards().length;
+      countEl.textContent = n + (n === 1 ? " certificate" : " certificates");
+    }
+    function applyFilter() {
+      var q = (searchIn.value || "").trim().toLowerCase(), shown = 0;
+      cards().forEach(function (c) { var ok = !q || c._cert.title().toLowerCase().indexOf(q) >= 0; c.hidden = !ok; if (ok) shown++; });
+      empty.hidden = shown !== 0 || cards().length === 0;
+    }
+    function addCert() {
+      var card = makeCard({});
+      list.appendChild(card);
+      renumber(); applyFilter();
+      openCard(card, true);
+      queueSave(field._section);
+      var t = card.querySelector("[data-field=title]");
+      try { card.scrollIntoView({ behavior: "smooth", block: "center" }); if (t) t.focus({ preventScroll: true }); } catch (e) {}
+    }
+
+    searchIn.addEventListener("input", applyFilter);
+    addTop.addEventListener("click", addCert);
+    addRow.addEventListener("click", addCert);
+
+    list.addEventListener("dragover", function (e) {
+      if (!dragCard) return;
+      e.preventDefault();
+      var after = null, min = Infinity;
+      cards().forEach(function (c) {
+        if (c === dragCard) return;
+        var r = c.getBoundingClientRect();
+        var offset = e.clientY - (r.top + r.height / 2);
+        if (offset < 0 && -offset < min) { min = -offset; after = c; }
+      });
+      if (after) list.insertBefore(dragCard, after); else list.appendChild(dragCard);
+    });
+    document.addEventListener("mouseup", function () {
+      if (dragCard) return;
+      Array.prototype.forEach.call(list.querySelectorAll(":scope > .bl__card[draggable='true']"), function (c) { c.setAttribute("draggable", "false"); });
+    });
+
+    (Array.isArray(value) ? value : []).forEach(function (item) {
+      // Reference-era rows were {name, file}: show the name in the Name field.
+      if (item && !item.title && item.name) item = Object.assign({}, item, { title: item.name });
+      list.appendChild(makeCard(item));
+    });
+    renumber(); applyFilter();
+    var storedIdx = -1;
+    try { var s = localStorage.getItem(openKey); storedIdx = (s === null || s === "") ? -1 : parseInt(s, 10); } catch (e) {}
+    if (storedIdx >= 0) { var all = cards(); if (all[storedIdx]) all[storedIdx].classList.add("is-open"); }
+  }
+
+  // Core pages accordion  the Blogs editor's look and feel, generalised for a
+  // page tree. Each page is a collapsible card (one open at a time) whose body
+  // holds the page's fields (Title/Slug, Subtitle, Header image, Content) on the
+  // 12-column grid, with its nested Subpages / Child-pages lists beneath. Drag
+  // the handle to reorder. Fields, gather and autosave use the same plumbing as
+  // every other list, so nothing about how pages are saved changes.
+  function buildPagesEditor(wrap, field, value) {
+    wrap.classList.add("pg");
+    var dragCard = null;
+
+    function sectionKey() {
+      var p = wrap.closest(".ed-panel");
+      return p ? p.id.replace("ed-panel-", "") : field._section;
+    }
+    function panelActive() {
+      var p = wrap.closest(".ed-panel");
+      return !!(p && p.classList.contains("is-active"));
+    }
+    function cards() { return Array.prototype.slice.call(list.querySelectorAll(":scope > .pg__card")); }
+
+    // Layout: the page cards fill the left 70% and the "Page structure" tree
+    // (page → subpages → child pages) sits in the right 30%; stacked on narrow
+    // screens. The .ed-list stays a direct child of this wrap, so gather and
+    // autosave read it exactly as before. A new core page is only added from
+    // the button at the bottom of the list.
+    var tree = el("aside", "pgt", { "aria-label": "Page structure" });
+    tree.innerHTML =
+      '<div class="pgt__head"><span class="pgt__title">' + svg('<rect x="3" y="3" width="7" height="5" rx="1"/><rect x="13" y="10" width="8" height="4.5" rx="1"/><rect x="13" y="17" width="8" height="4.5" rx="1"/><path d="M6.5 8v11.25H13M6.5 12.25H13"/>', 14) +
+      '<span>Page structure</span></span><span class="pgt__legend">Page › Subpage › Child page</span></div>' +
+      '<p class="pgt__hint">Click any page to open it on its own for editing.</p>' +
+      '<ul class="pgt__list" role="tree"></ul>' +
+      '<p class="pgt__empty">Add a core page to see its structure here.</p>';
+    var treeList = tree.querySelector(".pgt__list");
+    var treeEmpty = tree.querySelector(".pgt__empty");
+    wrap.appendChild(tree);
+
+    var empty = el("div", "bl__empty"); empty.textContent = "No pages yet. Add your first core page below."; empty.hidden = true;
+    wrap.appendChild(empty);
+
+    // ----- List -----
+    var list = el("div", "ed-list pg__list", { "data-list": field.name });
+    wrap.appendChild(list);
+
+    var addRow = el("button", "bl__addrow pg__addrow", { type: "button" });
+    addRow.innerHTML = '<span class="bl__addrow-plus">' + svg('<path d="M12 5v14M5 12h14"/>', 16) + '</span>' +
+      '<span class="bl__addrow-main">Add another core page</span>' +
+      '<span class="bl__addrow-sub">Create a content page, with an optional tree of sub and child pages.</span>';
+    wrap.appendChild(addRow);
+
+    var DOTS = '<circle cx="9" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="15" cy="18" r="1.3"/>';
+
+    function makeCard(item) {
+      item = item || {};
+      var card = el("div", "ed-card pg__card");
+
+      var head = el("div", "pg__head");
+      var handle = el("span", "pg__handle", { title: "Drag to reorder", "aria-hidden": "true" });
+      handle.innerHTML = svg(DOTS, 16);
+      var idxEl = el("span", "pg__idx");
+      var thumb = el("span", "pg__thumb is-empty"); var thumbImg = el("img"); thumbImg.alt = ""; thumb.appendChild(thumbImg);
+      var metaWrap = el("div", "pg__metahead");
+      var titleEl = el("div", "pg__htitle");
+      var subEl = el("div", "pg__sub");
+      metaWrap.appendChild(titleEl); metaWrap.appendChild(subEl);
+      var acts = el("div", "pg__acts");
+      // View: opens this page on the live storefront in a new tab.
+      var viewBtn = el("a", "pg__ic", { target: "_blank", rel: "noopener", title: "View page", "aria-label": "View page on the storefront" });
+      viewBtn.innerHTML = svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 15);
+      viewBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (!viewBtn.getAttribute("href")) e.preventDefault();
+      });
+      var dupBtn = el("button", "pg__ic", { type: "button", title: "Duplicate page", "aria-label": "Duplicate page" });
+      dupBtn.innerHTML = svg('<rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>', 15);
+      var delBtn = el("button", "pg__ic pg__ic--del", { type: "button", title: "Delete page", "aria-label": "Delete page" });
+      delBtn.innerHTML = svg('<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>', 15);
+      var chev = el("button", "pg__chev", { type: "button", "aria-label": "Expand or collapse" });
+      chev.innerHTML = svg('<path d="m6 9 6 6 6-6"/>', 16);
+      acts.appendChild(viewBtn); acts.appendChild(dupBtn); acts.appendChild(delBtn); acts.appendChild(chev);
+      head.appendChild(handle); head.appendChild(idxEl); head.appendChild(thumb); head.appendChild(metaWrap); head.appendChild(acts);
+
+      var body = el("div", "ed-card__body pg__body");
+      field.item_fields.forEach(function (f) {
+        var b = fieldBlock(f, item[f.name]);
+        b.setAttribute("data-item-field", f.name);
+        body.appendChild(b);
+      });
+      card.appendChild(head); card.appendChild(body);
+      wireConditionals(body, field.item_fields);
+
+      // Header mirrors the page's own Title / Slug / Header image (":scope >"
+      // keeps it to THIS page, never a nested sub/child page's fields).
+      var titleInput = body.querySelector(":scope > [data-field-wrap='title'] [data-field='title']");
+      var slugInput = body.querySelector(":scope > [data-field-wrap='slug'] [data-field='slug']");
+      var imgInput = body.querySelector(":scope > [data-field-wrap='image'] [data-field='image']");
+
+      function refreshHead() {
+        titleEl.textContent = (titleInput && titleInput.value.trim()) || "Untitled page";
+        var sv = (slugInput && slugInput.value.trim()) || "";
+        subEl.textContent = sv ? ("/" + sv + "/") : "No slug yet";
+        // Pages live at the bare slug (/<slug>/). A new page gets its slug
+        // when it is saved, so the link stays disabled until then.
+        if (sv && STOREFRONT_URL) {
+          viewBtn.href = STOREFRONT_URL.replace(/\/?$/, "/") + encodeURIComponent(sv) + "/";
+          viewBtn.classList.remove("is-disabled");
+          viewBtn.removeAttribute("aria-disabled");
+          viewBtn.title = "View page";
+        } else {
+          viewBtn.removeAttribute("href");
+          viewBtn.classList.add("is-disabled");
+          viewBtn.setAttribute("aria-disabled", "true");
+          viewBtn.title = "Save the page first to view it";
+        }
+        var iv = realMedia(imgInput && imgInput.value.trim());
+        if (iv) { thumb.classList.remove("is-empty"); thumbImg.src = iv; } else { thumb.classList.add("is-empty"); thumbImg.removeAttribute("src"); }
+      }
+      if (titleInput) titleInput.addEventListener("input", refreshHead);
+      if (slugInput) slugInput.addEventListener("input", refreshHead);
+      if (imgInput) imgInput.addEventListener("input", refreshHead);
+
+      function toggle() { openCard(card, !card.classList.contains("is-open")); }
+      head.addEventListener("click", function (e) {
+        if (e.target.closest(".pg__ic") || e.target.closest(".pg__handle")) return;
+        // Open but a sub/child page is being edited: edit the core page instead.
+        if (card.classList.contains("is-open") && cur.target !== card) { editCard(card, false); return; }
+        toggle();
+      });
+      chev.addEventListener("click", function (e) { e.stopPropagation(); toggle(); });
+
+      dupBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (window.tinymce) window.tinymce.triggerSave();
+        var data = gatherCard(card);
+        if (data.title) data.title = data.title + " (copy)";
+        data.slug = "";
+        var clone = makeCard(data);
+        if (card.nextSibling) list.insertBefore(clone, card.nextSibling); else list.appendChild(clone);
+        if (panelActive()) initRichtextIn(clone);
+        renumberPages(); applyEmpty(); queueSave(sectionKey());
+      });
+      delBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        destroyRichtextIn(card);
+        card.remove(); renumberPages(); applyEmpty(); queueSave(sectionKey());
+      });
+
+      // Drag to reorder (from the handle only).
+      handle.addEventListener("mousedown", function () { card.setAttribute("draggable", "true"); });
+      card.addEventListener("dragstart", function (e) {
+        dragCard = card; card.classList.add("is-dragging");
+        try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", ""); } catch (_) {}
+      });
+      card.addEventListener("dragend", function () {
+        card.classList.remove("is-dragging"); card.setAttribute("draggable", "false"); dragCard = null;
+        renumberPages(); queueSave(sectionKey());
+      });
+
+      refreshHead();
+      return card;
+    }
+
+    function gatherCard(card) {
+      var body = card.querySelector(":scope > .ed-card__body");
+      var obj = {};
+      field.item_fields.forEach(function (f) { var w = itemFieldWrap(body, f.name); obj[f.name] = w ? gatherValue(w, f) : ""; });
+      return obj;
+    }
+
+    // ----- One page edited at a time ---------------------------------------
+    // Only one core page is open, and inside it only ONE page shows its inputs:
+    // the core page itself, one subpage or one child page (``cur.target``).
+    // Every other page of that core page is a collapsed row (title only) that
+    // opens for editing on click; the "Add subpage" / "Add child page" buttons
+    // stay visible. Collapsed inputs are only hidden, never removed, so every
+    // value is still gathered and saved.
+    var cur = { root: null, target: null };
+    var LEVEL_NAME = ["Page", "Subpage", "Child page"];
+    function cardBody(card) { return card ? card.querySelector(":scope > .ed-card__body") : null; }
+    function ownValue(card, name) {
+      var bd = cardBody(card);
+      var i = bd ? bd.querySelector(":scope > [data-field-wrap='" + name + "'] [data-field='" + name + "']") : null;
+      return i ? String(i.value || "").trim() : "";
+    }
+    function nestedCards(card, listName) {
+      var bd = cardBody(card);
+      var l = bd ? bd.querySelector(":scope > [data-field-wrap='" + listName + "'] > .ed-list") : null;
+      return l ? Array.prototype.slice.call(l.querySelectorAll(":scope > .ed-card")) : [];
+    }
+    function parentCard(card) { return card.parentNode ? card.parentNode.closest(".ed-card") : null; }
+    function levelOf(card) {
+      if (card.classList.contains("pg__card")) return 0;
+      var parent = parentCard(card);
+      return parent && parent.classList.contains("pg__card") ? 1 : 2;
+    }
+    function pageTitle(card, level) { return ownValue(card, "title") || ("Untitled " + LEVEL_NAME[level].toLowerCase()); }
+    function pathTo(card) {
+      var p = [];
+      for (var c = card; c && wrap.contains(c); c = parentCard(c)) {
+        p.unshift(c);
+        if (c.classList.contains("pg__card")) break;
+      }
+      return p;
+    }
+    function setText(node, text) { if (node && node.textContent !== text) node.textContent = text; }
+
+    function openCard(card, open) {
+      if (open) {
+        cards().forEach(function (c) { if (c !== card) c.classList.remove("is-open"); });
+        card.classList.add("is-open");
+        if (cur.root !== card) cur = { root: card, target: card };
+      } else {
+        card.classList.remove("is-open");
+        if (cur.root === card) cur = { root: null, target: null };
+      }
+      applyView();
+      if (open && panelActive()) initRichtextIn(card);
+      queueTree();
+    }
+
+    // Edit ``card`` (a core page, subpage or child page): open its core page
+    // and make it the one page showing inputs.
+    function editCard(card, scroll) {
+      var path = pathTo(card);
+      if (!path.length) return;
+      var root = path[0];
+      if (!root.classList.contains("is-open")) openCard(root, true);
+      cur = { root: root, target: card };
+      applyView();
+      if (panelActive()) initRichtextIn(root);
+      renderTree();
+      if (scroll) { try { card.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }
+    }
+
+    function crumbFor(root) {
+      var bd = cardBody(root);
+      var c = bd.querySelector(":scope > .pg__crumb");
+      if (!c) {
+        c = el("div", "pg__crumb");
+        c.innerHTML = '<span class="pg__crumb-lead">Editing</span><span class="pg__crumb-path"></span>';
+        var back = el("button", "pg__crumb-back", { type: "button" });
+        back.innerHTML = svg('<path d="m15 6-6 6 6 6"/>', 13) + "<span>Edit the core page</span>";
+        back.addEventListener("click", function (e) { e.stopPropagation(); editCard(root, false); });
+        c.appendChild(back);
+        bd.insertBefore(c, bd.firstChild);
+      }
+      return c;
+    }
+
+    // Paint the collapsed / editing state of every page in the open core page.
+    function applyView() {
+      cards().forEach(function (root) {
+        var isCur = root === cur.root;
+        var all = [root].concat(Array.prototype.slice.call(root.querySelectorAll(".ed-card")));
+        all.forEach(function (c) {
+          var level = levelOf(c);
+          var editing = isCur && c === cur.target;
+          c.classList.toggle("pg-collapsed", isCur && !editing);
+          c.classList.toggle("pg-editing", editing);
+          if (level === 0) return;
+          c.classList.add("pg-node");
+          var bd = cardBody(c);
+          c.classList.toggle("pg-leaf", !(bd && bd.querySelector(":scope > [data-field-wrap='children']")));
+          // Collapsed-row header: the page's own title + an Edit / Editing tag.
+          var head = c.querySelector(":scope > .ed-card__head");
+          if (!head) return;
+          var name = head.querySelector(":scope > .pg-node__name");
+          var tag = head.querySelector(":scope > .pg-node__tag");
+          if (!name) {
+            name = el("span", "pg-node__name");
+            tag = el("span", "pg-node__tag");
+            var rm = head.querySelector(":scope > .ed-card__rm");
+            head.insertBefore(name, rm); head.insertBefore(tag, rm);
+            head.setAttribute("title", "Click to edit");
+          }
+          setText(name, ownValue(c, "title") || "Untitled " + LEVEL_NAME[level].toLowerCase());
+          setText(tag, editing ? "Editing" : "Edit");
+        });
+        root.classList.toggle("pg-sub-editing", isCur && cur.target !== root);
+        if (isCur && cur.target !== root) {
+          var path = pathTo(cur.target);
+          setText(crumbFor(root).querySelector(".pg__crumb-path"),
+            path.map(function (c, i) { return pageTitle(c, i); }).join("  ›  "));
+        }
+      });
+    }
+
+    // A collapsed sub/child page row opens for editing on click.
+    wrap.addEventListener("click", function (e) {
+      var head = e.target.closest && e.target.closest(".ed-card__head");
+      if (!head || !wrap.contains(head) || e.target.closest(".ed-card__rm")) return;
+      var card = head.parentNode;
+      if (!card || !card.classList.contains("pg-node")) return;
+      if (cur.target !== card) editCard(card, false);
+    });
+
+    function treeNode(card, level, num) {
+      var li = el("li", "pgt__item pgt__item--l" + level, { role: "treeitem" });
+      var active = cur.target === card;
+      var b = el("button", "pgt__node" + (active ? " is-active" : ""), { type: "button" });
+      if (active) b.setAttribute("aria-current", "true");
+      var lvl = el("span", "pgt__lvl"); lvl.textContent = level === 0 ? ("#" + num) : LEVEL_NAME[level];
+      var name = el("span", "pgt__name"); name.textContent = pageTitle(card, level);
+      b.appendChild(lvl); b.appendChild(name);
+      if (level === 0) {
+        var slug = ownValue(card, "slug");
+        var sl = el("span", "pgt__slug"); sl.textContent = slug ? "/" + slug + "/" : "No slug yet";
+        b.appendChild(sl);
+      }
+      b.addEventListener("click", function () { editCard(card, true); });
+      li.appendChild(b);
+      return li;
+    }
+
+    function renderTree() {
+      // The page being edited was removed: fall back to its core page.
+      if (cur.target && !wrap.contains(cur.target)) {
+        if (cur.root && wrap.contains(cur.root)) cur.target = cur.root;
+        else cur = { root: null, target: null };
+      }
+      applyView();
+      treeList.innerHTML = "";
+      var roots = cards();
+      roots.forEach(function (root, i) {
+        var li = treeNode(root, 0, i + 1);
+        var subs = nestedCards(root, "subpages");
+        if (subs.length) {
+          var ul = el("ul", "pgt__kids", { role: "group" });
+          subs.forEach(function (sub) {
+            var sli = treeNode(sub, 1);
+            var kids = nestedCards(sub, "children");
+            if (kids.length) {
+              var ul2 = el("ul", "pgt__kids", { role: "group" });
+              kids.forEach(function (kid) { ul2.appendChild(treeNode(kid, 2)); });
+              sli.appendChild(ul2);
+            }
+            ul.appendChild(sli);
+          });
+          li.appendChild(ul);
+        }
+        treeList.appendChild(li);
+      });
+      treeEmpty.hidden = roots.length > 0;
+      setText(addRow.querySelector(".bl__addrow-main"), roots.length ? "Add another core page" : "Add your first core page");
+    }
+    var treeTimer = null;
+    function queueTree() { clearTimeout(treeTimer); treeTimer = setTimeout(renderTree, 80); }
+
+    function renumberPages() {
+      cards().forEach(function (c, i) { var n = c.querySelector(":scope > .pg__head > .pg__idx"); if (n) n.textContent = "#" + (i + 1); });
+    }
+    function applyEmpty() { empty.hidden = cards().length !== 0; }
+
+    function addPage() {
+      var card = makeCard({});
+      list.appendChild(card);
+      renumberPages(); applyEmpty();
+      openCard(card, true);
+      queueSave(sectionKey());
+      try { card.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
+    }
+
+    addRow.addEventListener("click", addPage);
+
+    // Keep the structure tree in step: titles/slugs typed, sub/child pages
+    // added or removed (their own Add/Remove buttons), pages reordered.
+    wrap.addEventListener("input", function (e) { if (!tree.contains(e.target)) queueTree(); });
+    if (window.MutationObserver) new MutationObserver(function (records) {
+      // A subpage / child page just added with its own Add button opens for editing.
+      var added = null;
+      records.forEach(function (r) {
+        Array.prototype.forEach.call(r.addedNodes, function (n) {
+          if (n.nodeType === 1 && n.classList.contains("ed-card") && !n.classList.contains("pg__card")) added = n;
+        });
+      });
+      if (added && wrap.contains(added)) editCard(added, false);
+      else queueTree();
+    }).observe(list, { childList: true, subtree: true });
+
+    // Drag-over reordering (bound once on the list; only THIS list's direct
+    // page cards move  nested lists have their own controls).
+    list.addEventListener("dragover", function (e) {
+      if (!dragCard || dragCard.parentNode !== list) return;
+      e.preventDefault();
+      var after = null, min = Infinity;
+      cards().forEach(function (c) {
+        if (c === dragCard) return;
+        var r = c.getBoundingClientRect();
+        var offset = e.clientY - (r.top + r.height / 2);
+        if (offset < 0 && -offset < min) { min = -offset; after = c; }
+      });
+      if (after) list.insertBefore(dragCard, after); else list.appendChild(dragCard);
+    });
+    document.addEventListener("mouseup", function () {
+      if (dragCard) return;
+      Array.prototype.forEach.call(list.querySelectorAll(":scope > .pg__card[draggable='true']"), function (c) { c.setAttribute("draggable", "false"); });
+    });
+
+    // ----- Initial render (all cards start collapsed) -----
+    (Array.isArray(value) ? value : []).forEach(function (item) { list.appendChild(makeCard(item)); });
+    renumberPages(); applyEmpty(); renderTree();
   }
 
   function listRow(field, item, i) {
@@ -362,6 +2807,63 @@
     });
   }
 
+  // Show/hide style-specific fields (Style 2 / Style 3 only) against the hero
+  // style picker, across the whole hero panel  section-level fields and the
+  // fields inside every banner row. Called on load, on style change, and after
+  // a banner is added.
+  function syncStyleOnly(panel) {
+    var ctrl = panel.querySelector("[data-field='hero_banner_style']");
+    if (!ctrl) return;
+    var val = ctrl.value;
+    Array.prototype.forEach.call(panel.querySelectorAll("[data-style-only]"), function (w) {
+      // A field that is also conditional (show_if) stays hidden while its
+      // condition is off, even on its own style (see wireConditionals).
+      w.style.display = (w.getAttribute("data-style-only") === val && w.getAttribute("data-cond-hidden") !== "1") ? "" : "none";
+    });
+  }
+
+  // Newsletter tab: choosing an offer writes its automatic heading ("Sign up
+  // and get 10% off your first order") into the Heading field, unless the owner
+  // has typed their own. Clearing the offer clears a heading it wrote.
+  function wireNewsletter(panel) {
+    var offer = panel.querySelector("[data-field='newsletter_popup_coupon']");
+    var heading = panel.querySelector("[data-field='newsletter_popup_heading']");
+    if (!offer || !heading) return;
+    if (offer.options[0] && !offer.options[0].value) {
+      offer.options[0].textContent = "No offer";
+      if (offer.dataset.owcs === "1" && window.OwSelect) window.OwSelect.rebuild(offer);
+    }
+    var byId = {};
+    (DATASETS.coupons || []).forEach(function (c) { byId[c.value] = c; });
+    var autos = Object.keys(byId).map(function (k) { return byId[k].headline; });
+    var label = panel.querySelector("[data-field-wrap='newsletter_popup_heading'] .ed-field__label");
+    var note = el("span", "ed-auto-note"); note.textContent = "AUTO";
+    function isAuto(text) { return !text || autos.indexOf(text) >= 0; }
+    function markAuto() {
+      var on = !!heading.value && autos.indexOf(heading.value) >= 0;
+      if (label) { if (on && !note.parentNode) label.appendChild(note); else if (!on && note.parentNode) note.parentNode.removeChild(note); }
+    }
+    offer.addEventListener("change", function () {
+      if (!isAuto(heading.value.trim())) return;   // keep the owner's own words
+      var c = byId[offer.value];
+      heading.value = c ? c.headline : "";
+      heading.dispatchEvent(new Event("input", { bubbles: true }));
+      markAuto();
+    });
+    heading.addEventListener("input", markAuto);
+    // Placeholder reflects what the storefront shows when the heading is blank.
+    function syncPlaceholder() {
+      var c = byId[offer.value];
+      heading.placeholder = c ? c.headline : "Join our newsletter";
+    }
+    offer.addEventListener("change", syncPlaceholder);
+    syncPlaceholder(); markAuto();
+    if (!(DATASETS.coupons || []).length) {
+      var help = panel.querySelector("[data-field-wrap='newsletter_popup_coupon'] .ed-field__help");
+      if (help) help.textContent = "You have no active discount codes yet. Create one under Discounts to offer it here.";
+    }
+  }
+
   // Show/hide dependent fields (e.g. banner category/product target) within a scope.
   function wireConditionals(scope, fields) {
     fields.forEach(function (f) {
@@ -369,7 +2871,16 @@
       var wrap = scope.querySelector(":scope > [data-field-wrap='" + f.name + "']");
       var ctrl = scope.querySelector("[data-field='" + f.show_if.field + "']");
       if (!wrap || !ctrl) return;
-      function apply() { wrap.style.display = f.show_if.in.indexOf(ctrl.value) >= 0 ? "" : "none"; }
+      function apply() {
+        var on = f.show_if.in.indexOf(ctrl.value) >= 0;
+        wrap.setAttribute("data-cond-hidden", on ? "" : "1");
+        // A field tied to one hero style (style_only) also needs that style.
+        var only = wrap.getAttribute("data-style-only");
+        var panel = only ? wrap.closest(".ed-panel") : null;
+        var styleCtrl = panel ? panel.querySelector("[data-field='hero_banner_style']") : null;
+        var styleOk = !only || !styleCtrl || styleCtrl.value === only;
+        wrap.style.display = (on && styleOk) ? "" : "none";
+      }
       ctrl.addEventListener("change", apply); ctrl.addEventListener("input", apply); apply();
     });
   }
@@ -381,7 +2892,21 @@
     if (!e2) return field.type === "checkbox" ? false : "";
     return field.type === "checkbox" ? e2.checked : e2.value;
   }
+  // Find a list-item field wrap inside a card body. Normally it is a direct
+  // child; in the banner editor the field is grouped one level down inside a
+  // .bn-acc__body accordion section, so check there too. The :scope > chaining
+  // never descends into a nested .ed-list, so nested-list cards are unaffected.
+  function itemFieldWrap(body, name) {
+    if (!body) return null;
+    return body.querySelector(":scope > [data-field-wrap='" + name + "']") ||
+           body.querySelector(":scope > .bn-acc > .bn-acc__item > .bn-acc__body > [data-field-wrap='" + name + "']") ||
+           // Blogs editor: the item's fields are direct children of the
+           // 12-column .blogedit grid. No nested lists here, so a descendant
+           // match inside .blogedit is safe.
+           body.querySelector(":scope > .blogedit > [data-field-wrap='" + name + "']");
+  }
   function gatherValue(wrap, field) {
+    if (field.type === "seo_pages" || field.editor === "seo_home") return wrap._seoGather ? wrap._seoGather() : {};
     if (field.type === "list") {
       var list = wrap.querySelector(":scope > .ed-list");
       var out = [];
@@ -389,7 +2914,7 @@
         var body = card.querySelector(":scope > .ed-card__body");
         var obj = {};
         field.item_fields.forEach(function (f) {
-          var w = body ? body.querySelector(":scope > [data-field-wrap='" + f.name + "']") : null;
+          var w = itemFieldWrap(body, f.name);
           obj[f.name] = w ? gatherValue(w, f) : (f.type === "checkbox" ? false : "");
         });
         out.push(obj);
@@ -400,6 +2925,7 @@
       var group = wrap.querySelector(":scope > .ed-group");
       var o = {};
       field.subfields.forEach(function (sf) {
+        if (sf.type === "heading") return;  // visual divider, holds no value
         var w = group ? group.querySelector(":scope > [data-field-wrap='" + sf.name + "']") : null;
         o[sf.name] = w ? gatherValue(w, sf) : (sf.type === "checkbox" ? false : "");
       });
@@ -410,8 +2936,23 @@
   function gatherSection(section) {
     var panel = document.getElementById("ed-panel-" + section.key);
     var values = {};
+    var accordion = section.layout === "accordion";
     section.fields.forEach(function (f) {
-      var w = panel.querySelector(":scope > [data-field-wrap='" + f.name + "']");
+      var w;
+      if (accordion) {
+        // Accordion fields live inside .ed-acc__item > .ed-acc__body, not as
+        // direct children of the panel  so scope the lookup to the field's own
+        // accordion body (otherwise every field reads empty and wipes content).
+        var body = panel.querySelector(".ed-acc__item[data-acc='" + f.name + "'] > .ed-acc__body");
+        w = body ? body.querySelector(":scope > [data-field-wrap='" + f.name + "']") : null;
+      } else {
+        // A field is normally a direct child of the panel; a field inside a
+        // split-layout group lives one level down in a .spl-panel__body.
+        w = panel.querySelector(":scope > [data-field-wrap='" + f.name + "']") ||
+            panel.querySelector(".spl-panel__body > [data-field-wrap='" + f.name + "']") ||
+            // A field nested beneath another one (e.g. the logo's alt text).
+            panel.querySelector(":scope > .ed-field > .ed-below > [data-field-wrap='" + f.name + "']");
+      }
       values[f.name] = w ? gatherValue(w, f) : (f.type === "checkbox" ? false : "");
     });
     return values;
@@ -424,12 +2965,50 @@
     syncRichtext();
     fetch(saveBase.replace("SECTION", key), { method:"POST", headers:{ "Content-Type":"application/json", "X-CSRFToken": csrf }, body: JSON.stringify({ values: gatherSection(section) }) })
       .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
-      .then(function () { setStatus("saved"); })
+      .then(function () {
+        setStatus("saved");
+        showSavedToast();
+      })
       .catch(function () { setStatus("error"); });
   }
   function setStatus(state) {
     saveEl.setAttribute("data-state", state === "saved" ? "idle" : state);
     saveText.textContent = state === "saving" ? "Saving…" : state === "error" ? "Couldn't save" : "Saved";
+  }
+
+  // ---- Split layout: numbered content panel + media panel + tip bar --------
+  // A bespoke two-column section (e.g. "Categories, best-sellers & video"): the
+  // left panel holds the text/select fields, the right panel a single media
+  // field, and an optional tip bar sits beneath. Fields render through the same
+  // fieldBlock, so autosave/gather (see gatherSection's `split` branch) and the
+  // media library keep working. Responsive: the panels stack on narrow screens.
+  function buildSplit(section, panel) {
+    var split = el("div", "spl", { "data-split-section": section.key });
+    (section.panels || [{ id: "content" }]).forEach(function (p) {
+      var pane = el("div", "spl-panel", { "data-panel": p.id });
+      var head = el("div", "spl-panel__head");
+      var lead = el("div", "spl-panel__lead");
+      if (p.num) { var num = el("span", "spl-panel__num"); num.textContent = p.num; lead.appendChild(num); }
+      var ttl = el("span", "spl-panel__ttl"); ttl.textContent = p.title || ""; lead.appendChild(ttl);
+      head.appendChild(lead);
+      if (p.note) { var note = el("span", "spl-panel__note"); note.textContent = p.note; head.appendChild(note); }
+      var body = el("div", "spl-panel__body");
+      var mine = section.fields.filter(function (f) { return (f.panel || "content") === p.id; });
+      mine.forEach(function (f) { body.appendChild(fieldBlock(f, CONTENT[f.name])); });
+      wireConditionals(body, mine);
+      pane.appendChild(head); pane.appendChild(body);
+      split.appendChild(pane);
+    });
+    panel.appendChild(split);
+    if (section.tip) {
+      var tip = el("div", "spl-tip");
+      tip.innerHTML = '<span class="spl-tip__ico" aria-hidden="true">' +
+        svg('<circle cx="12" cy="12" r="10"/><path d="M12 11v5M12 8h.01"/>', 16) + '</span>' +
+        '<span class="spl-tip__lead">Tip</span>' +
+        '<span class="spl-tip__txt"></span>';
+      tip.querySelector(".spl-tip__txt").textContent = section.tip;
+      panel.appendChild(tip);
+    }
   }
 
   // ---- Accordion (one open at a time, remembered across refreshes) ----
@@ -443,6 +3022,16 @@
       var body = el("div", "ed-acc__body");
       body.appendChild(fieldBlock(f, CONTENT[f.name]));
       hdr.addEventListener("click", function () { openAcc(section.key, f.name, true); });
+      // A named item (a custom policy) shows its title in the header as typed.
+      var titleIn = f.type === "object" ? body.querySelector("[data-field='title']") : null;
+      if (titleIn) {
+        var ttlEl = hdr.querySelector(".ed-acc__ttl");
+        var syncTtl = function () {
+          var t = String(titleIn.value || "").trim();
+          ttlEl.textContent = t ? (f.label || f.name).replace(/\s*\(optional\)$/, "") + " · " + t : (f.label || f.name);
+        };
+        titleIn.addEventListener("input", syncTtl); syncTtl();
+      }
       item.appendChild(hdr); item.appendChild(body);
       acc.appendChild(item);
     });
@@ -471,46 +3060,162 @@
     if (name) openAcc(sectionKey, name, false);
   }
 
-  SECTIONS.forEach(function (section, i) {
+  // ---- "Auto-saved" toast (slides in from the right on each save) ------
+  var toastEl = null, toastTimer = null;
+  function showSavedToast() {
+    if (!toastEl) {
+      toastEl = el("div", "ed-toast", { role: "status", "aria-live": "polite" });
+      toastEl.innerHTML = '<span class="ed-toast__ico" aria-hidden="true">' + svg('<path d="M20 6 9 17l-5-5"/>', 16) + '</span><span class="ed-toast__msg">Content auto-saved</span>';
+      document.body.appendChild(toastEl);
+    }
+    // Restart the entrance so rapid successive saves re-trigger the animation.
+    toastEl.classList.remove("is-show");
+    void toastEl.offsetWidth;
+    toastEl.classList.add("is-show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("is-show"); }, 2200);
+  }
+
+  var LOCK_PATH = '<rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>';
+  // A tab the owner's (free) plan doesn't include: instead of its fields, an
+  // upgrade panel. The server also refuses a save to it, so this is UI only.
+  function buildLockedPanel(section) {
+    var box = el("div", "ed-locked");
+    var ico = el("span", "ed-locked__ico", { "aria-hidden": "true" }); ico.innerHTML = svg(LOCK_PATH, 20);
+    var t = el("div", "ed-locked__title"); t.textContent = "“" + section.label + "” isn’t in your plan";
+    var p = el("div", "ed-locked__text"); p.textContent = "Upgrade your plan to unlock and edit this section of your storefront.";
+    box.appendChild(ico); box.appendChild(t); box.appendChild(p);
+    if (UPGRADE_URL) { var a = el("a", "pal-btn", { href: UPGRADE_URL }); a.textContent = "Upgrade plan"; box.appendChild(a); }
+    return box;
+  }
+
+  // Tabs are cheap, so all of them are drawn up front. Panels are not: each is
+  // built the first time its tab opens (ensurePanel), so the page only pays for
+  // the tab the owner is looking at. A panel that was never opened was never
+  // edited, so autosave (which only fires from inside a panel) never needs it.
+  var tabPlaceholder = tabsEl.querySelector("[data-ed-tab-placeholder]");
+  if (tabPlaceholder) tabPlaceholder.remove();
+  SECTIONS.forEach(function (section) {
     section.fields.forEach(function (f) { f._section = section.key; });
     var tab = el("button", "ed-tab", { type: "button", "data-tab": section.key });
-    tab.innerHTML = '<span class="ed-tab__ico">' + svg(ICONS[section.icon] || ICONS[section.key] || ICONS.brand) + '</span><span>' + section.label + '</span>';
-    if (i === 0) tab.setAttribute("aria-current", "true");
+    tab.innerHTML = '<span class="ed-tab__ico">' + svg(ICONS[section.icon] || ICONS[section.key] || ICONS.brand) + '</span><span>' + section.label + '</span>' +
+      (section.locked ? '<span class="ed-tab__lock" aria-hidden="true">' + svg(LOCK_PATH, 12) + '</span>' : '');
+    if (section.locked) tab.classList.add("ed-tab--locked");
     tab.addEventListener("click", function () { activate(section.key); });
     tabsEl.appendChild(tab);
+  });
 
-    var panel = el("div", "ed-panel" + (i === 0 ? " is-active" : ""), { id: "ed-panel-" + section.key });
-    var head = el("div", "ed-panel__head");
-    var h = el("h2", "ed-panel__title"); h.textContent = section.label; head.appendChild(h);
-    if (section.hint) { var hp = el("p", "ed-panel__hint"); hp.textContent = section.hint; head.appendChild(hp); }
-    panel.appendChild(head);
-    if (section.layout === "accordion") {
+  function sectionFor(key) { return SECTIONS.filter(function (s) { return s.key === key; })[0]; }
+
+  function ensurePanel(key) {
+    var existing = document.getElementById("ed-panel-" + key);
+    if (existing) return existing;
+    var section = sectionFor(key);
+    if (!section) return null;
+    // No panel heading/subheading: the selected tab already names the section,
+    // so each panel starts straight with its fields.
+    var panel = el("div", "ed-panel", { id: "ed-panel-" + section.key });
+    if (section.locked) {
+      // No fields, no autosave: an upgrade panel stands in their place.
+      panel.appendChild(buildLockedPanel(section));
+    } else if (section.layout === "accordion") {
       buildAccordion(section, panel);
     } else {
-      section.fields.forEach(function (f) { panel.appendChild(fieldBlock(f, CONTENT[f.name])); });
+      // Flat fields  except a heading marked layout:"split", whose group (the
+      // fields up to the next heading) renders as one compact two-panel block.
+      var fs = section.fields;
+      for (var fi = 0; fi < fs.length; fi++) {
+        var f = fs[fi];
+        if (f.type === "heading" && f.layout === "split") {
+          panel.appendChild(fieldBlock(f, CONTENT[f.name]));   // the group's subhead
+          var grp = [];
+          var j = fi + 1;
+          for (; j < fs.length && fs[j].type !== "heading"; j++) grp.push(fs[j]);
+          buildSplit({ key: section.key + "__" + f.name, panels: f.panels, tip: f.tip, fields: grp }, panel);
+          fi = j - 1;
+        } else if (f.below && panel.querySelector(":scope > [data-field-wrap='" + f.below + "']")) {
+          // A field declared "below" another (the logo's alt text) sits inside
+          // that field's own column, directly beneath it. gatherSection finds
+          // it in its .ed-below holder.
+          var host = panel.querySelector(":scope > [data-field-wrap='" + f.below + "']");
+          var holder = el("div", "ed-below");
+          holder.appendChild(fieldBlock(f, CONTENT[f.name]));
+          host.appendChild(holder);
+        } else {
+          panel.appendChild(fieldBlock(f, CONTENT[f.name]));
+        }
+      }
       wireConditionals(panel, section.fields);
+      if (section.key === "newsletter") wireNewsletter(panel);
+      // Wire the hero style picker to reveal only its style's fields.
+      var styleCtrl = panel.querySelector("[data-field='hero_banner_style']");
+      if (styleCtrl) {
+        (function (p) {
+          syncStyleOnly(p);
+          var lastStyle = styleCtrl.value;
+          styleCtrl.addEventListener("input", function () { syncStyleOnly(p); });
+          styleCtrl.addEventListener("change", function () {
+            syncStyleOnly(p);
+            // A real switch (not a re-click) puts every banner's colours back
+            // to auto for the new style's background.
+            if (styleCtrl.value !== lastStyle) { lastStyle = styleCtrl.value; resetHeroForStyle(p, styleCtrl.value); }
+          });
+        })(panel);
+      }
+      // Keep the banner preview matching the chosen hero style + split-hero
+      // colour. These controls sit outside the slide cards, so the banner
+      // editor's own input listener never sees them  refresh it here, and run
+      // one render now that the panel (and the style control) is fully built.
+      var bannerWrap = panel.querySelector(".ed-field.bn");
+      if (bannerWrap && bannerWrap._bnRefresh) {
+        var refreshBanner = function () { bannerWrap._bnRefresh(); };
+        ["hero_banner_style", "hero_style3_left_bg", "hero_style3_left_bg_text"].forEach(function (fn) {
+          var ctrl = panel.querySelector("[data-field='" + fn + "']");
+          if (ctrl) { ctrl.addEventListener("input", refreshBanner); ctrl.addEventListener("change", refreshBanner); }
+        });
+        refreshBanner();
+      }
     }
     fieldsEl.appendChild(panel);
-  });
-  activePanelKey = SECTIONS.length ? SECTIONS[0].key : null;
+    return panel;
+  }
 
-  function activate(key) {
+  // Show one section: build its panel if needed, mark its tab, mount the
+  // rich-text editors it shows. No URL or scroll changes (see activate()).
+  function showPanel(key) {
     if (activePanelKey && activePanelKey !== key) {
       var prev = document.getElementById("ed-panel-" + activePanelKey);
       if (prev) destroyRichtextIn(prev);
     }
+    var panel = ensurePanel(key);
     activePanelKey = key;
     Array.prototype.forEach.call(tabsEl.children, function (t) { t.setAttribute("aria-current", t.getAttribute("data-tab") === key ? "true" : "false"); });
-    Array.prototype.forEach.call(fieldsEl.children, function (p) { p.classList.toggle("is-active", p.id === "ed-panel-" + key); });
-    document.querySelector(".ed-body").scrollTop = 0;
+    Array.prototype.forEach.call(fieldsEl.children, function (p) { p.classList.toggle("is-active", p === panel); });
 
-    var panel = document.getElementById("ed-panel-" + key);
-    var section = SECTIONS.filter(function (s) { return s.key === key; })[0];
-    if (section && section.layout === "accordion") {
+    var section = sectionFor(key);
+    if (section && section.locked) {
+      // Upgrade panel only: nothing to mount.
+    } else if (section && section.layout === "accordion") {
       restoreAcc(key, section.fields);   // inits the open item's editor
+    } else if (panel && (panel.querySelector(".bl") || panel.querySelector(".pg"))) {
+      // Blogs / Pages accordion editors: only init the rich-text of an OPEN
+      // card. Initialising a TinyMCE editor inside a collapsed (max-height:0)
+      // card renders it at zero height and it never recovers on expand  and
+      // it's wasteful. openCard() inits a card's editor when it opens; here we
+      // cover any card restored open at load.
+      Array.prototype.forEach.call(panel.querySelectorAll(".bl__card.is-open, .pg__card.is-open"), function (c) { initRichtextIn(c); });
     } else if (panel) {
       initRichtextIn(panel);
     }
+  }
+
+  function activate(key) {
+    showPanel(key);
+    // Remember the open tab in the URL hash so a refresh reopens it. Uses
+    // replaceState (no new history entry, no scroll jump).
+    try { history.replaceState(null, "", "#" + key); } catch (e) {}
+    var edBody = document.querySelector(".ed-body"); if (edBody) edBody.scrollTop = 0;
+    try { window.scrollTo(0, 0); } catch (e) {}
 
     // The active tab should scroll into the visible part of the strip.
     var active = tabsEl.querySelector("[aria-current='true']");
@@ -520,7 +3225,76 @@
   fieldsEl.addEventListener("input", function (e) { var p = e.target.closest(".ed-panel"); if (p) queueSave(p.id.replace("ed-panel-", "")); });
   fieldsEl.addEventListener("change", function (e) { if (e.target.type === "checkbox" || e.target.tagName === "SELECT") { var p = e.target.closest(".ed-panel"); if (p) queueSave(p.id.replace("ed-panel-", "")); } });
 
+  // Restore the open tab across a refresh. The tab lives only in the URL hash,
+  // so reloading this page (hash intact) reopens it, while navigating here fresh
+  // from another page (no hash) opens the default first tab. Only that one
+  // panel is built, so the default tab no longer flashes before a restored one.
+  (function restoreTab() {
+    var key = (location.hash || "").replace(/^#/, "");
+    if (key && sectionFor(key)) {
+      activate(key);
+    } else if (SECTIONS.length) {
+      showPanel(SECTIONS[0].key);
+    }
+  })();
+
+  // Section-tab steppers: each click scrolls the strip by exactly one tab, and
+  // an arrow disables itself once its end is reached.
+  (function tabSteppers() {
+    var prev = document.querySelector("[data-ed-prev]");
+    var next = document.querySelector("[data-ed-next]");
+    if (!prev || !next) return;
+    var EPS = 2;
+    function updateArrows() {
+      var noScroll = tabsEl.scrollWidth - tabsEl.clientWidth <= EPS;
+      prev.disabled = noScroll || tabsEl.scrollLeft <= EPS;
+      next.disabled = noScroll || tabsEl.scrollLeft + tabsEl.clientWidth >= tabsEl.scrollWidth - EPS;
+    }
+    function step(dir) {
+      var tabs = Array.prototype.slice.call(tabsEl.querySelectorAll(".ed-tab"));
+      var box = tabsEl.getBoundingClientRect();
+      var i, r;
+      if (dir > 0) {
+        for (i = 0; i < tabs.length; i++) {
+          r = tabs[i].getBoundingClientRect();
+          if (r.right > box.right + EPS) { tabs[i].scrollIntoView({ inline: "end", block: "nearest", behavior: "smooth" }); return; }
+        }
+      } else {
+        for (i = tabs.length - 1; i >= 0; i--) {
+          r = tabs[i].getBoundingClientRect();
+          if (r.left < box.left - EPS) { tabs[i].scrollIntoView({ inline: "start", block: "nearest", behavior: "smooth" }); return; }
+        }
+      }
+    }
+    prev.addEventListener("click", function () { step(-1); });
+    next.addEventListener("click", function () { step(1); });
+    tabsEl.addEventListener("scroll", updateArrows, { passive: true });
+    window.addEventListener("resize", updateArrows);
+    updateArrows();
+    setTimeout(updateArrows, 300);
+    setTimeout(updateArrows, 1200);
+  })();
+
   if (window.OWScrollHint) window.OWScrollHint.initAll();
+
+  // Tabs and the open panel are built: reveal them together (editor.css keeps
+  // them hidden until now, so a half-built editor is never painted).
+  root.classList.add("is-ready");
+
+  // Warm TinyMCE in the background once the page is idle, so opening Blogs,
+  // Policies or Pages mounts the rich-text editor without a visible wait. Only
+  // when some open-able section actually has a rich-text field.
+  function anyRichtext(fields) {
+    return (fields || []).some(function (f) {
+      return f && (f.type === "richtext" || anyRichtext(f.item_fields) || anyRichtext(f.fields));
+    });
+  }
+  var hasRichtext = SECTIONS.some(function (s) { return !s.locked && anyRichtext(s.fields); });
+  if (hasRichtext) {
+    var warm = function () { loadTiny().catch(function () {}); };
+    if (window.requestIdleCallback) window.requestIdleCallback(warm, { timeout: 4000 });
+    else setTimeout(warm, 1500);
+  }
 })();
 </script>
 {% endblock %}

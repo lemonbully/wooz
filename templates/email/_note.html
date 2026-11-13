@@ -1,0 +1,7 @@
+{% comment %}Fine-print note with a 2px left accent bar. Params: text (or use the
+"note" block by including with a caller is overkill  pass text).{% endcomment %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0 0;">
+  <tr>
+    <td style="border-left:2px solid {{ bar|default:'#4b2bf5' }}; padding:1px 0 1px 14px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.55; color:#66666b;">{{ text }}</td>
+  </tr>
+</table>

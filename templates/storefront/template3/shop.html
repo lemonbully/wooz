@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop All | Mellow Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+<main class="container">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>Shop All</span></nav>
+  <div class="page-head"><h1 class="h1">Shop All</h1></div>
+
+  <div class="slider" data-slider>
+    <div class="slider__track" data-subcats style="--col:calc((100% - 3*16px)/4.4);--col-sm:62%"></div>
+  </div>
+
+  <div data-collection style="margin-top:20px"></div>
+</main>
+
+<div class="services container section" data-services></div>
+<div data-footer></div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/collection.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I;
+  T3.$('[data-subcats]').innerHTML = D.categories.map(c => `<a class="cat-card" href="category.html?c=${c.slug}">
+    <div class="cat-card__media" style="aspect-ratio:1"><img src="${D.U(c.img, 600, 600)}" alt="" loading="lazy"></div>
+    <div class="cat-card__name"><span class="ico">${c.icon}</span>${c.name}</div><p class="cat-card__desc">${c.desc}</p></a>`).join('');
+  T3Collection({
+    root: '[data-collection]', products: D.products,
+    promo: `<a href="shop.html?sale=1" class="promo-tile reveal" style="background:var(--neon)"><span class="badge badge--sale" style="align-self:flex-start">Up to 30% off</span><div><h3>Mid season<br>sale is live</h3><p class="muted small" style="margin:8px 0 18px">Soft essentials at happy prices. Ends Sunday.</p><span class="btn btn--black btn--arrow">Shop Sale <span class="btn__dot">${I.arrow}</span></span></div></a>`
+  });
+  T3.$('[data-services]').innerHTML = [['truck','Free delivery','On orders above ₹2,999'],['return','Free returns','Within 15 days of delivery'],['card','100% secure payments','UPI, cards, netbanking and COD'],['chat','Customer service','Mon to Sat, 9 AM to 8 PM']].map(([i,t,s]) => `<div class="service">${I[i]}<b>${t}</b><span>${s}</span></div>`).join('');
+  T3.$('[data-services]').classList.add('services');
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

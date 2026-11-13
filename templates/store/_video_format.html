@@ -1,0 +1,24 @@
+{% load store_extras %}
+{% comment %}
+Product video format (landscape 16:9 / portrait 9:16)  the ProductForm
+`video_orientation` field. Shared by the D2C and B2B product forms.
+{% endcomment %}
+<div class="pal-field app-f--full">
+  <span class="pal-field__label">Product video format{% field_tip "video_orientation" %}</span>
+  <div class="app-vidfmt">
+    <label class="app-vidfmt__opt">
+      <input type="radio" name="video_orientation" value="landscape"{% if not product or product.video_orientation != 'portrait' %} checked{% endif %}>
+      <span class="app-vidfmt__card">
+        <span class="app-vidfmt__name">Landscape</span>
+        <span class="app-vidfmt__dim">Wide product demos (16:9)</span>
+      </span>
+    </label>
+    <label class="app-vidfmt__opt">
+      <input type="radio" name="video_orientation" value="portrait"{% if product and product.video_orientation == 'portrait' %} checked{% endif %}>
+      <span class="app-vidfmt__card">
+        <span class="app-vidfmt__name">Portrait</span>
+        <span class="app-vidfmt__dim">Reels / shorts style (9:16)</span>
+      </span>
+    </label>
+  </div>
+</div>

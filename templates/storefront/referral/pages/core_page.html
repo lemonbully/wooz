@@ -1,0 +1,306 @@
+{% extends "storefront/referral/_page_shell.html" %}
+{% comment %}
+Core page for the collaboration store  the same tree-navigated SPA as the owner
+store's core_page.html (page → subpage → child, switched client-side, deep-links
+addressable), re-laid-out for the phone card: the sidebar becomes a collapsible
+"Contents" panel; content areas use .cp-content so TinyMCE HTML renders. Data for
+every subpage/child is emitted hidden and swapped in by the script.
+{% endcomment %}
+{% block head_title %}{{ core_page.title }} - {{ site_title }}{% endblock %}
+{% block page_heading %}{{ core_page.title }}{% endblock %}
+{% block head_extra %}
+<style>
+	.cp-content{ color:#1f2937; font-size:14px; line-height:1.75; word-wrap:break-word; overflow-wrap:break-word; }
+	.cp-content p{ margin:0 0 1em; }
+	.cp-content h1{ font-size:1.5em; font-weight:700; margin:1.1em 0 .5em; line-height:1.25; color:#111827; }
+	.cp-content h2{ font-size:1.3em; font-weight:700; margin:1.1em 0 .5em; line-height:1.3; color:#111827; }
+	.cp-content h3{ font-size:1.15em; font-weight:600; margin:1em 0 .4em; color:#111827; }
+	.cp-content h4{ font-size:1.05em; font-weight:600; margin:1em 0 .4em; color:#111827; }
+	.cp-content ul{ list-style:disc; padding-left:1.4em; margin:0 0 1em; }
+	.cp-content ol{ list-style:decimal; padding-left:1.4em; margin:0 0 1em; }
+	.cp-content li{ margin:.3em 0; }
+	.cp-content ul ul{ list-style:circle; }
+	.cp-content a{ color:#2563eb; text-decoration:underline; text-underline-offset:2px; }
+	.cp-content strong,.cp-content b{ font-weight:700; color:#111827; }
+	.cp-content em,.cp-content i{ font-style:italic; }
+	.cp-content blockquote{ border-left:3px solid #d1d5db; padding:.5em 1em; margin:1em 0; background:#f9fafb; color:#4b5563; font-style:italic; border-radius:0 .5rem .5rem 0; }
+	.cp-content hr{ border:none; border-top:1px solid #e5e7eb; margin:1.5em 0; }
+	.cp-content img{ max-width:100%; height:auto; border-radius:.5rem; margin:1em 0; }
+	.cp-content table{ width:100%; border-collapse:collapse; margin:1em 0; font-size:.92em; display:block; overflow-x:auto; }
+	.cp-content th,.cp-content td{ border:1px solid #e5e7eb; padding:.5em .6em; text-align:left; }
+	.cp-content th{ background:#f3f4f6; font-weight:600; color:#111827; }
+	.cp-content pre{ background:#1f2937; color:#e5e7eb; padding:.8em 1em; border-radius:.5rem; overflow-x:auto; margin:1em 0; font-size:.9em; }
+	.cp-content pre code{ background:transparent; color:inherit; padding:0; }
+	.cp-content code{ background:#f3f4f6; color:#dc2626; padding:.1em .35em; border-radius:.25rem; font-size:.9em; }
+	.cp-content iframe,.cp-content video{ max-width:100%; margin:1em 0; border-radius:.5rem; }
+	.cp-nav-link{ display:block; width:100%; text-align:left; padding:.55rem .6rem; border-radius:8px; font-size:13px; color:rgba(0,0,0,.65); text-decoration:none; cursor:pointer; background:transparent; border:none; }
+	.cp-nav-link:hover{ background:#f3f4f6; color:#111827; }
+	.cp-nav-link.active{ background:#f3f4f6; color:#111827; font-weight:600; }
+	.cp-nav-nested{ display:none; margin-left:.6rem; padding-left:.6rem; border-left:1px solid rgba(0,0,0,.1); }
+	.cp-nav-nested.show{ display:block; }
+	.cp-nav-nested .cp-nav-link{ font-size:12.5px; color:rgba(0,0,0,.5); }
+	.cp-nested-tab{ padding:.4rem .8rem; font-size:12.5px; font-weight:500; color:rgba(0,0,0,.65); background:transparent; border:1px solid rgba(0,0,0,.15); border-radius:100px; cursor:pointer; }
+	.cp-nested-tab.active{ background:#111827; border-color:#111827; color:#fff; }
+</style>
+{% endblock %}
+{% block page_inner %}
+{% url 'public_website' as home_url %}
+<div class="px-5 pt-4 pb-8">
+
+	<!-- Contents (collapsible tree nav) -->
+	<button type="button" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-black/10 text-[13px] font-medium text-black" id="cp-mobile-toggle">
+		<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
+		<span>Contents</span>
+		<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-left:auto"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+	</button>
+	<nav class="hidden mt-2 rounded-xl border border-black/10 p-2" id="cp-mobile-nav">
+		<a href="{{ home_url }}{{ core_page.slug }}/" class="cp-nav-link active" data-nav="overview" data-overview="1">Overview</a>
+		{% for sp in subpages %}
+		<div class="cp-nav-group">
+			<a href="{{ home_url }}{{ core_page.slug }}/{{ sp.slug }}/" class="cp-nav-link" data-nav="subpage" data-subpage="{{ sp.slug }}">{{ sp.title }}</a>
+			{% if sp.children %}
+			<div class="cp-nav-nested" data-nested-for="{{ sp.slug }}">
+				{% for n in sp.children %}{% if n.slug %}
+				<a href="{{ home_url }}{{ core_page.slug }}/{{ sp.slug }}/{{ n.slug }}/" class="cp-nav-link" data-nav="nested" data-subpage="{{ sp.slug }}" data-nested="{{ n.slug }}">{{ n.title }}</a>
+				{% endif %}{% endfor %}
+			</div>
+			{% endif %}
+		</div>
+		{% endfor %}
+		<a href="{% url 'public_core_pages' %}" class="cp-nav-link border-t border-black/5 mt-1 pt-2 text-black/60">← All pages</a>
+	</nav>
+
+	<!-- Breadcrumb -->
+	<nav class="mt-4 flex items-center flex-wrap gap-1.5 text-[12px] text-black/45" aria-label="Breadcrumb">
+		<a href="{% url 'public_core_pages' %}" class="hover:text-black">Pages</a>
+		<span class="opacity-50">/</span>
+		<span class="text-black/70 font-medium" id="cp-breadcrumb-page">{{ core_page.title }}</span>
+	</nav>
+
+	<!-- Article -->
+	<article class="mt-4">
+		<header>
+			<h1 class="text-[21px] font-semibold text-black leading-tight" id="cp-title">{{ core_page.title }}</h1>
+			<p class="mt-1 text-[13px] text-black/60 {% if not core_page.subtitle %}hidden{% endif %}" id="cp-subtitle">{{ core_page.subtitle|default:'' }}</p>
+			<div class="mt-3 rounded-2xl overflow-hidden bg-gray-100" id="cp-hero-wrap">
+				{% if core_page.image %}
+				<img src="{{ core_page.image }}" alt="{{ core_page.title }}" class="w-full h-44 object-cover" id="cp-hero-img">
+				{% else %}
+				<img src="" alt="" class="w-full h-44 object-cover hidden" id="cp-hero-img">
+				{% endif %}
+			</div>
+		</header>
+
+		<!-- Overview -->
+		<div id="cp-overview" class="mt-4">
+			{% if core_page.content %}
+			<div class="cp-content">{{ core_page.content|safe }}</div>
+			{% else %}
+			<p class="text-[13px] text-black/55">Select a topic from Contents to begin reading.</p>
+			{% endif %}
+		</div>
+
+		<!-- Subpage / nested -->
+		<div id="cp-subpage" class="hidden mt-4">
+			<div id="cp-nested" class="hidden mb-4">
+				<div class="text-[11px] uppercase tracking-wide text-black/45 mb-2">Related topics</div>
+				<div class="flex flex-wrap gap-2" id="cp-nested-tabs"></div>
+			</div>
+			<div id="cp-subpage-content"><div class="cp-content" id="cp-subpage-html"></div></div>
+			<div class="hidden rounded-2xl border border-black/10 p-4 bg-white" id="cp-nested-article">
+				<h3 class="text-[16px] font-semibold text-black" id="cp-nested-title"></h3>
+				<p class="mt-0.5 text-[12px] text-black/55 hidden" id="cp-nested-subtitle"></p>
+				<img src="" alt="" class="w-full max-h-56 object-cover rounded-xl mt-3 hidden" id="cp-nested-img">
+				<div class="cp-content mt-3" id="cp-nested-html"></div>
+			</div>
+		</div>
+	</article>
+
+	<!-- Data -->
+	{% if subpages %}
+	<div class="hidden" id="cp-data">
+		{% for subpage in subpages %}
+		<div id="cp-data-{{ subpage.slug }}" data-title="{{ subpage.title }}" data-subtitle="{{ subpage.subtitle|default:'' }}" data-image="{{ subpage.image|default:'' }}">
+			<div class="cp-data-html">{{ subpage.content|safe }}</div>
+			{% if subpage.children %}
+			<div class="cp-data-nested">
+				{% for n in subpage.children %}{% if n.slug %}
+				<div class="cp-nested-item" data-slug="{{ n.slug }}" data-title="{{ n.title }}" data-subtitle="{{ n.subtitle|default:'' }}" data-image="{{ n.image|default:'' }}">{{ n.content|safe }}</div>
+				{% endif %}{% endfor %}
+			</div>
+			{% endif %}
+		</div>
+		{% endfor %}
+	</div>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+	'use strict';
+	{% url 'public_website' as home_url %}
+	const SLUG = "{{ core_page.slug|escapejs }}";
+	const BASE = "{{ home_url|escapejs }}".replace(/\/$/, '') + '/';
+	const TITLE = "{{ core_page.title|escapejs }}";
+	const SUBTITLE = "{{ core_page.subtitle|default:''|escapejs }}";
+	const IMAGE = "{{ core_page.image|default:''|escapejs }}";
+
+	const $ = function (id) { return document.getElementById(id); };
+	const $$ = function (sel) { return document.querySelectorAll(sel); };
+
+	const data = $('cp-data');
+	const titleEl = $('cp-title');
+	const subtitleEl = $('cp-subtitle');
+	const heroImg = $('cp-hero-img');
+	const overview = $('cp-overview');
+	const subpageWrap = $('cp-subpage');
+	const subpageHtml = $('cp-subpage-html');
+	const nestedWrap = $('cp-nested');
+	const nestedTabs = $('cp-nested-tabs');
+	const subpageContent = $('cp-subpage-content');
+	const nestedArticle = $('cp-nested-article');
+	const nestedTitle = $('cp-nested-title');
+	const nestedSubtitle = $('cp-nested-subtitle');
+	const nestedImg = $('cp-nested-img');
+	const nestedHtml = $('cp-nested-html');
+	const breadcrumb = $('cp-breadcrumb-page');
+	const mobileToggle = $('cp-mobile-toggle');
+	const mobileNav = $('cp-mobile-nav');
+
+	let currentSub = null, currentNested = null;
+
+	const buildUrl = function (sub, nested) {
+		let url = BASE + SLUG + '/';
+		if (sub) url += sub + '/';
+		if (nested) url += nested + '/';
+		return url;
+	};
+	const parseUrl = function () {
+		let path = location.pathname;
+		if (path.indexOf(BASE) === 0) path = path.slice(BASE.length);
+		const parts = path.split('/').filter(Boolean);
+		if (!parts.length || parts[0] !== SLUG) return { sub: null, nested: null };
+		return { sub: parts[1] || null, nested: parts[2] || null };
+	};
+	const esc = function (text) { const d = document.createElement('div'); d.textContent = text || ''; return d.innerHTML; };
+
+	const updateNav = function (sub, nested) {
+		$$('.cp-nav-link').forEach(function (el) { el.classList.remove('active'); });
+		$$('.cp-nav-nested').forEach(function (el) { el.classList.remove('show'); });
+		if (!sub) {
+			$$('[data-overview="1"]').forEach(function (el) { el.classList.add('active'); });
+		} else {
+			$$('[data-subpage="' + sub + '"][data-nav="subpage"]').forEach(function (el) { el.classList.add('active'); });
+			$$('[data-nested-for="' + sub + '"]').forEach(function (el) { el.classList.add('show'); });
+			if (nested) $$('[data-nested="' + nested + '"]').forEach(function (el) { el.classList.add('active'); });
+		}
+	};
+	const updateHero = function (title, subtitle, image) {
+		if (titleEl) titleEl.textContent = title || TITLE;
+		if (subtitleEl) { subtitleEl.textContent = subtitle || ''; subtitleEl.classList.toggle('hidden', !subtitle); }
+		if (heroImg) {
+			if (image) { heroImg.src = image; heroImg.alt = title || ''; heroImg.classList.remove('hidden'); }
+			else { heroImg.classList.add('hidden'); }
+		}
+	};
+	const updateBreadcrumb = function (sub, nested) {
+		if (!breadcrumb) return;
+		if (nested) breadcrumb.textContent = nested;
+		else if (sub) breadcrumb.textContent = sub;
+		else breadcrumb.textContent = TITLE;
+	};
+
+	const renderNested = function (slug, items, opts) {
+		opts = opts || {};
+		const push = opts.push !== false;
+		let item = null;
+		items.forEach(function (i) { if (i.dataset.slug === slug) item = i; });
+		if (!item) return;
+		currentNested = item.dataset.slug;
+		if (subpageContent) subpageContent.classList.add('hidden');
+		if (nestedArticle) nestedArticle.classList.remove('hidden');
+		if (nestedTitle) nestedTitle.textContent = item.dataset.title || '';
+		if (nestedSubtitle) { nestedSubtitle.textContent = item.dataset.subtitle || ''; nestedSubtitle.classList.toggle('hidden', !item.dataset.subtitle); }
+		if (nestedImg) {
+			if (item.dataset.image) { nestedImg.src = item.dataset.image; nestedImg.alt = item.dataset.title || ''; nestedImg.classList.remove('hidden'); }
+			else { nestedImg.classList.add('hidden'); }
+		}
+		if (nestedHtml) nestedHtml.innerHTML = item.innerHTML || '';
+		if (nestedTabs) nestedTabs.querySelectorAll('.cp-nested-tab').forEach(function (t) { t.classList.toggle('active', t.dataset.nested === currentNested); });
+		if (push) history.pushState({ sub: currentSub, nested: currentNested }, '', buildUrl(currentSub, currentNested));
+		const subData = $('cp-data-' + currentSub);
+		updateBreadcrumb(subData ? subData.dataset.title : currentSub, item.dataset.title);
+		updateNav(currentSub, currentNested);
+	};
+	const showSubpageContent = function () {
+		currentNested = null;
+		if (subpageContent) subpageContent.classList.remove('hidden');
+		if (nestedArticle) nestedArticle.classList.add('hidden');
+		if (nestedTabs) nestedTabs.querySelectorAll('.cp-nested-tab').forEach(function (t) { t.classList.remove('active'); });
+	};
+	const renderSubpage = function (sub, nested, opts) {
+		opts = opts || {};
+		const push = opts.push !== false;
+		if (!data) return;
+		const el = $('cp-data-' + sub);
+		if (!el) return;
+		currentSub = sub; currentNested = null;
+		updateHero(el.dataset.title, el.dataset.subtitle, el.dataset.image);
+		if (overview) overview.classList.add('hidden');
+		if (subpageWrap) subpageWrap.classList.remove('hidden');
+		const htmlEl = el.querySelector('.cp-data-html');
+		if (subpageHtml) subpageHtml.innerHTML = htmlEl ? htmlEl.innerHTML : '';
+		const nestedData = el.querySelector('.cp-data-nested');
+		const items = nestedData ? Array.prototype.slice.call(nestedData.querySelectorAll('.cp-nested-item')) : [];
+		if (items.length) {
+			if (nestedWrap) nestedWrap.classList.remove('hidden');
+			if (nestedTabs) {
+				nestedTabs.innerHTML = items.map(function (i) { return '<button type="button" class="cp-nested-tab" data-nested="' + i.dataset.slug + '">' + esc(i.dataset.title || 'Topic') + '</button>'; }).join('');
+				nestedTabs.querySelectorAll('.cp-nested-tab').forEach(function (t) { t.addEventListener('click', function () { renderNested(t.dataset.nested, items); }); });
+			}
+			if (nested) {
+				let found = false; items.forEach(function (i) { if (i.dataset.slug === nested) found = true; });
+				if (found) { renderNested(nested, items, { push: false }); } else { showSubpageContent(); }
+			} else { showSubpageContent(); }
+		} else if (nestedWrap) { nestedWrap.classList.add('hidden'); }
+		updateBreadcrumb(el.dataset.title, null);
+		updateNav(sub, currentNested);
+		if (push) history.pushState({ sub: sub, nested: currentNested }, '', buildUrl(sub, currentNested));
+	};
+	const renderOverview = function (opts) {
+		opts = opts || {};
+		const push = opts.push !== false;
+		currentSub = null; currentNested = null;
+		updateHero(TITLE, SUBTITLE, IMAGE);
+		if (overview) overview.classList.remove('hidden');
+		if (subpageWrap) subpageWrap.classList.add('hidden');
+		if (nestedWrap) nestedWrap.classList.add('hidden');
+		updateBreadcrumb(null, null);
+		updateNav(null, null);
+		if (push) history.pushState({ sub: null, nested: null }, '', buildUrl());
+	};
+
+	const closeNav = function () { if (mobileNav) mobileNav.classList.add('hidden'); };
+
+	const init = function () {
+		$$('.cp-nav-link[data-overview]').forEach(function (el) { el.addEventListener('click', function (e) { e.preventDefault(); renderOverview(); closeNav(); }); });
+		$$('.cp-nav-link[data-subpage][data-nav="subpage"]').forEach(function (el) { el.addEventListener('click', function (e) { e.preventDefault(); renderSubpage(el.dataset.subpage, null); closeNav(); }); });
+		$$('.cp-nav-link[data-nested]').forEach(function (el) { el.addEventListener('click', function (e) { e.preventDefault(); renderSubpage(el.dataset.subpage, el.dataset.nested); closeNav(); }); });
+		if (mobileToggle) mobileToggle.addEventListener('click', function () { if (mobileNav) mobileNav.classList.toggle('hidden'); });
+		window.addEventListener('popstate', function (e) {
+			const s = e.state || parseUrl();
+			if (s.sub) renderSubpage(s.sub, s.nested, { push: false });
+			else renderOverview({ push: false });
+		});
+		const p = parseUrl();
+		if (p.sub) renderSubpage(p.sub, p.nested, { push: false });
+		else renderOverview({ push: false });
+	};
+
+	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+	else init();
+})();
+</script>
+{% endblock %}

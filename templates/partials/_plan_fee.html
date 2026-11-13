@@ -1,0 +1,45 @@
+{% comment %}
+Compact commerce-fee + penalty disclosure for a plan card.
+
+Shows the plan's commerce fee price ranges (minimum value to maximum value →
+fee, billing.CommerceFeeBand) and any activity penalties (ActivityPenalty)
+without adding a tall text block: a single mono line that expands, on click,
+into the ranges and penalties. Native <details> so there is no JS and the
+collapsed state costs one line. Money reads with the rupee sign (|inr).
+
+Context in:
+  plan   an annotated SubscriptionPlan (see billing.pricing.plan_cards):
+          .fee_band_list, .commerce_fee_from, .activity_list
+
+A plan with no activity penalties shows a visible "No minimum orders required"
+line instead, so the buyer knows there is no order quota to meet.
+{% endcomment %}{% load billing_money %}
+{% if plan.fee_band_list or plan.activity_list %}
+<details class="pal-plan__fee">
+  <summary>
+    <span>Commerce fee</span>
+    <span class="pal-plan__fee-val">
+      {% if plan.commerce_fee_from is not None %}From {{ plan.commerce_fee_from|inr }} / product sold{% else %}See details{% endif %}
+    </span>
+    <span class="pal-plan__fee-caret" aria-hidden="true">⌄</span>
+  </summary>
+  <div class="pal-plan__fee-body">
+    {% for b in plan.fee_band_list %}
+    <div class="pal-plan__fee-row">
+      <span>Selling price{% inr_range b.min_price b.max_price %}</span>
+      <span>{{ b.fee|inr }} / unit</span>
+    </div>
+    {% endfor %}
+    {% for a in plan.activity_list %}
+    <div class="pal-plan__fee-row pal-plan__fee-row--pen">
+      <span>Min {{ a.threshold_orders }} order{{ a.threshold_orders|pluralize }} / {{ a.window_days }} days</span>
+      <span>{{ a.reactivation_penalty|inr }} to reactivate</span>
+    </div>
+    {% endfor %}
+    <p class="pal-plan__fee-note">Charged only on delivered orders: each product sold at a price inside a range is charged that range's fee (coupons don't change it). GST extra.</p>
+  </div>
+</details>
+{% endif %}
+{% if not plan.activity_list %}
+<p class="pal-plan__nomin"><span class="pal-plan__nomin-ico" aria-hidden="true">✓</span> No minimum orders required</p>
+{% endif %}

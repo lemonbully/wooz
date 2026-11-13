@@ -8,25 +8,39 @@
     <div>
       <p class="pal-mono pal-mono--accent">Grow</p>
       <h1 class="app-head__title pal-mt-4">Discounts</h1>
-      <p class="app-head__lead">Coupon codes for campaigns, launches and win-backs — fixed or percentage.</p>
+      <p class="app-head__lead">Coupon codes for campaigns, launches and win-backs  fixed or percentage.</p>
     </div>
-    <div class="app-head__actions"><a href="{% url 'store:coupon_new' site.id %}" class="pal-btn">New discount <span class="pal-btn__arrow" aria-hidden="true">→</span></a></div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:instant_discounts' site.id %}" class="pal-btn pal-btn--ghost">Instant discount</a>
+      <a href="{% url 'store:coupon_new' site.id %}" class="pal-btn">New discount <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+    </div>
   </div>
 
   <div class="app-block">
     {% if coupons %}
       <div class="app-tablewrap">
         <table class="app-table">
-          <thead><tr><th>Code</th><th>Type</th><th class="app-table__num">Value</th><th class="app-table__num">Used</th><th>Window</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Discount</th><th>Type</th><th>Method</th><th class="app-table__num">Value</th><th class="app-table__num">Used</th><th>Window</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {% for c in coupons %}
               <tr>
-                <td><a href="{% url 'store:coupon_edit' site.id c.id %}" class="app-table__strong">{{ c.code }}</a></td>
-                <td>{{ c.get_discount_type_display }}</td>
-                <td class="app-table__num">{% if c.discount_type == 'percent' %}{{ c.value }}%{% else %}{{ site.currency }} {{ c.value }}{% endif %}</td>
+                <td><a href="{% url 'store:coupon_edit' site.id c.id %}" class="app-table__strong">{{ c.display_name }}</a></td>
+                <td>{{ c.get_discount_class_display }}</td>
+                <td class="app-sub">{{ c.get_method_display }}</td>
+                <td class="app-table__num">
+                  {% if c.discount_class == 'shipping' %}Free shipping
+                  {% elif c.discount_class == 'bxgy' %}Buy X get Y
+                  {% elif c.discount_type == 'percent' %}{{ c.value }}%
+                  {% else %}{{ site.currency }} {{ c.value }}{% endif %}
+                </td>
                 <td class="app-table__num">{{ c.times_used }}{% if c.usage_limit %}/{{ c.usage_limit }}{% endif %}</td>
-                <td class="app-sub">{{ c.starts_at|date:"d M"|default:"—" }} → {{ c.ends_at|date:"d M"|default:"—" }}</td>
-                <td>{% if c.active %}<span class="app-badge app-badge--ok">Active</span>{% else %}<span class="app-badge app-badge--muted">Off</span>{% endif %}</td>
+                <td class="app-sub">{{ c.starts_at|date:"d M"|default:"" }} → {{ c.ends_at|date:"d M"|default:"" }}</td>
+                <td>
+                  {% if not c.active %}<span class="app-badge app-badge--muted">Draft</span>
+                  {% elif c.is_expired %}<span class="app-badge app-badge--muted">Expired</span>
+                  {% elif c.is_scheduled %}<span class="app-badge">Scheduled</span>
+                  {% else %}<span class="app-badge app-badge--ok">Active</span>{% endif %}
+                </td>
                 <td class="app-table__actions">
                   <a href="{% url 'store:coupon_edit' site.id c.id %}" class="app-iconbtn">Edit</a>
                   <form method="post" action="{% url 'store:coupon_delete' site.id c.id %}" onsubmit="return confirm('Remove this discount?');">{% csrf_token %}<button class="app-iconbtn app-iconbtn--danger" type="submit">Delete</button></form>

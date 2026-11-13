@@ -1,0 +1,116 @@
+{% extends "web/_shell.html" %}
+
+{% comment %}
+Core page display  mirrors the storefront's structure: a sticky sidebar tree
+(the core page → its subpages → their child pages) beside the current node's
+content. Server-rendered, one real URL per node. Styled with the 
+marketing system (onewooz_design.md): squared, hairline-ruled, mono metadata,
+one accent.
+{% endcomment %}
+
+{% block title %}{% if seo.custom_title %}{{ seo.title }}{% else %}{{ page_title }} · OneWooz{% endif %}{% endblock %}
+
+{% block head %}{{ block.super }}
+<style nonce="{{ csp_nonce }}">
+  .cp { border-top: 1px solid var(--pal-line); }
+  .cp__grid { display: grid; grid-template-columns: 17rem 1fr; align-items: start; }
+  @media (max-width: 60rem) { .cp__grid { grid-template-columns: 1fr; } }
+
+  /* Sidebar tree */
+  .cp-side { border-right: 1px solid var(--pal-line); padding: 2rem 1.5rem 3rem; position: sticky; top: 4rem; }
+  @media (max-width: 60rem) { .cp-side { position: static; border-right: 0; border-bottom: 1px solid var(--pal-line); padding-bottom: 1.5rem; } }
+  .cp-side__label { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pal-faint); margin-bottom: 0.85rem; }
+  .cp-side__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.15rem; letter-spacing: -0.02em; color: var(--pal-ink); margin-bottom: 1.25rem; }
+  .cp-nav { display: flex; flex-direction: column; }
+  .cp-nav a { display: block; font-family: var(--pal-font-mono); font-size: 0.72rem; letter-spacing: 0.02em; line-height: 1.35;
+    color: var(--pal-muted); text-decoration: none; padding: 0.5rem 0.65rem; border-left: 2px solid transparent;
+    transition: color 140ms ease, background 140ms ease, border-color 140ms ease; }
+  .cp-nav a:hover { color: var(--pal-ink); background: var(--pal-paper-2); }
+  .cp-nav a.is-active { color: var(--pal-ink); border-left-color: var(--pal-accent); background: var(--pal-paper-2); }
+  .cp-nav__nested { margin: 0.15rem 0 0.35rem 0.6rem; border-left: 1px solid var(--pal-line); padding-left: 0.5rem; display: flex; flex-direction: column; }
+  .cp-nav__nested a { font-size: 0.68rem; color: var(--pal-faint); }
+  .cp-nav__nested a:hover, .cp-nav__nested a.is-active { color: var(--pal-ink); }
+  .cp-side__all { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 2rem; padding-top: 1.25rem;
+    border-top: 1px solid var(--pal-line); font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--pal-faint); text-decoration: none; }
+  .cp-side__all:hover { color: var(--pal-accent); }
+
+  /* Main content */
+  .cp-main { padding: 2.25rem 0 3.5rem; min-width: 0; }
+  @media (min-width: 60.01rem) { .cp-main { padding-left: 2.5rem; } }
+  .cp-main__crumb { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 1.25rem; }
+  .cp-main__crumb a { color: var(--pal-muted); text-decoration: none; }
+  .cp-main__crumb a:hover { color: var(--pal-ink); }
+  .cp-main__crumb .sep { opacity: 0.4; margin: 0 0.4rem; }
+  .cp-main__crumb .cur { color: var(--pal-accent); }
+  .cp-main__title { font-family: var(--pal-font-display); font-weight: 500; letter-spacing: -0.03em; line-height: 1.05;
+    font-size: clamp(2rem, 1.4rem + 2.4vw, 3rem); color: var(--pal-ink); padding-bottom: 1.5rem; margin-bottom: 1.75rem; border-bottom: 1px solid var(--pal-line); }
+
+  .cp-empty { color: var(--pal-muted); font-size: 0.98rem; }
+
+  .cp-children { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--pal-line); }
+  .cp-children__label { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pal-faint); margin-bottom: 1rem; }
+  .cp-children__grid { display: grid; gap: 1px; background: var(--pal-line); border: 1px solid var(--pal-line); }
+  .cp-children__grid a { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: var(--pal-paper);
+    padding: 1rem 1.15rem; text-decoration: none; color: var(--pal-ink); font-family: var(--pal-font-display); font-weight: 500; font-size: 1.02rem;
+    transition: background 140ms ease, color 140ms ease; }
+  .cp-children__grid a:hover { background: var(--pal-paper-2); color: var(--pal-accent); }
+  .cp-children__grid a .arw { font-family: var(--pal-font-mono); color: var(--pal-accent); }
+</style>
+{% endblock %}
+
+{% block main %}
+<section class="cp">
+  <div class="pal-container cp__grid">
+
+    <aside class="cp-side">
+      <p class="cp-side__label">Contents</p>
+      <p class="cp-side__title">{{ root.title }}</p>
+      <nav class="cp-nav" aria-label="Page navigation">
+        <a href="{{ root.get_absolute_url }}"{% if node == root %} class="is-active" aria-current="page"{% endif %}>Overview</a>
+        {% for sp in subpages %}
+          <a href="{{ sp.get_absolute_url }}"{% if node == sp %} class="is-active" aria-current="page"{% elif sp == active_sub %} class="is-active"{% endif %}>{{ sp.title }}</a>
+          {% if sp == active_sub and sp.children.all %}
+          <div class="cp-nav__nested">
+            {% for c in sp.children.all %}
+            <a href="{{ c.get_absolute_url }}"{% if node == c %} class="is-active" aria-current="page"{% endif %}>{{ c.title }}</a>
+            {% endfor %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </nav>
+      <a class="cp-side__all" href="{% url 'web:core_pages' %}">&larr; All pages</a>
+    </aside>
+
+    <main class="cp-main">
+      <nav class="cp-main__crumb" aria-label="Breadcrumb">
+        <a href="{% url 'web:home' %}">Home</a>
+        {% for c in crumbs %}
+          <span class="sep" aria-hidden="true">/</span>
+          {% if forloop.last %}<span class="cur" aria-current="page">{{ c.title }}</span>{% else %}<a href="{{ c.url }}">{{ c.title }}</a>{% endif %}
+        {% endfor %}
+      </nav>
+
+      <h1 class="cp-main__title">{{ node.title }}</h1>
+
+      {% if node.content %}
+      <div class="pal-prose">{{ node.content|safe }}</div>
+      {% else %}
+      <p class="cp-empty">Choose a page from the list to start reading.</p>
+      {% endif %}
+
+      {% if children %}
+      <div class="cp-children">
+        <p class="cp-children__label">In this section</p>
+        <div class="cp-children__grid">
+          {% for c in children %}
+          <a href="{{ c.get_absolute_url }}"><span>{{ c.title }}</span><span class="arw" aria-hidden="true">&rarr;</span></a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </main>
+
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,15 @@
+New OneWooz subscription purchased
+
+A subscription has just been paid for and activated.
+
+  Customer email : {{ customer_email }}{% if customer_name %}
+  Customer name  : {{ customer_name }}{% endif %}{% if customer_phone %}
+  Customer phone : {{ customer_phone }}{% endif %}
+  Plan           : {{ plan_name }}
+  Duration       : {{ duration_label }}
+  Amount paid    : {% if is_free %}Free (no charge){% else %}{{ amount_label }}{% endif %}
+  Order number   : {{ order_number }}{% if paid_at %}
+  Paid at        : {{ paid_at }}{% endif %}{% if period_start and period_end %}
+  Active period  : {{ period_start }} to {{ period_end }}{% endif %}
+
+ {{ brand }}

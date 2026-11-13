@@ -1,7 +1,6 @@
 {% extends "web/_shell.html" %}
 {% load onewooz %}
 
-{% block title %}Platform · OneWooz{% endblock %}
 
 {% block main %}
 
@@ -25,7 +24,7 @@
   <div class="pal-container">
     <div class="pal-marker" data-reveal><span class="pal-marker__num">01</span><span>Storefront</span></div>
     <div class="pal-grid pal-grid--3 pal-mt-12" data-reveal>
-      <div class="pal-cell"><div class="pal-cell__idx">01</div><div class="pal-cell__title">Industry layouts</div><div class="pal-cell__desc">A structure chosen for your trade, not a blank canvas — apparel, food, industrial supply and home each get a different build.</div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">01</div><div class="pal-cell__title">Industry layouts</div><div class="pal-cell__desc">A structure chosen for your trade, not a blank canvas  apparel, food, industrial supply and home each get a different build.</div></div>
       <div class="pal-cell"><div class="pal-cell__idx">02</div><div class="pal-cell__title">Real copy</div><div class="pal-cell__desc">Product and page text written to fit your business. Nothing is left saying “insert text here”.</div></div>
       <div class="pal-cell"><div class="pal-cell__idx">03</div><div class="pal-cell__title">Policy pages</div><div class="pal-cell__desc">Shipping, returns, privacy and terms drafted and linked, ready to publish or edit.</div></div>
       <div class="pal-cell"><div class="pal-cell__idx">04</div><div class="pal-cell__title">Media handling</div><div class="pal-cell__desc">Images optimised, cropped and served responsively, so the store stays fast on any connection.</div></div>
@@ -36,27 +35,42 @@
 </section>
 
 {# --------------------------------------------------------- Commerce core #}
-<section class="pal-section pal-ruled">
+<section class="pal-section pal-section--tight-bottom pal-ruled">
   <div class="pal-container">
     <div class="pal-marker" data-reveal><span class="pal-marker__num">02</span><span>Commerce core</span></div>
     <div class="pal-matrix pal-mt-12" data-reveal>
       <div class="pal-matrix__row"><div class="pal-matrix__idx">01</div><div class="pal-matrix__body"><div class="pal-matrix__title">Catalogue &amp; stock</div><div class="pal-matrix__desc">Variants, options, images, HSN and GST fields, low-stock warnings, and counts that decrement on every sale across every channel.</div></div></div>
-      <div class="pal-matrix__row"><div class="pal-matrix__idx">02</div><div class="pal-matrix__body"><div class="pal-matrix__title">Checkout &amp; payments</div><div class="pal-matrix__desc">Cards, UPI, cash on delivery and part-payment. Discount codes and store credit. Settlement to your account — we never touch the money.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">02</div><div class="pal-matrix__body"><div class="pal-matrix__title">Checkout &amp; payments</div><div class="pal-matrix__desc">Cards, UPI, cash on delivery and part-payment. Discount codes and store credit. Settlement to your account  we never touch the money.</div></div></div>
       <div class="pal-matrix__row"><div class="pal-matrix__idx">03</div><div class="pal-matrix__body"><div class="pal-matrix__title">Shipping &amp; logistics</div><div class="pal-matrix__desc">Live courier rates at checkout, pincode serviceability, label generation in the correct format, and tracking pushed to the buyer automatically.</div></div></div>
       <div class="pal-matrix__row"><div class="pal-matrix__idx">04</div><div class="pal-matrix__body"><div class="pal-matrix__title">Orders &amp; returns</div><div class="pal-matrix__desc">A single queue for fulfilment, refunds, replacements and warranty requests, with the customer kept informed at each step.</div></div></div>
-      <div class="pal-matrix__row"><div class="pal-matrix__idx">05</div><div class="pal-matrix__body"><div class="pal-matrix__title">Analytics</div><div class="pal-matrix__desc">Where visitors come from, what they view, where they drop off and what actually sells — in plain answers, not a dashboard needing training.</div></div></div>
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">05</div><div class="pal-matrix__body"><div class="pal-matrix__title">Analytics</div><div class="pal-matrix__desc">Where visitors come from, what they view, where they drop off and what actually sells  in plain answers, not a dashboard needing training.</div></div></div>
     </div>
+  </div>
+</section>
+
+{# ------------------------------------------------------ Email marketing #}
+<section class="pal-section pal-section--tight-top pal-ruled" id="email-marketing">
+  <div class="pal-container">
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">03</span><span>Email marketing</span></div>
+    <div class="ow-emhead" data-reveal>
+      <h2 class="ow-emhead__title">Your customers, one email away.</h2>
+      <p class="ow-emhead__lead">
+        Every store has its own email marketing, in the same dashboard as orders and
+        stock. Your customer list is already there, so a campaign is four steps.
+      </p>
+    </div>
+    {% include "web/_email_flow.html" %}
   </div>
 </section>
 
 {# ------------------------------------------------------- Infrastructure #}
 <section class="pal-section pal-ruled pal-section--ink">
   <div class="pal-container">
-    <div class="pal-marker" data-reveal><span class="pal-marker__num">03</span><span>Infrastructure</span></div>
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">04</span><span>Infrastructure</span></div>
     <h2 class="pal-h2 pal-mt-6" style="max-width:20ch;" data-reveal>The machinery under the one-click promise.</h2>
     <div class="pal-grid pal-grid--3 pal-mt-12" data-reveal>
       <div class="pal-cell"><div class="pal-cell__idx">A</div><div class="pal-cell__title">Fast by default</div><div class="pal-cell__desc">Server-rendered pages on a global edge, so stores load quickly wherever buyers are.</div></div>
-      <div class="pal-cell"><div class="pal-cell__idx">B</div><div class="pal-cell__title">Secure by design</div><div class="pal-cell__desc">Encrypted credentials, non-enumerable identifiers and tenant isolation baked in — not bolted on.</div></div>
+      <div class="pal-cell"><div class="pal-cell__idx">B</div><div class="pal-cell__title">Secure by design</div><div class="pal-cell__desc">Encrypted credentials, non-enumerable identifiers and tenant isolation baked in  not bolted on.</div></div>
       <div class="pal-cell"><div class="pal-cell__idx">C</div><div class="pal-cell__title">HTTPS, handled</div><div class="pal-cell__desc">Certificates issued and renewed automatically for every store and custom domain, forever.</div></div>
       <div class="pal-cell"><div class="pal-cell__idx">D</div><div class="pal-cell__title">Always on</div><div class="pal-cell__desc">Monitored around the clock, with orders and payments processed while you sleep.</div></div>
       <div class="pal-cell"><div class="pal-cell__idx">E</div><div class="pal-cell__title">Your domain</div><div class="pal-cell__desc">Connect a domain you own; we walk the DNS and take over the certificate lifecycle.</div></div>
@@ -70,13 +84,13 @@
 
 {# ---------------------------------------------------------------- Reach #}
 {% comment %}
-An abstract logistics network — schematic, not a literal map. Dashed routes run
+An abstract logistics network  schematic, not a literal map. Dashed routes run
 between hubs with pulsing rings (SVG/CSS, no script). Speaks to nationwide
 fulfilment for both D2C parcels and B2B consignments.
 {% endcomment %}
 <section class="pal-section pal-ruled">
   <div class="pal-container">
-    <div class="pal-marker" data-reveal><span class="pal-marker__num">04</span><span>Reach</span></div>
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">05</span><span>Reach</span></div>
     <h2 class="pal-h2 pal-mt-6" style="max-width:20ch;" data-reveal>Wherever your buyers are, the order gets there.</h2>
 
     <div class="pal-map pal-mt-12" data-reveal>
@@ -98,7 +112,7 @@ fulfilment for both D2C parcels and B2B consignments.
         <path class="route" d="M110 220 Q560 250 900 300"/>
         <path class="route" d="M110 220 Q300 350 470 410"/>
 
-        {% comment %} Destinations — a few named, many left as dots to imply "everywhere". {% endcomment %}
+        {% comment %} Destinations  a few named, many left as dots to imply "everywhere". {% endcomment %}
         <g><circle class="hub-ring" cx="300" cy="110" r="6"/><circle class="hub" cx="300" cy="110" r="4"/><text x="300" y="94" text-anchor="middle">Delhi</text></g>
         <g><circle class="hub-ring" cx="380" cy="330" r="6"/><circle class="hub" cx="380" cy="330" r="4"/><text x="380" y="354" text-anchor="middle">Mumbai</text></g>
         <g><circle class="hub-ring" cx="520" cy="90" r="6"/><circle class="hub" cx="520" cy="90" r="4"/></g>
@@ -122,7 +136,7 @@ fulfilment for both D2C parcels and B2B consignments.
 {# -------------------------------------------------------------- CTA #}
 <section class="pal-section pal-ruled pal-blueprint">
   <div class="pal-container pal-cta">
-    <div class="pal-marker" data-reveal><span class="pal-marker__num">05</span><span>Deploy</span></div>
+    <div class="pal-marker" data-reveal><span class="pal-marker__num">06</span><span>Deploy</span></div>
     <h2 class="pal-display pal-cta__title pal-mt-6" style="font-size:clamp(2.4rem,1.2rem+5vw,4.5rem);" data-reveal>See it build your store.</h2>
     <p class="pal-lead pal-mt-6" data-reveal>Free to start, live in minutes, and nothing is lost if you change your mind.</p>
     <div class="pal-btn-row pal-mt-8" data-reveal>

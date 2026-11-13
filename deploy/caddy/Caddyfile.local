@@ -1,4 +1,4 @@
-# OneWooz edge — local docker-compose only.
+# OneWooz edge  local docker-compose only.
 #
 # Uses Caddy's internal CA (`tls internal`) instead of Let's Encrypt, because
 # ACME cannot validate *.localhost. Run `caddy trust` (or accept the warning)

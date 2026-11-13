@@ -1,0 +1,29 @@
+{% extends "custom_admin/_auth.html" %}
+
+{% block title %}Set a new password · OneWooz Admin{% endblock %}
+
+{% block card %}
+  <p class="owa-kicker">Account recovery</p>
+  <h1 class="owa-auth__h">Set a new password</h1>
+  <p class="owa-auth__p">Choose a strong password you don’t use anywhere else.</p>
+
+  {% if errors %}
+    <div class="owa-alert owa-alert--error" role="alert">
+      <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'custom_admin:reset' %}">
+    {% csrf_token %}
+    <input type="hidden" name="t" value="{{ token }}">
+    <label class="owa-field">
+      <span class="owa-field__label">New password</span>
+      <input class="owa-input" type="password" name="new_password" id="new_password" autocomplete="new-password" required autofocus>
+    </label>
+    <label class="owa-field">
+      <span class="owa-field__label">Confirm new password</span>
+      <input class="owa-input" type="password" name="confirm_password" id="confirm_password" autocomplete="new-password" required>
+    </label>
+    <button type="submit" class="owa-btn owa-btn--accent owa-btn--block">Change password <span class="owa-btn__arw" aria-hidden="true">→</span></button>
+  </form>
+{% endblock %}

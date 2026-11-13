@@ -1,0 +1,15 @@
+{% comment %}Conversion funnel with step-to-step continuation. Expects `funnel`.{% endcomment %}
+<div class="an-funnel">
+  {% for f in funnel %}
+  <div class="an-funnel__row">
+    <div class="an-funnel__meta">
+      <span class="an-funnel__label">{{ f.label }}</span>
+      <span class="an-funnel__val">{{ f.value }}</span>
+    </div>
+    <div class="an-funnel__track"><span class="an-funnel__fill" style="width:{{ f.pct }}%"></span></div>
+    <div class="an-funnel__note">
+      {% if f.drop is not None %}<span class="an-funnel__cont">{{ f.step_pct }}% continued</span><span class="an-funnel__drop">−{{ f.drop }}%</span>{% else %}entry point{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>

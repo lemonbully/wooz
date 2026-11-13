@@ -1,4 +1,4 @@
-# OneWooz HA — Phase 3: task defs, ALB site cert, web/worker/beat services, autoscaling.
+# OneWooz HA  Phase 3: task defs, ALB site cert, web/worker/beat services, autoscaling.
 # Run AFTER Phase 2 instances have registered (registeredContainerInstancesCount >= 2)
 # and the onewooz.site ACM cert shows ISSUED.
 
@@ -24,7 +24,7 @@ aws elbv2 add-listener-certificates --region $R --listener-arn $l443.Trim() --ce
 Write-Host "  added; ALB now serves onewooz.com + *.onewooz.com + onewooz.site + *.onewooz.site"
 
 Write-Host "== Create services (capacity provider onewooz-cp) =="
-# web — behind the ALB target group
+# web  behind the ALB target group
 aws ecs create-service --region $R --cluster onewooz-prod --service-name web `
   --task-definition onewooz-web --desired-count 2 `
   --capacity-provider-strategy "capacityProvider=onewooz-cp,weight=1" `

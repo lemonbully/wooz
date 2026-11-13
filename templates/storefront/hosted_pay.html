@@ -1,0 +1,133 @@
+<!doctype html>
+{% comment %}
+  Hosted payment for a UGC-store order, served on the owner's own store domain
+  (storefront.hosted_pay). Opens the owner's Cashfree or Razorpay checkout for
+  the order; afterwards "done" confirms the payment and returns the shopper to
+  the UGC store. Self-contained: no theme chrome, so it works for
+  every store design.
+{% endcomment %}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Secure payment · {{ site.name }}</title>
+  <style nonce="{{ csp_nonce }}">
+    :root { --ink: #111114; --muted: #6b6b72; --line: #e4e4e0; --bg: #f6f6f3; --accent: #111114; --err: #b4232a; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--ink);
+      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .card { width: 100%; max-width: 420px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 28px 24px; text-align: center; }
+    .store { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+    h1 { font-size: 20px; margin: 0 0 18px; font-weight: 600; }
+    .amount { font-size: 30px; font-weight: 700; margin: 0; }
+    .sub { color: var(--muted); font-size: 13px; margin: 4px 0 22px; }
+    .btn { display: block; width: 100%; border: 0; border-radius: 999px; padding: 14px 18px; font: inherit; font-weight: 600;
+      background: var(--accent); color: #fff; cursor: pointer; text-decoration: none; }
+    .btn[disabled] { opacity: .55; cursor: wait; }
+    .link { display: inline-block; margin-top: 14px; color: var(--muted); font-size: 13px; }
+    .err { color: var(--err); font-size: 14px; margin: 0 0 16px; }
+    .lock { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; color: var(--muted); font-size: 12px; }
+    .lock svg { width: 14px; height: 14px; }
+  </style>
+  {% if gateway == 'cashfree' %}<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>{% endif %}
+  {% if gateway == 'razorpay' %}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{% endif %}
+</head>
+<body>
+  <main class="card">
+    <p class="store">{{ site.name }}</p>
+    <h1>Complete your payment</h1>
+    <p class="amount">&#8377;{{ amount }}</p>
+    <p class="sub">Your order is reserved. Pay securely to place it.</p>
+
+    <p class="err" id="hpError"{% if not error %} hidden{% endif %} role="alert">{{ error }}</p>
+
+    {% if gateway %}
+      <button type="button" class="btn" id="hpPay">Pay &#8377;{{ amount }}</button>
+    {% endif %}
+    {% if back_url %}<a class="link" href="{{ back_url }}">Back to checkout</a>{% endif %}
+
+    <p class="lock">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Payments are processed securely by {% if gateway == 'razorpay' %}Razorpay{% else %}Cashfree{% endif %}
+    </p>
+  </main>
+
+  {% if gateway %}
+  {% if razorpay %}{{ razorpay|json_script:"hp-razorpay" }}{% endif %}
+  <script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var GATEWAY = "{{ gateway|escapejs }}";
+    var SESSION = "{{ session_id|escapejs }}";
+    var MODE = "{{ mode|escapejs }}";
+    var DONE = "{{ done_url|escapejs }}";
+    var btn = document.getElementById("hpPay");
+    var errBox = document.getElementById("hpError");
+    var label = btn ? btn.textContent : "";
+
+    function showError(text) {
+      if (!errBox) return;
+      errBox.textContent = text || "";
+      errBox.hidden = !text;
+      if (btn) { btn.disabled = false; btn.textContent = label; }
+    }
+    function busy(text) { if (btn) { btn.disabled = true; btn.textContent = text; } showError(""); }
+    // Every outcome goes through "done", which confirms the real status with
+    // the gateway and sends the shopper back to the store (paid → their
+    // order; not paid → checkout with the cart intact).
+    function finish(query) { window.location.href = DONE + (query ? "?" + query : ""); }
+
+    function openCashfree() {
+      if (typeof Cashfree !== "function") { showError("Couldn't load the payment window. Please refresh this page."); return; }
+      busy("Opening payment…");
+      var cf = Cashfree({ mode: MODE === "production" ? "production" : "sandbox" });
+      cf.checkout({ paymentSessionId: SESSION, redirectTarget: "_modal" }).then(function (result) {
+        result = result || {};
+        if (result.redirect) return; // Cashfree is taking the page to the bank/UPI step; it returns to DONE.
+        busy("Checking payment…");
+        finish("");
+      }).catch(function () {
+        showError("Couldn't open the payment window. Please try again.");
+      });
+    }
+
+    function openRazorpay() {
+      if (typeof Razorpay !== "function") { showError("Couldn't load the payment window. Please refresh this page."); return; }
+      var p = {};
+      try { p = JSON.parse((document.getElementById("hp-razorpay") || {}).textContent || "{}"); } catch (e) { p = {}; }
+      busy("Opening payment…");
+      var rzp = new Razorpay({
+        key: p.key, order_id: p.order_id, amount: p.amount, currency: p.currency, name: p.name, prefill: p.prefill || {},
+        handler: function (resp) {
+          busy("Confirming payment…");
+          // The signature lets "done" verify the payment with the store's key.
+          finish(new URLSearchParams({
+            razorpay_payment_id: resp.razorpay_payment_id || "",
+            razorpay_signature: resp.razorpay_signature || ""
+          }).toString());
+        },
+        modal: {
+          ondismiss: function () {
+            // Closed without paying (or paid and closed early): "done" checks.
+            busy("Checking payment…");
+            finish("");
+          }
+        }
+      });
+      rzp.on("payment.failed", function () {
+        showError("The payment didn't go through. You can try again.");
+      });
+      rzp.open();
+    }
+
+    function open() { if (GATEWAY === "razorpay") openRazorpay(); else openCashfree(); }
+
+    if (btn) btn.addEventListener("click", open);
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", open);
+    else open();
+  })();
+  </script>
+  {% endif %}
+</body>
+</html>

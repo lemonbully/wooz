@@ -22,7 +22,7 @@
 
       <!-- Main copy -->
       <div class="md:flex-1 order-1 md:order-2 max-w-[680px] mx-auto md:mx-0 text-center md:text-left">
-        <h2 class="text-4xl md:text-5xl uppercase font-normal tracking-tight text-gray-900 mb-4 text-center md:text-left">ABOUT US.</h2>
+        <h1 class="text-4xl md:text-5xl uppercase font-normal tracking-tight text-gray-900 mb-4 text-center md:text-left">About {{ website.content.site_name|default:website.name }}.</h1>
         <div id="about-overview" class="max-w-[680px] mx-auto md:mx-0">
           <p class="text-gray-600 text-sm sm:text-base leading-relaxed mb-4 px-4 md:px-0 text-justify md:text-left">
             {{ page.content.editorial_intro_1|default:"Studio Marani, communication agency based in Milan, has been created in 2011 from Maurizio Marani after his long term experience with the uberfamous McCann Erickson. Many of his clients, like L'Espresso Group and Radio Deejay, will follow him in this new adventure and many others such as Radio Capital." }}
@@ -35,18 +35,32 @@
     </div>
   </div>
 
-  <!-- Wide image aligned with content container -->
-  <div class="mt-10 sm:mt-12 lg:mt-14" id="about-team">
-    <figure class="w-full overflow-hidden rounded-none shadow-none">
-      <img 
-        src="{{ page.content.editorial_banner_image|default:'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2069&auto=format&fit=crop' }}" 
-        alt="Creative team working from above" 
-        class="w-full h-auto max-h-[400px] object-cover"
-        srcset="{{ page.content.editorial_banner_image|default:'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2069&auto=format&fit=crop' }}"
+  <!-- Banner: on phones it sits in the content container as a 16:9 frame; on
+       desktop it runs the full width of the page in a fixed 400px-tall frame.
+       Either way the image fills the frame, centre-cropped, so an uploaded
+       banner always shows a predictable crop. The editor's About-page preview
+       uses the same 400px height. -->
+  <style nonce="{{ csp_nonce }}">
+    .ab-banner { margin-top: 2.5rem; }
+    .ab-banner__frame { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #f3f4f6; margin: 0; }
+    .ab-banner__frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+    @media (min-width: 768px) {
+      /* Full width: drop the container's max-width and side padding. */
+      .ab-banner.ab-banner { margin-top: 3.5rem; max-width: none; width: 100%; padding-left: 0; padding-right: 0; }
+      .ab-banner__frame { aspect-ratio: auto; height: 400px; }
+    }
+  </style>
+  {% if not page.content.editorial_banner_image_removed %}
+  <div class="ab-banner container mx-auto px-4 sm:px-6 lg:px-8" id="about-team">
+    <figure class="ab-banner__frame">
+      <img
+        src="{{ page.content.editorial_banner_image|default:'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2069&auto=format&fit=crop' }}"
+        alt="{{ website.content.site_name|default:website.name }}"
+        decoding="async"
       />
     </figure>
   </div>
-  </div>
+  {% endif %}
 </section>
 
 <!-- Coworking Showcase Section (two blocks) -->
@@ -55,6 +69,7 @@
     <!-- Block 1: Image left, copy right -->
     <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
       <!-- Left: Image card -->
+      {% if not page.content.cowork_block1_image_removed %}
       <div class="order-2 md:order-1 p-4 md:p-0">
         <div class="rounded-2xl overflow-hidden shadow-md">
           <img 
@@ -65,6 +80,7 @@
           />
         </div>
       </div>
+      {% endif %}
 
       <!-- Right: Text content -->
       <div class="order-1 md:order-2 text-center md:text-left">
@@ -98,65 +114,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Block 2: Copy left, image right with testimonial card -->
-    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center mt-16">
-      <!-- Left: Copy -->
-      <div class="order-2 md:order-1 text-center md:text-left">
-        <h3 class="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-gray-900 leading-[1.2] mb-4">
-          {{ page.content.cowork_block2_title|default:"We're trusted by the most important teams" }}
-        </h3>
-        <p class="text-gray-600 text-sm md:text-base leading-relaxed mb-6 max-w-xl mx-auto md:mx-0">
-          {{ page.content.cowork_block2_desc|default:'Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip exea commodo consequat aute irure dolor in reprehenderit in voluptate velit.' }}
-        </p>
-
-        <!-- Tag pills -->
-        <div class="flex flex-wrap gap-3 mb-6 justify-center md:justify-start">
-          {% if page.content.cowork_block2_tags %}
-            {% for tag in page.content.cowork_block2_tags %}
-            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-xs uppercase tracking-[0.25em]">
-              <span class="w-2 h-2 rounded-full bg-gray-400"></span>{{ tag }}
-            </span>
-            {% endfor %}
-          {% else %}
-            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-xs uppercase tracking-[0.25em]"><span class="w-2 h-2 rounded-full bg-gray-400"></span>agency</span>
-            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-xs uppercase tracking-[0.25em]"><span class="w-2 h-2 rounded-full bg-gray-400"></span>application</span>
-            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-xs uppercase tracking-[0.25em]"><span class="w-2 h-2 rounded-full bg-gray-400"></span>business</span>
-            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-xs uppercase tracking-[0.25em]"><span class="w-2 h-2 rounded-full bg-gray-400"></span>company</span>
-            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-xs uppercase tracking-[0.25em]"><span class="w-2 h-2 rounded-full bg-gray-400"></span>startup</span>
-            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-xs uppercase tracking-[0.25em]"><span class="w-2 h-2 rounded-full bg-gray-400"></span>venture</span>
-          {% endif %}
-        </div>
-        <a href="{{ website_base }}products" class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-black text-white hover:bg-gray-900 transition text-xs md:text-sm uppercase tracking-[0.25em]">Shop Now</a>
-      </div>
-
-      <!-- Right: Image with overlay card -->
-      <div class="order-1 md:order-2 p-4 md:p-0">
-        <div class="relative rounded-2xl overflow-hidden shadow-md pb-12">
-          <img 
-            src="{{ page.content.cowork_block2_image|default:'https://images.unsplash.com/photo-1607746882042-944635dfe10e?q=80&w=2070&auto=format&fit=crop' }}" 
-            alt="Happy customer in workspace" 
-            class="w-full h-full object-cover"
-            srcset="{{ page.content.cowork_block2_image|default:'https://images.unsplash.com/photo-1607746882042-944635dfe10e?q=80&w=2070&auto=format&fit=crop' }}"
-          />
-
-          <!-- Testimonial bubble -->
-          <div class="absolute left-5 right-5 bottom-0 sm:left-auto sm:w-4/5 sm:right-5 bg-white rounded-2xl shadow-xl p-5">
-            {# NOTE: website.content/page.content are dict-like; getattribute() won't read dict keys. #}
-            {% with title_p=page.content|dict_get:"cowork_block2_quote_title" title_w=website.content|dict_get:"cowork_block2_quote_title" %}
-            <p class="text-gray-900 font-medium mb-1">“{{ title_p|default:title_w|default:'Our entire team loved the offices' }}”</p>
-            {% endwith %}
-            {% with quote_p=page.content|dict_get:"cowork_block2_quote" quote_w=website.content|dict_get:"cowork_block2_quote" %}
-            {% if quote_p or quote_w %}
-            <p class="text-sm text-gray-600">{{ quote_p|default:quote_w }}</p>
-            {% else %}
-            <p class="text-sm text-gray-600">No content available.</p>
-            {% endif %}
-            {% endwith %}
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </section>
 
@@ -165,19 +122,7 @@
 <!-- Australian Lifestyle Brand Section -->
 <section class="py-16 bg-white max-w-7xl mx-auto">
   <div class="container mx-auto px-4">
-    <div class="flex flex-col items-center justify-center text-center mb-12">
-      <h2 class="text-2xl font-normal uppercase tracking-widest text-gray-800">
-        {{ page.content.aus_brand_heading|default:"WE ARE AN AUSTRALIAN LIFESTYLE" }}
-      </h2>
-      <h3 class="text-2xl font-normal uppercase tracking-widest text-gray-800 mb-6">
-        {{ page.content.aus_brand_subheading|default:"BRAND" }}
-      </h3>
-      <p class="max-w-3xl text-gray-700 text-center">
-        {{ page.content.aus_brand_description|default:"We started Auguste with a clear vision to transcend trends, and instead design future vintage pieces that would be loved for seasons to come." }}
-      </p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mt-16 items-center">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
       <!-- Left Side Text Content -->
       <div class="flex flex-col justify-center">
         <div class="mb-8 text-center md:text-left">
@@ -196,24 +141,24 @@
       <!-- Right Side Image Collage - Redesigned for proper positioning -->
       <div class="relative h-[400px] md:h-[450px] lg:h-[500px] mx-4 md:mx-0">
         <!-- Main Image (Person/Portrait) -->
-        <div class="absolute right-0 top-0 w-3/4 h-full overflow-hidden rounded-lg shadow-[0_0_5px_rgba(0,0,0,0.1)]">
+        {% if not page.content.aus_brand_main_image_removed %}<div class="absolute right-0 top-0 w-3/4 h-full overflow-hidden rounded-lg shadow-[0_0_5px_rgba(0,0,0,0.1)]">
           <img 
             src="{{ page.content.aus_brand_main_image|default:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=776&q=80' }}" 
             alt="Australian Brand" 
             class="w-full h-full object-cover object-center"
             srcset="{{ page.content.aus_brand_main_image|default:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=776&q=80' }}"
           />
-        </div>
+        </div>{% endif %}
         
         <!-- Secondary Image (Nature/Waterfall) -->
-        <div class="absolute left-0 bottom-1/4 w-5/12 aspect-square overflow-hidden rounded-lg shadow-2xl z-20">
+        {% if not page.content.aus_brand_secondary_image_removed %}<div class="absolute left-0 bottom-1/4 w-5/12 aspect-square overflow-hidden rounded-lg shadow-2xl z-20">
           <img 
             src="{{ page.content.aus_brand_secondary_image|default:'https://images.unsplash.com/photo-1522748906645-95d8adfd52c7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80' }}" 
             alt="Nature" 
             class="w-full h-full object-cover"
             srcset="{{ page.content.aus_brand_secondary_image|default:'https://images.unsplash.com/photo-1522748906645-95d8adfd52c7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80' }}"
           />
-        </div>
+        </div>{% endif %}
       </div>
     </div>
   </div>

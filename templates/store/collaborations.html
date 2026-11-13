@@ -1,41 +1,288 @@
 {% extends "store/_shell.html" %}
+{% load static %}
 {% block title %}{{ site.name }} · Collaborations{% endblock %}
 {% block crumb %}Collaborations{% endblock %}
 
 {% block main %}
-<div class="app-page">
-  <div class="app-head">
-    <div>
-      <p class="pal-mono pal-mono--accent">Grow</p>
-      <h1 class="app-head__title pal-mt-4">Collaborations</h1>
-      <p class="app-head__lead">Creators and affiliates who promote your store and earn commission on the orders they bring.</p>
+<div class="app-page" data-store-id="{{ site.id }}">
+
+  {# ── Hero ──────────────────────────────────────────────────────────────── #}
+  <div class="collab-hero">
+    <div class="collab-hero__copy">
+      <span class="collab-hero__chip">Collaborations Suite</span>
+      <h1 class="collab-hero__title">Collaborations for {{ site.name }}</h1>
+      <p class="collab-hero__lead">Create on-brand referral portals in seconds. Craft curated product assignments, automate referral contracts, and keep track of verified creators from one workspace.</p>
+      <p class="collab-hero__note">🔒 Secure onboarding with OTP &amp; expiring smart links hosted on {{ referral_root_domain }}</p>
     </div>
-    <div class="app-head__actions"><a href="{% url 'store:collaboration_new' site.id %}" class="pal-btn">Invite collaborator <span class="pal-btn__arrow" aria-hidden="true">→</span></a></div>
+    <div class="collab-hero__stats">
+      <div class="collab-stat"><span class="collab-stat__n">{{ stats.partners }}</span><span class="collab-stat__k">Partners</span></div>
+      <div class="collab-stat"><span class="collab-stat__n">{{ stats.verified }}</span><span class="collab-stat__k">Verified</span></div>
+      <div class="collab-stat"><span class="collab-stat__n">{{ stats.awaiting }}</span><span class="collab-stat__k">Awaiting</span></div>
+    </div>
   </div>
 
-  <div class="app-block">
-    {% if collaborations %}
+  {# ── Payout requests raised by creators from their myUGCstore dashboard ── #}
+  {% if pending_payouts or recent_payouts %}
+  <div class="app-card" id="payout-requests" style="margin-bottom:1.25rem;">
+    <div class="app-card__head">
+      <h2 class="app-card__title">Payout requests{% if pending_payouts %} <span class="app-badge app-badge--warn">{{ pending_payouts|length }} pending</span>{% endif %}</h2>
+    </div>
+    <div class="app-card__body">
+      <p class="app-sub" style="margin:0 0 0.75rem;">Pay the creator outside OneWooz (bank transfer or UPI), then mark the request paid. Their balance updates and they get an email.</p>
       <div class="app-tablewrap">
         <table class="app-table">
-          <thead><tr><th>Collaborator</th><th>Handle</th><th>Commission</th><th class="app-table__num">Orders</th><th class="app-table__num">Earned</th><th class="app-table__num">Owed</th><th>Status</th></tr></thead>
+          <thead><tr><th>Creator</th><th>Requested</th><th class="app-table__num">Amount</th><th class="app-table__num">Outstanding</th><th>Status</th><th class="app-table__actions"></th></tr></thead>
           <tbody>
-            {% for c in collaborations %}
+            {% for p in pending_payouts %}
               <tr>
-                <td class="app-table__strong">{{ c.name }}<div class="app-sub">{{ c.email }}</div></td>
-                <td class="app-table__id">@{{ c.handle }}</td>
-                <td>{% if c.commission_type == 'percent' %}{{ c.commission_value }}%{% else %}{{ site.currency }} {{ c.commission_value }}/order{% endif %}</td>
-                <td class="app-table__num">{{ c.total_orders }}</td>
-                <td class="app-table__num">{{ site.currency }} {{ c.total_earned }}</td>
-                <td class="app-table__num">{{ site.currency }} {{ c.outstanding }}</td>
-                <td><span class="app-badge app-badge--{{ c.status }}">{{ c.get_status_display }}</span></td>
+                <td><span class="app-table__strong">{{ p.collaboration.name }}</span><div class="app-sub">{{ p.collaboration.email }}</div>{% if p.note %}<div class="app-sub">“{{ p.note }}”</div>{% endif %}</td>
+                <td class="app-sub">{{ p.created_at|date:"d M Y, H:i" }}</td>
+                <td class="app-table__num app-table__strong">₹{{ p.amount|floatformat:2 }}</td>
+                <td class="app-table__num">₹{{ p.collaboration.outstanding|floatformat:2 }}</td>
+                <td><span class="app-badge app-badge--warn">Pending</span></td>
+                <td class="app-table__actions">
+                  <form method="post" action="{% url 'store:collaboration_payout_request_resolve' site.id p.id %}" class="ord-inline" data-confirm="Mark ₹{{ p.amount|floatformat:2 }} as paid to {{ p.collaboration.name }}? They will be emailed.">
+                    {% csrf_token %}
+                    <button type="submit" name="decision" value="paid" class="pal-btn pal-btn--sm">Mark paid</button>
+                  </form>
+                  <form method="post" action="{% url 'store:collaboration_payout_request_resolve' site.id p.id %}" class="ord-inline" data-confirm="Decline this payout request?">
+                    {% csrf_token %}
+                    <button type="submit" name="decision" value="cancelled" class="pal-btn pal-btn--ghost pal-btn--sm">Decline</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            {% for p in recent_payouts %}
+              <tr>
+                <td><span class="app-table__strong">{{ p.collaboration.name }}</span><div class="app-sub">{{ p.collaboration.email }}</div></td>
+                <td class="app-sub">{{ p.created_at|date:"d M Y, H:i" }}</td>
+                <td class="app-table__num">₹{{ p.amount|floatformat:2 }}</td>
+                <td class="app-table__num">₹{{ p.collaboration.outstanding|floatformat:2 }}</td>
+                <td>{% if p.status == 'paid' %}<span class="app-badge app-badge--ok">Paid{% if p.paid_at %} {{ p.paid_at|date:"d M" }}{% endif %}</span>{% else %}<span class="app-badge app-badge--muted">{{ p.get_status_display }}</span>{% endif %}</td>
+                <td></td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    {% else %}
-      <div class="app-empty"><h2 class="app-empty__title">No collaborators yet</h2><p class="app-empty__text">Invite a creator and share a referral handle to start driving attributed sales.</p><div class="app-empty__actions"><a href="{% url 'store:collaboration_new' site.id %}" class="pal-btn">Invite collaborator</a></div></div>
-    {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="collab-grid">
+    {# ── Add Collaboration ─────────────────────────────────────────────────── #}
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Add Collaboration</h2></div>
+      <form method="post" action="{% url 'store:collaborations' site.id %}" class="app-card__body collab-form">
+        {% csrf_token %}
+        <label class="pal-field" style="margin:0;">
+          <span class="pal-field__label">Email ID <span class="app-req">*</span></span>
+          <input type="email" name="email" required class="pal-input" placeholder="influencer@brand.com">
+        </label>
+        <label class="pal-field">
+          <span class="pal-field__label">Mobile number</span>
+          <input type="tel" name="mobile_number" class="pal-input" placeholder="+91 98765 43210">
+        </label>
+        <label class="pal-field">
+          <span class="pal-field__label">Referral portal subdomain <span class="app-req">*</span></span>
+          <span class="collab-subdomain">
+            <input type="text" name="subdomain_prefix" pattern="[A-Za-z0-9-]+" placeholder="creator-hub" class="pal-input">
+            <span class="collab-subdomain__suffix">.{{ referral_root_domain }}</span>
+          </span>
+        </label>
+
+        <div class="collab-scope">
+          <div class="collab-scope__head">
+            <span class="pal-field__label" style="margin:0;">Product access</span>
+            <label class="app-check"><input type="checkbox" name="assign_all_products" value="1" data-scope-all="products" checked><span class="app-check__label">All products</span></label>
+          </div>
+          <div class="collab-scope__list" data-scope-list="products" hidden>
+            {% for p in products_all %}
+              <label class="collab-scope__opt"><input type="checkbox" name="products" value="{{ p.id }}">{{ p.title }}</label>
+            {% empty %}<p class="app-dlg__hint">No products yet.</p>{% endfor %}
+          </div>
+        </div>
+
+        <div class="collab-scope">
+          <div class="collab-scope__head">
+            <span class="pal-field__label" style="margin:0;">Category focus</span>
+            <label class="app-check"><input type="checkbox" name="assign_all_categories" value="1" data-scope-all="categories" checked><span class="app-check__label">All categories</span></label>
+          </div>
+          <div class="collab-scope__list" data-scope-list="categories" hidden>
+            {% for c in categories_all %}
+              <label class="collab-scope__opt"><input type="checkbox" name="categories" value="{{ c.id }}">{{ c.name }}</label>
+            {% empty %}<p class="app-dlg__hint">No categories yet.</p>{% endfor %}
+          </div>
+        </div>
+
+        <div class="collab-comm">
+          <span class="pal-field__label" style="margin:0;">Commission structure</span>
+          <div class="collab-comm__radios">
+            <label class="collab-radio"><input type="radio" name="commission_type" value="fixed" checked> ₹ per sale</label>
+            <label class="collab-radio"><input type="radio" name="commission_type" value="percent"> % per sale</label>
+          </div>
+          <input type="number" name="commission_value" min="0" step="0.01" required class="pal-input" placeholder="Commission amount">
+        </div>
+
+        <div class="collab-form__foot">
+          <p class="app-dlg__hint">Invitation includes OTP verification and expires in 48 hours for security.</p>
+          <button type="submit" class="pal-btn">✈ Send Invite</button>
+        </div>
+      </form>
+    </div>
+
+    {# ── Collaborations list ───────────────────────────────────────────────── #}
+    <div class="app-card">
+      <div class="app-card__head">
+        <h2 class="app-card__title">Collaborations</h2>
+        <div class="collab-legend">
+          <span class="app-badge app-badge--active">Verified</span>
+          <span class="app-badge app-badge--invited">Invited</span>
+          <span class="app-badge app-badge--danger">Expired</span>
+        </div>
+      </div>
+      <div class="app-card__body">
+        <form method="get" class="collab-filters">
+          <div class="app-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="search" name="ref_q" value="{{ ref_q }}" placeholder="Search by name or email">
+          </div>
+          <div class="collab-filters__row">
+            <label class="pal-field" style="margin:0;"><span class="pal-field__label">Status</span>
+              <select name="ref_status" class="pal-select">
+                <option value="">All</option>
+                <option value="verified" {% if ref_status == 'verified' %}selected{% endif %}>Verified</option>
+                <option value="invited" {% if ref_status == 'invited' %}selected{% endif %}>Invited</option>
+                <option value="expired" {% if ref_status == 'expired' %}selected{% endif %}>Expired</option>
+                <option value="suspended" {% if ref_status == 'suspended' %}selected{% endif %}>Suspended</option>
+              </select>
+            </label>
+            <label class="pal-field" style="margin:0;"><span class="pal-field__label">Sort</span>
+              <select name="ref_sort" class="pal-select">
+                <option value="recent" {% if ref_sort == 'recent' %}selected{% endif %}>Most recent</option>
+                <option value="earnings" {% if ref_sort == 'earnings' %}selected{% endif %}>Highest earnings</option>
+                <option value="pending_payout" {% if ref_sort == 'pending_payout' %}selected{% endif %}>Pending payout</option>
+              </select>
+            </label>
+          </div>
+          <div class="collab-filters__row">
+            <label class="pal-field" style="margin:0;"><span class="pal-field__label">Min orders</span><input type="number" name="ref_min_orders" min="0" value="{{ ref_min_orders }}" class="pal-input"></label>
+            <label class="pal-field" style="margin:0;"><span class="pal-field__label">Min earnings (₹)</span><input type="number" name="ref_min_earnings" min="0" step="0.01" value="{{ ref_min_earnings }}" class="pal-input"></label>
+          </div>
+          <div class="collab-filters__foot">
+            <label class="app-check"><input type="checkbox" name="ref_pending_payout" value="1" {% if ref_pending_payout %}checked{% endif %}><span class="app-check__label">Pending payout only</span></label>
+            <span class="collab-filters__btns">
+              <button type="submit" class="pal-btn pal-btn--sm">Apply Filters</button>
+              <a href="{% url 'store:collaborations' site.id %}" class="pal-btn pal-btn--ghost pal-btn--sm">Clear</a>
+            </span>
+          </div>
+        </form>
+
+        <div class="collab-list">
+          {% for partner in partners %}
+            <div class="collab-partner" data-collab-id="{{ partner.id }}">
+              <div class="collab-partner__top">
+                <div class="collab-partner__id">
+                  <span class="collab-partner__name">{{ partner.name }}</span>
+                  {% if partner.status == 'suspended' %}<span class="app-badge app-badge--muted">Suspended</span>
+                  {% elif partner.status == 'verified' %}<span class="app-badge app-badge--active">Verified</span>
+                  {% elif partner.status == 'expired' %}<span class="app-badge app-badge--danger">Expired</span>
+                  {% else %}<span class="app-badge app-badge--invited">Invited</span>{% endif %}
+                </div>
+                <span class="collab-earnings-btn">
+                  <button type="button" class="pal-btn pal-btn--ghost pal-btn--sm" data-earnings data-url="{% url 'store:collaboration_earnings' site.id partner.id %}" data-payout-url="{% url 'store:collaboration_payout' site.id partner.id %}" data-collab-id="{{ partner.id }}">View earnings</button>
+                </span>
+              </div>
+              {# Live store: a verified/active collaborator sells on this subdomain. #}
+              {% if partner.subdomain %}
+              <div class="collab-partner__portal">
+                {% if partner.status == 'verified' or partner.status == 'active' %}
+                  <span class="collab-portal collab-portal--live">
+                    <span class="inv-dot inv-dot--ok"></span>
+                    <a href="https://{{ partner.subdomain }}.{{ referral_root_domain }}" target="_blank" rel="noopener">{{ partner.subdomain }}.{{ referral_root_domain }} ↗</a>
+                  </span>
+                {% else %}
+                  <span class="collab-portal">
+                    <span class="inv-dot"></span>{{ partner.subdomain }}.{{ referral_root_domain }} <span class="collab-portal__pend"> goes live after verification</span>
+                  </span>
+                {% endif %}
+              </div>
+              {% endif %}
+
+              {# Earnings at a glance (credited from settled referral orders). #}
+              <div class="collab-partner__earn">
+                <div class="collab-earn"><span class="collab-earn__n">{{ partner.total_orders }}</span><span class="collab-earn__k">Orders</span></div>
+                <div class="collab-earn"><span class="collab-earn__n">₹{{ partner.total_earned|floatformat:2 }}</span><span class="collab-earn__k">Earned</span></div>
+                <div class="collab-earn"><span class="collab-earn__n">₹{{ partner.total_paid|floatformat:2 }}</span><span class="collab-earn__k">Paid</span></div>
+                <div class="collab-earn collab-earn--due"><span class="collab-earn__n">₹{{ partner.outstanding|floatformat:2 }}</span><span class="collab-earn__k">Outstanding</span></div>
+              </div>
+
+              <dl class="collab-partner__meta">
+                <div><dt>Email</dt><dd>{{ partner.email }}</dd></div>
+                {% if partner.mobile_number %}<div><dt>Phone</dt><dd>{{ partner.mobile_number }}</dd></div>{% endif %}
+                <div><dt>Commission</dt><dd>{% if partner.commission_type == 'percent' %}{{ partner.commission_value|floatformat:2 }}% per sale{% else %}₹{{ partner.commission_value|floatformat:2 }} per sale{% endif %}</dd></div>
+                <div><dt>Products</dt><dd>{% if partner.product_scope == 'all' %}All catalogue{% else %}{{ partner.products.count }} selected{% endif %}</dd></div>
+                <div><dt>Categories</dt><dd>{% if partner.category_scope == 'all' %}All categories{% else %}{{ partner.categories.count }} selected{% endif %}</dd></div>
+              </dl>
+              <p class="collab-partner__when">Invited {{ partner.created_at|timesince }} ago{% if partner.contract_signed_at %} · Signed {{ partner.contract_signed_at|date:"M d, Y" }}{% endif %}</p>
+              <div class="collab-partner__actions">
+                <button type="button" class="pal-btn pal-btn--ghost pal-btn--sm" data-copy-contract data-url="{% url 'store:collaboration_contract_url' site.id partner.id %}">Copy contract link</button>
+                {% if partner.invite_token %}<a href="{% url 'collab_contract' partner.invite_token %}" target="_blank" rel="noopener" class="pal-btn pal-btn--ghost pal-btn--sm">Open contract</a>{% endif %}
+                <button type="button" class="pal-btn pal-btn--ghost pal-btn--sm" data-resend data-url="{% url 'store:collaboration_resend' site.id partner.id %}">Resend invite</button>
+                <form method="post" action="{% url 'store:collaboration_suspend' site.id partner.id %}" class="ord-inline" data-confirm="Suspend this collaboration? This deactivates the referral portal.">
+                  {% csrf_token %}
+                  <button type="submit" class="pal-btn pal-btn--danger pal-btn--sm">{% if partner.is_suspended %}Reactivate{% else %}Suspend{% endif %}</button>
+                </form>
+              </div>
+              <div class="collab-partner__expiry">
+                {% if partner.otp_expires_at %}<span>⏱ OTP expires {{ partner.otp_expires_at|date:"M d, Y H:i" }}</span>{% endif %}
+                {% if partner.invite_token_expires_at %}<span>⌛ Link valid until {{ partner.invite_token_expires_at|date:"M d, Y H:i" }}</span>{% endif %}
+              </div>
+            </div>
+          {% empty %}
+            <div class="app-empty"><p class="app-empty__text">No collaborations yet. Invite your first creator on the left.</p></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
+{# ── Earnings modal ────────────────────────────────────────────────────── #}
+<div class="app-dlg" id="earningsModal" hidden>
+  <div class="app-dlg__backdrop" data-earn-close></div>
+  <div class="app-dlg__panel">
+    <header class="app-dlg__head">
+      <div><h3 class="app-dlg__title" id="earnName">Earnings</h3><p class="app-dlg__sub" id="earnEmail"></p></div>
+      <button type="button" class="app-dlg__x" data-earn-close aria-label="Close">{% include "store/_icons.html" with icon="close" %}</button>
+    </header>
+    <div class="app-dlg__body">
+      <dl class="app-dlg__list">
+        <div><dt>Commission</dt><dd id="earnCommission"></dd></div>
+        <div><dt>Attributed orders</dt><dd id="earnOrders"></dd></div>
+        <div><dt>Total earned</dt><dd id="earnEarned"></dd></div>
+        <div><dt>Total paid</dt><dd id="earnPaid"></dd></div>
+        <div><dt>Outstanding</dt><dd id="earnOutstanding"></dd></div>
+      </dl>
+
+      {# Record a payout  books an out-of-band payment against the balance. #}
+      <div class="app-dlg__section collab-payout" data-payout hidden>
+        <p class="app-dlg__subhead">Record a payout</p>
+        <p class="app-dlg__hint">Log a payment you've made to this collaborator (bank transfer, UPI…). It reduces their outstanding balance.</p>
+        <div class="collab-payout__row">
+          <input type="number" min="0" step="0.01" class="pal-input" data-payout-amount placeholder="Amount paid (₹)" aria-label="Payout amount">
+          <button type="button" class="pal-btn pal-btn--sm" data-payout-submit>Record payout</button>
+        </div>
+        <p class="collab-payout__msg" data-payout-msg hidden></p>
+      </div>
+      <p class="app-dlg__hint collab-payout__settled" data-payout-settled hidden>Nothing outstanding  all earnings are paid up.</p>
+    </div>
+    <footer class="app-dlg__foot"><button type="button" class="pal-btn pal-btn--ghost" data-earn-close>Close</button></footer>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/app/collaborations.js' %}" defer></script>
 {% endblock %}

@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include "storefront/_tracking_head.html" %}
+    {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
     {% firstof website.content.site_name website.content.websiteName "Website" as site_name %}
     {% if seo.page_meta_title %}
     <title>{{ seo.page_meta_title }}</title>
@@ -14,11 +16,13 @@
     {% endif %}
     <!-- Performance hints -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="preconnect" href="https://app.1matrix.io" crossorigin>
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
-    <link rel="dns-prefetch" href="//app.1matrix.io">
     <!-- Tailwind CSS (compiled + self-hosted for CSP safety) -->
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={% now 'U' %}">
+    <!-- Rich-text (.prose) styles: the compiled Tailwind has no Typography
+         plugin, so owner-authored policy/blog/page HTML needs these to keep its
+         headings, lists and spacing. Loaded after Tailwind to beat Preflight. -->
+    <link rel="stylesheet" href="{% static 'css/storefront-richtext.css' %}?v={% now 'U' %}">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <!-- Google Fonts -->
@@ -32,7 +36,7 @@
     <!-- SEO Tags -->
     {% firstof seo.meta_description page.content.meta_description website.content.seo.meta_description website.content.meta_description website.content.description as desc %}
     {% if desc %}<meta name="description" content="{{ desc }}">{% endif %}
-    {% firstof website.content.seo.keywords website.content.seo.meta_keywords page.content.meta_keywords website.content.meta_keywords as kws %}
+    {% firstof seo.keywords website.content.seo.keywords website.content.seo.meta_keywords page.content.meta_keywords website.content.meta_keywords as kws %}
     {% if kws %}<meta name="keywords" content="{{ kws }}">{% endif %}
     <!-- Custom Meta Tags (safe meta-only rendering) -->
     {% if website.content.seo.custom_meta_tags %}
@@ -46,7 +50,8 @@
             {% endif %}
         {% endfor %}
     {% endif %}
-    {% if noindex %}
+    {# noindex: the store is not on its verified domain yet, or the owner hid this page from search (SEO tab). #}
+    {% if noindex or seo.noindex %}
     <meta name="robots" content="noindex, nofollow">
     {% else %}
     <meta name="robots" content="index, follow">
@@ -58,11 +63,12 @@
     {% if ogd %}<meta property="og:description" content="{{ ogd }}">{% endif %}
     {% firstof seo.og_site_name website.content.site_name website.content.websiteName as ogsn %}
     {% if ogsn %}<meta property="og:site_name" content="{{ ogsn }}">{% endif %}
-    {% firstof seo.og_url canonical_url as ogu %}
+    {% firstof seo.canonical_url canonical_url as page_canonical %}
+    {% firstof seo.og_url page_canonical as ogu %}
     {% if ogu %}<meta property="og:url" content="{{ ogu }}">{% endif %}
     {% firstof seo.og_image website.content.seo.og_image as ogi %}
     {% if ogi %}<meta property="og:image" content="{{ ogi }}">{% endif %}
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="{{ seo.og_type|default:'website' }}">
     <!-- Twitter Card Tags -->
     {% firstof seo.twitter_image as twi %}
     <meta name="twitter:card" content="{% if twi %}summary_large_image{% else %}summary{% endif %}">
@@ -71,12 +77,12 @@
     {% firstof seo.twitter_description seo.meta_description as twd %}
     {% if twd %}<meta name="twitter:description" content="{{ twd }}">{% endif %}
     {% if twi %}<meta name="twitter:image" content="{{ twi }}">{% endif %}
-    {% firstof seo.twitter_url canonical_url as twu %}
+    {% firstof seo.twitter_url page_canonical as twu %}
     {% if twu %}<meta name="twitter:url" content="{{ twu }}">{% endif %}
     {% firstof seo.twitter_brand_name as twsite %}
     {% if twsite %}<meta name="twitter:site" content="{{ twsite }}">{% endif %}
-    {% if canonical_url %}
-    <link rel="canonical" href="{{ canonical_url }}">
+    {% if page_canonical %}
+    <link rel="canonical" href="{{ page_canonical }}">
     {% endif %}
     <!-- Custom Styles -->
     <style>
@@ -113,6 +119,7 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="flex flex-col min-h-screen">
+    {% include "storefront/_tracking_body.html" %}
     <!-- Header (hidden when embedded) -->
     {% if not embedded %}
     <header>
@@ -164,5 +171,8 @@
     </script>
     
     {% block extra_scripts %}{% endblock %}
+
+    {# Newsletter popup (Edit Content → Newsletter); renders nothing when off. #}
+    {% include "storefront/shared/_newsletter_popup.html" %}
 </body>
 </html> 

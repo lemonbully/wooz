@@ -1,0 +1,15 @@
+{% extends "custom_admin/_auth.html" %}
+
+{% block title %}Link expired · OneWooz Admin{% endblock %}
+
+{% block card %}
+  <p class="owa-kicker">Account recovery</p>
+  <h1 class="owa-auth__h">This link has expired</h1>
+  <p class="owa-auth__p">
+    This password-reset link is invalid, has already been used, or has expired. Request a new one to continue.
+  </p>
+  <div class="owa-auth__foot">
+    <a href="{% url 'custom_admin:forgot' %}">Request a new link →</a>
+    <a href="{% url 'custom_admin:sign_in' %}">Back to sign in</a>
+  </div>
+{% endblock %}

@@ -1,0 +1,171 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Email analytics{% endblock %}
+{% block crumb %}Email marketing{% endblock %}
+
+{% block main %}
+<div class="app-page em">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Measure</p>
+      <h1 class="app-head__title pal-mt-4">Email analytics</h1>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:email_marketing' site.id %}" class="pal-btn pal-btn--ghost">Overview</a>
+    </div>
+  </div>
+
+  {% if not has_activity %}
+  <div class="app-block">
+    <div class="app-card"><div class="app-card__body">
+      <p class="emx-help">No email activity yet. Once you send a campaign, its opens, clicks and delivery show up here as charts.</p>
+    </div></div>
+  </div>
+  {% else %}
+
+  {# KPIs #}
+  <div class="app-block">{% include "store/_an_kpis.html" with kpis=kpis %}</div>
+
+  {# Decompositions: delivery donut + engagement donut #}
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Delivery</h2><span class="app-card__hint">status of every send</span></div>
+      <div class="app-card__body">{% include "store/_email_donut.html" with donut=delivery_donut center_label="sent" %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Engagement</h2><span class="app-card__hint">how recipients responded</span></div>
+      <div class="app-card__body">{% include "store/_email_donut.html" with donut=engagement_donut center_label="recipients" %}</div>
+    </div>
+  </div>
+
+  {# Trend over time (multi-line) #}
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head app-card__head--wrap">
+        <h2 class="app-card__title">Activity over time</h2>
+        <div class="emax-range">
+          {% for r in day_ranges %}
+          <a class="emax-range__opt{% if r == days %} is-active{% endif %}" href="?days={{ r }}">{{ r }}d</a>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="app-card__body">
+        <div class="emax-legend">
+          {% for line in trend_lines %}
+          <span class="emax-legend__item"><span class="emax-legend__dot" style="background:{{ line.color }}"></span>{{ line.label }} <em>{% if line.label == 'Sent' %}{{ trend_axis.totals.sent }}{% elif line.label == 'Opened' %}{{ trend_axis.totals.opened }}{% else %}{{ trend_axis.totals.clicked }}{% endif %}</em></span>
+          {% endfor %}
+        </div>
+        <div class="emax-chart">
+          <svg viewBox="0 0 100 40" preserveAspectRatio="none" class="emax-chart__svg" aria-hidden="true">
+            <line x1="0" y1="0" x2="100" y2="0" class="emax-grid"/>
+            <line x1="0" y1="20" x2="100" y2="20" class="emax-grid"/>
+            <line x1="0" y1="40" x2="100" y2="40" class="emax-grid"/>
+            {% for line in trend_lines %}
+            <polyline points="{{ line.points }}" fill="none" stroke="{{ line.color }}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+            {% endfor %}
+          </svg>
+          <div class="emax-chart__peak">peak {{ trend_axis.max }}/day</div>
+        </div>
+        <div class="emax-axis"><span>{{ trend_axis.start }}</span><span>{{ trend_axis.mid }}</span><span>{{ trend_axis.end }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  {# Funnel + weekday decomposition #}
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Engagement funnel</h2><span class="app-card__hint">recipients → clicks</span></div>
+      <div class="app-card__body">{% include "store/_an_funnel.html" with funnel=funnel %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Opens by weekday</h2><span class="app-card__hint">when recipients open</span></div>
+      <div class="app-card__body">
+        <div class="emax-week">
+          {% for b in weekday_bars %}
+          <div class="emax-week__col">
+            <div class="emax-week__track"><span class="emax-week__fill" style="height:{{ b.pct }}%"></span></div>
+            <span class="emax-week__n">{{ b.value }}</span>
+            <span class="emax-week__lbl">{{ b.label }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Per-campaign comparison #}
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Campaign comparison</h2><span class="app-card__hint">open rate vs click rate</span></div>
+      <div class="app-card__body">
+        {% for c in per_campaign %}
+        <div class="emax-cmp">
+          <div class="emax-cmp__head"><span class="emax-cmp__name" title="{{ c.name }}">{{ c.name }}</span><span class="emax-cmp__sent">{{ c.sent }} sent</span></div>
+          <div class="emax-cmp__bar"><span class="emax-cmp__k">Opens</span><span class="emax-cmp__track"><span class="emax-cmp__fill" style="width:{{ c.open_pct }}%"></span></span><span class="emax-cmp__v">{{ c.open_pct }}%</span></div>
+          <div class="emax-cmp__bar"><span class="emax-cmp__k">Clicks</span><span class="emax-cmp__track"><span class="emax-cmp__fill emax-cmp__fill--accent" style="width:{{ c.click_pct }}%"></span></span><span class="emax-cmp__v">{{ c.click_pct }}%</span></div>
+        </div>
+        {% empty %}
+        <p class="emx-help">No campaigns yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+{% include "store/_email_styles.html" %}
+
+<style nonce="{{ csp_nonce }}">
+  .emax-range { display: inline-flex; gap: 0.3rem; }
+  .emax-range__opt { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase;
+    border: 1px solid var(--pal-line); padding: 0.3rem 0.55rem; color: var(--pal-muted); text-decoration: none; }
+  .emax-range__opt:hover { border-color: var(--pal-muted); color: var(--pal-ink); }
+  .emax-range__opt.is-active { background: var(--pal-ink); color: var(--pal-paper); border-color: var(--pal-ink); }
+
+  /* Donut */
+  .emax-donut { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+  .emax-donut__svg { width: 8.5rem; height: 8.5rem; flex: none; }
+  .emax-donut__center { font-family: var(--pal-font-display); }
+  .emax-donut__total { font-size: 1.4rem; font-weight: 600; fill: var(--pal-ink); }
+  .emax-donut__cap { font-family: var(--pal-font-mono); font-size: 0.34rem; letter-spacing: 0.12em; text-transform: uppercase; fill: var(--pal-muted); }
+  .emax-donut__legend { display: grid; gap: 0.5rem; min-width: 0; flex: 1; }
+  .emax-donut__row { display: flex; align-items: center; gap: 0.55rem; font-size: 0.85rem; }
+  .emax-donut__dot { width: 0.7rem; height: 0.7rem; flex: none; }
+  .emax-donut__label { color: var(--pal-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .emax-donut__val { margin-left: auto; font-family: var(--pal-font-mono); font-size: 0.72rem; color: var(--pal-muted); }
+
+  /* Line chart */
+  .emax-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem; }
+  .emax-legend__item { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--pal-muted); }
+  .emax-legend__item em { font-style: normal; font-family: var(--pal-font-mono); font-size: 0.72rem; color: var(--pal-ink); }
+  .emax-legend__dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; flex: none; }
+  .emax-chart { position: relative; border: 1px solid var(--pal-line-soft); }
+  .emax-chart__svg { display: block; width: 100%; height: 11rem; }
+  .emax-grid { stroke: var(--pal-line-soft); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .emax-chart__peak { position: absolute; top: 0.35rem; right: 0.5rem; font-family: var(--pal-font-mono);
+    font-size: 0.56rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-faint); }
+  .emax-axis { display: flex; justify-content: space-between; margin-top: 0.4rem; font-family: var(--pal-font-mono);
+    font-size: 0.58rem; letter-spacing: 0.05em; color: var(--pal-faint); }
+
+  /* Weekday bars */
+  .emax-week { display: flex; align-items: flex-end; gap: 0.5rem; height: 11rem; }
+  .emax-week__col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; height: 100%; justify-content: flex-end; }
+  .emax-week__track { width: 100%; flex: 1; display: flex; align-items: flex-end; }
+  .emax-week__fill { width: 100%; background: var(--pal-accent); min-height: 2px; }
+  .emax-week__n { font-family: var(--pal-font-mono); font-size: 0.62rem; color: var(--pal-ink); }
+  .emax-week__lbl { font-family: var(--pal-font-mono); font-size: 0.56rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--pal-muted); }
+
+  /* Per-campaign comparison */
+  .emax-cmp { padding: 0.7rem 0; border-top: 1px solid var(--pal-line-soft); }
+  .emax-cmp:first-child { border-top: 0; }
+  .emax-cmp__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.4rem; }
+  .emax-cmp__name { font-weight: 500; color: var(--pal-ink); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .emax-cmp__sent { font-family: var(--pal-font-mono); font-size: 0.62rem; color: var(--pal-faint); flex: none; }
+  .emax-cmp__bar { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.25rem; }
+  .emax-cmp__k { font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-muted); width: 3.4rem; flex: none; }
+  .emax-cmp__track { flex: 1; height: 0.55rem; background: var(--pal-paper-2, #ececea); }
+  .emax-cmp__fill { display: block; height: 100%; background: var(--pal-accent-2, #6a44fb); }
+  .emax-cmp__fill--accent { background: var(--pal-accent, #4b2bf5); }
+  .emax-cmp__v { font-family: var(--pal-font-mono); font-size: 0.68rem; color: var(--pal-ink); width: 2.6rem; text-align: right; flex: none; }
+</style>
+{% endblock %}

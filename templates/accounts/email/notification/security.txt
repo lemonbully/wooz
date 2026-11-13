@@ -1,0 +1,11 @@
+{{ headline }}
+
+{% if detail %}{{ detail }}
+
+{% endif %}When: {{ when }}
+
+If this was you, no action is needed. If it wasn't, review your sign-in methods
+and devices right away:
+  {{ app_origin }}/security/
+
+ {{ brand }}

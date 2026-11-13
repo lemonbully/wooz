@@ -1,0 +1,343 @@
+{% extends "store/_shell.html" %}
+{% load billing_money %}
+{% block title %}{{ site.name }} · {{ bill.invoice_number|default:"Bill" }}{% endblock %}
+{% block crumb %}{{ bill.invoice_number|default:"Bill" }}{% endblock %}
+
+{% block main %}
+<style nonce="{{ csp_nonce }}">
+  .inv-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .inv-doc { background: var(--pal-panel); border: 1px solid var(--pal-line); padding: clamp(1.4rem, 1rem + 2vw, 2.5rem); margin-top: 1.25rem; }
+  .inv-head { display: flex; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; padding-bottom: 1.5rem; border-bottom: 1px solid var(--pal-line); }
+  .inv-brand { font-family: var(--pal-font-display); font-weight: 600; font-size: 1.3rem; letter-spacing: -0.02em; color: var(--pal-ink); }
+  .inv-brand__sub { margin-top: 0.2rem; font-size: 0.82rem; color: var(--pal-muted); }
+  .inv-title { text-align: right; }
+  .inv-title__k { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-muted); }
+  .inv-title__num { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.15rem; color: var(--pal-ink); margin-top: 0.2rem; }
+  .inv-parties { display: flex; flex-wrap: wrap; gap: 1.5rem 3rem; padding: 1.5rem 0; border-bottom: 1px solid var(--pal-line); }
+  .inv-party { flex: 1 1 14rem; }
+  .inv-party__k { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-faint); margin-bottom: 0.5rem; }
+  .inv-party__name { font-weight: 500; color: var(--pal-ink); }
+  .inv-party__line { font-size: 0.85rem; color: var(--pal-muted); line-height: 1.6; }
+  .inv-meta { display: flex; flex-wrap: wrap; gap: 1.25rem 2.5rem; padding: 1.25rem 0; border-bottom: 1px solid var(--pal-line); }
+  .inv-meta__k { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-faint); }
+  .inv-meta__v { margin-top: 0.25rem; font-size: 0.92rem; color: var(--pal-ink-2); }
+  .inv-meta__sub { margin-top: 0.15rem; font-size: 0.75rem; color: var(--pal-faint); }
+  .inv-tablewrap { margin-top: 1.5rem; overflow-x: auto; }
+  .inv-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .inv-table th { text-align: left; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--pal-line); }
+  .inv-table td { padding: 0.7rem 0.75rem; border-bottom: 1px solid var(--pal-line-soft); color: var(--pal-ink-2); }
+  .inv-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .inv-totals { margin-top: 1.5rem; margin-left: auto; max-width: 22rem; }
+  .inv-totals__row { display: flex; justify-content: space-between; gap: 1rem; padding: 0.5rem 0; font-size: 0.9rem; color: var(--pal-muted); }
+  .inv-totals__row--grand { border-top: 1px solid var(--pal-line); margin-top: 0.35rem; padding-top: 0.85rem; font-size: 1.1rem; font-weight: 600; color: var(--pal-ink); }
+  .inv-feeline { margin-top: 0.2rem; font-size: 0.75rem; color: var(--pal-muted); }
+  .inv-pay { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--pal-line); }
+  .inv-pay__grid { display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; }
+  .inv-note { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--pal-line); font-size: 0.82rem; color: var(--pal-faint); line-height: 1.6; }
+  @media print {
+    .inv-noprint { display: none !important; }
+    .inv-doc { border: 0; padding: 0; margin: 0; }
+  }
+</style>
+
+<div class="app-page">
+  <div class="app-head inv-bar">
+    <div>
+      <p class="pal-mono pal-mono--accent">Money</p>
+      <h1 class="app-head__title pal-mt-4">{{ bill.invoice_number|default:"Bill" }}</h1>
+    </div>
+    <div class="app-head__actions inv-noprint">
+      <a href="{% url 'store:bills' site.id %}" class="pal-btn pal-btn--ghost">← All bills</a>
+      <a href="{% url 'store:bill_export' site.id bill.id %}" class="pal-btn pal-btn--ghost">Export Excel</a>
+      <a href="{% url 'store:bill_pdf' site.id bill.id %}?download=1" class="pal-btn pal-btn--ghost">Download PDF</a>
+      {% if bill.status != 'paid' and bill.total_amount > 0 %}
+        <button type="button" class="pal-btn" data-pay-open>Pay this bill <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="app-block" style="margin-top:1rem;">
+    <div class="inv-doc">
+      <div class="inv-head">
+        <div>
+          <div class="inv-brand">{{ seller.company_name }}</div>
+          <div class="inv-brand__sub">Commerce fee for the OneWooz platform</div>
+        </div>
+        <div class="inv-title">
+          <div class="inv-title__k">{% if tax.applied %}Tax invoice{% else %}Invoice{% endif %}</div>
+          <div class="inv-title__num">{{ bill.invoice_number|default:bill.id }}</div>
+          <div style="margin-top:0.5rem;">
+            <span class="app-badge app-badge--{% if bill.status == 'paid' %}ok{% elif bill.status == 'pending_review' %}warn{% else %}danger{% endif %}">{{ bill.get_status_display }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-parties">
+        <div class="inv-party">
+          <div class="inv-party__k">From</div>
+          <div class="inv-party__name">{{ seller.company_name }}</div>
+          <div class="inv-party__line">
+            {% if seller.address %}{{ seller.address|linebreaksbr }}<br>{% endif %}
+            {% if seller.gstin %}GSTIN: {{ seller.gstin }}<br>{% endif %}
+            {% if seller.pan %}PAN: {{ seller.pan }}<br>{% endif %}
+            {% if seller.state %}State: {{ seller.state }}<br>{% endif %}
+            {% if seller.email %}{{ seller.email }}<br>{% endif %}
+            {% if seller.phone %}{{ seller.phone }}{% endif %}
+          </div>
+        </div>
+        <div class="inv-party">
+          <div class="inv-party__k">Billed to</div>
+          <div class="inv-party__name">{{ buyer.name }}</div>
+          <div class="inv-party__line">
+            {% if buyer.name != buyer.brand %}Store: {{ buyer.brand }}<br>{% endif %}
+            {% if buyer.address %}{{ buyer.address }}<br>{% endif %}
+            {% if buyer.gstin %}GSTIN: {{ buyer.gstin }}<br>{% endif %}
+            {% if buyer.state %}State: {{ buyer.state }}<br>{% endif %}
+            {% if buyer.email %}{{ buyer.email }}<br>{% endif %}
+            {% if buyer.phone %}{{ buyer.phone }}{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-meta">
+        <div>
+          <div class="inv-meta__k">Billing period</div>
+          <div class="inv-meta__v">{{ bill.period_start|date:"d M Y" }} → {{ bill.period_end|date:"d M Y" }}</div>
+        </div>
+        <div>
+          <div class="inv-meta__k">Issued</div>
+          <div class="inv-meta__v">{{ bill.period_end|date:"d M Y" }}</div>
+        </div>
+        <div>
+          <div class="inv-meta__k">Commerce fee</div>
+          {# The total commerce fee on this bill (before GST); each order's fee follows the product price ranges of the subscription. #}
+          <div class="inv-meta__v">{{ bill.currency }} {{ tax.subtotal|floatformat:2 }}</div>
+          <div class="inv-meta__sub">Total, by product price range</div>
+        </div>
+        <div>
+          <div class="inv-meta__k">Charged on</div>
+          <div class="inv-meta__v">{{ config.get_order_charge_event_display }}</div>
+        </div>
+        {% if seller.sac %}
+        <div>
+          <div class="inv-meta__k">SAC</div>
+          <div class="inv-meta__v">{{ seller.sac }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="inv-tablewrap">
+        <table class="inv-table">
+          <thead>
+            <tr><th>Order</th><th>Milestone</th><th>Date</th><th class="inv-num">Selling value</th><th class="inv-num">Commerce fee</th></tr>
+          </thead>
+          <tbody>
+            {% for c in charges %}
+              <tr>
+                <td>
+                  <a href="{% url 'store:order_detail' site.id c.order_id %}" style="color:var(--pal-accent)">#{{ c.order.number }}</a>
+                  {% for ln in c.fee_lines %}
+                    <div class="inv-feeline">{{ ln.title }}{% if ln.variant %} ({{ ln.variant }}){% endif %} · {{ ln.selling_price|inr }} · {{ ln.quantity }} × {{ ln.fee_per_unit|inr }}</div>
+                  {% endfor %}
+                </td>
+                <td>{{ c.get_event_display }}</td>
+                <td>{{ c.charged_at|date:"d M Y" }}</td>
+                <td class="inv-num">{% if c.selling_value is not None %}{{ bill.currency }} {{ c.selling_value|floatformat:2 }}{% endif %}</td>
+                <td class="inv-num">{{ bill.currency }} {{ c.amount|floatformat:2 }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" style="color:var(--pal-faint);">No individual charges recorded for this bill.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="inv-totals">
+        <div class="inv-totals__row"><span>Orders billed</span><span>{{ bill.total_orders }}</span></div>
+        <div class="inv-totals__row"><span>Commerce fee (taxable value)</span><span>{{ bill.currency }} {{ tax.subtotal|floatformat:2 }}</span></div>
+        {% if tax.applied %}
+          {% if tax.intra %}
+            <div class="inv-totals__row"><span>CGST @ {{ tax.half_rate|floatformat:"-2" }}%</span><span>{{ bill.currency }} {{ tax.cgst|floatformat:2 }}</span></div>
+            <div class="inv-totals__row"><span>SGST @ {{ tax.half_rate|floatformat:"-2" }}%</span><span>{{ bill.currency }} {{ tax.sgst|floatformat:2 }}</span></div>
+          {% else %}
+            <div class="inv-totals__row"><span>IGST @ {{ tax.rate|floatformat:"-2" }}%</span><span>{{ bill.currency }} {{ tax.igst|floatformat:2 }}</span></div>
+          {% endif %}
+        {% endif %}
+        <div class="inv-totals__row inv-totals__row--grand"><span>Amount due</span><span>{{ bill.currency }} {{ tax.total|floatformat:2 }}</span></div>
+      </div>
+
+      {% if payment.banks or payment.upis %}
+        <div class="inv-pay">
+          <div class="inv-party__k">Payment details</div>
+          <div class="inv-pay__grid">
+            {% for b in payment.banks %}
+              <div class="inv-party__line">
+                {% if b.bank_name %}Bank: {{ b.bank_name }}<br>{% endif %}
+                {% if b.account_holder %}Account name: {{ b.account_holder }}<br>{% endif %}
+                {% if b.account_number %}Account no.: {{ b.account_number }}<br>{% endif %}
+                {% if b.ifsc_code %}IFSC: {{ b.ifsc_code }}<br>{% endif %}
+                {% if b.branch %}Branch: {{ b.branch }}{% endif %}
+              </div>
+            {% endfor %}
+            {% for upi in payment.upis %}
+              <div class="inv-party__line">UPI ID: {{ upi }}</div>
+            {% endfor %}
+          </div>
+          {% if payment.note %}<p class="inv-party__line" style="margin-top:0.5rem;">{{ payment.note }}</p>{% endif %}
+        </div>
+      {% endif %}
+
+      {% if bill.payment_screenshot %}
+        <div class="inv-proof inv-noprint">
+          <div class="inv-proof__head">
+            <span class="inv-proof__k">Payment proof submitted</span>
+            <span class="app-badge app-badge--{% if bill.screenshot_status == 'approved' %}ok{% elif bill.screenshot_status == 'rejected' %}danger{% else %}warn{% endif %}">{{ bill.get_screenshot_status_display }}</span>
+          </div>
+          {% if payment_reference %}<p class="inv-proof__ref">Reference: {{ payment_reference }}</p>{% endif %}
+          <a href="{{ bill.payment_screenshot.url }}" target="_blank" rel="noopener" class="inv-proof__thumb">
+            <img src="{{ bill.payment_screenshot.url }}" alt="Payment screenshot">
+          </a>
+          {% if bill.status != 'paid' %}
+            <p class="inv-proof__note">OneWooz is reviewing your payment. You can resubmit a clearer screenshot if needed.</p>
+            <button type="button" class="pal-btn pal-btn--ghost" data-pay-open>Resubmit payment proof</button>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <p class="inv-note">
+        This invoice covers the commerce fee on orders your store delivered during the billing period.
+        {% if bill.status != 'paid' %}Pay from your dashboard to keep your store fully active.{% else %}Paid{% if bill.paid_at %} on {{ bill.paid_at|date:"d M Y" }}{% endif %}  thank you.{% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
+{% comment %} Payment details + proof-submission modal {% endcomment %}
+<div class="app-dlg" id="payModal" hidden>
+  <div class="app-dlg__backdrop" data-pay-close></div>
+  <div class="app-dlg__panel">
+    <header class="app-dlg__head">
+      <div>
+        <h3 class="app-dlg__title">Pay {{ bill.invoice_number|default:"this bill" }}</h3>
+        <p class="app-dlg__sub">Amount due: {{ bill.currency }} {{ bill.total_amount|floatformat:2 }}</p>
+      </div>
+      <button type="button" class="app-dlg__x" data-pay-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+
+    <div class="app-dlg__body">
+      {% if has_payment_methods %}
+        <div class="app-tabs" role="tablist" aria-label="Payment methods">
+          {% if bank_accounts %}<button type="button" class="app-tab is-active" data-pay-tab="bank" role="tab" aria-selected="true">Bank transfer</button>{% endif %}
+          {% if qr_accounts %}<button type="button" class="app-tab{% if not bank_accounts %} is-active{% endif %}" data-pay-tab="qr" role="tab" aria-selected="{% if not bank_accounts %}true{% else %}false{% endif %}">QR / UPI</button>{% endif %}
+        </div>
+
+        {% if bank_accounts %}
+          <div class="pay-pane" data-pay-pane="bank">
+            {% for acc in bank_accounts %}
+              <div class="pay-card">
+                {% if acc.label %}<p class="pay-card__label">{{ acc.label }}</p>{% endif %}
+                <dl class="app-dlg__list">
+                  {% if acc.bank_name %}<div><dt>Bank</dt><dd>{{ acc.bank_name }}</dd></div>{% endif %}
+                  {% if acc.account_holder %}<div><dt>Account holder</dt><dd>{{ acc.account_holder }}</dd></div>{% endif %}
+                  {% if acc.account_number %}<div><dt>Account no.</dt><dd>{{ acc.account_number }}</dd></div>{% endif %}
+                  {% if acc.ifsc_code %}<div><dt>IFSC</dt><dd>{{ acc.ifsc_code }}</dd></div>{% endif %}
+                </dl>
+                {% if acc.note %}<p class="app-dlg__hint">{{ acc.note }}</p>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if qr_accounts %}
+          <div class="pay-pane{% if bank_accounts %} is-hidden{% endif %}" data-pay-pane="qr">
+            {% for acc in qr_accounts %}
+              <div class="pay-card pay-card--qr">
+                {% if acc.label %}<p class="pay-card__label">{{ acc.label }}</p>{% endif %}
+                {% if acc.qr_image %}<img class="pay-qr" src="{{ acc.qr_image.url }}" alt="Scan to pay{% if acc.upi_id %}  {{ acc.upi_id }}{% endif %}">{% endif %}
+                {% if acc.upi_id %}<p class="pay-card__upi">UPI ID: <strong>{{ acc.upi_id }}</strong></p>{% endif %}
+                {% if acc.note %}<p class="app-dlg__hint">{{ acc.note }}</p>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% else %}
+        <p class="app-dlg__muted">Payment details are not configured yet. Please contact OneWooz support to settle this bill.</p>
+      {% endif %}
+
+      <form method="post" action="{% url 'store:bill_payment_submit' site.id bill.id %}" enctype="multipart/form-data" class="app-dlg__section" id="payForm">
+        {% csrf_token %}
+        <p class="app-dlg__subhead">Confirm your payment</p>
+        <label class="app-dlg__field">
+          <span>Reference / UTR number (optional)</span>
+          <input type="text" name="reference" maxlength="120" placeholder="e.g. UTR 1234567890" value="{{ payment_reference }}">
+        </label>
+        <label class="app-dlg__field">
+          <span>Payment screenshot</span>
+          <input type="file" name="screenshot" accept="image/*" required>
+        </label>
+        <p class="app-dlg__hint">Upload a screenshot showing the completed payment. OneWooz will review it and mark this bill paid once confirmed.</p>
+        <div class="app-dlg__foot app-dlg__foot--flush">
+          <button type="button" class="pal-btn pal-btn--ghost" data-pay-close>Cancel</button>
+          <button type="submit" class="pal-btn">I have paid  submit proof</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style nonce="{{ csp_nonce }}">
+  .inv-proof { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--pal-line); }
+  .inv-proof__head { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+  .inv-proof__k { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
+  .inv-proof__ref { margin-top: 0.5rem; font-size: 0.85rem; color: var(--pal-ink-2); }
+  .inv-proof__thumb { display: inline-block; margin-top: 0.75rem; border: 1px solid var(--pal-line); max-width: 12rem; }
+  .inv-proof__thumb img { display: block; width: 100%; height: auto; }
+  .inv-proof__note { margin-top: 0.75rem; font-size: 0.82rem; color: var(--pal-faint); }
+  .inv-proof__note + .pal-btn { margin-top: 0.75rem; }
+  .pay-pane { margin-top: 1rem; display: grid; gap: 0.85rem; }
+  .pay-pane.is-hidden { display: none; }
+  .pay-card { border: 1px solid var(--pal-line); background: var(--pal-panel); padding: 1rem 1.1rem; }
+  .pay-card__label { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 0.6rem; }
+  .pay-card--qr { text-align: center; }
+  .pay-qr { width: 100%; max-width: 15rem; height: auto; margin: 0 auto; border: 1px solid var(--pal-line); background: #fff; padding: 0.5rem; }
+  .pay-card__upi { margin-top: 0.75rem; font-size: 0.92rem; color: var(--pal-ink-2); word-break: break-all; }
+  .pay-card__upi strong { color: var(--pal-ink); }
+</style>
+
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var modal = document.getElementById("payModal");
+    if (!modal) return;
+    function open() { modal.hidden = false; document.body.style.overflow = "hidden"; }
+    function close() { modal.hidden = true; document.body.style.overflow = ""; }
+    document.querySelectorAll("[data-pay-open]").forEach(function (b) {
+      b.addEventListener("click", open);
+    });
+    modal.querySelectorAll("[data-pay-close]").forEach(function (b) {
+      b.addEventListener("click", close);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !modal.hidden) close();
+    });
+    // Tab switching between bank and QR panes.
+    var tabs = modal.querySelectorAll("[data-pay-tab]");
+    var panes = modal.querySelectorAll("[data-pay-pane]");
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var key = tab.getAttribute("data-pay-tab");
+        tabs.forEach(function (t) {
+          var on = t === tab;
+          t.classList.toggle("is-active", on);
+          t.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        panes.forEach(function (p) {
+          p.classList.toggle("is-hidden", p.getAttribute("data-pay-pane") !== key);
+        });
+      });
+    });
+  })();
+</script>
+{% endblock %}

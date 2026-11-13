@@ -1,0 +1,132 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ site.name }} · Email marketing{% endblock %}
+{% block crumb %}Email marketing{% endblock %}
+
+{% block main %}
+<div class="app-page em">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Grow</p>
+      <h1 class="app-head__title pal-mt-4">Email marketing</h1>
+    </div>
+    <div class="app-head__actions">
+      <a href="{% url 'store:email_analytics' site.id %}" class="pal-btn pal-btn--ghost">Analytics</a>
+      <a href="{% url 'store:email_audiences' site.id %}" class="pal-btn pal-btn--ghost">Audiences</a>
+      <a href="{% url 'store:email_sequences' site.id %}" class="pal-btn pal-btn--ghost">Sequences</a>
+      <a href="{% url 'store:email_campaign_new' site.id %}" class="pal-btn">New campaign <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+    </div>
+  </div>
+
+  {# ---- KPIs ---- #}
+  <div class="app-block">
+    {% include "store/_an_kpis.html" with kpis=kpis %}
+  </div>
+
+  {# ---- Reach summary tiles ---- #}
+  <div class="app-block em-tiles">
+    <a class="em-tile" href="{% url 'store:email_audiences' site.id %}">
+      <span class="em-tile__k">Audience lists</span>
+      <span class="em-tile__v">{{ audience_count }}</span>
+      <span class="em-tile__s">{{ member_count }} recipient{{ member_count|pluralize }}</span>
+    </a>
+    <div class="em-tile">
+      <span class="em-tile__k">Store customers</span>
+      <span class="em-tile__v">{{ customer_count }}</span>
+      <span class="em-tile__s">reachable in one click</span>
+    </div>
+    <a class="em-tile" href="{% url 'store:email_audiences' site.id %}#suppressions">
+      <span class="em-tile__k">Suppressed</span>
+      <span class="em-tile__v">{{ suppression_count }}</span>
+      <span class="em-tile__s">unsubscribed / bounced</span>
+    </a>
+    <div class="em-tile">
+      <span class="em-tile__k">Monthly allowance</span>
+      <span class="em-tile__v">{% if limits.monthly_email_limit %}{{ limits.monthly_email_limit }}{% else %}∞{% endif %}</span>
+      <span class="em-tile__s">emails / month on your plan</span>
+    </div>
+  </div>
+
+  {% if has_activity %}
+  <div class="app-block an-cols">
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Engagement funnel</h2><span class="app-card__hint">recipients → clicks</span></div>
+      <div class="app-card__body">{% include "store/_an_funnel.html" with funnel=funnel %}</div>
+    </div>
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Delivery</h2><span class="app-card__hint">across all campaigns</span></div>
+      <div class="app-card__body">{% include "store/_an_bars.html" with bars=status_bars empty="Nothing sent yet." %}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ---- Campaigns ---- #}
+  <div class="app-block">
+    <div class="app-card">
+      <div class="app-card__head">
+        <h2 class="app-card__title">Campaigns</h2>
+        <a href="{% url 'store:email_campaign_new' site.id %}" class="pal-btn pal-btn--ghost">New</a>
+      </div>
+      <div class="app-card__body">
+        {% if campaign_rows %}
+        <div class="app-tablewrap">
+          <table class="app-table">
+            <thead><tr><th>Campaign</th><th>Type</th><th>Status</th><th class="app-table__num">Sent</th><th class="app-table__num">Opened</th><th class="app-table__num">Clicked</th><th></th></tr></thead>
+            <tbody>
+              {% for row in campaign_rows %}
+              {% with c=row.c s=row.stats %}
+              <tr>
+                <td><a class="app-table__strong" href="{% url 'store:email_campaign_edit' site.id c.id %}">{{ c.name }}</a></td>
+                <td class="app-sub">{{ c.get_kind_display }}</td>
+                <td>
+                  {% if c.status == 'sent' %}<span class="app-badge app-badge--ok">Sent</span>
+                  {% elif c.status == 'active' %}<span class="app-badge">Sending</span>
+                  {% elif c.status == 'scheduled' %}<span class="app-badge">Scheduled</span>
+                  {% elif c.status == 'paused' %}<span class="app-badge app-badge--muted">Paused</span>
+                  {% else %}<span class="app-badge app-badge--muted">Draft</span>{% endif %}
+                </td>
+                <td class="app-table__num">{{ s.sent }}</td>
+                <td class="app-table__num">{{ s.opened }}</td>
+                <td class="app-table__num">{{ s.clicked }}</td>
+                <td class="app-table__actions">
+                  <a class="app-iconbtn" href="{% url 'store:email_campaign_edit' site.id c.id %}">Edit</a>
+                  <a class="app-iconbtn" href="{% url 'store:email_campaign_segments' site.id c.id %}">Segments</a>
+                  {% if c.status == 'draft' or c.status == 'paused' or c.status == 'scheduled' %}
+                    <form method="post" action="{% url 'store:email_campaign_send' site.id c.id %}">{% csrf_token %}<button class="app-iconbtn" type="submit">Send</button></form>
+                  {% endif %}
+                  {% if c.status == 'active' or c.status == 'scheduled' %}
+                    <form method="post" action="{% url 'store:email_campaign_pause' site.id c.id %}">{% csrf_token %}<button class="app-iconbtn" type="submit">Pause</button></form>
+                  {% elif c.status == 'paused' %}
+                    <form method="post" action="{% url 'store:email_campaign_resume' site.id c.id %}">{% csrf_token %}<button class="app-iconbtn" type="submit">Resume</button></form>
+                  {% endif %}
+                  <form method="post" action="{% url 'store:email_campaign_delete' site.id c.id %}" onsubmit="return confirm('Remove this campaign?');">{% csrf_token %}<button class="app-iconbtn app-iconbtn--danger" type="submit">Delete</button></form>
+                </td>
+              </tr>
+              {% endwith %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="app-empty">
+          <span class="app-empty__ico" aria-hidden="true">{% include "store/_icons.html" with icon="mail" %}</span>
+          <h2 class="app-empty__title">No campaigns yet</h2>
+          <p class="app-empty__text">Create your first broadcast to announce a launch or a sale, or set up a drip sequence that welcomes new customers over their first few days.</p>
+          <a href="{% url 'store:email_campaign_new' site.id %}" class="pal-btn">Create a campaign <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style nonce="{{ csp_nonce }}">
+  .em-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--pal-line); border: 1px solid var(--pal-line); }
+  @media (max-width: 56rem) { .em-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 30rem) { .em-tiles { grid-template-columns: 1fr; } }
+  .em-tile { display: flex; flex-direction: column; gap: 0.35rem; padding: 1.15rem 1.25rem; background: var(--pal-panel); text-decoration: none; color: inherit; transition: background 140ms ease; }
+  a.em-tile:hover { background: var(--pal-paper-2); }
+  .em-tile__k { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pal-muted); }
+  .em-tile__v { font-family: var(--pal-font-display); font-size: 1.9rem; font-weight: 500; letter-spacing: -0.02em; color: var(--pal-ink); line-height: 1; }
+  .em-tile__s { font-size: 0.8rem; color: var(--pal-muted); }
+</style>
+{% endblock %}

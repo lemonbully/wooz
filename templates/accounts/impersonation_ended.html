@@ -1,0 +1,35 @@
+{% extends "accounts/_auth_shell.html" %}
+
+{% comment %}
+Shown by accounts.impersonation.stop once the impersonation has been cleared.
+The admin surface lives on another origin (arcane.onewooz.com), and the CSP's
+`form-action 'self'` makes browsers block a form POST that *redirects* cross-
+origin, so "Stop impersonating" cannot simply 302 there. This page is an
+ordinary 200 response instead, and moves the browser on with a plain navigation
+(meta refresh + nonce'd script), which form-action does not govern. The button
+is the fallback if both are disabled.
+{% endcomment %}
+
+{% block title %}Impersonation ended · OneWooz{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<meta http-equiv="refresh" content="1;url={{ admin_url }}">
+{% endblock %}
+
+{% block auth_title %}Impersonation ended{% endblock %}
+
+{% block auth_body %}
+  <p class="auth__subtitle mt-4">
+    {% if target_label %}You are no longer viewing <strong>{{ target_label }}</strong>&rsquo;s dashboard.{% else %}You are no longer impersonating a store owner.{% endif %}
+    Taking you back to the admin&hellip;
+  </p>
+
+  <a href="{{ admin_url }}" id="imp-return" class="btn btn--primary btn--block mt-6">
+    Return to admin
+  </a>
+
+  <script nonce="{{ csp_nonce }}">
+    window.location.replace(document.getElementById("imp-return").href);
+  </script>
+{% endblock %}

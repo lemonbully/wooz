@@ -29,8 +29,11 @@ CADDY_ASK_SECRET = env.get_or_create_dev_secret("ONEWOOZ_CADDY_ASK_SECRET", SECR
 
 MARKETING_HOST = env.get("ONEWOOZ_MARKETING_HOST", "7vg4xqqt-8000.inc1.devtunnels.ms")
 APP_HOST = env.get("ONEWOOZ_APP_HOST", "app.onewooz.localhost")
-ADMIN_HOST = env.get("ONEWOOZ_ADMIN_HOST", "admin.onewooz.localhost")
+ADMIN_HOST = env.get("ONEWOOZ_ADMIN_HOST", "arcane.onewooz.localhost")
 STOREFRONT_APEX = env.get("ONEWOOZ_STOREFRONT_APEX", "shop.localhost")
+# UGC collaboration (referral) storefront apex  dev uses a *.localhost name so
+# <sub>.myugcstore.localhost resolves to 127.0.0.1 in modern browsers.
+REFERRAL_ROOT_DOMAIN = env.get("ONEWOOZ_REFERRAL_ROOT_DOMAIN", "myugcstore.localhost")
 
 # Port runserver is on. Everything below that needs a port derives from this,
 # so running on a different port is one environment variable, not a hunt
@@ -45,6 +48,7 @@ ALLOWED_HOSTS = [
     APP_HOST,
     ADMIN_HOST,
     f".{STOREFRONT_APEX}",
+    f".{REFERRAL_ROOT_DOMAIN}",
     "localhost",
     "127.0.0.1",
     "[::1]",
@@ -62,6 +66,13 @@ CSRF_TRUSTED_ORIGINS = [
         ADMIN_HOST,
         STOREFRONT_APEX,
         f"*.{STOREFRONT_APEX}",
+        # UGC referral apex (collaborator portal) + collaborator storefront
+        # subdomains. The host router forces X-Forwarded-Proto=https for these,
+        # so with SECURE_PROXY_SSL_HEADER set a same-origin POST over dev http is
+        # otherwise rejected; trusting the http origin keeps local login/checkout
+        # working. (Production uses real https, so this is a dev-only allowance.)
+        REFERRAL_ROOT_DOMAIN,
+        f"*.{REFERRAL_ROOT_DOMAIN}",
         "localhost",
         "127.0.0.1",
     )
@@ -72,7 +83,7 @@ CSRF_TRUSTED_ORIGINS = [
 # works across the dashboard and the admin surface locally, mirroring how
 # WEBAUTHN_RP_ID = "onewooz.com" behaves in production.
 #
-# Passkeys will not work on http://127.0.0.1:8000 — an IP address is not a
+# Passkeys will not work on http://127.0.0.1:8000  an IP address is not a
 # valid relying-party id. Use the named hosts to test them.
 WEBAUTHN_RP_ID = env.get("ONEWOOZ_WEBAUTHN_RP_ID", MARKETING_HOST)
 
@@ -88,7 +99,7 @@ WEBAUTHN_RP_ID = env.get("ONEWOOZ_WEBAUTHN_RP_ID", MARKETING_HOST)
 #     http://127.0.0.1:8000/s/<store>/       a generated storefront
 #
 # The prefix is moved into SCRIPT_NAME, so reverse() and {% url %} reproduce
-# it automatically — no view or template contains a prefixed path.
+# it automatically  no view or template contains a prefixed path.
 #
 # The named hosts keep working host-based, which is the arrangement production
 # actually uses; test there before shipping anything host-sensitive.
@@ -98,6 +109,10 @@ DEV_SURFACE_PREFIXES = {
     "app": "/user",
     "admin": "/admin",
     "storefront": "/s",
+    # Collaborator portal (referral apex). On a real host use
+    # ``myugcstore.localhost:8000/dashboard``; on bare 127.0.0.1 use
+    # ``/referral/dashboard`` (this prefix is stripped like the others).
+    "referral": "/referral",
 }
 
 # --------------------------------------------------------------------------
@@ -125,12 +140,12 @@ CSRF_COOKIE_SECURE = False
 # Convenience
 # --------------------------------------------------------------------------
 
-# Email — send real sign-in / sign-up messages (OTP, magic links, verification)
+# Email  send real sign-in / sign-up messages (OTP, magic links, verification)
 # when SMTP credentials are provided, otherwise print to the console so the app
 # runs with no setup. Same variables as production, in the same priority order:
-#   1. Hostinger / generic SMTP — ONEWOOZ_SMTP_USER + ONEWOOZ_SMTP_PASSWORD
+#   1. Hostinger / generic SMTP  ONEWOOZ_SMTP_USER + ONEWOOZ_SMTP_PASSWORD
 #      (+ optional ONEWOOZ_SMTP_HOST/PORT/SSL/TLS/FROM_EMAIL).
-#   2. Gmail — ONEWOOZ_GMAIL_USER + ONEWOOZ_GMAIL_APP_PASSWORD.
+#   2. Gmail  ONEWOOZ_GMAIL_USER + ONEWOOZ_GMAIL_APP_PASSWORD.
 #   3. Console backend (default).
 _SMTP_USER = env.get("ONEWOOZ_SMTP_USER", "")
 _SMTP_PASSWORD = env.get("ONEWOOZ_SMTP_PASSWORD", "")
@@ -146,7 +161,8 @@ if _SMTP_USER and _SMTP_PASSWORD:
     EMAIL_USE_SSL = env.get_bool("ONEWOOZ_SMTP_SSL", False)
     EMAIL_USE_TLS = False if EMAIL_USE_SSL else env.get_bool("ONEWOOZ_SMTP_TLS", True)
     EMAIL_TIMEOUT = env.get_int("ONEWOOZ_SMTP_TIMEOUT", 20)
-    DEFAULT_FROM_EMAIL = env.get("ONEWOOZ_FROM_EMAIL", _SMTP_USER)
+    # Display name in front of the mailbox so clients show "OneWooz", not "hello".
+    DEFAULT_FROM_EMAIL = env.get("ONEWOOZ_FROM_EMAIL", "OneWooz <%s>" % _SMTP_USER)
     SERVER_EMAIL = DEFAULT_FROM_EMAIL
 elif _GMAIL_USER and _GMAIL_APP_PASSWORD:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -161,6 +177,14 @@ elif _GMAIL_USER and _GMAIL_APP_PASSWORD:
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+# Print sign-in / sign-up one-time codes straight to the runserver terminal
+# instead of "sending" them, so local auth never depends on reading email.
+OTP_CONSOLE_ECHO = True
+
+# Seed a demo store (with a demo category + subcategory) after `migrate`, so
+# localhost always has a working store without any manual setup.
+DEV_SEED_STORE = True
+
 # Password hashing is deliberately slow. Keep Argon2 in dev so behaviour
 # matches production, but with the cheapest parameters the hasher allows.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
@@ -173,7 +197,7 @@ STORAGES = {
 # Let WhiteNoise serve static files straight from the source dirs (no
 # collectstatic), re-checking the filesystem on every request and telling the
 # browser to revalidate each time. An edited CSS/JS file is picked up on a plain
-# reload — no Ctrl+Shift+R. Prod keeps hashed filenames via the manifest storage,
+# reload  no Ctrl+Shift+R. Prod keeps hashed filenames via the manifest storage,
 # where far-future caching is correct because the URL changes when the file does.
 WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = True

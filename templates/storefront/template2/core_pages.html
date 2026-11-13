@@ -16,29 +16,54 @@
 <section class="bg-gray-50 py-12">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     {% if pages %}
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% comment %}
+      One card per core page, built from what the owner entered in Edit content:
+      header image, title, and the subtitle (or, failing that, an excerpt of the
+      page body). Styles are scoped here because the storefront Tailwind build
+      is precompiled.
+      {% endcomment %}
+      <style>
+        .cph-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 1.5rem; }
+        @media (min-width: 640px) { .cph-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .cph-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .cph-card { display: flex; flex-direction: column; min-width: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 1rem; overflow: hidden; text-decoration: none; color: inherit; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .2s, transform .2s; }
+        .cph-card:hover { box-shadow: 0 12px 28px rgba(17,24,39,.10); transform: translateY(-2px); }
+        .cph-media { position: relative; aspect-ratio: 16 / 9; background: #f3f4f6; overflow: hidden; }
+        .cph-media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s; }
+        .cph-card:hover .cph-media img { transform: scale(1.03); }
+        .cph-media--empty { display: flex; align-items: center; justify-content: center; color: #9ca3af; }
+        .cph-media--empty svg { width: 2.5rem; height: 2.5rem; }
+        .cph-body { display: flex; flex-direction: column; flex: 1; padding: 1.25rem 1.25rem 1.1rem; }
+        .cph-title { font-size: 1.125rem; font-weight: 600; line-height: 1.35; color: #111827; overflow-wrap: anywhere; }
+        .cph-desc { margin-top: .5rem; font-size: .9rem; line-height: 1.55; color: #4b5563; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+        .cph-foot { margin-top: auto; padding-top: 1rem; display: flex; align-items: center; justify-content: space-between; gap: .75rem; font-size: .85rem; }
+        .cph-count { color: #6b7280; }
+        .cph-cta { display: inline-flex; align-items: center; gap: .35rem; font-weight: 600; color: #111827; }
+        .cph-cta svg { width: 1rem; height: 1rem; transition: transform .2s; }
+        .cph-card:hover .cph-cta svg { transform: translateX(2px); }
+      </style>
+      <div class="cph-grid">
         {% for p in pages %}
-          <a href="{{ website_base }}{{ p.slug }}/"
-             class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden">
-            <div class="p-6">
-              <div class="flex items-start gap-3">
-                <div class="h-11 w-11 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
-                  <svg class="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <h2 class="text-lg font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors truncate">
-                    {{ p.title }}
-                  </h2>
-                  <p class="mt-1 text-sm text-gray-500 truncate">{{ website_base }}{{ p.slug }}/</p>
-                </div>
+          <a href="{{ website_base }}{{ p.slug }}/" class="cph-card">
+            {% if p.image %}
+              <div class="cph-media"><img src="{{ p.image }}" alt="{{ p.title }}" loading="lazy"></div>
+            {% else %}
+              <div class="cph-media cph-media--empty" aria-hidden="true">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
               </div>
-              <div class="mt-5 flex items-center text-sm font-semibold text-indigo-700">
-                View page
-                <svg class="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
+            {% endif %}
+            <div class="cph-body">
+              <h2 class="cph-title">{{ p.title }}</h2>
+              {% if p.subtitle %}
+                <p class="cph-desc">{{ p.subtitle }}</p>
+              {% elif p.content %}
+                <p class="cph-desc">{{ p.content|striptags|truncatewords:30 }}</p>
+              {% endif %}
+              <div class="cph-foot">
+                <span class="cph-count">{% if p.subpages %}{{ p.subpages|length }} topic{{ p.subpages|length|pluralize }}{% endif %}</span>
+                <span class="cph-cta">View page
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </span>
               </div>
             </div>
           </a>
@@ -58,17 +83,17 @@
                 <a href="{{ website_base }}{{ p.slug }}/" class="font-semibold text-indigo-700 hover:text-indigo-900">
                   {{ p.title }}
                 </a>
-                {% if p.subpages.all %}
+                {% if p.subpages %}
                   <ul class="mt-3 pl-4 border-l border-gray-200 space-y-2">
-                    {% for sp in p.subpages.all %}
+                    {% for sp in p.subpages %}
                       <li>
                         <a href="{{ website_base }}{{ p.slug }}/{{ sp.slug }}/" class="text-gray-900 hover:text-indigo-700 font-medium">
                           {{ sp.title }}
                         </a>
-                        {% if sp.nested_subpages.all %}
+                        {% if sp.children %}
                           <ul class="mt-2 pl-4 border-l border-gray-100 space-y-1">
-                            {% for n in sp.nested_subpages.all %}
-                              {% if n.is_active %}
+                            {% for n in sp.children %}
+                              {% if n.slug %}
                                 <li>
                                   <a href="{{ website_base }}{{ p.slug }}/{{ sp.slug }}/{{ n.slug }}/" class="text-gray-700 hover:text-indigo-700">
                                     {{ n.title }}

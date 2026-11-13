@@ -1,0 +1,18 @@
+{{ brand }} - Order #{{ order_number }} confirmed
+
+Thank you{% if customer_name %}, {{ customer_name }}{% endif %}!
+
+We've received your order #{{ order_number }} and it is confirmed.
+
+Your order:
+{% for it in items %}- {{ it.title }}{% if it.variant_label %} ({{ it.variant_label }}){% endif %} | Qty {{ it.quantity }} x {{ sym }}{{ it.unit_price }} | {{ sym }}{{ it.line_total }}
+{% endfor %}
+Subtotal: {{ sym }}{{ subtotal }}
+{% if discount %}Discount: -{{ sym }}{{ discount }}
+{% endif %}{% if credit %}Store credit: -{{ sym }}{{ credit }}
+{% endif %}{% if tax %}GST: {{ sym }}{{ tax }}
+{% endif %}Total: {{ sym }}{{ total }}
+{% if confirmation_url %}
+View your order: {{ confirmation_url }}
+{% endif %}
+{% if reply_to %}Reply to this email to reach {{ brand }}.{% else %}This is an automated confirmation from {{ brand }}.{% endif %}

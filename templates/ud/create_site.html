@@ -5,147 +5,224 @@
 
 {% block main %}
 <div class="app-page">
+  <form method="post" class="cw" data-wizard
+        data-initial-step="{% if errors.business_category or errors.business_subcategory %}2{% elif errors.brand_name %}3{% else %}1{% endif %}">
+    {% csrf_token %}
 
-  <div class="app-head">
-    <div>
-      <p class="pal-mono pal-mono--accent">02 — Onboarding</p>
-      <h1 class="app-head__title pal-mt-4">Create a store</h1>
-      <p class="app-head__lead">
-        Tell us a little about your business. OneWooz turns it into a working,
-        published store — copy, sections, policies and all — that you can refine
-        afterwards.
-      </p>
-    </div>
-  </div>
+    {# ---- Step header (progress) ---- #}
+    <ol class="cw__steps" aria-label="Progress">
+      <li class="cw__s is-active" data-prog="1"><span class="cw__s-n">1</span><span class="cw__s-l">Business type</span></li>
+      <li class="cw__s" data-prog="2"><span class="cw__s-n">2</span><span class="cw__s-l">Category</span></li>
+      <li class="cw__s" data-prog="3"><span class="cw__s-n">3</span><span class="cw__s-l">Brand</span></li>
+    </ol>
 
-  <div class="app-block">
+    <div class="cw__body">
 
-  {% if submitted %}
-    {# ---- Confirmation state ---- #}
-    <div class="app-confirm">
-      <div class="pal-alert pal-alert--ok">
-        <p class="pal-alert__title">Brief captured</p>
-        We have your details for <strong>{{ brief.brand_name|default:"your store" }}</strong>.
-        Store generation from the industry content packs is landing next — you’ll
-        get a live store on a <code>.onewooz.site</code> address the moment it does.
-        <p class="pal-alert__ref">REF · {{ brief.business_type|upper|default:"—" }} / {{ brief.industry|default:"—" }}</p>
-      </div>
-      <div class="pal-btn-row">
-        <a href="{% url 'ud:dashboard' %}" class="pal-btn">Back to overview</a>
-        <a href="{% url 'ud:create_site' %}" class="pal-btn pal-btn--ghost">Edit the brief</a>
-      </div>
-    </div>
-
-  {% else %}
-    {# ---- Wizard form ---- #}
-    <form method="post" class="app-wizard">
-      {% csrf_token %}
-
-      <div class="app-wizard__rail">
-        <p class="app-wizard__kicker">Store setup</p>
-        <div class="app-wizard__steps">
-          <div class="app-wstep">
-            <span class="app-wstep__n">01</span>
-            <div><div class="app-wstep__t">Business type</div><div class="app-wstep__d">D2C or B2B</div></div>
+      {# ---- Step 1 · Business type ---- #}
+      <section class="cw__step" data-step="1">
+        <h1 class="cw__title">What are you selling as?</h1>
+        <p class="cw__hint">This sets whether your store takes payments or enquiries.</p>
+        <div class="app-optset app-optset--2 cw__opts">
+          <div class="app-opt">
+            <input type="radio" name="business_type" id="bt-d2c" value="d2c" {% if form.business_type != 'b2b' %}checked{% endif %}>
+            <label for="bt-d2c">
+              <span class="app-opt__k cw__opt-k">D2C <span class="cw__opt-paren">(E-commerce)</span></span>
+              <span class="app-opt__d">Cart, checkout and online payments  selling direct to shoppers.</span>
+            </label>
           </div>
-          <div class="app-wstep">
-            <span class="app-wstep__n">02</span>
-            <div><div class="app-wstep__t">Industry</div><div class="app-wstep__d">Sets the content pack</div></div>
-          </div>
-          <div class="app-wstep">
-            <span class="app-wstep__n">03</span>
-            <div><div class="app-wstep__t">Brand</div><div class="app-wstep__d">Name &amp; tagline</div></div>
-          </div>
-          <div class="app-wstep">
-            <span class="app-wstep__n">04</span>
-            <div><div class="app-wstep__t">Publish</div><div class="app-wstep__d">Live in seconds</div></div>
+          <div class="app-opt">
+            <input type="radio" name="business_type" id="bt-b2b" value="b2b" {% if form.business_type == 'b2b' %}checked{% endif %}>
+            <label for="bt-b2b">
+              <span class="app-opt__k cw__opt-k">B2B <span class="cw__opt-paren">(Catalog)</span></span>
+              <span class="app-opt__d">A catalogue and enquiry flow  for wholesale and trade supply.</span>
+            </label>
           </div>
         </div>
-      </div>
+        <div class="cw__nav">
+          <span></span>
+          <button type="button" class="pal-btn" data-next>Continue <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+        </div>
+      </section>
 
-      <div class="app-wizard__form">
+      {# ---- Step 2 · Category ---- #}
+      <section class="cw__step" data-step="2" hidden>
+        <h1 class="cw__title">What do you sell?</h1>
+        <p class="cw__hint">Pick the category and subcategory that fit best.</p>
+        <div class="cw__fields">
+          <label class="pal-field">
+            <span class="pal-field__label">Category</span>
+            <select class="pal-input" name="business_category" id="business_category"
+                    data-subcat-url="{% url 'ud:subcategories_json' %}">
+              <option value="" {% if not form.business_category %}selected{% endif %} disabled>Select a category…</option>
+              {% for c in categories %}
+              <option value="{{ c.id }}" {% if form.business_category == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            </select>
+            {% if errors.business_category %}<span class="cw-err">{{ errors.business_category }}</span>{% endif %}
+          </label>
+          <label class="pal-field">
+            <span class="pal-field__label">Subcategory</span>
+            <select class="pal-input" name="business_subcategory" id="business_subcategory">
+              <option value="" selected disabled>Select a category first…</option>
+            </select>
+            {% if errors.business_subcategory %}<span class="cw-err">{{ errors.business_subcategory }}</span>{% endif %}
+          </label>
+          {% if not categories %}
+          <p class="cw-err">No categories are set up yet  an admin must add business categories before stores can be created.</p>
+          {% endif %}
+          <p class="cw-err" data-err="step2" hidden>Choose a category and subcategory to continue.</p>
+        </div>
+        <div class="cw__nav">
+          <button type="button" class="pal-btn pal-btn--ghost" data-back>Back</button>
+          <button type="button" class="pal-btn" data-next>Continue <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
+        </div>
+      </section>
 
-        {# Step 1 — business type #}
-        <fieldset class="app-fieldset">
-          <legend class="app-fieldset__legend">What are you selling as?</legend>
-          <p class="app-fieldset__hint">This decides whether your store takes orders and payment, or enquiries.</p>
-          <div class="app-optset app-optset--2">
-            <div class="app-opt">
-              <input type="radio" name="business_type" id="bt-d2c" value="d2c" checked>
-              <label for="bt-d2c">
-                <span class="app-opt__k">D2C</span>
-                <span class="app-opt__t">Sell direct to shoppers</span>
-                <span class="app-opt__d">Cart, checkout and online payments. For brands selling to the public.</span>
-              </label>
-            </div>
-            <div class="app-opt">
-              <input type="radio" name="business_type" id="bt-b2b" value="b2b">
-              <label for="bt-b2b">
-                <span class="app-opt__k">B2B</span>
-                <span class="app-opt__t">Take trade enquiries</span>
-                <span class="app-opt__d">A catalogue and enquiry flow instead of checkout. For wholesale and retail supply.</span>
-              </label>
-            </div>
-          </div>
-        </fieldset>
-
-        {# Step 2 — industry #}
-        <fieldset class="app-fieldset">
-          <legend class="app-fieldset__legend">Which industry fits best?</legend>
-          <p class="app-fieldset__hint">We pick real copy, section order and demo products from a pack built for it.</p>
-          <div class="app-optset app-optset--3">
-            <div class="app-opt">
-              <input type="radio" name="industry" id="ind-fashion" value="fashion" checked>
-              <label for="ind-fashion"><span class="app-opt__t">Fashion &amp; apparel</span><span class="app-opt__d">Clothing, footwear, accessories.</span></label>
-            </div>
-            <div class="app-opt">
-              <input type="radio" name="industry" id="ind-beauty" value="beauty">
-              <label for="ind-beauty"><span class="app-opt__t">Beauty &amp; wellness</span><span class="app-opt__d">Skincare, cosmetics, supplements.</span></label>
-            </div>
-            <div class="app-opt">
-              <input type="radio" name="industry" id="ind-food" value="food">
-              <label for="ind-food"><span class="app-opt__t">Food &amp; beverage</span><span class="app-opt__d">Packaged food, drinks, gourmet.</span></label>
-            </div>
-            <div class="app-opt">
-              <input type="radio" name="industry" id="ind-home" value="home">
-              <label for="ind-home"><span class="app-opt__t">Home &amp; living</span><span class="app-opt__d">Décor, furniture, kitchenware.</span></label>
-            </div>
-            <div class="app-opt">
-              <input type="radio" name="industry" id="ind-electronics" value="electronics">
-              <label for="ind-electronics"><span class="app-opt__t">Electronics</span><span class="app-opt__d">Gadgets, accessories, devices.</span></label>
-            </div>
-            <div class="app-opt">
-              <input type="radio" name="industry" id="ind-other" value="other">
-              <label for="ind-other"><span class="app-opt__t">Something else</span><span class="app-opt__d">A general-purpose starting point.</span></label>
-            </div>
-          </div>
-        </fieldset>
-
-        {# Step 3 — brand #}
-        <fieldset class="app-fieldset">
-          <legend class="app-fieldset__legend">Your brand</legend>
-          <p class="app-fieldset__hint">Used across the storefront, its title and its social preview.</p>
-          <div>
-            <label class="pal-field">
-              <span class="pal-field__label">Brand name</span>
-              <input class="pal-input" type="text" name="brand_name" maxlength="120" placeholder="e.g. Northline Supply" required>
-            </label>
-            <label class="pal-field">
-              <span class="pal-field__label">Tagline <span class="app-optional">(optional)</span></span>
-              <input class="pal-input" type="text" name="tagline" maxlength="160" placeholder="One line on what you sell and for whom">
-            </label>
-          </div>
-        </fieldset>
-
-        <div class="app-wizard__foot">
-          <span class="app-wizard__note">You can change everything after it’s live</span>
+      {# ---- Step 3 · Brand ---- #}
+      <section class="cw__step" data-step="3" hidden>
+        <h1 class="cw__title">Your brand</h1>
+        <p class="cw__hint">You can change all of this after your store is live.</p>
+        <div class="cw__fields cw__grid">
+          <label class="pal-field cw__span2">
+            <span class="pal-field__label">Brand name</span>
+            <input class="pal-input" type="text" name="brand_name" maxlength="120" placeholder="e.g. Northline Supply" value="{{ form.brand_name|default:'' }}">
+            {% if errors.brand_name %}<span class="cw-err">{{ errors.brand_name }}</span>{% endif %}
+            <span class="cw-err" data-err="step3" hidden>Enter a store name to continue.</span>
+          </label>
+          <label class="pal-field cw__span2">
+            <span class="pal-field__label">Tagline <span class="app-optional">(optional)</span></span>
+            <input class="pal-input" type="text" name="tagline" maxlength="160" placeholder="One line on what you sell" value="{{ form.tagline|default:'' }}">
+          </label>
+          <label class="pal-field">
+            <span class="pal-field__label">Currency</span>
+            <select class="pal-input" name="currency">
+              {% for code, label in currency_choices %}
+              <option value="{{ code }}" {% if form.currency == code %}selected{% endif %}>{{ label }} ({{ code }})</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="pal-field">
+            <span class="pal-field__label">Support phone <span class="app-optional">(optional)</span></span>
+            <input class="pal-input" type="text" name="support_phone" maxlength="20" placeholder="+91…" value="{{ form.support_phone|default:'' }}">
+          </label>
+          <label class="pal-field cw__span2">
+            <span class="pal-field__label">Support email <span class="app-optional">(optional)</span></span>
+            <input class="pal-input" type="email" name="support_email" maxlength="254" placeholder="help@yourbrand.com" value="{{ form.support_email|default:'' }}">
+          </label>
+        </div>
+        <div class="cw__nav">
+          <button type="button" class="pal-btn pal-btn--ghost" data-back>Back</button>
           <button type="submit" class="pal-btn">Build my store <span class="pal-btn__arrow" aria-hidden="true">→</span></button>
         </div>
+      </section>
 
-      </div>
-    </form>
-  {% endif %}
-
-  </div>
+    </div>
+  </form>
 </div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+
+  /* ---- Step navigation ---- */
+  var form = document.querySelector("[data-wizard]");
+  if (!form) return;
+  var steps = Array.prototype.slice.call(form.querySelectorAll(".cw__step"));
+  var dots = Array.prototype.slice.call(form.querySelectorAll(".cw__s"));
+  var total = steps.length;
+  var current = parseInt(form.getAttribute("data-initial-step"), 10) || 1;
+
+  function show(n) {
+    current = Math.min(Math.max(n, 1), total);
+    steps.forEach(function (s) { s.hidden = parseInt(s.getAttribute("data-step"), 10) !== current; });
+    dots.forEach(function (d) {
+      var i = parseInt(d.getAttribute("data-prog"), 10);
+      d.classList.toggle("is-active", i === current);
+      d.classList.toggle("is-done", i < current);
+    });
+  }
+
+  function validate(step) {
+    if (step === 2) {
+      var okC = !!(document.getElementById("business_category") || {}).value;
+      var okS = !!(document.getElementById("business_subcategory") || {}).value;
+      toggleErr("step2", !(okC && okS));
+      return okC && okS;
+    }
+    if (step === 3) {
+      var name = (form.querySelector("[name='brand_name']") || {}).value || "";
+      toggleErr("step3", !name.trim());
+      return !!name.trim();
+    }
+    return true;
+  }
+
+  function toggleErr(key, on) {
+    var el = form.querySelector("[data-err='" + key + "']");
+    if (el) el.hidden = !on;
+  }
+
+  form.addEventListener("click", function (e) {
+    var next = e.target.closest && e.target.closest("[data-next]");
+    if (next) { if (validate(current)) show(current + 1); return; }
+    var back = e.target.closest && e.target.closest("[data-back]");
+    if (back) { show(current - 1); return; }
+  });
+
+  form.addEventListener("submit", function (e) {
+    // Final guard  brand name must be present (server validates too).
+    if (!validate(3)) { e.preventDefault(); show(3); }
+  });
+
+  show(current);
+
+  /* ---- Dependent subcategory dropdown ---- */
+  var cat = document.getElementById("business_category");
+  var sub = document.getElementById("business_subcategory");
+  if (!cat || !sub) return;
+  var tpl = cat.getAttribute("data-subcat-url") || "";
+  var selected = "{{ form.business_subcategory|default:'' }}";
+
+  // The subcategory <select> is enhanced into a custom dropdown by
+  // custom-select.js, which snapshots the options once. Whenever we mutate the
+  // native <select>'s options we must tell it to re-read them, or the loaded
+  // subcategories stay invisible in the custom UI.
+  function refreshCustom() {
+    if (window.OwSelect && window.OwSelect.rebuild) window.OwSelect.rebuild(sub);
+  }
+
+  function setPlaceholder(text) {
+    sub.innerHTML = "";
+    var opt = document.createElement("option");
+    opt.value = ""; opt.disabled = true; opt.selected = true; opt.textContent = text;
+    sub.appendChild(opt);
+    refreshCustom();
+  }
+
+  function load(categoryId, preselect) {
+    if (!categoryId) { setPlaceholder("Select a category first…"); return; }
+    var sep = tpl.indexOf("?") === -1 ? "?" : "&";
+    var url = tpl + sep + "category=" + encodeURIComponent(categoryId);
+    setPlaceholder("Loading…");
+    fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var rows = (data && data.results) || [];
+        if (!rows.length) { setPlaceholder("No subcategories  add some in the admin"); return; }
+        setPlaceholder("Select a subcategory…");
+        rows.forEach(function (row) {
+          var opt = document.createElement("option");
+          opt.value = row.id; opt.textContent = row.name;
+          if (preselect && String(preselect) === String(row.id)) opt.selected = true;
+          sub.appendChild(opt);
+        });
+        refreshCustom();
+      })
+      .catch(function () { setPlaceholder("Couldn't load subcategories  try again"); });
+  }
+
+  cat.addEventListener("change", function () { load(cat.value, null); });
+  if (cat.value) load(cat.value, selected);
+})();
+</script>
 {% endblock %}

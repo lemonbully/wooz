@@ -1,0 +1,86 @@
+{% extends "web/_shell.html" %}
+
+{% comment %}
+Core-pages index  the single footer "Core pages" link lands here. Shows the
+whole published tree (page → subpage → child) as links; each is a real page you
+can open.  marketing system (onewooz_design.md): squared, hairline,
+mono metadata, one accent.
+{% endcomment %}
+
+
+{% block head %}{{ block.super }}
+<style nonce="{{ csp_nonce }}">
+  .cp-tree { border: 1px solid var(--pal-line); }
+  .cp-tree__page { border-top: 1px solid var(--pal-line); }
+  .cp-tree__page:first-child { border-top: 0; }
+  .cp-tree__page > a { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 1.15rem 1.35rem; text-decoration: none; color: var(--pal-ink);
+    font-family: var(--pal-font-display); font-weight: 500; font-size: 1.15rem; letter-spacing: -0.01em;
+    transition: background 140ms ease, color 140ms ease; }
+  .cp-tree__page > a:hover { background: var(--pal-paper-2); color: var(--pal-accent); }
+  .cp-tree__page > a .arw { font-family: var(--pal-font-mono); font-size: 0.8rem; color: var(--pal-accent); }
+
+  .cp-tree__branch { padding: 0 1.35rem 1.1rem 1.35rem; }
+  .cp-tree__sub { margin-top: 0.65rem; }
+  .cp-tree__sub > a { display: inline-block; font-family: var(--pal-font-mono); font-size: 0.78rem; letter-spacing: 0.02em;
+    color: var(--pal-ink-2); text-decoration: none; padding: 0.15rem 0; }
+  .cp-tree__sub > a:hover { color: var(--pal-accent); }
+  .cp-tree__nested { margin: 0.35rem 0 0.35rem 0.85rem; border-left: 1px solid var(--pal-line); padding-left: 0.85rem; }
+  .cp-tree__nested a { display: block; font-family: var(--pal-font-mono); font-size: 0.72rem; color: var(--pal-muted);
+    text-decoration: none; padding: 0.2rem 0; }
+  .cp-tree__nested a:hover { color: var(--pal-accent); }
+
+  .cp-index-empty { border: 1px solid var(--pal-line); padding: clamp(2.5rem, 1.5rem + 3vw, 4rem); text-align: center; color: var(--pal-muted); }
+</style>
+{% endblock %}
+
+{% block main %}
+<section class="pal-pagehead pal-blueprint">
+  <div class="pal-container">
+    <nav class="pal-breadcrumb" aria-label="Breadcrumb">
+      <a href="{% url 'web:home' %}">Home</a>
+      <span aria-hidden="true"> / </span>
+      <span aria-current="page">Pages</span>
+    </nav>
+    <h1 class="pal-pagehead__title">Pages</h1>
+    <p class="pal-pagehead__lead">Every guide, policy and resource, laid out as a tree. Open any page to read it.</p>
+  </div>
+</section>
+
+<section class="pal-section pal-section--tight pal-ruled">
+  <div class="pal-container pal-container--narrow">
+    {% if pages %}
+    <ul class="cp-tree">
+      {% for p in pages %}
+      <li class="cp-tree__page">
+        <a href="{{ p.get_absolute_url }}">
+          <span>{{ p.title }}</span>
+          <span class="arw" aria-hidden="true">&rarr;</span>
+        </a>
+        {% if p.subpages.all %}
+        <ul class="cp-tree__branch">
+          {% for sp in p.subpages.all %}
+          <li class="cp-tree__sub">
+            <a href="{{ sp.get_absolute_url }}">{{ sp.title }}</a>
+            {% if sp.children.all %}
+            <div class="cp-tree__nested">
+              {% for c in sp.children.all %}
+              <a href="{{ c.get_absolute_url }}">{{ c.title }}</a>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="cp-index-empty">
+      <p>No pages have been published yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

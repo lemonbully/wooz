@@ -1,0 +1,386 @@
+{% comment %}
+Account settings on the storefront account page (signed-in shopper only):
+Your details (name, mobile, email change confirmed by a code sent to the new
+address), Saved addresses (Home / Office / any name; shipping, billing or both;
+one default, which checkout pre-fills) and Delete my account (confirmation +
+a code sent to the current email; orders are kept). JSON endpoints live in
+storefront.views (account_*); rules in storefront.account_profile.
+Accent follows the theme's --primary-color.
+{% endcomment %}
+<style nonce="{{ csp_nonce }}">
+  .ap{--ap-accent:var(--primary-color,#111827);--ap-ink:#111827;--ap-text:#374151;--ap-muted:#6b7280;--ap-line:#e5e7eb;max-width:64rem;margin:2.5rem auto 0;color:var(--ap-ink)}
+  .ap *{box-sizing:border-box}
+  .ap-head{margin:0 0 1rem}
+  .ap-head h2{margin:0;font-size:1.25rem;font-weight:600;letter-spacing:-.01em}
+  .ap-head p{margin:.25rem 0 0;font-size:.88rem;color:var(--ap-muted)}
+  .ap-grid{display:grid;gap:1.25rem;align-items:start}
+  /* Columns follow the section's own width (not the viewport), so it also
+     reads right inside the UGC store's phone-width card. */
+  .ap-wrap{container-type:inline-size}
+  @container (min-width:52rem){.ap-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}}
+  .ap-card{border:1px solid var(--ap-line);border-radius:1rem;background:#fff;padding:1.25rem}
+  .ap-cardhead{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:0 0 1rem}
+  .ap-cardhead h3{margin:0;font-size:1rem;font-weight:600}
+  .ap-field{display:grid;gap:.35rem;margin:0 0 .85rem}
+  .ap-field > span{font-size:.78rem;font-weight:600;color:var(--ap-text)}
+  .ap-input,.ap-select{width:100%;height:2.75rem;padding:0 .8rem;border:1px solid #d1d5db;border-radius:.6rem;background:#fff;color:var(--ap-ink);font-size:.92rem;font-family:inherit}
+  .ap-input:focus,.ap-select:focus{outline:none;border-color:var(--ap-accent);box-shadow:0 0 0 3px rgba(17,24,39,.08)}
+  .ap-row2{display:grid;gap:0 .75rem}
+  @media (min-width:30rem){.ap-row2{grid-template-columns:1fr 1fr}}
+  .ap-field--email{margin-top:1.1rem}
+  .ap-emailrow{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.7rem .8rem;border:1px solid var(--ap-line);border-radius:.6rem;background:#f9fafb}
+  .ap-emailrow b{font-weight:600;word-break:break-all;font-size:.92rem}
+  .ap-btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:2.6rem;padding:.55rem 1rem;border-radius:.6rem;border:1px solid transparent;font-size:.88rem;font-weight:600;font-family:inherit;cursor:pointer;text-decoration:none;transition:background-color .15s ease,border-color .15s ease,opacity .15s ease}
+  .ap-btn:disabled{opacity:.55;cursor:not-allowed}
+  .ap-btn--primary{background:var(--ap-accent);color:#fff}
+  .ap-btn--ghost{background:#fff;border-color:#d1d5db;color:var(--ap-ink)}
+  .ap-btn--ghost:hover{border-color:var(--ap-accent)}
+  .ap-btn--link{min-height:auto;padding:0;background:none;border:0;color:var(--ap-accent);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+  .ap-btn--danger{background:#b91c1c;color:#fff}
+  .ap-btn--danger:hover{background:#991b1b}
+  .ap-btn--dangerghost{background:#fff;border-color:#fecaca;color:#b91c1c}
+  .ap-btn--dangerghost:hover{border-color:#b91c1c}
+  .ap-btn:focus-visible{outline:2px solid var(--ap-accent);outline-offset:2px}
+  .ap-actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+  .ap-msg{margin:.6rem 0 0;font-size:.82rem;line-height:1.45}
+  .ap-msg.is-ok{color:#047857}.ap-msg.is-err{color:#b91c1c}
+  .ap-sub{margin-top:.75rem;padding:.85rem;border:1px dashed #d1d5db;border-radius:.6rem;background:#fcfcfd}
+  .ap-addrs{display:grid;gap:.75rem}
+  .ap-addr{position:relative;padding:.9rem 1rem;border:1px solid var(--ap-line);border-radius:.8rem}
+  .ap-addr.is-default{border-color:var(--ap-accent);box-shadow:0 0 0 1px var(--ap-accent)}
+  .ap-tags{display:flex;flex-wrap:wrap;gap:.35rem;margin:0 0 .45rem}
+  .ap-tag{display:inline-flex;align-items:center;gap:.3rem;padding:.15rem .55rem;border-radius:9999px;font-size:.72rem;font-weight:600;background:#f3f4f6;color:var(--ap-text)}
+  .ap-tag--label{background:var(--ap-accent);color:#fff}
+  .ap-tag--default{background:#ecfdf5;color:#047857}
+  .ap-addr p{margin:0;font-size:.88rem;line-height:1.5;color:var(--ap-text)}
+  .ap-addr .ap-actions{margin-top:.6rem}
+  .ap-empty{padding:1rem;border:1px dashed #d1d5db;border-radius:.8rem;font-size:.88rem;color:var(--ap-muted);text-align:center}
+  .ap-danger{margin-top:1.25rem;border-color:#fecaca;background:#fffafa;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem}
+  .ap-danger h3{margin:0 0 .25rem;font-size:1rem;font-weight:600;color:#991b1b}
+  .ap-danger p{margin:0;font-size:.86rem;line-height:1.5;color:var(--ap-text);max-width:38rem}
+  .ap-pills{display:flex;flex-wrap:wrap;gap:.4rem}
+  .ap-pill{position:relative}
+  .ap-pill input{position:absolute;opacity:0;width:1px;height:1px}
+  .ap-pill span{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .85rem;border:1px solid #d1d5db;border-radius:9999px;font-size:.85rem;font-weight:500;cursor:pointer;background:#fff}
+  .ap-pill input:checked + span{background:var(--ap-accent);border-color:var(--ap-accent);color:#fff}
+  .ap-pill input:focus-visible + span{outline:2px solid var(--ap-accent);outline-offset:2px}
+  .ap-check{display:flex;align-items:flex-start;gap:.5rem;font-size:.86rem;color:var(--ap-text);margin:.25rem 0 .9rem}
+  .ap-check input{margin-top:.15rem;width:1rem;height:1rem;accent-color:var(--ap-accent)}
+  .ap-dlg{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:1rem}
+  .ap-dlg[hidden]{display:none}
+  .ap-dlg__bg{position:absolute;inset:0;background:rgba(17,24,39,.55)}
+  .ap-dlg__panel{position:relative;width:min(34rem,100%);max-height:calc(100vh - 2rem);overflow:auto;background:#fff;border-radius:1rem;padding:1.25rem 1.25rem 1.1rem;box-shadow:0 24px 60px -20px rgba(0,0,0,.45)}
+  .ap-dlg__head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:0 0 1rem}
+  .ap-dlg__head h3{margin:0;font-size:1.05rem;font-weight:600}
+  .ap-x{width:2rem;height:2rem;border-radius:9999px;border:1px solid var(--ap-line);background:#fff;cursor:pointer;font-size:1.1rem;line-height:1}
+  .ap-list{margin:.25rem 0 .9rem;padding-left:1.2rem;font-size:.86rem;line-height:1.6;color:var(--ap-text)}
+  .ap-note{font-size:.86rem;line-height:1.55;color:var(--ap-text);margin:0 0 .75rem}
+  .ap-code{letter-spacing:.35em;text-align:center;font-size:1.1rem}
+  /* Shown only where the host page splits Profile from Account settings
+     (storefront/account.html via data-ap-part); hidden everywhere else. */
+  .ap-split-only{display:none}
+</style>
+
+<section class="ap" id="account-details" aria-labelledby="ap-title" data-ap
+  data-profile-url="{% url 'public_account_profile' %}"
+  data-email-otp-url="{% url 'public_account_email_otp' %}"
+  data-email-verify-url="{% url 'public_account_email_verify' %}"
+  data-address-save-url="{% url 'public_account_address_save' %}"
+  data-address-del-tmpl="{% url 'public_account_address_delete' '00000000-0000-0000-0000-000000000000' %}"
+  data-delete-otp-url="{% url 'public_account_delete_otp' %}"
+  data-delete-confirm-url="{% url 'public_account_delete_confirm' %}">
+  <div class="ap-head">
+    <h2 id="ap-title">Account settings</h2>
+    <p>Manage your details and the addresses you deliver to.</p>
+  </div>
+
+  <div class="ap-wrap"><div class="ap-grid">
+    <div class="ap-card" data-ap-part="details">
+      <div class="ap-cardhead ap-split-only" data-ap-part="settings"><h3>Sign-in email</h3></div>
+      <div class="ap-cardhead" data-ap-part="profile"><h3>Your details</h3></div>
+      <form data-ap-profile data-ap-part="profile" novalidate>
+        <label class="ap-field"><span>Full name</span>
+          <input class="ap-input" name="name" maxlength="120" autocomplete="name" required value="{{ account_profile.name|default:'' }}">
+        </label>
+        <label class="ap-field"><span>Mobile number</span>
+          <input class="ap-input" name="phone" maxlength="20" inputmode="tel" autocomplete="tel" value="{{ account_profile.phone|default:'' }}" placeholder="e.g. +91 98765 43210">
+        </label>
+        <div class="ap-actions"><button type="submit" class="ap-btn ap-btn--primary">Save details</button></div>
+        <p class="ap-msg" data-ap-profile-msg hidden></p>
+      </form>
+
+      <div class="ap-field ap-field--email" data-ap-part="settings">
+        <span>Email</span>
+        <div class="ap-emailrow"><b>{{ customer_email }}</b><button type="button" class="ap-btn ap-btn--link" data-ap-email-open>Change</button></div>
+      </div>
+      <div class="ap-sub" data-ap-email data-ap-part="settings" hidden>
+        <form data-ap-email-send novalidate>
+          <label class="ap-field"><span>New email</span>
+            <input class="ap-input" type="email" name="email" autocomplete="email" required placeholder="you@example.com">
+          </label>
+          <div class="ap-actions"><button type="submit" class="ap-btn ap-btn--primary">Send code</button><button type="button" class="ap-btn ap-btn--ghost" data-ap-email-cancel>Cancel</button></div>
+        </form>
+        <form data-ap-email-verify novalidate hidden>
+          <label class="ap-field"><span>Code sent to your new email</span>
+            <input class="ap-input ap-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="------">
+          </label>
+          <div class="ap-actions"><button type="submit" class="ap-btn ap-btn--primary">Confirm new email</button><button type="button" class="ap-btn ap-btn--ghost" data-ap-email-cancel>Cancel</button></div>
+        </form>
+        <p class="ap-msg" data-ap-email-msg hidden></p>
+      </div>
+    </div>
+
+    <div class="ap-card" data-ap-part="profile">
+      <div class="ap-cardhead"><h3>Saved addresses</h3><button type="button" class="ap-btn ap-btn--ghost" data-ap-addr-new>+ Add address</button></div>
+      {% if saved_addresses %}
+      <div class="ap-addrs">
+        {% for a in saved_addresses %}
+        <div class="ap-addr{% if a.is_default %} is-default{% endif %}">
+          <div class="ap-tags">
+            <span class="ap-tag ap-tag--label">{{ a.label|default:"Address" }}</span>
+            <span class="ap-tag">{{ a.get_address_type_display }}</span>
+            {% if a.is_default %}<span class="ap-tag ap-tag--default">Default</span>{% endif %}
+          </div>
+          <p>{% if a.house_no or a.street_area %}{{ a.house_no }}{% if a.house_no and a.street_area %}, {% endif %}{{ a.street_area }}{% else %}{{ a.address_text }}{% endif %}</p>
+          <p>{{ a.city }}{% if a.state %}, {{ a.state }}{% endif %} {{ a.pincode }}</p>
+          {% if a.phone %}<p>{{ a.phone }}</p>{% endif %}
+          <div class="ap-actions">
+            <button type="button" class="ap-btn ap-btn--link" data-ap-addr-edit
+              data-id="{{ a.id }}" data-label="{{ a.label }}" data-type="{{ a.address_type }}"
+              data-house="{% if a.house_no or a.street_area %}{{ a.house_no }}{% else %}{{ a.address_text }}{% endif %}" data-street="{{ a.street_area }}"
+              data-city="{{ a.city }}" data-state="{{ a.state }}" data-pincode="{{ a.pincode }}"
+              data-phone="{{ a.phone }}" data-default="{% if a.is_default %}1{% endif %}">Edit</button>
+            <button type="button" class="ap-btn ap-btn--link" data-ap-addr-del="{{ a.id }}">Delete</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="ap-empty">No saved addresses yet. Add one to check out faster.</p>
+      {% endif %}
+      <p class="ap-msg" data-ap-addr-msg hidden></p>
+    </div>
+  </div></div>
+
+  <div class="ap-card ap-danger" data-ap-part="settings">
+    <div>
+      <h3>Delete my account</h3>
+      <p>Close your account and remove your personal details from {{ website.name }}. The store keeps a record of your past orders.</p>
+    </div>
+    <button type="button" class="ap-btn ap-btn--dangerghost" data-ap-delete-open>Delete My Account</button>
+  </div>
+
+  {# Address add / edit #}
+  <div class="ap-dlg" data-ap-addr-dlg hidden role="dialog" aria-modal="true" aria-labelledby="ap-addr-title">
+    <div class="ap-dlg__bg" data-ap-close></div>
+    <div class="ap-dlg__panel">
+      <div class="ap-dlg__head"><h3 id="ap-addr-title" data-ap-addr-title>Add address</h3><button type="button" class="ap-x" data-ap-close aria-label="Close">×</button></div>
+      <form data-ap-addr-form novalidate>
+        <input type="hidden" name="id" value="">
+        <div class="ap-field"><span>Save this address as</span>
+          <div class="ap-pills">
+            <label class="ap-pill"><input type="radio" name="label_choice" value="home" checked><span>Home</span></label>
+            <label class="ap-pill"><input type="radio" name="label_choice" value="office"><span>Office</span></label>
+            <label class="ap-pill"><input type="radio" name="label_choice" value="other"><span>Other</span></label>
+          </div>
+        </div>
+        <label class="ap-field" data-ap-custom hidden><span>Address name</span>
+          <input class="ap-input" name="label_custom" maxlength="40" placeholder="e.g. Mom’s place">
+        </label>
+        <label class="ap-field"><span>Use this address for</span>
+          <select class="ap-select" name="address_type">
+            <option value="both">Shipping &amp; billing</option>
+            <option value="shipping">Shipping only</option>
+            <option value="billing">Billing only</option>
+          </select>
+        </label>
+        <label class="ap-field"><span>House / flat / building</span><input class="ap-input" name="house_no" maxlength="120" autocomplete="address-line1"></label>
+        <label class="ap-field"><span>Street / area / landmark</span><input class="ap-input" name="street_area" maxlength="200" autocomplete="address-line2"></label>
+        <div class="ap-row2">
+          <label class="ap-field"><span>City</span><input class="ap-input" name="city" maxlength="120" autocomplete="address-level2"></label>
+          <label class="ap-field"><span>State</span><input class="ap-input" name="state" maxlength="120" autocomplete="address-level1"></label>
+        </div>
+        <div class="ap-row2">
+          <label class="ap-field"><span>PIN code</span><input class="ap-input" name="pincode" maxlength="10" inputmode="numeric" autocomplete="postal-code"></label>
+          <label class="ap-field"><span>Phone (optional)</span><input class="ap-input" name="phone" maxlength="20" inputmode="tel" autocomplete="tel"></label>
+        </div>
+        <label class="ap-check"><input type="checkbox" name="is_default" value="1"> Make this my default address</label>
+        <p class="ap-msg is-err" data-ap-addr-err hidden></p>
+        <div class="ap-actions"><button type="submit" class="ap-btn ap-btn--primary">Save address</button><button type="button" class="ap-btn ap-btn--ghost" data-ap-close>Cancel</button></div>
+      </form>
+    </div>
+  </div>
+
+  {# Delete account: confirm, then code #}
+  <div class="ap-dlg" data-ap-del-dlg hidden role="dialog" aria-modal="true" aria-labelledby="ap-del-title">
+    <div class="ap-dlg__bg" data-ap-close></div>
+    <div class="ap-dlg__panel">
+      <div class="ap-dlg__head"><h3 id="ap-del-title">Delete your account?</h3><button type="button" class="ap-x" data-ap-close aria-label="Close">×</button></div>
+      <div data-ap-del-step="1">
+        <p class="ap-note">This can’t be undone. Once your account is deleted:</p>
+        <ul class="ap-list">
+          <li>You can no longer sign in to it or see its orders</li>
+          <li>Your email, mobile number and saved addresses are removed from your account</li>
+          <li>Your wishlist and any store credit are removed</li>
+          <li>You are unsubscribed from the newsletter</li>
+        </ul>
+        <p class="ap-note">The store keeps a record of your past orders and account details, as it may need them for legal, tax and accounting purposes.</p>
+        <label class="ap-check"><input type="checkbox" data-ap-del-ack> I understand, delete my account</label>
+        <div class="ap-actions"><button type="button" class="ap-btn ap-btn--danger" data-ap-del-send disabled>Send confirmation code</button><button type="button" class="ap-btn ap-btn--ghost" data-ap-close>Keep my account</button></div>
+      </div>
+      <form data-ap-del-step="2" data-ap-del-form novalidate hidden>
+        <p class="ap-note">Enter the 6-digit code we sent to <b>{{ customer_email }}</b>.</p>
+        <label class="ap-field"><span>Confirmation code</span><input class="ap-input ap-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="------"></label>
+        <div class="ap-actions"><button type="submit" class="ap-btn ap-btn--danger">Delete my account</button><button type="button" class="ap-btn ap-btn--ghost" data-ap-close>Cancel</button></div>
+      </form>
+      <p class="ap-msg" data-ap-del-msg hidden></p>
+    </div>
+  </div>
+</section>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var root = document.querySelector('[data-ap]');
+  if (!root) return;
+  var token = '{{ csrf_token }}';
+  function q(sel, el) { return (el || root).querySelector(sel); }
+  function say(el, text, ok) { if (!el) return; el.textContent = text; el.hidden = !text; el.classList.toggle('is-ok', !!ok); el.classList.toggle('is-err', !ok); }
+  function post(url, data) {
+    var fd = data instanceof FormData ? data : new FormData();
+    if (!(data instanceof FormData)) Object.keys(data || {}).forEach(function (k) { fd.append(k, data[k]); });
+    return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': token, 'X-Requested-With': 'XMLHttpRequest' }, body: fd })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok && d && d.ok, data: d || {} }; }); })
+      .catch(function () { return { ok: false, data: { error: 'Network error. Please try again.' } }; });
+  }
+  function busy(form, on) { Array.prototype.forEach.call(form.querySelectorAll('button[type=submit]'), function (b) { b.disabled = on; }); }
+  function openDlg(d) { d.hidden = false; var f = d.querySelector('input:not([type=hidden]),button'); if (f) f.focus(); }
+  function closeDlg(d) { d.hidden = true; }
+  root.addEventListener('click', function (e) {
+    var c = e.target.closest('[data-ap-close]');
+    if (c) { var d = c.closest('.ap-dlg'); if (d) closeDlg(d); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    Array.prototype.forEach.call(root.querySelectorAll('.ap-dlg'), function (d) { d.hidden = true; });
+  });
+
+  // Your details
+  var profile = q('[data-ap-profile]');
+  if (profile) profile.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var msg = q('[data-ap-profile-msg]');
+    if (!profile.elements['name'].value.trim()) { say(msg, 'Please enter your name.', false); return; }
+    busy(profile, true);
+    post(root.getAttribute('data-profile-url'), new FormData(profile)).then(function (res) {
+      busy(profile, false);
+      say(msg, res.ok ? (res.data.message || 'Saved.') : (res.data.error || 'Could not save your details.'), res.ok);
+    });
+  });
+
+  // Change email: code to the new address, then confirm
+  var emailBox = q('[data-ap-email]'), emailSend = q('[data-ap-email-send]'), emailVerify = q('[data-ap-email-verify]'), emailMsg = q('[data-ap-email-msg]');
+  function resetEmail() { emailSend.reset(); emailVerify.reset(); emailSend.hidden = false; emailVerify.hidden = true; say(emailMsg, '', true); }
+  q('[data-ap-email-open]').addEventListener('click', function () { resetEmail(); emailBox.hidden = false; emailSend.email.focus(); });
+  Array.prototype.forEach.call(root.querySelectorAll('[data-ap-email-cancel]'), function (b) { b.addEventListener('click', function () { emailBox.hidden = true; resetEmail(); }); });
+  emailSend.addEventListener('submit', function (e) {
+    e.preventDefault();
+    busy(emailSend, true);
+    post(root.getAttribute('data-email-otp-url'), { email: emailSend.email.value.trim() }).then(function (res) {
+      busy(emailSend, false);
+      if (!res.ok) { say(emailMsg, res.data.error || 'Could not send the code.', false); return; }
+      say(emailMsg, res.data.message, true);
+      emailSend.hidden = true; emailVerify.hidden = false; emailVerify.code.focus();
+    });
+  });
+  emailVerify.addEventListener('submit', function (e) {
+    e.preventDefault();
+    busy(emailVerify, true);
+    post(root.getAttribute('data-email-verify-url'), { code: emailVerify.code.value.trim() }).then(function (res) {
+      busy(emailVerify, false);
+      if (!res.ok) { say(emailMsg, res.data.error || 'That code is incorrect or has expired.', false); return; }
+      say(emailMsg, res.data.message, true);
+      setTimeout(function () { window.location.reload(); }, 700);
+    });
+  });
+
+  // Address book
+  var addrDlg = q('[data-ap-addr-dlg]'), addrForm = q('[data-ap-addr-form]'), addrErr = q('[data-ap-addr-err]'), addrMsg = q('[data-ap-addr-msg]');
+  var customRow = q('[data-ap-custom]');
+  function syncLabel() { var v = (addrForm.querySelector('input[name=label_choice]:checked') || {}).value; customRow.hidden = v !== 'other'; }
+  addrForm.addEventListener('change', function (e) { if (e.target.name === 'label_choice') { syncLabel(); if (!customRow.hidden) addrForm.label_custom.focus(); } });
+  function setChoice(v) { var r = addrForm.querySelector('input[name=label_choice][value="' + v + '"]'); if (r) r.checked = true; syncLabel(); }
+  function openAddress(btn) {
+    addrForm.reset(); say(addrErr, '', false);
+    var editing = !!btn;
+    q('[data-ap-addr-title]').textContent = editing ? 'Edit address' : 'Add address';
+    addrForm.elements['id'].value = editing ? btn.getAttribute('data-id') : '';
+    if (editing) {
+      var label = btn.getAttribute('data-label') || '';
+      if (label === 'Home') setChoice('home'); else if (label === 'Office') setChoice('office'); else { setChoice('other'); addrForm.label_custom.value = label; }
+      addrForm.address_type.value = btn.getAttribute('data-type') || 'both';
+      addrForm.house_no.value = btn.getAttribute('data-house') || '';
+      addrForm.street_area.value = btn.getAttribute('data-street') || '';
+      addrForm.city.value = btn.getAttribute('data-city') || '';
+      addrForm.state.value = btn.getAttribute('data-state') || '';
+      addrForm.pincode.value = btn.getAttribute('data-pincode') || '';
+      addrForm.phone.value = btn.getAttribute('data-phone') || '';
+      addrForm.is_default.checked = btn.getAttribute('data-default') === '1';
+    } else { setChoice('home'); }
+    openDlg(addrDlg);
+  }
+  q('[data-ap-addr-new]').addEventListener('click', function () { openAddress(null); });
+  root.addEventListener('click', function (e) {
+    var ed = e.target.closest('[data-ap-addr-edit]');
+    if (ed) { openAddress(ed); return; }
+    var del = e.target.closest('[data-ap-addr-del]');
+    if (!del) return;
+    var card = del.closest('.ap-addr');
+    if (del.getAttribute('data-armed') !== '1') {
+      del.setAttribute('data-armed', '1'); del.textContent = 'Tap again to delete';
+      setTimeout(function () { if (del.isConnected) { del.removeAttribute('data-armed'); del.textContent = 'Delete'; } }, 4000);
+      return;
+    }
+    del.disabled = true;
+    var url = root.getAttribute('data-address-del-tmpl').replace('00000000-0000-0000-0000-000000000000', del.getAttribute('data-ap-addr-del'));
+    post(url, {}).then(function (res) {
+      if (!res.ok) { del.disabled = false; say(addrMsg, res.data.error || 'Could not delete the address.', false); return; }
+      if (card) card.style.opacity = '.4';
+      window.location.reload();
+    });
+  });
+  addrForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    busy(addrForm, true);
+    post(root.getAttribute('data-address-save-url'), new FormData(addrForm)).then(function (res) {
+      busy(addrForm, false);
+      if (!res.ok) { say(addrErr, res.data.error || 'Could not save the address.', false); return; }
+      closeDlg(addrDlg); window.location.reload();
+    });
+  });
+
+  // Delete account: understand → code → delete
+  var delDlg = q('[data-ap-del-dlg]'), ack = q('[data-ap-del-ack]'), sendBtn = q('[data-ap-del-send]'), delForm = q('[data-ap-del-form]'), delMsg = q('[data-ap-del-msg]');
+  q('[data-ap-delete-open]').addEventListener('click', function () {
+    ack.checked = false; sendBtn.disabled = true; delForm.reset();
+    q('[data-ap-del-step="1"]', delDlg).hidden = false; delForm.hidden = true; say(delMsg, '', true);
+    openDlg(delDlg);
+  });
+  ack.addEventListener('change', function () { sendBtn.disabled = !ack.checked; });
+  sendBtn.addEventListener('click', function () {
+    sendBtn.disabled = true;
+    post(root.getAttribute('data-delete-otp-url'), {}).then(function (res) {
+      if (!res.ok) { sendBtn.disabled = false; say(delMsg, res.data.error || 'Could not send the code.', false); return; }
+      q('[data-ap-del-step="1"]', delDlg).hidden = true; delForm.hidden = false; say(delMsg, res.data.message, true); delForm.code.focus();
+    });
+  });
+  delForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    busy(delForm, true);
+    post(root.getAttribute('data-delete-confirm-url'), { code: delForm.code.value.trim() }).then(function (res) {
+      if (!res.ok) { busy(delForm, false); say(delMsg, res.data.error || 'That code is incorrect or has expired.', false); return; }
+      say(delMsg, res.data.message, true);
+      window.location.href = res.data.redirect || '/';
+    });
+  });
+})();
+</script>

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mellow Studio | Soft essentials for everyday</title>
+<meta name="description" content="Template 3 preview: soft, story-rich D2C storefront.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body data-float="1" data-popup="1">
+<div data-header></div>
+
+<main>
+  <!-- 1. Hero banner -->
+  <section class="hero" aria-label="Featured" data-hero></section>
+
+  <div class="roll-up">
+    <!-- 2. Categories -->
+    <section class="section" style="padding-top:clamp(40px,5vw,72px)">
+      <div class="container">
+        <div class="sec-head">
+          <h2 class="h2">Explore Categories</h2>
+          <div class="pill-tabs" data-cat-tabs><button class="is-active" data-set="all">All</button><button data-set="her">For Her</button><button data-set="him">For Him</button></div>
+        </div>
+        <div class="slider" data-slider>
+          <div class="slider__track" data-cat-track style="--col:calc((100% - 5*16px)/6);--col-sm:42%"></div>
+          <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 3. Best sellers -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="sec-head">
+        <div><p class="eyebrow">Loved by 50,000+ customers</p><h2 class="h2">Best Sellers</h2></div>
+        <div class="pill-tabs" data-prod-tabs><button class="is-active" data-set="best">Best Sellers</button><button data-set="new">New Arrivals</button><button data-set="sale">On Sale</button></div>
+      </div>
+      <div class="slider" data-slider>
+        <div class="slider__track" data-best-track style="--col:calc((100% - 3*16px)/4);--col-sm:62%"></div>
+        <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><a class="btn btn--outline btn--sm" href="shop.html">View all</a><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Story banner pair (collection highlight) -->
+  <section class="container">
+    <div class="grid grid--2" style="gap:16px" data-highlights></div>
+  </section>
+
+  <!-- 4. Video / shoppable reels -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head sec-head--center">
+        <p class="eyebrow">Watch &amp; shop</p>
+        <h2 class="h2">Seen on our community</h2>
+        <p>Real outfits from real customers. Tap any reel to shop the look.</p>
+      </div>
+      <div class="slider" data-slider>
+        <div class="slider__track" data-reels style="--col:calc((100% - 4*16px)/5);--col-sm:62%"></div>
+        <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. About / our story -->
+  <section class="section" style="padding-top:0">
+    <div class="container story">
+      <div class="story__text reveal">
+        <p class="eyebrow">Our story</p>
+        <h2 class="h1" style="margin-top:12px">Soft fabrics,<br>made to be lived in.</h2>
+        <p>We started Mellow in a tiny Tiruppur studio with one belief: everyday clothes should feel as good on the hundredth wear as the first. Today every piece is still cut, stitched and checked by the same hands, in organic cotton and linen that breathe with you.</p>
+        <a href="about.html" class="btn btn--black btn--arrow">Learn More <span class="btn__dot" data-ico="arrow"></span></a>
+      </div>
+      <div class="story__media reveal">
+        <span class="sticker sticker--pill" style="top:10%;left:-4%">Wow</span>
+        <div class="story__circle"><img src="" data-src-id="beach" alt="Customer wearing a linen outfit on the beach"></div>
+        <span class="sticker sticker--blob" style="bottom:12%;right:-2%">Comfy</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Marquee band -->
+  <div class="band" aria-hidden="true"><div class="band__track" data-band></div></div>
+
+  <!-- 6. Blog -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head">
+        <div><p class="eyebrow">The Journal</p><h2 class="h2">Stories &amp; style notes</h2></div>
+        <a class="btn btn--outline btn--sm" href="blogs.html">Read all articles</a>
+      </div>
+      <div class="grid grid--3" data-blogs></div>
+    </div>
+  </section>
+
+  <!-- 7. Why choose us -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="sec-head sec-head--center"><p class="eyebrow">Why choose us</p><h2 class="h2">Feel good &amp; enjoy every day</h2></div>
+      <div class="features" data-why></div>
+    </div>
+  </section>
+
+  <!-- 8. Testimonials -->
+  <section class="section reviews-sec">
+    <div class="container">
+      <div class="sec-head">
+        <div><p class="eyebrow">What customers say</p><h2 class="h1">Over 12,000<br>Happy Reviews</h2></div>
+        <div class="review-score">
+          <div class="avatars" data-avatars></div>
+          <div><b style="font-size:22px">4.8</b> <span class="stars" data-stars-big></span><div class="small muted">Average rating on 12,480 reviews</div></div>
+        </div>
+      </div>
+      <div class="slider" data-slider>
+        <div class="slider__track" data-reviews style="--col:calc((100% - 2*16px)/3);--col-sm:86%"></div>
+        <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. FAQ -->
+  <section class="section" id="faq">
+    <div class="container faq-wrap">
+      <div class="faq-aside">
+        <p class="eyebrow">Need help?</p>
+        <h2 class="h1" style="margin-top:10px">Frequently asked questions</h2>
+        <p>Everything about orders, delivery, sizing and returns. Still curious? Our team replies within an hour.</p>
+        <a href="contact.html" class="btn btn--black btn--arrow">Contact Us <span class="btn__dot" data-ico="arrow"></span></a>
+        <div class="faq-help"><img src="" data-src-id="p3" alt=""><div><b>Talk to Neha</b><div class="small muted">Customer care, Mon to Sat, 9 AM to 8 PM</div></div></div>
+      </div>
+      <div data-acc-single data-faqs></div>
+    </div>
+  </section>
+</main>
+
+<div data-footer></div>
+
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$;
+  document.querySelectorAll('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
+  document.querySelectorAll('[data-prev]').forEach(e => e.innerHTML = I.left);
+  document.querySelectorAll('[data-next]').forEach(e => e.innerHTML = I.right);
+  document.querySelectorAll('[data-src-id]').forEach(e => e.src = D.U(D.IMG[e.dataset.srcId], 900, 900));
+
+  /* Hero slideshow */
+  const hero = $('[data-hero]');
+  hero.innerHTML = D.heroSlides.map((s, i) => `
+    <div class="hero__slide ${i === 0 ? 'is-active' : ''}" style="--bg:${s.bg}">
+      <img src="${s.img}" style="object-position:50% ${s.pos || "30%"}" alt="" ${i ? 'loading="lazy"' : 'fetchpriority="high"'}>
+      <div class="hero__content"><div class="container">
+        <p class="eyebrow">${s.eyebrow}</p>
+        ${i === 0 ? `<h1>${s.title}</h1>` : `<h2>${s.title}</h2>`}
+        <a href="shop.html" class="btn btn--white btn--arrow">${s.cta} <span class="btn__dot">${I.arrow}</span></a>
+      </div></div>
+    </div>`).join('') + `
+    <div class="hero__controls"><span data-hero-count>1 / ${D.heroSlides.length}</span><div class="hero__progress"><i></i></div>
+      <button class="hero__arrow" data-hero-prev aria-label="Previous slide">${I.left}</button><button class="hero__arrow" data-hero-next aria-label="Next slide">${I.right}</button></div>`;
+  let cur = 0, timer; const slides = hero.querySelectorAll('.hero__slide'), bar = hero.querySelector('.hero__progress i');
+  const go = n => { slides[cur].classList.remove('is-active'); cur = (n + slides.length) % slides.length; slides[cur].classList.add('is-active');
+    hero.querySelector('[data-hero-count]').textContent = `${cur + 1} / ${slides.length}`; bar.classList.remove('run'); void bar.offsetWidth; bar.classList.add('run');
+    clearTimeout(timer); timer = setTimeout(() => go(cur + 1), 6000); };
+  hero.querySelector('[data-hero-prev]').onclick = () => go(cur - 1);
+  hero.querySelector('[data-hero-next]').onclick = () => go(cur + 1);
+  go(0);
+
+  /* Categories */
+  const sets = { all: D.categories, her: D.categories.filter(c => ['dresses','knitwear','bags','accessories','t-shirts','sneakers'].includes(c.slug)), him: D.categories.filter(c => ['t-shirts','shirts','denim','outerwear','sneakers','accessories'].includes(c.slug)) };
+  const renderCats = k => { $('[data-cat-track]').innerHTML = sets[k].map(c => `<a class="cat-card" href="category.html?c=${c.slug}"><div class="cat-card__media"><img src="${D.U(c.img, 500, 620)}" alt="${c.name}" loading="lazy"></div><div class="cat-card__name">${c.name} <sup>${c.count}</sup></div></a>`).join(''); };
+  renderCats('all');
+  $('[data-cat-tabs]').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('[data-cat-tabs] .is-active').classList.remove('is-active'); b.classList.add('is-active'); renderCats(b.dataset.set); $('[data-cat-track]').scrollLeft = 0; });
+
+  /* Best sellers */
+  const pset = { best: [...D.products].sort((a, b) => b.reviews - a.reviews).slice(0, 10), new: D.products.filter(p => p.badges.includes('new')), sale: D.products.filter(p => p.mrp) };
+  const renderBest = k => { $('[data-best-track]').innerHTML = pset[k].map(p => T3.card(p, { reveal: false })).join(''); };
+  renderBest('best');
+  $('[data-prod-tabs]').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('[data-prod-tabs] .is-active').classList.remove('is-active'); b.classList.add('is-active'); renderBest(b.dataset.set); $('[data-best-track]').scrollLeft = 0; });
+
+  /* Highlights */
+  $('[data-highlights]').innerHTML = [
+    { t: 'Made to Move,<br>Built for Comfort', e: 'Move collection', img: 'streetDenim', bg: 'var(--lime)', c: 'outerwear' },
+    { t: 'Easy linen for<br>long summer days', e: 'New in', img: 'whiteDress', bg: 'var(--lilac)', c: 'dresses' },
+  ].map(h => `<a href="category.html?c=${h.c}" class="highlight-card reveal" style="background:${h.bg}">
+      <div><p class="eyebrow">${h.e}</p><h3 class="h2">${h.t}</h3><span class="btn btn--black btn--arrow" style="align-self:flex-start">Shop Now <span class="btn__dot">${I.arrow}</span></span></div>
+      <div style="padding:0;overflow:hidden"><img src="${D.U(D.IMG[h.img], 600, 800)}" alt="" loading="lazy"></div>
+    </a>`).join('');
+
+  /* Reels */
+  $('[data-reels]').innerHTML = D.reels.map(r => { const p = T3.byId(r.product); return `<div class="reel">
+      <img src="${r.img}" alt="" loading="lazy"><span class="reel__views">${I.eye} ${r.views}</span><span class="reel__play">${I.play}</span>
+      <a class="reel__product" href="product.html?p=${p.id}"><img src="${p.img[0]}" alt=""><span><b>${p.name}</b><small>${T3.inr(p.price)}</small></span><span class="btn btn--white btn--sm" style="height:32px;padding:0 12px">Shop</span></a>
+    </div>`; }).join('');
+
+  /* Band */
+  const band = [['leaf','Organic Cotton'],['truck','Free Shipping'],['return','Easy Returns'],['heart','Made in India'],['shield','Secure Checkout']].map(([i, t]) => `<span class="band__item">${I[i]} ${t} <a class="btn btn--white" href="shop.html">Shop</a></span>`).join('');
+  $('[data-band]').innerHTML = band + band;
+
+  /* Blogs */
+  $('[data-blogs]').innerHTML = D.blogs.slice(0, 3).map(b => `<a class="blog-card reveal" href="blog.html?b=${b.slug}"><div class="blog-card__media"><img src="${b.img}" alt="" loading="lazy"><span class="badge badge--light">${b.tag}</span></div><div class="blog-card__meta">${b.date}<i></i>${b.read}</div><h3>${b.title}</h3><p>${b.excerpt}</p></a>`).join('');
+
+  /* Why */
+  $('[data-why]').innerHTML = D.why.map(w => `<div class="feature reveal"><div class="feature__icon">${I[w.icon]}</div><h3>${w.title}</h3><p>${w.text}</p></div>`).join('');
+
+  /* Reviews */
+  $('[data-avatars]').innerHTML = D.reviews.slice(0, 5).map(r => `<img src="${r.avatar}" alt="">`).join('');
+  $('[data-stars-big]').outerHTML = T3.stars(5);
+  $('[data-reviews]').innerHTML = D.reviews.map(r => { const p = T3.byId(r.product); return `<div class="review-card">${T3.stars(5)}
+      <blockquote><b>“${r.title}</b>${r.text}”</blockquote>
+      <div class="review-card__who"><div style="display:flex;align-items:center;gap:10px"><img src="${r.avatar}" alt=""><div><b>${r.name}</b><div class="small muted">${r.city} · <span class="verified">${I.check} Verified</span></div></div></div>
+      <a class="prod" href="product.html?p=${p.id}"><img src="${p.img[0]}" alt=""></a></div></div>`; }).join('');
+
+  /* FAQ */
+  $('[data-faqs]').innerHTML = D.faqs.map((f, i) => T3.acc(f.q, `<p>${f.a}</p>`, i === 0)).join('');
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 """UUIDv7 identifiers.
 
 Every model in OneWooz uses a UUIDv7 primary key. No table has a sequential
-integer key, so no identifier anywhere in the product is enumerable — you
+integer key, so no identifier anywhere in the product is enumerable  you
 cannot walk from order 1041 to order 1042, or from one tenant's records to
 another's, by incrementing a number in a URL.
 

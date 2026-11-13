@@ -17,19 +17,32 @@ class StorefrontConfig(AppConfig):
         register_custom_domain_checker(_is_verified_custom_domain)
 
 
+def custom_domain_candidates(host: str) -> list[str]:
+    """The stored ``custom_domain`` values a request host can belong to: the
+    host itself, plus its ``www`` twin  ``www.brand.com`` serves the store
+    connected as ``brand.com`` (and vice versa), so an owner's ``www`` CNAME
+    just works without connecting it separately."""
+    host = (host or "").lower().rstrip(".")
+    if not host:
+        return []
+    if host.startswith("www."):
+        return [host, host[4:]]
+    return [host, f"www.{host}"]
+
+
 def _is_verified_custom_domain(host: str) -> bool:
     from django.core.cache import cache
 
-    host = (host or "").lower()
-    if not host:
+    candidates = custom_domain_candidates(host)
+    if not candidates:
         return False
-    key = f"cd:{host}"
+    key = f"cd:{candidates[0]}"
     value = cache.get(key)
     if value is None:
         from tenancy.models import Site
 
         value = Site.objects.filter(
-            custom_domain=host, custom_domain_verified=True, is_deleted=False
+            custom_domain__in=candidates, custom_domain_verified=True, is_deleted=False
         ).exists()
         cache.set(key, value, 120)
     return value

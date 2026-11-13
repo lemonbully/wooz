@@ -1,72 +1,347 @@
 {% extends "store/_shell.html" %}
+{% load static store_extras %}
 {% block title %}{{ site.name }} · Products{% endblock %}
 {% block crumb %}Products{% endblock %}
 
 {% block main %}
-<div class="app-page">
+{% comment %}
+  Products page, three sections behind one tab strip:
+    #products      the full product list (default, visible immediately)
+    #best-sellers  homepage Best Sellers order + subtitle
+    #settings      storefront display toggles (+ B2B enquiry form fields)
+  The active section lives in the URL hash so a reload or a shared link opens
+  the same section. Visibility is driven by data-section on .prd, set before
+  the panels paint (inline script below), so there is no flash of the list.
+  Every id, class and data-url products.js relies on is unchanged.
+{% endcomment %}
+<div class="app-page prd" data-store-id="{{ site.id }}" data-section="products">
+  {% csrf_token %}
   <div class="app-head">
     <div>
       <p class="pal-mono pal-mono--accent">Catalogue</p>
-      <h1 class="app-head__title pal-mt-4">Products</h1>
-      <p class="app-head__lead">Everything you sell. Add items, set price and stock, and control what shows on the storefront.</p>
+      <h1 class="app-head__title pal-mt-4">Products <span class="prd-count">({{ products_all|length }})</span></h1>
     </div>
     <div class="app-head__actions">
-      <a href="{% url 'store:product_new' site.id %}" class="pal-btn">Add product <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+      <a class="pal-btn" href="{% url 'store:product_new' site.id %}">+ Create Product</a>
     </div>
   </div>
 
-  <div class="app-block">
-    <form method="get" class="app-toolbar">
-      <div class="app-search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="search" name="q" value="{{ q }}" placeholder="Search title or SKU…">
-      </div>
-      <select name="category" class="pal-select">
-        <option value="">All categories</option>
-        {% for c in categories %}<option value="{{ c.id }}" {% if active_category == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
-      </select>
-      <select name="status" class="pal-select">
-        <option value="">Any status</option>
-        <option value="active" {% if active_status == 'active' %}selected{% endif %}>Active</option>
-        <option value="inactive" {% if active_status == 'inactive' %}selected{% endif %}>Hidden</option>
-      </select>
-      <button class="pal-btn pal-btn--ghost" type="submit">Apply</button>
-    </form>
-
-    {% if products %}
-      <div class="app-tablewrap">
-        <table class="app-table">
-          <thead><tr><th>Product</th><th>Category</th><th class="app-table__num">Price</th><th class="app-table__num">Stock</th><th>Status</th><th></th></tr></thead>
-          <tbody>
-            {% for p in products %}
-              <tr>
-                <td><a href="{% url 'store:product_edit' site.id p.id %}" class="app-table__strong">{{ p.title }}</a>{% if p.sku %}<div class="app-sub">{{ p.sku }}</div>{% endif %}</td>
-                <td>{{ p.category.name|default:"—" }}</td>
-                <td class="app-table__num">{{ site.currency }} {{ p.price }}</td>
-                <td class="app-table__num">
-                  {% if p.is_out_of_stock %}<span class="app-badge app-badge--danger">0</span>
-                  {% elif p.is_low_stock %}<span class="app-badge app-badge--warn">{{ p.stock_on_hand }}</span>
-                  {% else %}{{ p.stock_on_hand }}{% endif %}
-                </td>
-                <td>{% if p.is_active %}<span class="app-badge app-badge--ok">Active</span>{% else %}<span class="app-badge app-badge--muted">Hidden</span>{% endif %}</td>
-                <td class="app-table__actions">
-                  <a href="{% url 'store:product_edit' site.id p.id %}" class="app-iconbtn" aria-label="Edit">Edit</a>
-                  <form method="post" action="{% url 'store:product_delete' site.id p.id %}" onsubmit="return confirm('Remove this product?');">{% csrf_token %}<button class="app-iconbtn app-iconbtn--danger" type="submit">Delete</button></form>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% include "store/_pagination.html" with page=products %}
-    {% else %}
-      <div class="app-empty">
-        <span class="app-empty__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span>
-        <h2 class="app-empty__title">No products yet</h2>
-        <p class="app-empty__text">Add your first product — title, price, a photo and stock — and it’s ready to sell.</p>
-        <div class="app-empty__actions"><a href="{% url 'store:product_new' site.id %}" class="pal-btn">Add product <span class="pal-btn__arrow" aria-hidden="true">→</span></a></div>
-      </div>
-    {% endif %}
+  {# ── Section tabs: each one says what is inside and how much ─────────── #}
+  <div class="prd-tabs" role="tablist" aria-label="Product sections">
+    <a class="prd-tab" role="tab" id="prd-tab-products" href="#products" data-prd-tab="products"
+       aria-controls="prd-panel-products" aria-selected="true">
+      <span class="prd-tab__top">
+        <span class="prd-tab__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>
+        <span class="prd-tab__label"><span class="prd-tab__long">All products</span><span class="prd-tab__short">Products</span></span>
+        <span class="prd-tab__n">{{ products_all|length }}</span>
+      </span>
+      <span class="prd-tab__desc">Search, edit, duplicate and star products. {{ products_active_count }} active, {{ products_draft_count }} draft.</span>
+    </a>
+    <a class="prd-tab" role="tab" id="prd-tab-best-sellers" href="#best-sellers" data-prd-tab="best-sellers"
+       aria-controls="prd-panel-best-sellers" aria-selected="false" tabindex="-1">
+      <span class="prd-tab__top">
+        <span class="prd-tab__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></span>
+        <span class="prd-tab__label"><span class="prd-tab__long">Best sellers order</span><span class="prd-tab__short">Best sellers</span></span>
+        <span class="prd-tab__n"><span data-best-count>{{ best_sellers_products|length }}</span>/{{ best_sellers_max }}</span>
+      </span>
+      <span class="prd-tab__desc">Rank the starred products shown in your homepage Best Sellers section.</span>
+    </a>
+    <a class="prd-tab" role="tab" id="prd-tab-settings" href="#settings" data-prd-tab="settings"
+       aria-controls="prd-panel-settings" aria-selected="false" tabindex="-1">
+      <span class="prd-tab__top">
+        <span class="prd-tab__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span>
+        <span class="prd-tab__label"><span class="prd-tab__long">Display settings</span><span class="prd-tab__short">Settings</span></span>
+        <span class="prd-tab__n"><span data-flags-on>{{ display_flags_on }}</span>/{{ display_flags_total }} on</span>
+      </span>
+      <span class="prd-tab__desc">Storefront switches: hover image, zoom{% if site.is_d2c %}, list prices, cart reminders{% endif %}{% if site.is_b2b %}, enquiry form fields{% endif %}.</span>
+    </a>
   </div>
+  <script nonce="{{ csp_nonce }}">
+    (function () {
+      var map = { "products": 1, "all": 1, "best-sellers": 1, "best": 1, "settings": 1 };
+      var h = (location.hash || "").replace("#", "");
+      if (h === "all") h = "products";
+      if (h === "best") h = "best-sellers";
+      if (!map[h] || h === "products") return;
+      var root = document.currentScript.closest(".prd");
+      root.setAttribute("data-section", h);
+      Array.prototype.forEach.call(root.querySelectorAll("[data-prd-tab]"), function (t) {
+        var on = t.getAttribute("data-prd-tab") === h;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.setAttribute("tabindex", on ? "0" : "-1");
+      });
+    })();
+  </script>
+
+  {# ════════════════════════ Section 1: All products ════════════════════════ #}
+  <section class="prd-panel prd-panel--products" id="prd-panel-products" role="tabpanel" aria-labelledby="prd-tab-products">
+    {# Search + category filter (client-side, live as the owner types) #}
+    <div class="prd-filters" role="search" aria-label="Filter products">
+      {% comment %}
+        One row on desktop: search takes the free width, the category select
+        and the status chips are only as wide as their content, the result
+        count sits at the far right. Wraps to stacked rows on phones.
+      {% endcomment %}
+      <div class="app-search prd-filters__search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" id="manage-products-search" placeholder="Search by name, SKU or category…" autocomplete="off" aria-label="Search products">
+      </div>
+      <select id="manage-products-category" class="pal-select prd-filters__cat" aria-label="Filter by category">
+        <option value="">All Categories</option>
+        {% for cat in categories_all %}<option value="{{ cat.id }}">{{ cat.name }}</option>{% endfor %}
+      </select>
+      <div class="prd-quick" role="group" aria-label="Show products">
+        <button type="button" class="prd-quick__opt is-active" data-prd-quick="" aria-pressed="true">All <span class="prd-quick__n">{{ products_all|length }}</span></button>
+        <button type="button" class="prd-quick__opt" data-prd-quick="active" aria-pressed="false">Active <span class="prd-quick__n">{{ products_active_count }}</span></button>
+        <button type="button" class="prd-quick__opt" data-prd-quick="draft" aria-pressed="false">Draft <span class="prd-quick__n">{{ products_draft_count }}</span></button>
+        <button type="button" class="prd-quick__opt" data-prd-quick="best" aria-pressed="false"><span class="prd-quick__star" aria-hidden="true">★</span> Best sellers <span class="prd-quick__n" data-best-starred>{{ best_sellers_starred_count }}</span></button>
+      </div>
+      <span class="prd-filtercount" id="prd-filter-count" aria-live="polite" hidden></span>
+    </div>
+
+    {# Product table: a table on desktop, one card per product on phones #}
+    <div class="app-tablewrap prd-tablewrap">
+      <table class="app-table ord-table prd-table">
+        <thead>
+          <tr>
+            <th class="prd-c-img"><span class="sr-only">Image</span></th>
+            <th class="prd-c-title">Product</th>
+            <th class="prd-c-price">Price</th>
+            <th class="prd-c-cats">Categories</th>
+            <th class="prd-c-status">Status</th>
+            <th class="prd-c-acts app-table__actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="manage-products-tbody">
+          {% for p in products_all %}
+            <tr class="prd-row"
+                data-title="{{ p.title|lower }}"
+                data-search="{{ p.title|lower }} {{ p.sku|default:''|lower }}{% if p.category %} {{ p.category.name|lower }}{% endif %}{% for c in p.categories.all %} {{ c.name|lower }}{% endfor %}"
+                data-category="{% if p.category %}{{ p.category.id }}{% endif %}"
+                data-categories="{% if p.category %}{{ p.category.id }}{% endif %}{% for c in p.categories.all %} {{ c.id }}{% endfor %}"
+                data-status="{% if p.is_active %}active{% else %}draft{% endif %}"
+                data-best="{% if p.is_best_seller %}1{% else %}0{% endif %}">
+              <td class="prd-c-img">
+                {% if p.images.first %}<img class="ord-thumb" src="{{ p.images.first.image.url }}" alt="">
+                {% else %}<span class="ord-thumb ord-thumb--empty"></span>{% endif %}
+              </td>
+              <td class="prd-c-title">
+                <span class="app-table__strong prd-title">{{ p.title }}</span>
+                {% if p.sku %}<span class="prd-sku">SKU {{ p.sku }}</span>{% endif %}
+              </td>
+              <td class="prd-c-price">{{ currency }} {{ p.price }}</td>
+              <td class="prd-c-cats">
+                <span class="prd-cats">
+                  {% if p.category %}<span class="app-chip">{{ p.category.name }}</span>{% endif %}
+                  {% for c in p.categories.all %}<span class="app-chip">{{ c.name }}</span>{% endfor %}
+                </span>
+              </td>
+              <td class="prd-c-status"><span class="app-badge {% if p.is_active %}app-badge--active{% else %}app-badge--muted{% endif %}">{% if p.is_active %}Active{% else %}Draft{% endif %}</span></td>
+              <td class="prd-c-acts app-table__actions">
+                <span class="ord-acts">
+                  <button type="button" class="prd-star{% if p.is_best_seller %} is-on{% endif %}" data-best-seller
+                          data-product-id="{{ p.id }}"
+                          data-url="{% url 'store:toggle_best_seller' site.id p.id %}"
+                          title="{% if p.is_best_seller %}Unmark Best Seller{% else %}Mark as Best Seller{% endif %}" aria-label="Toggle Best Seller">★</button>
+                  <a href="{% url 'store:product_edit' site.id p.id %}" class="ord-actbtn" title="Edit" aria-label="Edit">{% include "store/_icons.html" with icon="pencil" %}</a>
+                  <form method="post" action="{% url 'store:product_duplicate' site.id p.id %}" class="ord-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="ord-actbtn" title="Duplicate" aria-label="Duplicate">{% include "store/_icons.html" with icon="copy" %}</button>
+                  </form>
+                  <form method="post" action="{% url 'store:product_delete' site.id p.id %}" class="ord-inline" data-confirm="Delete this product?">
+                    {% csrf_token %}
+                    <button type="submit" class="ord-actbtn ord-actbtn--danger" title="Delete" aria-label="Delete">{% include "store/_icons.html" with icon="trash" %}</button>
+                  </form>
+                  <a href="{{ site.storefront_url }}products/{{ p.slug }}/" target="_blank" rel="noopener" class="ord-actbtn ord-actbtn--view" title="View product on storefront" aria-label="View">{% include "store/_icons.html" with icon="eye" %}</a>
+                </span>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="ord-empty">No products yet. <a class="prd-link" href="{% url 'store:product_new' site.id %}">Create your first product</a></td></tr>
+          {% endfor %}
+          <tr id="prd-no-match" hidden><td colspan="6" class="ord-empty">No products match your search.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {# ════════════════════════ Section 2: Best sellers ════════════════════════ #}
+  <section class="prd-panel prd-panel--best-sellers" id="prd-panel-best-sellers" role="tabpanel" aria-labelledby="prd-tab-best-sellers">
+    <div class="prd-bestgrid">
+      <div class="prd-best">
+        <div class="prd-best__head">
+          <div>
+            <div class="prd-best__title">Homepage order <span class="app-chip app-chip--soft"><span data-best-count>{{ best_sellers_products|length }}</span> of {{ best_sellers_max }} slots</span></div>
+            <p class="prd-best__lead">Rank 1 shows first. Click Reorder, drag the rows (or use the arrows), then Save Order.</p>
+          </div>
+          <div class="prd-best__actions">
+            <span class="prd-best__dirty" id="bestSellersDirty" hidden>Unsaved order</span>
+            <button type="button" id="bestSellersReorderToggle" class="pal-btn pal-btn--ghost pal-btn--sm"><span class="reorder-label">Reorder</span></button>
+            <button type="button" id="bestSellersResetBtn" class="pal-btn pal-btn--ghost pal-btn--sm">Reset</button>
+            <button type="button" id="bestSellersSaveBtn" class="pal-btn pal-btn--sm" data-url="{% url 'store:best_sellers_order' site.id %}">Save Order</button>
+          </div>
+        </div>
+
+        <div class="prd-best__body">
+          <script type="application/json" id="bestSellersOrderJson">{{ best_sellers_order_json|safe }}</script>
+          <script type="application/json" id="bestSellersDefaultOrderJson">{{ best_sellers_default_order_json|safe }}</script>
+          {% comment %} The list is always in the DOM (hidden when empty) so its reorder handlers attach and starring a product can add a row live. {% endcomment %}
+          <ul id="bestSellersOrderList" class="prd-best__list"{% if not best_sellers_products %} hidden{% endif %}>
+            {% for p in best_sellers_products %}
+              <li class="prd-best-item" data-product-id="{{ p.id }}">
+                <span class="prd-best-handle" title="Drag to reorder" hidden>⋮⋮</span>
+                <span class="prd-best-rank">{{ forloop.counter }}</span>
+                <span class="ord-thumb">{% if p.images.first %}<img src="{{ p.images.first.image.url }}" alt="">{% endif %}</span>
+                <span class="prd-best-info">
+                  <span class="prd-best-name">{{ p.title }}</span>
+                  <span class="prd-best-state {% if p.is_active %}is-active{% endif %}">{% if p.is_active %}Active{% else %}Draft{% endif %}</span>
+                </span>
+                <span class="prd-best-moves">
+                  <button type="button" class="prd-best-up ord-actbtn" hidden aria-label="Move up">↑</button>
+                  <button type="button" class="prd-best-down ord-actbtn" hidden aria-label="Move down">↓</button>
+                </span>
+              </li>
+            {% endfor %}
+          </ul>
+          {% comment %} Open slots up to the cap, drawn by products.js beside the ranked rows so the list shows capacity at a glance. Kept outside the sortable list so drag and drop never touches them. {% endcomment %}
+          <ol class="prd-best__slots" id="bestSellersSlots" data-max="{{ best_sellers_max }}" aria-label="Open Best Seller slots"{% if not best_sellers_products %} hidden{% endif %}></ol>
+          <div id="bestSellersEmpty" class="prd-best__empty"{% if best_sellers_products %} hidden{% endif %}>
+            <div class="prd-best__empty-ico">★</div>
+            <p class="prd-best__empty-title">No Best Sellers yet</p>
+            <p class="prd-best__empty-text">Star up to {{ best_sellers_max }} products in the product list and they appear here, ready to rank.</p>
+            <a class="pal-btn pal-btn--ghost pal-btn--sm prd-best__empty-cta" href="#products" data-prd-goto="products">Go to All products</a>
+          </div>
+        </div>
+      </div>
+
+      <aside class="prd-aside" aria-label="Best Sellers section">
+        <div class="prd-aside__card">
+          <p class="prd-aside__eyebrow">Section text</p>
+          <div class="prd-best__subtitle">
+            <label class="pal-field">
+              <span class="pal-field__label">Subtitle text below heading</span>
+              <input type="text" id="best-sellers-subtitle-input" class="pal-input" maxlength="300"
+                     value="{{ best_sellers_subtitle }}" placeholder="e.g. Our best-selling products, curated just for you.">
+            </label>
+            <button type="button" id="best-sellers-subtitle-save" class="pal-btn pal-btn--sm"
+                    data-url="{% url 'store:best_sellers_subtitle' site.id %}">Save</button>
+          </div>
+          <span id="best-sellers-subtitle-feedback" class="prd-feedback" hidden></span>
+        </div>
+        <div class="prd-aside__card">
+          <p class="prd-aside__eyebrow">How it works</p>
+          <ol class="prd-steps">
+            <li>In <a class="prd-link" href="#products" data-prd-goto="products">All products</a>, tap the ★ on up to {{ best_sellers_max }} products.</li>
+            <li>Come back here, click <strong>Reorder</strong> and arrange them.</li>
+            <li>Click <strong>Save Order</strong>. Your homepage follows this ranking.</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  {# ═══════════════════════ Section 3: Display settings ═══════════════════════ #}
+  <section class="prd-panel prd-panel--settings" id="prd-panel-settings" role="tabpanel" aria-labelledby="prd-tab-settings">
+    <div class="prd-setgroups">
+      <div class="prd-setgroup">
+        <div class="prd-setgroup__head">
+          <h2 class="prd-setgroup__title">Storefront display</h2>
+          <p class="prd-setgroup__lead">How product cards and product pages look to shoppers. Changes save instantly.</p>
+        </div>
+        <div class="prd-settings">
+          <div class="prd-setting">
+            <div class="prd-setting__copy">
+              <span class="prd-setting__title">Product hover image</span>
+              <p class="prd-setting__lead">Product cards switch to the product's 2nd image on hover (instead of zoom).</p>
+            </div>
+            <div class="prd-setting__ctrl">
+              <span class="prd-status" data-status>{{ enable_product_hover_swap|yesno:"Enabled,Disabled" }}</span>
+              <label class="ow-switch">
+                <input type="checkbox" class="prd-flag" aria-label="Product hover image" data-url="{% url 'store:product_flag' site.id 'hover_swap' %}" {% if enable_product_hover_swap %}checked{% endif %}>
+                <span class="ow-switch__track"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="prd-setting">
+            <div class="prd-setting__copy">
+              <span class="prd-setting__title">Product detail zoom</span>
+              <p class="prd-setting__lead">Customers can zoom in and out on product images on the product detail page.</p>
+            </div>
+            <div class="prd-setting__ctrl">
+              <span class="prd-status" data-status>{{ enable_product_detail_zoom|yesno:"Enabled,Disabled" }}</span>
+              <label class="ow-switch">
+                <input type="checkbox" class="prd-flag" aria-label="Product detail zoom" data-url="{% url 'store:product_flag' site.id 'detail_zoom' %}" {% if enable_product_detail_zoom %}checked{% endif %}>
+                <span class="ow-switch__track"></span>
+              </label>
+            </div>
+          </div>
+
+          {% if site.is_d2c %}
+          <div class="prd-setting">
+            <div class="prd-setting__copy">
+              <span class="prd-setting__title">Show price in lists <span class="app-chip app-chip--soft">D2C</span></span>
+              <p class="prd-setting__lead">Product prices display on cards in listings (homepage, shop, category pages).</p>
+            </div>
+            <div class="prd-setting__ctrl">
+              <span class="prd-status" data-status>{{ show_price_in_lists|yesno:"Enabled,Disabled" }}</span>
+              <label class="ow-switch">
+                <input type="checkbox" class="prd-flag" aria-label="Show price in lists" data-url="{% url 'store:product_flag' site.id 'show_price' %}" {% if show_price_in_lists %}checked{% endif %}>
+                <span class="ow-switch__track"></span>
+              </label>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if site.is_d2c %}
+      <div class="prd-setgroup">
+        <div class="prd-setgroup__head">
+          <h2 class="prd-setgroup__title">Customer emails</h2>
+          <p class="prd-setgroup__lead">Automated reminders sent to signed-in shoppers.</p>
+        </div>
+        <div class="prd-settings">
+          <div class="prd-setting">
+            <div class="prd-setting__copy">
+              <span class="prd-setting__title">Abandoned cart &amp; incomplete checkout emails <span class="app-chip app-chip--soft">D2C</span></span>
+              <p class="prd-setting__lead">Signed-in customers who leave items in their cart or start checkout without paying get a reminder email. Incomplete checkout: sent after <strong>24 hours</strong>. Abandoned cart: reminders up to <strong>15 days</strong> after the last cart activity.</p>
+            </div>
+            <div class="prd-setting__ctrl">
+              <span class="prd-status" data-status>{{ abandoned_cart_emails_enabled|yesno:"Enabled,Disabled" }}</span>
+              <label class="ow-switch">
+                <input type="checkbox" class="prd-flag" aria-label="Abandoned cart and incomplete checkout emails" data-url="{% url 'store:product_flag' site.id 'abandoned_cart' %}" {% if abandoned_cart_emails_enabled %}checked{% endif %}>
+                <span class="ow-switch__track"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if site.is_b2b %}
+      <div class="prd-setgroup">
+        <div class="prd-setgroup__head">
+          <h2 class="prd-setgroup__title">Product enquiry form <span class="app-chip app-chip--soft">B2B</span></h2>
+          <p class="prd-setgroup__lead">Which fields customers must fill when they send an enquiry from a product detail page.</p>
+        </div>
+        <div class="prd-enqcard" id="enquiryModeCard" data-url="{% url 'store:enquiry_form_mode' site.id %}" data-current="{{ enquiry_form_mode }}">
+          <div class="prd-enqmodes" role="radiogroup" aria-label="Enquiry form fields">
+            <label class="prd-enqmode{% if enquiry_form_mode == 'mobile_only' %} is-on{% endif %}"><input type="radio" name="enquiry_form_mode" value="mobile_only" {% if enquiry_form_mode == 'mobile_only' %}checked{% endif %}>📱 Mobile Only</label>
+            <label class="prd-enqmode{% if enquiry_form_mode == 'mobile_qty' %} is-on{% endif %}"><input type="radio" name="enquiry_form_mode" value="mobile_qty" {% if enquiry_form_mode == 'mobile_qty' %}checked{% endif %}>📞 Mobile + Qty</label>
+            <label class="prd-enqmode{% if enquiry_form_mode == 'email_qty' %} is-on{% endif %}"><input type="radio" name="enquiry_form_mode" value="email_qty" {% if enquiry_form_mode == 'email_qty' %}checked{% endif %}>✉️ Email + Qty</label>
+            <label class="prd-enqmode{% if enquiry_form_mode == 'all' %} is-on{% endif %}"><input type="radio" name="enquiry_form_mode" value="all" {% if enquiry_form_mode == 'all' %}checked{% endif %}>☰ Mobile + Email + Qty</label>
+            <span class="prd-feedback" id="enqModeFeedback" hidden></span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/app/products.js' %}" defer></script>
 {% endblock %}

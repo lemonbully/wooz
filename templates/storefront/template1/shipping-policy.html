@@ -7,47 +7,8 @@
 {% block body_class %}bg-gray-50{% endblock %}
 
 {% block content %}
-{% website_base_path website request as website_base %}
 <div class="container mx-auto px-4 py-[7rem]">
-    <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-sm p-8">
-        <h1 class="text-3xl uppercase text-center font-semibold text-gray-900 mb-6">Shipping Policy</h1>
-        {% if global_content.shipping_policy %}
-            <div class="prose max-w-none">
-                {{ global_content.shipping_policy|safe }}
-            </div>
-        {% else %}
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm text-yellow-700">
-                            No shipping policy has been added yet. Please edit your website content to add it.
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <div class="prose max-w-none text-gray-500">
-                <h2>Processing Time</h2>
-                <p>Orders are processed within 1-2 business days. Orders placed on weekends or holidays will be processed on the next business day.</p>
-                <h2>Shipping Rates & Delivery Estimates</h2>
-                <p>Shipping charges for your order will be calculated and displayed at checkout. Delivery estimates vary by destination.</p>
-                <h2>Shipment Confirmation & Order Tracking</h2>
-                <p>You will receive a shipment confirmation email once your order has shipped containing your tracking number(s).</p>
-                <h2>International Shipping</h2>
-                <p>We currently ship to selected countries. Customs, duties, and taxes are the responsibility of the customer.</p>
-            </div>
-        {% endif %}
-
-        <div class="mt-8 text-center">
-            <a href="{{ website_base }}" class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                Return to Home
-            </a>
-        </div>
-    </div>
+    {% include "storefront/shared/_policy_page.html" with policy_key="shipping" policy_title="Shipping Policy" policy_html=global_content.shipping_policy %}
 </div>
 {% endblock %}
 

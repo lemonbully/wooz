@@ -1,0 +1,13 @@
+{% if is_free %}Your OneWooz {{ plan_name }} plan is ready{% else %}Complete your OneWooz {{ plan_name }} subscription{% endif %}
+
+{% if is_free %}You've been given the {{ plan_name }} plan ({{ cycle_label }}) on OneWooz  free of charge.{% else %}You've been invited to subscribe to the {{ plan_name }} plan ({{ cycle_label }}) on OneWooz for {{ amount_label }}.{% endif %}
+
+{% if is_free %}Open the link below to review the agreement, verify your email and activate it. There's nothing to pay.{% else %}Open the link below to review the agreement, verify your email and pay securely via Cashfree. We never store your card details.{% endif %}
+
+{{ link }}
+
+This link is valid for about {{ minutes }} minutes and works once. If it expires, ask us to send a new one.
+
+If you weren't expecting this, you can ignore this email.
+
+ {{ brand }}

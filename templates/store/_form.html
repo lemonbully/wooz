@@ -10,7 +10,15 @@ Checkboxes render as inline toggles. Wrap in your own <form> + submit row.
 {% endif %}
 <div class="app-formgrid">
   {% for field in form %}
-    {% if field.field.widget.input_type == "checkbox" %}
+    {% if field|widget_type == "ClearableFileInput" or field|widget_type == "FileInput" %}
+      {% comment %} {# File uploads are transported through the media library (the surrounding
+         template supplies a "Choose from media library" button). Keep the input
+         present but hidden so a library pick can inject the file. #} {% endcomment %}
+      <div class="app-mediainput-holder">
+        {{ field }}
+        {% for error in field.errors %}<span class="app-field-err">{{ error }}</span>{% endfor %}
+      </div>
+    {% elif field.field.widget.input_type == "checkbox" %}
       <label class="app-check app-f--full">
         {{ field }}
         <span class="app-check__label">{{ field.label }}</span>

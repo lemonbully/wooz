@@ -1,29 +1,28 @@
+{% load store_extras %}
 {% comment %}
-Seven product-image slots. Slot 1 is the main image. On edit, any images
-already saved are shown first; new uploads are added as further gallery images.
-The view reads request.FILES for image1..image7.
+Product images  six fixed blocks. Clicking an empty block (or "Choose from
+media library") opens the store media library modal, where the owner uploads or
+picks images; several fill the empty blocks from the one clicked, in order.
+Each image is submitted as a hidden `media_image` asset id; the view copies the file
+into a ProductImage server-side (commerce.media_processing.clone_asset_file).
+Each image stays in its own block: removing one (a hidden `remove_image`
+input) leaves that block empty, and nothing after it moves up. Saved images go
+back into the block they were saved in (their `order` is the block number;
+`image_slot` / `media_image_slot` post it). The first filled block is the main
+image. Wired by initImageSlots in product_form.html; the cap (6) is enforced
+server-side too.
 {% endcomment %}
-<div class="app-f--full">
-  <span class="pal-field__label">Product images <span class="app-field-hint" style="display:inline">— first image is the main image</span></span>
-
-  {% if existing_images %}
-    <div class="app-imggrid">
-      {% for img in existing_images %}
-        <figure class="app-imgcell">
-          <img src="{{ img.image.url }}" alt="{{ img.alt_text }}">
-          <figcaption>Image {{ forloop.counter }}</figcaption>
-        </figure>
-      {% endfor %}
-    </div>
-    <p class="app-field-hint">Upload below to add more images.</p>
-  {% endif %}
-
-  <div class="app-slots">
-    {% for i in "1234567" %}
-      <label class="app-slot">
-        <span class="app-slot__n">Image {{ i }}{% if i == "1" and not existing_images %} <span class="app-req">*</span>{% endif %}</span>
-        <input type="file" name="image{{ i }}" accept="image/*"{% if i == "1" and not existing_images %} required{% endif %}>
-      </label>
+<div class="app-f--full" data-imgslots data-max="6">
+  <div class="app-imgslots__head">
+    <span class="pal-field__label" style="margin:0">Product images <span class="app-field-hint" style="display:inline">(up to 6 · the first is the main image)</span>{% field_tip "images" %}</span>
+    <button type="button" class="pal-btn pal-btn--ghost app-imgslots__lib" data-imgslots-lib>Choose from media library</button>
+  </div>
+  <div class="app-imgslots" data-imgslots-grid></div>
+  <p class="app-imgslots__err" data-imgslots-err role="alert" hidden></p>
+  {# Saved images, read by the script to fill the first blocks. #}
+  <div hidden data-imgslots-existing>
+    {% for img in existing_images %}
+      <span data-id="{{ img.id }}" data-order="{{ img.order }}" data-url="{{ img.image.url }}" data-alt="{{ img.alt_text }}"></span>
     {% endfor %}
   </div>
 </div>

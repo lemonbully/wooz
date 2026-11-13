@@ -1,0 +1,203 @@
+{% comment %}
+  A product variation's own details on the product page.
+
+  The owner can give a variation combination its own title, bullets,
+  description, features, item details, origin / manufacturer / packer details,
+  dimensions, extras and FAQs (product form > "Edit this variation"; stored on
+  the combination's "profile", commerce/variant_profiles.py). Each variation
+  that has any is rendered here once, with the very same partials the page
+  uses for the product, into an inert <template>. When the shopper picks a
+  variation, the page fires a `pdp:variant` event ({detail: {key}}), and the
+  script below swaps the matching parts in; picking a variation without its
+  own details (or none) puts the product's back.
+
+  Live parts are marked on the page:
+    [data-vp-title-slot]         text replaced by the variation's title
+    [data-vp-slot="badges"]      trust badges row        (vp_badges)
+    [data-vp-cat-slot]           breadcrumb category link
+    #pdp-main-play / #pv-open + #pv-modal   the product video (store / UGC)
+    [data-vp-slot="bullets"]     "About this item"        (vp_bullets)
+    [data-vp-slot="features"]    Features checklist
+    [data-vp-slot="faqs"]        FAQ section   (vp_faqs; vp_faqs_compact on the UGC sheet)
+    #<vp_pfx>panel-{desc,addl,manufacturer,others}   detail tab panels
+                                 (contents swapped, so the open tab stays)
+
+  Used by the store's product page (template2, and template1 which extends it)
+  and the UGC storefront's product page (vp_pfx="rd-", compact panels).
+{% endcomment %}
+{% if variant_profiles %}
+<div hidden data-vp-store>
+  {% for v in variant_profiles %}
+  <template data-vp="{{ v.key }}" data-vp-title="{{ v.title }}" data-vp-own-title="{% if v.own_title %}1{% endif %}"
+    {% if v.video is None %}data-vp-vstate=""{% elif v.video %}data-vp-vstate="own" data-vp-vtype="{{ v.video.type }}" data-vp-vurl="{{ v.video.url }}" data-vp-vembed="{{ v.video.embed_url|default:'' }}" data-vp-vori="{{ v.video.orientation|default:'landscape' }}"{% else %}data-vp-vstate="none"{% endif %}
+    {% if v.category is not None %}data-vp-cat="{% if v.category %}1{% endif %}" data-vp-cat-name="{{ v.category.name }}" data-vp-cat-slug="{{ v.category.slug }}"{% endif %}>
+    {% if vp_badges %}<div data-vp-part="badges">{% include "storefront/_pdp_badges.html" with product=v.product %}</div>{% endif %}
+    {% if vp_bullets %}<div data-vp-part="bullets">{% include "storefront/_pdp_bullets.html" with d2c_details=v.details %}</div>{% endif %}
+    <div data-vp-part="features">{% include "storefront/_pdp_features.html" with d2c_details=v.details %}</div>
+    <div data-vp-part="panels">{% include "storefront/_pdp_detail_panels.html" with product=v.product d2c_details=v.details pfx=vp_pfx compact=vp_compact %}</div>
+    {% if vp_faqs and v.faqs %}<div data-vp-part="faqs">{% include "storefront/template2/components/faq.html" with faqs=v.faqs faqs_subtitle=product_faqs_subtitle %}</div>{% endif %}
+    {% if vp_faqs_compact and v.faqs %}<div data-vp-part="faqs">{% include "storefront/_pdp_faqs_compact.html" with faqs=v.faqs %}</div>{% endif %}
+  </template>
+  {% endfor %}
+</div>
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  var store = document.querySelector("[data-vp-store]");
+  if (!store) return;
+  var PFX = "{{ vp_pfx|default:''|escapejs }}";
+  var PANELS = ["desc", "addl", "manufacturer", "others"];
+  var PARTS = ["bullets", "features", "faqs", "badges"];
+  var tmpls = {};
+  Array.prototype.forEach.call(store.querySelectorAll("template[data-vp]"), function (t) {
+    tmpls[t.getAttribute("data-vp")] = t;
+  });
+  function slot(name) { return document.querySelector('[data-vp-slot="' + name + '"]'); }
+  function panel(name) { return document.getElementById(PFX + "panel-" + name); }
+
+  // The product's own parts, read now (while the page is still parsing),
+  // before any script reshapes them, so they can be put back untouched.
+  var titleEls = Array.prototype.slice.call(document.querySelectorAll("[data-vp-title-slot]"));
+  var base = { titles: titleEls.map(function (el) { return el.textContent; }), parts: {}, panels: {} };
+  PARTS.forEach(function (n) { var s = slot(n); if (s) base.parts[n] = s.innerHTML; });
+  PANELS.forEach(function (n) { var p = panel(n); if (p) base.panels[n] = p.innerHTML; });
+
+  // Breadcrumb category (store page).
+  var catSlot = document.querySelector("[data-vp-cat-slot]");
+  var catLink = catSlot ? catSlot.querySelector("[data-vp-cat-link]") : null;
+  if (catSlot && catLink) base.cat = { show: !catSlot.hidden, name: catLink.textContent, href: catLink.getAttribute("href") || "" };
+  function setCategory(c) {
+    if (!catSlot || !catLink || !c) return;
+    catSlot.hidden = !c.show;
+    catLink.textContent = c.name || "";
+    catLink.setAttribute("href", c.href || "#");
+  }
+
+  // Product video: the store page's play button carries it in data-video-*,
+  // the UGC page's modal in data-vtype / data-url / data-embed.
+  var playBtn = document.getElementById("pdp-main-play");
+  var pvModal = document.getElementById("pv-modal");
+  var pvOpen = document.getElementById("pv-open");
+  function shown(el) { return !!el && !el.hidden && el.style.display !== "none"; }
+  function readVideo() {
+    if (playBtn) {
+      return { on: shown(playBtn), type: playBtn.getAttribute("data-video-type") || "", url: playBtn.getAttribute("data-video-url") || "",
+               embed: playBtn.getAttribute("data-video-embed") || "", ori: playBtn.getAttribute("data-video-orientation") || "landscape" };
+    }
+    if (pvModal) {
+      return { on: shown(pvOpen), type: pvModal.getAttribute("data-vtype") || "", url: pvModal.getAttribute("data-url") || "",
+               embed: pvModal.getAttribute("data-embed") || "", ori: pvModal.getAttribute("data-orientation") || "landscape" };
+    }
+    return null;
+  }
+  function toggle(el, on) { if (!el) return; el.hidden = !on; el.style.display = on ? "" : "none"; }
+  function writeVideo(v) {
+    var on = !!(v && v.on && (v.url || v.embed));
+    if (playBtn) {
+      playBtn.setAttribute("data-video-type", on ? v.type : "");
+      playBtn.setAttribute("data-video-url", on ? v.url : "");
+      playBtn.setAttribute("data-video-embed", on ? v.embed : "");
+      playBtn.setAttribute("data-video-orientation", on ? (v.ori || "landscape") : "landscape");
+      toggle(playBtn, on);
+    }
+    if (pvModal) {
+      pvModal.setAttribute("data-vtype", on ? v.type : "");
+      pvModal.setAttribute("data-url", on ? v.url : "");
+      pvModal.setAttribute("data-embed", on ? v.embed : "");
+      pvModal.setAttribute("data-orientation", on ? (v.ori || "landscape") : "landscape");
+      toggle(pvOpen, on);
+    }
+  }
+  base.video = readVideo();
+
+  var showing = { panels: "", video: "", cat: "" };
+  function apply(key) {
+    var t = (key && Object.prototype.hasOwnProperty.call(tmpls, key)) ? tmpls[key] : null;
+    var frag = t ? t.content : null;
+
+    var title = t ? (t.getAttribute("data-vp-title") || "") : "";
+    titleEls.forEach(function (el, i) { el.textContent = title || base.titles[i]; });
+    // A variation's own title is its full name, so the automatic
+    // ", Size M, Colour Black" suffix after the heading is dropped meanwhile.
+    var suffix = document.getElementById("pdp-title-variant");
+    if (suffix) suffix.hidden = !!(t && t.getAttribute("data-vp-own-title") === "1");
+
+    PARTS.forEach(function (n) {
+      var s = slot(n);
+      if (!s) return;
+      var part = frag ? frag.querySelector('[data-vp-part="' + n + '"]') : null;
+      var src = part ? key : "";
+      if ((showing[n] || "") === src) return;
+      s.innerHTML = part ? part.innerHTML : (base.parts[n] || "");
+      s.__vpSwapped = true;
+      showing[n] = src;
+      if (n === "faqs" && window.owInitFaqSection) window.owInitFaqSection(s.querySelector("#faqs-section"));
+    });
+
+    var pp = frag ? frag.querySelector('[data-vp-part="panels"]') : null;
+    var psrc = pp ? key : "";
+    if (showing.panels !== psrc) {
+      PANELS.forEach(function (n) {
+        var live = panel(n);
+        if (!live) return;
+        var from = pp ? pp.querySelector("#" + PFX + "panel-" + n) : null;
+        live.innerHTML = from ? from.innerHTML : (base.panels[n] || "");
+      });
+      showing.panels = psrc;
+    }
+
+    // Video: the variation's own, none, or the product's.
+    if (base.video) {
+      var vstate = t ? (t.getAttribute("data-vp-vstate") || "") : "";
+      var vid = base.video;
+      if (vstate === "own") {
+        vid = { on: true, type: t.getAttribute("data-vp-vtype") || "", url: t.getAttribute("data-vp-vurl") || "",
+                embed: t.getAttribute("data-vp-vembed") || "", ori: t.getAttribute("data-vp-vori") || "landscape" };
+      } else if (vstate === "none") {
+        vid = { on: false };
+      }
+      var vsig = JSON.stringify(vid);
+      if (showing.video !== vsig) { writeVideo(vid); showing.video = vsig; }
+    }
+
+    // Breadcrumb category: the variation's own (or none), else the product's.
+    if (base.cat) {
+      var cat = base.cat;
+      if (t && t.hasAttribute("data-vp-cat")) {
+        cat = t.getAttribute("data-vp-cat") === "1"
+          ? { show: true, name: t.getAttribute("data-vp-cat-name") || "",
+              href: (catSlot.getAttribute("data-vp-cat-base") || "") + (t.getAttribute("data-vp-cat-slug") || "") + "/" }
+          : { show: false, name: "", href: "" };
+      }
+      var csig = JSON.stringify(cat);
+      if (showing.cat !== csig) { setCategory(cat); showing.cat = csig; }
+    }
+  }
+  document.addEventListener("pdp:variant", function (e) {
+    apply((e && e.detail && e.detail.key) ? String(e.detail.key) : "");
+  });
+
+  // "Read more" / "Read less" on swapped-in bullets (the page's own handler
+  // is bound to the bullets it rendered first).
+  document.addEventListener("click", function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest("#bullets-read-more, #bullets-read-less") : null;
+    if (!btn) return;
+    var s = btn.closest('[data-vp-slot="bullets"]');
+    if (!s || !s.__vpSwapped) return;
+    var list = s.querySelector("#bullets-list");
+    var more = s.querySelector("#bullets-read-more");
+    var less = s.querySelector("#bullets-read-less");
+    if (!list || !more || !less) return;
+    if (btn === more) {
+      Array.prototype.forEach.call(list.querySelectorAll("li.hidden"), function (li) { li.classList.remove("hidden"); });
+      more.classList.add("hidden");
+      less.classList.remove("hidden");
+    } else {
+      Array.prototype.forEach.call(list.querySelectorAll("li"), function (li, i) { if (i >= 3) li.classList.add("hidden"); });
+      less.classList.add("hidden");
+      more.classList.remove("hidden");
+    }
+  });
+})();
+</script>
+{% endif %}

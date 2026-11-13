@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static onewooz %}
+{% load static onewooz web_extras %}
 
 {% comment %}
-Marketing shell — "Palantir" direction. Defines the public-site chrome once:
+Marketing shell  "" direction. Defines the public-site chrome once:
 sticky ruled nav (with a JS-free mobile disclosure menu), content, footer.
 Everything is wrapped in `.pal`, and the design system is loaded here from
 onewooz-pal.css, so the marketing surface is fully transformed while the app,
@@ -10,10 +10,11 @@ admin and auth chrome (onewooz.css) are untouched.
 {% endcomment %}
 
 {% block head %}
+{% include "web/_head_seo.html" %}
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/onewooz-pal.css' %}">
 <script nonce="{{ csp_nonce }}">
-  // Flag the document for entrance animations before first paint — unless the
+  // Flag the document for entrance animations before first paint  unless the
   // user prefers reduced motion. Gating the hidden initial states on this class
   // means there is no flash of hidden content, and reduced-motion / no-JS users
   // get a fully rendered, still page. Runs in <head>, so it lands before body.
@@ -32,10 +33,11 @@ admin and auth chrome (onewooz.css) are untouched.
 <header class="pal-nav" id="site-nav">
   <div class="pal-container pal-nav__inner">
     <a href="{% url 'web:home' %}" class="pal-brand">
-      <img class="pal-brand__img" src="{% static 'img/Icon_main.png' %}" alt="" width="26" height="26">
+      <img class="pal-brand__img" src="{% brand_logo_url %}" alt="" width="26" height="26">
     </a>
 
     <nav class="pal-nav__links" aria-label="Main">
+      <a href="{% url 'web:home' %}">Home</a>
       <a href="{% url 'web:platform' %}">Platform</a>
       <a href="{% url 'web:solutions' %}">Solutions</a>
       <a href="{% url 'web:customers' %}">Customers</a>
@@ -45,18 +47,19 @@ admin and auth chrome (onewooz.css) are untouched.
 
     <div class="pal-nav__actions">
       <a href="{% surface_url 'app' '/sign-in/' %}" class="pal-btn pal-btn--ghost">Sign in</a>
-      <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store</a>
+      <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn pal-nav__deploy">Deploy a store</a>
+      <a href="{% surface_url 'app' '/sign-in/' %}" class="pal-btn pal-nav__signin">Sign in</a>
 
       <details class="pal-menu">
         <summary aria-label="Menu">Menu</summary>
         <div class="pal-menu__panel">
+          <a href="{% url 'web:home' %}">Home</a>
           <a href="{% url 'web:platform' %}">Platform</a>
           <a href="{% url 'web:solutions' %}">Solutions</a>
           <a href="{% url 'web:customers' %}">Customers</a>
           <a href="{% url 'web:pricing' %}">Pricing</a>
           <a href="{% url 'web:security' %}">Security</a>
           <a href="{% surface_url 'app' '/sign-in/' %}">Sign in</a>
-          <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store</a>
         </div>
       </details>
     </div>
@@ -72,11 +75,14 @@ admin and auth chrome (onewooz.css) are untouched.
     <div class="pal-footer__top">
       <div>
         <a href="{% url 'web:home' %}" class="pal-brand">
-          <img class="pal-brand__img" src="{% static 'img/Icon_main.png' %}" alt="" width="26" height="26">
+          <img class="pal-brand__img" src="{% brand_logo_url %}" alt="" width="26" height="26">
         </a>
         <p class="pal-footer__note">
           Commerce infrastructure for people who would rather run their business
           than manage a website.
+        </p>
+        <p class="pal-footer__note">
+          OneWooz is owned and operated by <strong>The Artless</strong>.
         </p>
       </div>
 
@@ -93,18 +99,25 @@ admin and auth chrome (onewooz.css) are untouched.
           <a href="{% url 'web:about' %}">About</a>
           <a href="{% url 'web:contact' %}">Contact</a>
           <a href="{% url 'web:support' %}">Support</a>
+          <a href="{% url 'web:security' %}">Security</a>
         </div>
         <div class="pal-footer__col">
           <h4>Legal</h4>
-          <a href="{% url 'web:page' 'privacy' %}">Privacy</a>
-          <a href="{% url 'web:page' 'terms' %}">Terms</a>
-          <a href="{% url 'web:security' %}">Security</a>
+          {% footer_policies as legal_policies %}
+          {% for policy in legal_policies %}
+          <a href="{{ policy.get_absolute_url }}">{{ policy.title }}</a>
+          {% endfor %}
+        </div>
+        <div class="pal-footer__col">
+          <h4>Resources</h4>
+          <a href="{% url 'web:blog_list' %}">Blog</a>
+          <a href="{% url 'web:core_pages' %}">Core pages</a>
         </div>
       </div>
     </div>
 
     <div class="pal-footer__base">
-      <span>&copy; {% now "Y" %} OneWooz — All rights reserved</span>
+      <span>&copy; {% now "Y" %} OneWooz, a product of The Artless  All rights reserved</span>
       <span>Made for merchants, not developers</span>
     </div>
   </div>
@@ -145,8 +158,8 @@ admin and auth chrome (onewooz.css) are untouched.
 
     var slice = function (nl) { return Array.prototype.slice.call(nl); };
 
-    // Split big headings into masked lines that reveal one after another —
-    // the Palantir line-by-line text entrance. Delays are set via the DOM
+    // Split big headings into masked lines that reveal one after another 
+    // the  line-by-line text entrance. Delays are set via the DOM
     // (element.style), never inline style attributes, so the CSP is not
     // engaged. Splitting on <br> keeps the authored line breaks.
     slice(document.querySelectorAll(".pal-display, .pal-h2, .pal-pagehead__title")).forEach(function (h) {
@@ -229,7 +242,7 @@ admin and auth chrome (onewooz.css) are untouched.
     };
 
     // Motion is on, so start counters at zero (their markup holds the final
-    // value for the reduced-motion / no-JS case) — then they count up on view.
+    // value for the reduced-motion / no-JS case)  then they count up on view.
     slice(document.querySelectorAll("[data-count]")).forEach(function (el) {
       el.textContent = (el.getAttribute("data-prefix") || "") + "0" + (el.getAttribute("data-suffix") || "");
     });
@@ -250,7 +263,10 @@ admin and auth chrome (onewooz.css) are untouched.
         reveal(entry.target);
         io.unobserve(entry.target);
       });
-    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+    // threshold 0 = reveal as soon as any part enters view. A ratio threshold
+    // (e.g. 0.08) can never be reached by a block taller than ~12 screens  a
+    // long legal policy  which then stayed invisible forever.
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0 });
     targets.forEach(function (el) { io.observe(el); });
   })();
 </script>

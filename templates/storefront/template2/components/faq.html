@@ -1,5 +1,9 @@
-{# Allow pages to pass `faqs` explicitly; otherwise default to website.content.faqs (home behavior stays the same). #}
-{% with faqs=faqs|default:website.content.faqs %}
+{% load website_filters %}
+{% comment %} {# A page may pass `faqs` explicitly (e.g. the product page passes the product's
+   own FAQs or a curated default set)  those are shown exactly as given. When no
+   `faqs` is passed (the home page) we top up the store's content FAQs to 8 with
+   demo defaults, so home behaviour is unchanged. #} {% endcomment %}
+{% if not faqs %}{% padded_items website.content.faqs 'faq' 8 as faqs %}{% endif %}
 {% if faqs|length > 0 %}
 <section id="faqs-section" class="py-16 md:py-20 bg-[rgb(238,238,238,1)]">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -53,9 +57,13 @@
     </div>
 </section>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const section = document.getElementById('faqs-section');
-    if (!section) return;
+(function () {
+// One FAQ section's slider + accordion. Exposed as window.owInitFaqSection so a
+// section swapped in later (a product variation's own FAQs on the product page,
+// storefront/_variant_profiles.html) is wired the same way; once per section.
+function initFaqSection(section) {
+    if (!section || section.__owFaqInit) return;
+    section.__owFaqInit = true;
     const grid = section.querySelector('#faqs-grid');
     const dotsContainer = section.querySelector('#faq-dots');
     const mqMobile = window.matchMedia('(max-width: 767px)');
@@ -187,8 +195,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         window.addEventListener('resize', () => { if (openItem === item) { panel.style.maxHeight = panel.scrollHeight + 'px'; } });
     });
+}
+window.owInitFaqSection = initFaqSection;
+document.addEventListener('DOMContentLoaded', function () {
+    initFaqSection(document.getElementById('faqs-section'));
 });
+})();
 </script>
     
 {% endif %}
-{% endwith %}

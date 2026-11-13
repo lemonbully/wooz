@@ -1247,7 +1247,7 @@
         }
       }
     } catch (e) {}
-    // Auto-open Razorpay on load — wait for SDK script to finish loading before triggering.
+    // Auto-open Razorpay on load  wait for SDK script to finish loading before triggering.
     // If the SDK never loads after ~10 s, redirect to the order status page so the
     // customer can see their pending order rather than being stuck on the checkout page.
     try{
@@ -1262,7 +1262,7 @@
           } else if (++_rpAutoRetries < 40) {
             setTimeout(_autoOpenRazorpay, 250);
           } else {
-            // SDK failed to load — send user to order status page (order is in "created/pending" state)
+            // SDK failed to load  send user to order status page (order is in "created/pending" state)
             window.location.href = _rpConfirmUrl;
           }
         }

@@ -1,4 +1,4 @@
-# OneWooz HA — Phase 2: EC2 launch template, Auto Scaling Group, ECS capacity provider.
+# OneWooz HA  Phase 2: EC2 launch template, Auto Scaling Group, ECS capacity provider.
 # Run AFTER 01-edge-data.ps1. Adds ASG instances (t4g.medium x2, multi-AZ) to cluster onewooz-prod.
 
 $ErrorActionPreference = "Stop"

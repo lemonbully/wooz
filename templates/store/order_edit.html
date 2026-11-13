@@ -1,0 +1,245 @@
+{% extends "store/_shell.html" %}
+{% load static store_extras %}
+{% block title %}{{ site.name }} · Order #{{ order.display_number }}{% endblock %}
+{% block crumb %}Order #{{ order.display_number }}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Fulfilment</p>
+      <h1 class="app-head__title pal-mt-4">Order #{{ order.display_number }}</h1>
+      <p class="app-head__lead">Placed {{ order.created_at|date:"d M Y, g:i A" }} · <span class="app-badge app-badge--{{ order.status }}">{{ order.get_status_display }}</span></p>
+    </div>
+    <div class="app-head__actions">
+      <a class="pal-btn pal-btn--ghost" href="{{ back_url }}">← Back to orders</a>
+    </div>
+  </div>
+
+  <form method="post" action="{% url 'store:order_edit' site.id order.id %}" class="app-block" id="oe-form">
+    {% csrf_token %}
+    {# The Orders tab / filters the owner came from, so Save and Back return there. #}
+    <input type="hidden" name="back" value="{{ back_qs }}">
+
+    {# ── Status & fulfilment ─────────────────────────────────────────────── #}
+    <div class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">Status & fulfilment</h2></div>
+      <div class="app-card__body">
+        <div class="app-formgrid">
+          <label class="pal-field app-f--third">
+            <span class="pal-field__label">Order status</span>
+            {% if status_locked %}
+              {# Delivered is final: it can only be turned into a replacement (a new ₹0 order in Pending). #}
+              <select name="status_ui" class="pal-select" data-oe-status>
+                <option value="delivered" selected>Delivered</option>
+                {% if can_create_replacement and not pending_replacement %}
+                  <option value="create_replacement">Create replacement</option>
+                {% endif %}
+              </select>
+              <span class="oe-hint">
+                {% if pending_replacement %}
+                  A replacement is already waiting in <a href="{% url 'store:orders' site.id %}?tab=pending">Pending</a>. Accept it there.
+                {% elif can_create_replacement %}
+                  A delivered order's status can't change. Choose Create replacement and save to send the same items again as a new {{ currency }} 0 order in Pending.
+                {% else %}
+                  A delivered order's status can't change.
+                {% endif %}
+              </span>
+            {% else %}
+              <select name="status_ui" class="pal-select">
+                {# A paid order not yet accepted is still Pending; selecting Ready to Pack on save would confirm it without a courier booking. #}
+                <option value="pending" {% if order.status == 'created' or order.status == 'paid' %}selected{% endif %}>Pending</option>
+                <option value="ready_to_pack" {% if order.status == 'confirmed' %}selected{% endif %}>Ready to Ship</option>
+                <option value="shipped" {% if order.status == 'shipped' %}selected{% endif %}>Shipped</option>
+                <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>Delivered</option>
+                <option value="cancel" {% if order.status == 'cancelled' %}selected{% endif %}>Cancel</option>
+                <option value="archive" {% if order.status == 'archived' %}selected{% endif %}>Archive</option>
+              </select>
+            {% endif %}
+          </label>
+          {# Read-only: the courier booking sets the AWB, checkout / the payment gateway set the method. #}
+          <label class="pal-field app-f--third">
+            <span class="pal-field__label">Tracking / AWB</span>
+            <input class="pal-input oe-readonly" type="text" value="{{ order.tracking_id }}" placeholder="Assigned when the courier is booked" readonly aria-readonly="true" tabindex="-1">
+          </label>
+          {% with pm=order|payment_tag %}
+          <label class="pal-field app-f--third">
+            <span class="pal-field__label">Payment method</span>
+            <input class="pal-input oe-readonly" type="text" value="{{ pm.label }}" readonly aria-readonly="true" tabindex="-1">
+          </label>
+          {% endwith %}
+        </div>
+        {% if shipments %}
+          <div class="app-ordership">
+            {% for s in shipments %}
+              <div class="app-chip">{{ s.courier_name|default:s.provider|default:"Courier" }} · {{ s.awb|default:"" }} · {{ s.get_status_display }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Line items ──────────────────────────────────────────────────────── #}
+    <div class="app-card" style="margin-top:1.25rem;">
+      <div class="app-card__head"><h2 class="app-card__title">Items</h2></div>
+      <div class="app-card__body">
+        <div class="app-tablewrap">
+          <table class="app-table">
+            <thead>
+              <tr><th>Product</th><th>SKU</th><th style="width:7rem;">Qty</th><th style="width:9rem;">Unit price</th><th class="app-table__num">Line total</th><th style="width:5.5rem;">Remove</th></tr>
+            </thead>
+            <tbody>
+              {% for it in items %}
+                <tr>
+                  <td class="app-table__strong">{{ it.title }}{% if it.variant_label %}<div class="app-sub">{{ it.variant_label }}</div>{% endif %}</td>
+                  <td>{{ it.sku|default:"" }}</td>
+                  <td><input class="pal-input pal-input--sm" type="number" min="1" name="item_{{ it.id }}_quantity" value="{{ it.quantity }}"></td>
+                  <td><input class="pal-input pal-input--sm" type="number" min="0" step="0.01" name="item_{{ it.id }}_unit_price" value="{{ it.unit_price }}"></td>
+                  <td class="app-table__num">{{ currency }} {{ it.line_total }}</td>
+                  <td><label class="oe-remove"><input type="checkbox" name="item_{{ it.id }}_remove" value="1"> Remove</label></td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="6" class="ord-empty">No items on this order.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {# Add products to the order: one row per product (or variation). #}
+        <div class="oe-add">
+          <p class="oe-add__title">Add items</p>
+          <div class="oe-add__rows" data-oe-rows>
+            <div class="oe-add__row" data-oe-row>
+              <select name="add_product" class="pal-select" aria-label="Product to add">
+                <option value="">Choose a product…</option>
+                {% for c in product_choices %}<option value="{{ c.value }}">{{ c.label }}</option>{% endfor %}
+              </select>
+              <input class="pal-input pal-input--sm" type="number" min="1" max="999" name="add_qty" value="1" aria-label="Quantity">
+            </div>
+          </div>
+          <button type="button" class="pal-btn pal-btn--ghost pal-btn--sm" data-oe-addrow>+ Add another product</button>
+          <p class="oe-hint">Saving recalculates the subtotal, GST, total and stock, and sends the change to Shiprocket when the order is booked there (items can change only until a courier is assigned).</p>
+        </div>
+
+        {# Current amounts (recalculated from the lines on every save). #}
+        <dl class="oe-sum">
+          <div><dt>Subtotal</dt><dd>{{ currency }} {{ order.subtotal }}</dd></div>
+          {% if order.discount_amount %}<div><dt>Discount{% if order.coupon %} ({{ order.coupon.code }}){% endif %}</dt><dd>- {{ currency }} {{ order.discount_amount }}</dd></div>{% endif %}
+          {% if order.credit_discount_amount %}<div><dt>Store credit</dt><dd>- {{ currency }} {{ order.credit_discount_amount }}</dd></div>{% endif %}
+          {% if order.tax_amount %}<div><dt>GST</dt><dd>{{ currency }} {{ order.tax_amount }}</dd></div>{% endif %}
+          <div><dt>Shipping</dt><dd>{{ currency }} {{ order.shipping_amount }}</dd></div>
+          <div class="oe-sum__total"><dt>Total</dt><dd>{{ currency }} {{ order.total }}</dd></div>
+          {% if order.is_partial_payment %}<div><dt>Paid online / COD balance</dt><dd>{{ currency }} {{ order.partial_paid_amount }} / {{ currency }} {{ order.partial_cod_amount }}</dd></div>{% endif %}
+        </dl>
+
+        <div class="app-formgrid" style="margin-top:1rem;">
+          <label class="pal-field app-f--third">
+            <span class="pal-field__label">Override total ({{ currency }})</span>
+            <input class="pal-input" type="number" min="0" step="0.01" name="total_amount" value="" placeholder="Calculated: {{ order.total }}">
+            <input type="hidden" name="total_amount_original" value="">
+            <span class="oe-hint">Leave empty to use the calculated total.</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    {# ── Customer & shipping ─────────────────────────────────────────────── #}
+    <div class="app-card" style="margin-top:1.25rem;">
+      <div class="app-card__head"><h2 class="app-card__title">Customer & shipping</h2></div>
+      <div class="app-card__body">
+        {% if order.collaboration_id %}
+        <div style="margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.6rem .8rem;border:1px solid rgb(75 43 245 / 0.20);background:rgb(75 43 245 / 0.06);border-radius:.4rem;font-size:.85rem;">
+          <span class="app-badge app-badge--ugc">UGC</span>
+          <span>From collaborator <strong>{{ order.collaboration.name }}</strong>
+          (<a href="https://{{ order.collaboration.subdomain }}.myugcstore.com" target="_blank" rel="noopener">{{ order.collaboration.subdomain }}.myugcstore.com</a>)
+          · commission <strong>{{ currency }} {{ order.commission_amount }}</strong></span>
+        </div>
+        {% endif %}
+        {% if order.replacement_seq %}
+        <div style="margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.6rem .8rem;border:1px solid var(--pal-line);background:var(--pal-panel);border-radius:.4rem;font-size:.85rem;">
+          <span class="app-badge app-badge--warn">Replacement</span>
+          <span>Replacement for order <strong>#{{ order.number }}</strong>{% if order.replacement_of_id %} (<a href="{% url 'store:order_edit' site.id order.replacement_of_id %}">view original</a>){% endif %}. Ships as prepaid: nothing is collected from the customer.</span>
+        </div>
+        {% endif %}
+        <div class="app-formgrid">
+          <label class="pal-field app-f--third"><span class="pal-field__label">Customer name</span><input class="pal-input" type="text" name="customer_name" value="{{ order.customer_name }}"></label>
+          <label class="pal-field app-f--third"><span class="pal-field__label">Email</span><input class="pal-input" type="email" name="customer_email" value="{{ order.customer_email }}"></label>
+          <label class="pal-field app-f--third"><span class="pal-field__label">Phone</span><input class="pal-input" type="text" name="customer_phone" value="{{ order.customer_phone }}"></label>
+          <label class="pal-field app-f--full"><span class="pal-field__label">Shipping address</span><textarea class="pal-textarea" name="shipping_address" rows="2">{{ order.shipping_address }}</textarea></label>
+          <label class="pal-field app-f--third"><span class="pal-field__label">City</span><input class="pal-input" type="text" name="shipping_city" value="{{ order.shipping_city }}"></label>
+          <label class="pal-field app-f--third"><span class="pal-field__label">State</span><input class="pal-input" type="text" name="shipping_state" value="{{ order.shipping_state }}"></label>
+          <label class="pal-field app-f--third"><span class="pal-field__label">PIN code</span><input class="pal-input" type="text" name="shipping_pincode" value="{{ order.shipping_pincode }}"></label>
+          <label class="pal-field app-f--half"><span class="pal-field__label">Company name</span><input class="pal-input" type="text" name="company_name" value="{{ order.company_name }}"></label>
+          <label class="pal-field app-f--half"><span class="pal-field__label">GSTIN</span><input class="pal-input" type="text" name="gstin" value="{{ order.gstin }}"></label>
+          <label class="pal-field app-f--full"><span class="pal-field__label">Billing address</span><textarea class="pal-textarea" name="billing_address" rows="2">{{ order.billing_address }}</textarea></label>
+        </div>
+      </div>
+      <div class="app-card__foot" style="display:flex;justify-content:flex-end;gap:0.6rem;">
+        <a class="pal-btn pal-btn--ghost" href="{{ back_url }}">Cancel</a>
+        <button class="pal-btn" type="submit">Save order</button>
+      </div>
+    </div>
+  </form>
+</div>
+<style nonce="{{ csp_nonce }}">
+  .oe-readonly { background: var(--pal-paper-2, var(--pal-panel)); color: var(--pal-muted); cursor: not-allowed; }
+  .oe-readonly:focus { outline: none; box-shadow: none; }
+  .oe-hint a { color: var(--pal-accent); }
+  .oe-remove { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--pal-muted); cursor: pointer; }
+  .oe-add { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--pal-line); display: grid; gap: .6rem; }
+  .oe-add__title { margin: 0; font-family: var(--pal-font-mono); font-size: .6rem; letter-spacing: .08em; text-transform: uppercase; color: var(--pal-muted); }
+  .oe-add__rows { display: grid; gap: .5rem; }
+  .oe-add__row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .oe-add__row > select, .oe-add__row > .ow-cs { flex: 1 1 18rem; min-width: 0; }
+  .oe-add__row > input { width: 6rem; flex: none; }
+  .oe-add [data-oe-addrow] { justify-self: start; }
+  .oe-hint { display: block; margin: 0; font-size: .76rem; color: var(--pal-faint); }
+  .oe-sum { margin: 1rem 0 0; display: grid; gap: .3rem; max-width: 26rem; margin-left: auto; }
+  .oe-sum > div { display: flex; justify-content: space-between; gap: 1rem; font-size: .88rem; color: var(--pal-ink-2); }
+  .oe-sum dt, .oe-sum dd { margin: 0; }
+  .oe-sum__total { padding-top: .35rem; border-top: 1px solid var(--pal-line); font-weight: 600; color: var(--pal-ink); }
+</style>
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  // Delivered order → "Create replacement": confirm before saving.
+  var form = document.getElementById("oe-form");
+  var status = document.querySelector("[data-oe-status]");
+  if (form && status) {
+    form.addEventListener("submit", function (e) {
+      if (status.value === "create_replacement" &&
+          !window.confirm("Create a replacement for order #{{ order.display_number }}? A new {{ currency }} 0 order with the same items goes to Pending, where you accept it to book the courier.")) {
+        e.preventDefault();
+      }
+    });
+  }
+})();
+(function () {
+  "use strict";
+  // "+ Add another product": clone a blank picker row.
+  var rows = document.querySelector("[data-oe-rows]");
+  var btn = document.querySelector("[data-oe-addrow]");
+  if (!rows || !btn) return;
+  var tpl = rows.querySelector("[data-oe-row]");
+  var select = tpl ? tpl.querySelector("select") : null;
+  var optionsHtml = select ? select.innerHTML : "";
+  btn.addEventListener("click", function () {
+    var row = document.createElement("div");
+    row.className = "oe-add__row";
+    row.setAttribute("data-oe-row", "");
+    var sel = document.createElement("select");
+    sel.name = "add_product";
+    sel.className = "pal-select";
+    sel.setAttribute("aria-label", "Product to add");
+    sel.innerHTML = optionsHtml;
+    sel.value = "";
+    var qty = document.createElement("input");
+    qty.className = "pal-input pal-input--sm";
+    qty.type = "number"; qty.min = "1"; qty.max = "999"; qty.name = "add_qty"; qty.value = "1";
+    qty.setAttribute("aria-label", "Quantity");
+    row.appendChild(sel);
+    row.appendChild(qty);
+    rows.appendChild(row);
+  });
+})();
+</script>
+{% endblock %}

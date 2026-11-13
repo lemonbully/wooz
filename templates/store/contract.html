@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Collaboration contract{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/onewooz-pal.css' %}">
+<link rel="stylesheet" href="{% static 'css/onewooz-app.css' %}">
+{% endblock %}
+
+{% block body %}
+<div class="pal">
+  <div class="contract-wrap">
+    <div class="app-card contract-card">
+      {% if error %}
+        <div class="app-card__body">
+          <h1 class="app-head__title">Link unavailable</h1>
+          <p class="app-head__lead">{{ error }}</p>
+        </div>
+      {% elif verified %}
+        <div class="app-card__body">
+          <div class="contract-tick">✓</div>
+          <h1 class="app-head__title">You're verified</h1>
+          <p class="app-head__lead">Your collaboration with {{ site.name }} is active. Your referral portal is now live.</p>
+          <dl class="app-dlg__list" style="margin-top:1rem;">
+            <div><dt>Portal</dt><dd>{{ collab.subdomain }}</dd></div>
+            <div><dt>Commission</dt><dd>{% if collab.commission_type == 'percent' %}{{ collab.commission_value|floatformat:2 }}% per sale{% else %}₹{{ collab.commission_value|floatformat:2 }} per sale{% endif %}</dd></div>
+          </dl>
+          {% if dashboard_url %}
+            <a href="{{ dashboard_url }}" class="pal-btn" style="margin-top:1.1rem;">Open your dashboard <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+            <p class="app-head__lead" style="margin-top:0.75rem;font-size:0.85rem;">We've also emailed you this link. Sign in with {{ collab.email }} and a one-time code.</p>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="app-card__head"><h2 class="app-card__title">Collaboration invitation</h2></div>
+        <div class="app-card__body">
+          <p class="app-head__lead">{{ site.name }} invited you to collaborate. Confirm the 6-digit OTP from your invitation to accept the contract and activate your referral portal.</p>
+          <dl class="app-dlg__list" style="margin:1rem 0;">
+            <div><dt>Portal</dt><dd>{{ collab.subdomain }}</dd></div>
+            <div><dt>Commission</dt><dd>{% if collab.commission_type == 'percent' %}{{ collab.commission_value|floatformat:2 }}% per sale{% else %}₹{{ collab.commission_value|floatformat:2 }} per sale{% endif %}</dd></div>
+          </dl>
+          {% if error %}<p class="app-dlg__err">{{ error }}</p>{% endif %}
+          <form method="post" class="contract-form">
+            {% csrf_token %}
+            <label class="pal-field" style="margin:0;">
+              <span class="pal-field__label">One-time password</span>
+              <input type="text" name="otp" inputmode="numeric" maxlength="6" required class="pal-input" placeholder="Enter 6-digit OTP">
+            </label>
+            <button type="submit" class="pal-btn" style="margin-top:0.9rem;">Accept &amp; verify</button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

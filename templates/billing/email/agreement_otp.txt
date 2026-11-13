@@ -1,0 +1,13 @@
+Your OneWooz confirmation code
+
+{{ code }}
+
+Enter this code to accept the agreement and continue to payment. It expires in
+{{ minutes }} minutes and works once.
+
+We will never ask you for this code by phone, chat or email. If someone does,
+they are not from OneWooz.
+
+If you didn't start a subscription on OneWooz, you can ignore this email.
+
+ {{ brand }}

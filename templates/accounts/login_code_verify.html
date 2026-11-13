@@ -1,4 +1,5 @@
 {% extends "accounts/_auth_shell.html" %}
+{% load static %}
 
 {% block title %}Enter your code · OneWooz{% endblock %}
 {% block auth_title %}Enter your code{% endblock %}
@@ -11,13 +12,12 @@
     {% csrf_token %}
     <input type="hidden" name="email" value="{{ email }}">
 
-    <div class="field">
-      <label class="sr-only" for="code">Six-digit code</label>
-      <input class="input input--code" type="text" name="code" id="code"
-             inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
-             autocomplete="one-time-code" required autofocus>
-    </div>
+    {% include "accounts/_otp_field.html" %}
 
     <button type="submit" class="btn btn--primary btn--block mt-6">Sign in</button>
   </form>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{% static 'js/otp-boxes.js' %}"></script>
 {% endblock %}

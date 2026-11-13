@@ -2,14 +2,14 @@
 {% load static onewooz %}
 
 {% comment %}
-Owner dashboard shell — "Palantir" direction, applied to the app surface.
+Owner dashboard shell  "" direction, applied to the app surface.
 
 A fixed hairline sidebar (desktop) + sticky top bar, transformed with the same
 design system as the marketing site: the body is wrapped in `.pal .app`, the
 tokens and primitives come from onewooz-pal.css, and the dashboard-specific
 chrome (sidebar, top bar, KPI cards, tables, wizard) from onewooz-app.css.
 
-Unlike marketing, the dashboard does NOT set `.pal-anim` on <html> — a working
+Unlike marketing, the dashboard does NOT set `.pal-anim` on <html>  a working
 tool should paint instantly, with no entrance-reveal animation.
 
 A page sets `nav_active` to highlight its sidebar item and may override
@@ -23,17 +23,18 @@ A page sets `nav_active` to highlight its sidebar item and may override
 {% endblock %}
 
 {% block body %}
-<div class="pal">
+<div class="pal{% if request.impersonation %} pal--impersonating{% endif %}">
+{% include "_impersonation_banner.html" %}
 <a href="#main" class="sr-only">Skip to content</a>
 
 <div class="app">
 
   {# ---- Sidebar (desktop) ---- #}
   <aside class="app-side">
-    <a href="{% url 'ud:dashboard' %}" class="app-side__brand" aria-label="OneWooz — dashboard home">
-      <img class="app-side__brand-img" src="{% static 'img/Icon_main.png' %}" alt="" width="24" height="24">
+    <a href="{% url 'ud:dashboard' %}" class="app-side__brand" aria-label="OneWooz  dashboard home">
+      <img class="app-side__brand-img" src="{% brand_logo_url %}" alt="" width="24" height="24">
     </a>
-    <div class="ow-scroller is-vertical app-side__scroller" data-scroller>
+    <div class="ow-scroller is-vertical app-side__scroller" data-scroller data-scroller-key="dashboard-sidebar">
       <div class="ow-scroller__area" data-scroller-area>
         {% include "ud/_nav.html" %}
       </div>
@@ -81,6 +82,8 @@ A page sets `nav_active` to highlight its sidebar item and may override
 
 {% block scripts %}
 <script src="{% static 'js/app/scroll-hint.js' %}" defer></script>
+<script src="{% static 'js/app/popup.js' %}" defer></script>
+<script src="{% static 'js/app/custom-select.js' %}" defer></script>
 <script nonce="{{ csp_nonce }}">
   // Close the account / mobile menus on outside click or Escape. The menus are
   // native <details>, so they work with JS disabled; this only refines them.
@@ -104,4 +107,5 @@ A page sets `nav_active` to highlight its sidebar item and may override
     }
   })();
 </script>
+{% include "ud/_session_heartbeat.html" %}
 {% endblock %}

@@ -1,0 +1,14 @@
+{% autoescape off %}{{ kind_label }}: {{ title }}
+
+{% if name %}Hi {{ name }}, there{% else %}There{% endif %}'s a new {{ kind_label|lower }} post for you in your OneWooz Business Hub.
+{% if preview %}
+{{ preview }}
+{% endif %}{% if has_video %}
+This post includes a video. Open it in your dashboard to watch.
+{% endif %}
+Read it in your dashboard:
+
+  {{ url }}
+
+{{ brand }}
+{% endautoescape %}

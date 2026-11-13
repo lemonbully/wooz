@@ -1,20 +1,20 @@
 {% extends "ud/_shell.html" %}
 
-{% block title %}Overview · OneWooz{% endblock %}
-{% block crumb %}Overview{% endblock %}
+{% block title %}Dashboard · OneWooz{% endblock %}
+{% block crumb %}Dashboard{% endblock %}
 
 {% block main %}
-<div class="app-page">
+<div class="app-page app-page--tight">
 
   {# ---- Page header ---- #}
-  <div class="app-head">
+  {% comment %} <div class="app-head">
     <div>
-      <p class="pal-mono pal-mono--accent">01 — Command centre</p>
+      <p class="pal-mono pal-mono--accent">01  Command centre</p>
       <h1 class="app-head__title pal-mt-4">
         {% if request.user.display_name %}Welcome back, {{ request.user.display_name }}{% else %}Welcome to OneWooz{% endif %}
       </h1>
       <p class="app-head__lead">
-        Every store you run with OneWooz, and how each is performing — in one place.
+        Every store you run with OneWooz, and how each is performing  in one place.
       </p>
     </div>
     <div class="app-head__actions">
@@ -22,26 +22,34 @@
         Create a store <span class="pal-btn__arrow" aria-hidden="true">→</span>
       </a>
     </div>
-  </div>
+  </div> {% endcomment %}
 
   {# ---- KPI row ---- #}
-  <div class="app-block">
+  <div>
     <div class="app-block__head">
       <p class="pal-mono">Performance · all stores</p>
       <span class="app-pill">30-day window</span>
     </div>
-    <div class="app-kpis">
+    <div class="app-kpis app-kpis--five">
       {% for kpi in kpis %}
-        <div class="app-kpi">
-          <p class="app-kpi__label">{{ kpi.label }}</p>
-          {% if kpi.value is None %}
-            <p class="app-kpi__value app-kpi__value--empty">—</p>
-            <p class="app-kpi__delta app-kpi__delta--flat">Live once a store is published</p>
-          {% else %}
+        {% if kpi.url and kpi.value is not None %}
+          <a href="{{ kpi.url }}" class="app-kpi app-kpi--link">
+            <p class="app-kpi__label">{{ kpi.label }} <span class="app-kpi__go" aria-hidden="true">→</span></p>
             <p class="app-kpi__value">{{ kpi.value }}</p>
             <p class="app-kpi__delta">{{ kpi.caption }}</p>
-          {% endif %}
-        </div>
+          </a>
+        {% else %}
+          <div class="app-kpi">
+            <p class="app-kpi__label">{{ kpi.label }}</p>
+            {% if kpi.value is None %}
+              <p class="app-kpi__value app-kpi__value--empty"></p>
+              <p class="app-kpi__delta app-kpi__delta--flat">Live once a store is published</p>
+            {% else %}
+              <p class="app-kpi__value">{{ kpi.value }}</p>
+              <p class="app-kpi__delta">{{ kpi.caption }}</p>
+            {% endif %}
+          </div>
+        {% endif %}
       {% endfor %}
     </div>
   </div>
@@ -53,75 +61,50 @@
         <p class="pal-mono pal-mono--accent">Resume where you left off</p>
         <p class="app-resume__name">You were working on <strong>{{ active_site.name }}</strong></p>
       </div>
-      <a href="{% url 'store:overview' active_site.id %}" class="pal-btn">Continue <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
+      <a href="{{ resume_url }}" class="pal-btn">Continue <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
     </div>
   </div>
   {% endif %}
 
-  {# ---- Stores (each is a separate, isolated profile) ---- #}
-  <div class="app-block">
-    <div class="app-block__head">
-      <p class="pal-mono">Your store profiles</p>
-      {% if sites %}<a href="{% url 'ud:create_site' %}" class="pal-link">Create another store</a>{% endif %}
-    </div>
-    {% if sites %}
-      <p class="app-block__note">Each store is its own profile with its own products, orders and content — they never mix. Open one to work on it, and switch profiles anytime from the store header.</p>
-    {% endif %}
-
-    {% if sites %}
-      <div class="app-stores">
-        {% for site in sites %}
-          <article class="app-store">
-            <div class="app-store__top">
-              <div>
-                <h2 class="app-store__name">{{ site.name }}</h2>
-                <p class="app-store__host">{{ site.slug }}.onewooz.site</p>
-              </div>
-              {% if site.is_live %}
-                <span class="app-pill app-pill--live">Live</span>
-              {% else %}
-                <span class="app-pill">{{ site.get_status_display }}</span>
-              {% endif %}
-            </div>
-            <div class="app-store__mini">
-              <div><div class="app-store__mini-v">{{ site.orders_count }}</div><div class="app-store__mini-l">Orders</div></div>
-              <div><div class="app-store__mini-v">{{ site.products_count }}</div><div class="app-store__mini-l">Products</div></div>
-              <div><div class="app-store__mini-v">{{ site.get_business_model_display }}</div><div class="app-store__mini-l">Type</div></div>
-            </div>
-            <div class="app-store__foot">
-              <a href="{% url 'store:overview' site.id %}" class="pal-btn pal-btn--ghost">Manage</a>
-              <a href="{% url 'store:editor' site.id %}" class="pal-btn pal-btn--ghost">Edit content</a>
-              <a href="{{ site.preview_url }}" target="_blank" rel="noopener" class="pal-link">View storefront ↗</a>
-            </div>
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="app-empty">
-        <span class="app-empty__ico" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M3 9 4.5 4.5A2 2 0 0 1 6.4 3h11.2a2 2 0 0 1 1.9 1.5L21 9"/><path d="M3 9h18"/><path d="M5 9v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M9 13h6"/></svg>
-        </span>
-        <h2 class="app-empty__title">No stores yet</h2>
-        <p class="app-empty__text">
-          Answer a few questions about your business and OneWooz builds and
-          publishes a working store — products, checkout, payments, shipping.
-          You can change anything afterwards.
-        </p>
-        <div class="app-empty__actions">
-          <a href="{% url 'ud:create_site' %}" class="pal-btn">Create your first store <span class="pal-btn__arrow" aria-hidden="true">→</span></a>
-        </div>
-      </div>
-    {% endif %}
-  </div>
-
   {# ---- Getting started + activity ---- #}
+  {% comment %}
+  Store cards were removed here: stores are reached from the top-bar profile
+  switcher and the "Resume" card above. What remains on the dashboard is the
+  account setup checklist and the recent-activity feed. The feed is capped to the
+  height of the checklist (JS below) and paginates when it has more than fits.
+  {% endcomment %}
   <div class="app-block">
     <div class="app-split">
 
-      <section>
+      {% if gs_complete and ai_enabled %}
+      <section data-getting-started data-ai-assistant data-ai-url="{% url 'ud:ai_chat' %}" data-csrf="{{ csrf_token }}">
+        <div class="app-card__head">
+          <h2 class="app-card__title">AI assistant</h2>
+          <span class="app-mono">Grok · OpenAI</span>
+        </div>
+        <div class="app-ai">
+          <div class="app-ai__feed" data-ai-feed>
+            <div class="app-ai__msg app-ai__msg--bot">
+              <p>Setup complete 🎉 I’m your OneWooz assistant. Ask me to write product copy, marketing ideas or SEO, or switch to <strong>Image</strong> and describe a picture to generate.</p>
+            </div>
+          </div>
+          <form class="app-ai__form" data-ai-form>
+            <div class="app-ai__modes" role="group" aria-label="Assistant mode">
+              <button type="button" class="app-ai__mode is-active" data-ai-mode="text" aria-pressed="true">Text</button>
+              <button type="button" class="app-ai__mode" data-ai-mode="image" aria-pressed="false">Image</button>
+            </div>
+            <div class="app-ai__row">
+              <textarea class="app-ai__input" data-ai-input rows="1" placeholder="Ask the assistant…" required></textarea>
+              <button type="submit" class="pal-btn app-ai__send" data-ai-send>Send</button>
+            </div>
+          </form>
+        </div>
+      </section>
+      {% else %}
+      <section data-getting-started>
         <div class="app-card__head">
           <h2 class="app-card__title">Getting started</h2>
-          <span class="app-mono">Step {% if sites %}3{% else %}2{% endif %} of {{ steps|length }}</span>
+          <span class="app-mono">Step {{ current_step }} of {{ steps|length }}</span>
         </div>
         <div class="app-steps app-steps--flush">
           {% for step in steps %}
@@ -137,34 +120,48 @@
                 <p class="app-step__title">{{ step.title }}</p>
                 <p class="app-step__desc">{{ step.desc }}</p>
               </div>
-              {% if step.state == 'now' %}
+              {% if step.state == 'now' and step.cta_url %}
                 <div class="app-step__aside">
-                  <a href="{% url 'ud:create_site' %}" class="pal-btn pal-btn--ghost">Start</a>
+                  <a href="{{ step.cta_url }}" class="pal-btn pal-btn--ghost">{{ step.cta_label|default:'Start' }}</a>
                 </div>
               {% endif %}
             </div>
           {% endfor %}
         </div>
       </section>
+      {% endif %}
 
-      <aside>
+      <aside data-activity>
         <div class="app-card__head">
           <h2 class="app-card__title">Recent activity</h2>
+          {% if focus_site %}<span class="app-mono">{{ focus_site.name }}</span>{% endif %}
         </div>
-        <div class="app-card__body">
+        <div class="app-card__body app-activity">
           {% if activity %}
-            <div class="app-feed">
+            <div class="app-feed" data-activity-feed>
               {% for event in activity %}
                 <div class="app-feed__item">
-                  <p class="app-feed__t">{{ event.when }}</p>
-                  <p class="app-feed__b">{{ event.text }}</p>
+                  <p class="app-feed__t">{{ event.when }}{% if event.actor %} · {{ event.actor }}{% endif %}</p>
+                  <p class="app-feed__b">{{ event.text }}{% if event.subject %} · <strong>{{ event.subject }}</strong>{% endif %}</p>
+                  <p class="app-feed__d">{{ event.when_exact }}</p>
                 </div>
               {% endfor %}
             </div>
+            <div class="app-activity__nav" data-activity-nav hidden>
+              <button type="button" class="app-activity__btn" data-activity-prev aria-label="Newer activity">←</button>
+              <span class="app-activity__pos" data-activity-pos>1 / 1</span>
+              <button type="button" class="app-activity__btn" data-activity-next aria-label="Older activity">→</button>
+            </div>
           {% else %}
             <p class="app-note-inline">
-              Nothing to show yet. Once your store is live, orders, sign-ups and
-              settings changes appear here as a running log.
+              {% if focus_site %}
+                Nothing here yet. As you edit content, add products, connect a
+                domain or take orders in <strong>{{ focus_site.name }}</strong>,
+                it all shows up here as a running timeline.
+              {% else %}
+                Nothing to show yet. Once your store is live, orders, sign-ups and
+                settings changes appear here as a running timeline.
+              {% endif %}
             </p>
           {% endif %}
         </div>
@@ -174,4 +171,216 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<style nonce="{{ csp_nonce }}">
+  /* Slightly smaller "Getting started" / "Recent activity" headings for a more
+     minimal feel  scoped to the dashboard so other pages' cards are untouched. */
+  [data-getting-started] .app-card__title,
+  [data-activity] .app-card__title { font-size: 0.92rem; }
+  /* Smaller activity rows  the reduced type also opens up a little more spacing
+     between entries. */
+  .app-activity .app-feed__b { font-size: 0.82rem; }
+  .app-activity .app-feed__t { font-size: 0.56rem; }
+  /* Exact date + time for each activity row. */
+  .app-feed__d { margin-top: 0.2rem; font-family: var(--pal-font-mono, monospace); font-size: 0.62rem;
+    letter-spacing: 0.03em; color: var(--pal-faint); font-variant-numeric: tabular-nums; }
+
+  /* AI assistant panel (replaces Getting started once setup is complete). */
+  .app-ai { display: flex; flex-direction: column; gap: 0.75rem; }
+  .app-ai__feed { display: flex; flex-direction: column; gap: 0.6rem; max-height: 22rem; overflow-y: auto;
+    padding: 0.25rem; }
+  .app-ai__msg { font-size: 0.86rem; line-height: 1.5; padding: 0.6rem 0.8rem; border: 1px solid var(--pal-line);
+    max-width: 88%; }
+  .app-ai__msg p { margin: 0; }
+  .app-ai__msg--bot { align-self: flex-start; background: var(--pal-paper-2, #ececea); color: var(--pal-ink-2); }
+  .app-ai__msg--me { align-self: flex-end; background: var(--pal-ink); color: var(--pal-paper); border-color: var(--pal-ink); }
+  .app-ai__msg--err { align-self: flex-start; border-left: 2px solid #b0271d; color: #b0271d; }
+  .app-ai__msg img { display: block; max-width: 100%; height: auto; border: 1px solid var(--pal-line); }
+  .app-ai__modes { display: inline-flex; border: 1px solid var(--pal-line); width: max-content; }
+  .app-ai__mode { appearance: none; border: 0; border-right: 1px solid var(--pal-line); background: transparent;
+    cursor: pointer; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 0.4rem 0.85rem; color: var(--pal-muted); }
+  .app-ai__mode:last-child { border-right: 0; }
+  .app-ai__mode.is-active { background: var(--pal-ink); color: var(--pal-paper); }
+  .app-ai__row { display: flex; gap: 0.5rem; align-items: stretch; }
+  .app-ai__input { flex: 1; resize: none; font: inherit; font-size: 0.9rem; padding: 0.6rem 0.7rem;
+    border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel, #fff); color: var(--pal-ink);
+    min-height: 2.6rem; max-height: 8rem; }
+  .app-ai__input:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+  .app-ai__send { white-space: nowrap; }
+  .app-ai__send[disabled] { opacity: 0.5; cursor: default; }
+
+  /* Recent-activity feed is capped to the getting-started column's height and
+     paginated (below) so it never overflows the row. `align-items:start` keeps
+     the left column at its natural height instead of stretching to the (taller)
+     feed before the pager kicks in. */
+  .app-block .app-split:has([data-activity]) { align-items: start; }
+  .app-activity { display: flex; flex-direction: column; }
+  .app-activity .app-feed { overflow: hidden; }
+  .app-activity__nav { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;
+    margin-top: 0.75rem; padding-top: 0.6rem; border-top: 1px solid var(--pal-line-soft); }
+  .app-activity__nav[hidden] { display: none; }
+  .app-activity__pos { font-family: var(--pal-font-mono, monospace); font-size: 0.7rem; letter-spacing: 0.04em;
+    color: var(--pal-muted); font-variant-numeric: tabular-nums; }
+  .app-activity__btn { appearance: none; cursor: pointer; font: inherit; line-height: 1; width: 1.9rem; height: 1.9rem;
+    display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--pal-line);
+    background: var(--pal-paper, #fff); color: var(--pal-ink); border-radius: 6px; }
+  .app-activity__btn:hover:not([disabled]) { border-color: var(--pal-accent, #4b2bf5); color: var(--pal-accent, #4b2bf5); }
+  .app-activity__btn[disabled] { opacity: 0.4; cursor: default; }
+</style>
+<script nonce="{{ csp_nonce }}">
+// Cap the recent-activity feed to the height of the "Getting started" column and
+// paginate it when it holds more items than fit  so the two columns stay the
+// same height and the feed never overflows the row. Pure presentation: every log
+// is already in the DOM; this only shows a page of them at a time.
+(function () {
+  "use strict";
+  var aside = document.querySelector("[data-activity]");
+  var gs = document.querySelector("[data-getting-started]");
+  if (!aside || !gs) return;
+  var feed = aside.querySelector("[data-activity-feed]");
+  var nav = aside.querySelector("[data-activity-nav]");
+  if (!feed || !nav) return;
+
+  var items = Array.prototype.slice.call(feed.querySelectorAll(".app-feed__item"));
+  if (items.length <= 1) { nav.hidden = true; return; }
+
+  var posEl = nav.querySelector("[data-activity-pos]");
+  var prevBtn = nav.querySelector("[data-activity-prev]");
+  var nextBtn = nav.querySelector("[data-activity-next]");
+  var page = 0, perPage = items.length, pages = 1;
+
+  function itemHeight() {
+    // Row height incl. the gap between items (from the flex/grid gap on .app-feed).
+    var h = items[0].getBoundingClientRect().height;
+    var gap = parseFloat(getComputedStyle(feed).rowGap || getComputedStyle(feed).gap || "0") || 0;
+    return h + gap;
+  }
+
+  function naturalHeight(el) {
+    // Sum of an element's children's own heights  the height it *wants*, even
+    // when a stretched grid row has made its own box taller.
+    var total = 0;
+    Array.prototype.forEach.call(el.children, function (c) {
+      var s = getComputedStyle(c);
+      total += c.offsetHeight + (parseFloat(s.marginTop) || 0) + (parseFloat(s.marginBottom) || 0);
+    });
+    return total;
+  }
+
+  function computePerPage() {
+    // Target = the getting-started column's natural height. Measure gs by its
+    // children so a stretched row can't inflate it, then subtract the feed's own
+    // chrome (its header + a reserved slot for the pager) to get the room left
+    // for items.
+    var target = naturalHeight(gs);
+    var asideHead = aside.querySelector(".app-card__head");
+    var chrome = (asideHead ? asideHead.offsetHeight : 0) + 48; // 48 ≈ pager row
+    var avail = target - chrome;
+    if (!avail || avail < 40) avail = feed.getBoundingClientRect().height || 240;
+    var ih = itemHeight() || 48;
+    var n = Math.max(1, Math.floor(avail / ih));
+    return Math.min(n, items.length);
+  }
+
+  function render() {
+    var start = page * perPage;
+    var end = start + perPage;
+    items.forEach(function (it, i) { it.hidden = (i < start || i >= end); });
+    if (posEl) posEl.textContent = (page + 1) + " / " + pages;
+    if (prevBtn) prevBtn.disabled = page <= 0;
+    if (nextBtn) nextBtn.disabled = page >= pages - 1;
+  }
+
+  function layout() {
+    perPage = computePerPage();
+    pages = Math.ceil(items.length / perPage);
+    if (page > pages - 1) page = pages - 1;
+    if (page < 0) page = 0;
+    nav.hidden = pages <= 1;
+    render();
+  }
+
+  if (prevBtn) prevBtn.addEventListener("click", function () { if (page > 0) { page--; render(); } });
+  if (nextBtn) nextBtn.addEventListener("click", function () { if (page < pages - 1) { page++; render(); } });
+
+  var t;
+  window.addEventListener("resize", function () { clearTimeout(t); t = setTimeout(layout, 150); });
+  // Measure after layout/paint so heights are real.
+  if (window.requestAnimationFrame) requestAnimationFrame(layout); else setTimeout(layout, 60);
+})();
+</script>
+<script nonce="{{ csp_nonce }}">
+// Dashboard AI assistant: talks only to our same-origin endpoint, which calls
+// Grok (text) / OpenAI (image) server-side. No key or third-party host here.
+(function () {
+  "use strict";
+  var root = document.querySelector("[data-ai-assistant]");
+  if (!root) return;
+  var url = root.getAttribute("data-ai-url");
+  var csrf = root.getAttribute("data-csrf") || "";
+  var feed = root.querySelector("[data-ai-feed]");
+  var form = root.querySelector("[data-ai-form]");
+  var input = root.querySelector("[data-ai-input]");
+  var send = root.querySelector("[data-ai-send]");
+  var mode = "text";
+
+  Array.prototype.forEach.call(root.querySelectorAll("[data-ai-mode]"), function (btn) {
+    btn.addEventListener("click", function () {
+      mode = btn.getAttribute("data-ai-mode");
+      Array.prototype.forEach.call(root.querySelectorAll("[data-ai-mode]"), function (b) {
+        var on = b === btn;
+        b.classList.toggle("is-active", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      input.placeholder = mode === "image" ? "Describe an image to generate…" : "Ask the assistant…";
+    });
+  });
+
+  function bubble(kind, node) {
+    var el = document.createElement("div");
+    el.className = "app-ai__msg app-ai__msg--" + kind;
+    if (typeof node === "string") { var p = document.createElement("p"); p.textContent = node; el.appendChild(p); }
+    else { el.appendChild(node); }
+    feed.appendChild(el);
+    feed.scrollTop = feed.scrollHeight;
+    return el;
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var text = (input.value || "").trim();
+    if (!text) return;
+    bubble("me", text);
+    input.value = "";
+    send.disabled = true;
+    var pending = bubble("bot", mode === "image" ? "Generating your image…" : "Thinking…");
+
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf, "Accept": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ message: text, mode: mode }),
+    }).then(function (r) { return r.json().catch(function () { return {}; }); })
+      .then(function (d) {
+        pending.remove();
+        if (d && d.ok && d.type === "image" && d.image) {
+          var img = document.createElement("img");
+          img.src = d.image; img.alt = text;
+          bubble("bot", img);
+        } else if (d && d.ok && d.text) {
+          bubble("bot", d.text);
+        } else {
+          bubble("err", (d && d.error) || "Something went wrong. Please try again.");
+        }
+      }).catch(function () {
+        pending.remove();
+        bubble("err", "Network error. Please try again.");
+      }).then(function () { send.disabled = false; input.focus(); });
+  });
+})();
+</script>
 {% endblock %}

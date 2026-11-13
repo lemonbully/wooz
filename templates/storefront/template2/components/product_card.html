@@ -1,0 +1,117 @@
+{% load website_filters %}{% comment %}
+The storefront product card: exactly the homepage Best Sellers card, shared
+so every product grid in this theme (category pages, All products, the
+product page's featured strip) shows the same card.
+
+Context: `product` (a storefront product proxy). Optional `wish_class`: the
+wishlist button's JS hook on pages that wire their own handler. The demo
+photo index comes from the surrounding loop's forloop.counter0.
+Styles: include components/product_card_styles.html once per page.
+{% endcomment %}
+<div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] md:m-[1rem] lg:m-4 product_card" style="border-radius: 8px;" data-product-id="{{ product.product_id }}" data-product-title="{{ product.title|lower }}">
+    <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
+        {% if product.image1 %}
+        <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+           class="group relative flex items-center justify-center flex-shrink-0 product-image-link">
+          <span class="relative w-full h-full flex items-center justify-center">
+            {% if website.content.enable_product_hover_swap and product.image2 %}
+            <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="block w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0" data-no-srcset="true"/>
+            <img src="{{ product.image2.url }}" {% media_attrs website product.image2.url product.title %} class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100" data-no-srcset="true"/>
+            {% else %}
+            <img src="{{ product.image1.url }}" {% media_attrs website product.image1.url product.title %} class="block w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" data-no-srcset="true"/>
+            {% endif %}
+          </span>
+        </a>
+        {% else %}
+        {# No product image yet  a reference photo keeps the card full. #}
+        <img src="{% demo_media 'product' forloop.counter0 %}" alt="{{ product.title }}"
+             class="block w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
+        {% endif %}
+
+        {% comment %} Badges: NEW for recently featured; Discount from specifications if provided {% endcomment %}        {% if product.specifications %}
+        <div class="absolute top-2 right-2 flex flex-col items-end space-y-1.5 pointer-events-none">
+            {% with specs=product.specifications %}
+                {% if specs %}
+                    {% if specs.discount %}
+                        <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount }}%</span>
+                    {% elif specs.discount_percentage %}
+                        <span class="px-2 py-0.5 text-[9px] tracking-widest uppercase bg-white/90 text-gray-900 ring-1 ring-gray-300">-{{ specs.discount_percentage }}%</span>
+                    {% endif %}
+                {% endif %}
+            {% endwith %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="px-2 sm:px-3 md:px-4 py-4 {% if is_d2c or website.template.is_D2C %}text-left best-seller-d2c-content{% else %}text-center{% endif %}">
+        {% if is_d2c or website.template.is_D2C %}
+        <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+           class="block sm:text-[13px] font-normal uppercase leading-tight text-gray-900 hover:text-black transition-colors break-words best-seller-d2c-title"
+           title="{{ product.title }}">
+            {{ product.title|truncatewords:5 }}
+        </a>
+        {% if show_price_in_lists %}
+        <div class="mt-1 text-gray-700">
+            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+               class="inline-flex items-baseline justify-start gap-1.5 hover:text-black transition-colors max-w-full">
+                {% with specs=product.specifications %}
+                    <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words best-seller-d2c-price">₹{{ product.price }}</span>
+                    {% if specs and specs.mrp %}
+                        <span class="text-[15px] text-gray-400 line-through break-words">₹{{ specs.mrp }}</span>
+                    {% elif specs and specs.original_price %}
+                        <span class="text-[15px] text-gray-400 line-through break-words">₹{{ specs.original_price }}</span>
+                    {% endif %}
+                {% endwith %}
+            </a>
+        </div>
+        {% endif %}
+        {% comment %} Add to Cart and Wishlist Buttons {% endcomment %}
+        <div class="mt-1.5 best-seller-d2c-actions">
+            <a href="{% url 'public_cart_add' product_id=product.product_id|default:'0' %}?qty=1"
+               class="inline-flex items-center justify-center gap-1 w-full h-7 sm:h-8 rounded-[6px] text-[#8A6550] uppercase bg-white hover:bg-[#f9f6f4] transition px-1 min-w-0 text-[9px] sm:text-xs"
+               style="border: 1px solid #888888;"
+               aria-label="Add {{ product.title }} to cart">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <circle cx="9" cy="20" r="1.6"></circle>
+                    <circle cx="18" cy="20" r="1.6"></circle>
+                    <path d="M3 4h2l2.1 10.2a1 1 0 0 0 1 .8h9.9a1 1 0 0 0 1-.8L21 8H7.2"></path>
+                </svg>
+                <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Add To Cart</span>
+            </a>
+            <button type="button"
+                    class="w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] {% if product.product_id|stringformat:"s" in wishlisted_product_ids %}text-red-500 bg-red-50 is-wishlisted{% else %}text-gray-700 bg-white{% endif %} hover:bg-gray-50 transition {{ wish_class|default:'js-best-seller-wishlist' }}"
+                    style="border: 1px solid #888888;"
+                    aria-pressed="{% if product.product_id|stringformat:"s" in wishlisted_product_ids %}true{% else %}false{% endif %}" data-wishlist-url="{% url 'public_wishlist_add' product_id=product.product_id|default:'0' %}" data-account-url="{% url 'public_user_account' %}"
+                    aria-label="Add {{ product.title }} to wishlist">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4" fill="{% if product.product_id|stringformat:"s" in wishlisted_product_ids %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="1.7">
+                    <path d="M12 21s-6.7-4.35-9.2-8.07C.87 10.13 1.5 6.7 4.4 5.2a5 5 0 0 1 5.6.77L12 7.7l2-1.73a5 5 0 0 1 5.6-.77c2.9 1.5 3.53 4.93 1.6 7.73C18.7 16.65 12 21 12 21z"></path>
+                </svg>
+            </button>
+        </div>
+        {% else %}
+        <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+           class="inline-block max-w-full break-words text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-gray-800 hover:text-black transition-colors"
+           title="{{ product.title }}">
+            {{ product.title|truncatewords:5 }}
+        </a>
+        {% if show_price_in_lists %}
+        <div class="mt-0 sm:mt-1 text-gray-700">
+            <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
+               class="inline-flex items-baseline justify-center gap-2 hover:text-black transition-colors">
+                {% with specs=product.specifications %}
+                    {% if specs and specs.mrp %}
+                        <span class="text-gray-400 line-through text-[11px]">₹{{ specs.mrp }}</span>
+                        <span class="text-xs">₹{{ product.price }}</span>
+                    {% elif specs and specs.original_price %}
+                        <span class="text-gray-400 line-through text-[11px]">₹{{ specs.original_price }}</span>
+                        <span class="text-xs">₹{{ product.price }}</span>
+                    {% else %}
+                        <span class="text-xs">₹{{ product.price }}</span>
+                    {% endif %}
+                {% endwith %}
+            </a>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>

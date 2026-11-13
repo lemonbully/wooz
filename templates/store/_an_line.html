@@ -1,0 +1,13 @@
+{% comment %}Multi-series line/area chart. Expects `chart`; optional `label`.{% endcomment %}
+<div class="an-chart">
+  <svg viewBox="0 0 {{ chart.cw }} {{ chart.ch }}" preserveAspectRatio="none" role="img" aria-label="{{ label|default:'Trend over time' }}">
+    <line x1="{{ chart.left }}" y1="{{ chart.baseline }}" x2="{{ chart.right }}" y2="{{ chart.baseline }}" class="an-axis"/>
+    {% if chart.area %}<polygon class="an-area" points="{{ chart.area }}"/>{% endif %}
+    {% for ln in chart.lines %}{% if ln.points %}<polyline class="an-line an-line--{{ ln.css }}" points="{{ ln.points }}"/>{% endif %}{% endfor %}
+  </svg>
+  <div class="an-chart__axis">
+    <span>{{ chart.first_label }}</span>
+    <span class="an-chart__peak">peak {{ chart.max_label }}</span>
+    <span>{{ chart.last_label }}</span>
+  </div>
+</div>

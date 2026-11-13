@@ -1,0 +1,22 @@
+{% extends "custom_admin/_auth.html" %}
+
+{% block title %}Reset your password · OneWooz Admin{% endblock %}
+
+{% block card %}
+  <p class="owa-kicker">Account recovery</p>
+  <h1 class="owa-auth__h">Reset your password</h1>
+  <p class="owa-auth__p">Enter your staff email. If it matches an account, we’ll send a link to set a new password.</p>
+
+  <form method="post" action="{% url 'custom_admin:forgot' %}">
+    {% csrf_token %}
+    <label class="owa-field">
+      <span class="owa-field__label">Email</span>
+      <input class="owa-input" type="email" name="email" id="email" autocomplete="username" required autofocus spellcheck="false">
+    </label>
+    <button type="submit" class="owa-btn owa-btn--accent owa-btn--block">Send reset link <span class="owa-btn__arw" aria-hidden="true">→</span></button>
+  </form>
+
+  <div class="owa-auth__foot">
+    <a href="{% url 'custom_admin:sign_in' %}">← Back to sign in</a>
+  </div>
+{% endblock %}
