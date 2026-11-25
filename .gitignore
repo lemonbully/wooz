@@ -42,3 +42,6 @@ emailworking.md
 *.md
 *.MD
 .claude/
+
+# Local report dumps
+reports.txt_*.txt
