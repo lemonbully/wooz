@@ -1,0 +1,35 @@
+{% load static marketplace_slots %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{% include "storefront/template3/_head.html" %}
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'storefront-t3/css/theme.css' %}">
+{% if website.content.custom_css %}<style>{{ website.content.custom_css|safe }}</style>{% endif %}
+{% block t3_head %}{% endblock %}
+{% app_head %}
+</head>
+<body {% block body_attrs %}{% endblock %}>
+{% include "storefront/_tracking_body.html" %}
+{% app_slot "body.start" %}{% app_slot "header.above" %}
+{% block header %}<div data-header></div>{% endblock %}
+{% app_slot "header.below" %}
+{% block main %}{% endblock %}
+{% app_slot "footer.above" %}
+{% block footer %}<div data-footer></div>{% endblock %}
+
+{{ t3_data|json_script:"t3-data" }}
+<script src="{% static 'storefront-t3/js/boot.js' %}"></script>
+{% block page_scripts %}{% endblock %}
+<script src="{% static 'storefront-t3/js/app.js' %}"></script>
+{% if website.content.custom_js %}<script nonce="{{ csp_nonce }}">{{ website.content.custom_js|safe }}</script>{% endif %}
+{% if request.analytics_context %}
+{{ request.analytics_context|json_script:"analytics-config" }}
+<script src="{% static 'js/website/analytics.js' %}" defer></script>
+{% endif %}
+{% app_tail %}
+{% include "storefront/_recaptcha_loader.html" %}
+</body>
+</html>

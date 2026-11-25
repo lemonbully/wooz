@@ -7,8 +7,9 @@
  * saved tree so freshly created rows pick up their server id (and de-duplicated
  * slug) for subsequent in-place updates.
  *
- * Rich text uses the same free TinyMCE 6 build as the rest of the admin, mounted
- * lazily when a node opens and torn down when it closes.
+ * Content is pasted HTML, edited with the paste-HTML editor (html_editor.js:
+ * live preview in the site styles, image uploads, formatting guide), mounted
+ * lazily the first time a node opens.
  */
 (function () {
   "use strict";
@@ -50,53 +51,27 @@
     }
   };
 
-  // ---- TinyMCE ---------------------------------------------------------
-  var TINY = {
-    menubar: "edit view insert format tools table",
-    plugins: "advlist autolink lists link image charmap preview anchor searchreplace visualblocks visualchars code fullscreen insertdatetime media table emoticons help wordcount",
-    toolbar: "undo redo | blocks fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | blockquote hr | removeformat code fullscreen preview",
-    height: 340, menubar_sticky: true, branding: false, promotion: false, license_key: "gpl",
-    content_style: "body{font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.6}",
-    paste_data_images: true, automatic_uploads: false, file_picker_types: "image",
-    file_picker_callback: function (callback, value, meta) {
-      if (meta.filetype !== "image") return;
-      var input = document.createElement("input");
-      input.type = "file"; input.accept = "image/*";
-      input.addEventListener("change", function () {
-        var file = input.files && input.files[0]; if (!file) return;
-        var reader = new FileReader();
-        reader.onload = function () { callback(reader.result, { title: file.name }); };
-        reader.readAsDataURL(file);
-      });
-      input.click();
-    },
-    setup: function (editor) {
-      editor.on("change input undo redo keyup SetContent", function () {
-        editor.save();
-        var ta = editor.getElement();
-        if (ta) ta.dispatchEvent(new Event("input", { bubbles: true }));
-      });
-    }
+  // ---- Paste-HTML editor ---------------------------------------------
+  var EDITOR = {
+    previewUrl: root.getAttribute("data-preview-url"),
+    uploadUrl: root.getAttribute("data-upload-url"),
+    css: root.getAttribute("data-css"),
+    csrf: csrf
   };
   function ownContent(item) {
-    // The node's OWN richtext textarea (never a nested node's).
+    // The node's OWN content textarea (never a nested node's).
     var fields = item.querySelector(":scope > .mkt-item__body > .mkt-fields");
-    return fields ? fields.querySelector(":scope > .mkt-field--content > textarea.admin-richtext") : null;
+    return fields ? fields.querySelector(":scope > .mkt-field--content textarea[data-field='content']") : null;
   }
   function initRich(item) {
     var ta = ownContent(item);
-    if (!ta || !window.tinymce || ta.dataset.tmceReady === "1") return;
-    ta.dataset.tmceReady = "1";
-    window.tinymce.init(Object.assign({ target: ta }, TINY));
+    if (!ta || !window.OWHtmlEditor || ta.dataset.owhReady === "1") return;
+    window.OWHtmlEditor.mount(ta, Object.assign({
+      titleInput: function () { return fieldEl(item, "title"); }
+    }, EDITOR));
   }
-  function destroyRich(item) {
-    var ta = ownContent(item);
-    if (!ta || !window.tinymce) return;
-    var ed = ta.id ? window.tinymce.get(ta.id) : null;
-    if (ed) ed.remove();
-    delete ta.dataset.tmceReady;
-  }
-  function flushRich() { if (window.tinymce) window.tinymce.triggerSave(); }
+  function destroyRich() { /* the editor is light; it stays mounted */ }
+  function flushRich() { /* the textarea is the source of truth */ }
 
   // ---- Small DOM helpers ----------------------------------------------
   function el(tag, cls, attrs) {
@@ -122,8 +97,9 @@
   }
   function contentField(value) {
     var wrap = el("div", "mkt-field mkt-field--content");
-    var lab = el("label", "mkt-field__label"); lab.textContent = "Content";
-    var ta = el("textarea", "admin-richtext", { "data-field": "content", id: "mkt-rt-" + (++UID) });
+    var id = "mkt-rt-" + (++UID);
+    var lab = el("label", "mkt-field__label", { "for": id }); lab.textContent = "Content (HTML)";
+    var ta = el("textarea", "ow-html-src", { "data-field": "content", id: id, rows: "18", spellcheck: "false", autocomplete: "off" });
     ta.value = value == null ? "" : value;
     wrap.appendChild(lab); wrap.appendChild(ta);
     return wrap;

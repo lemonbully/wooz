@@ -812,6 +812,27 @@ SECTIONS = [
                     {"name": "answer", "label": "Answer", "type": "textarea", "span": 12},
                 ],
             },
+            # Google reCAPTCHA on the contact form. Stored on the Site model
+            # (site_field), not in content: the secret is encrypted and never
+            # sent back to the browser (see RECAPTCHA_SECRET_KEPT).
+            {"name": "_h_recaptcha", "label": "Spam protection (Google reCAPTCHA)", "type": "heading",
+             "help": "Protects every enquiry form on your store (Contact page, Send enquiry pop-ups, bulk enquiry forms). "
+                     "In the Google reCAPTCHA admin console (google.com/recaptcha/admin), add your store's domain and pick a type: "
+                     "Challenge (v2) › “I'm not a robot” Checkbox shows a tick box; Score based (v3) works invisibly. "
+                     "Choose the same type below, then paste both keys. Clear the keys to turn it off."},
+            # Not a secret: kept in content (no migration). See storefront.recaptcha.version.
+            {"name": "recaptcha_version", "label": "Key type", "type": "select", "span": 4,
+             "options": [
+                 {"value": "v2", "label": "v2: “I'm not a robot” checkbox"},
+                 {"value": "v3", "label": "v3: score based (invisible)"},
+             ],
+             "help": "Must match the type you chose in Google's console, or the form shows “Invalid key type”."},
+            {"name": "recaptcha_site_key", "label": "Site key", "type": "text", "span": 4, "site_field": True,
+             "maxlength": 100, "placeholder": "6Lc...",
+             "help": "The public key Google shows first."},
+            {"name": "recaptcha_secret_key", "label": "Secret key", "type": "text", "span": 4, "site_field": True,
+             "secret": True, "maxlength": 100, "placeholder": "Paste your secret key",
+             "help": "Kept encrypted and never shown again. Leave the dots as they are to keep the saved key."},
         ],
     },
     {
@@ -957,6 +978,59 @@ SECTIONS = [
     },
 ]
 
+def _rank_hints() -> dict:
+    """Field name → the "!" tooltip shown beside its label in the editor.
+
+    These are exactly the fields the store's generated llms.txt depends on
+    (prompts.llms_txt.REQUIREMENTS); the limits are read from there so the
+    hint and the check can never disagree. Owners are told they matter for
+    ranking, which is what they are for.
+    """
+    from prompts import llms_txt as L
+
+    lead = "Required for better ranking."
+    contact = f"{lead} Add a phone number or a full address so customers and search engines can reach you."
+    return {
+        "site_name": f"{lead} Use your brand name, {L.MIN_NAME} to {L.MAX_NAME} characters.",
+        "meta_description": (
+            f"{lead} Describe what your store sells and who it is for in "
+            f"{L.MIN_DESCRIPTION} to {L.MAX_DESCRIPTION} characters."
+        ),
+        "about_section_content": (
+            f"{lead} Tell your brand's story and what makes it different, in at least "
+            f"{L.MIN_ABOUT} characters."
+        ),
+        "contact_email": f"{lead} Add the email address customers can write to.",
+        "mobile_number": contact,
+        "address": contact,
+        "refund_policy": (
+            f"{lead} Write your own refund policy, at least {L.MIN_POLICY} characters: "
+            "what can be returned, within how many days, and how refunds are paid."
+        ),
+        "shipping_policy": (
+            f"{lead} Write your own shipping policy, at least {L.MIN_POLICY} characters: "
+            "where you ship, delivery times and charges."
+        ),
+    }
+
+
+def _apply_rank_hints(fields, hints) -> None:
+    for f in fields or []:
+        if not isinstance(f, dict):
+            continue
+        if f.get("name") in hints and f.get("type") != "heading":
+            f["rank_hint"] = hints[f["name"]]
+        _apply_rank_hints(f.get("subfields"), hints)
+        _apply_rank_hints(f.get("fields"), hints)
+
+
+try:
+    _hints = _rank_hints()
+    for _s in SECTIONS:
+        _apply_rank_hints(_s.get("fields"), _hints)
+except Exception:  # a hint must never stop the editor from loading
+    pass
+
 _SECTION_BY_KEY = {s["key"]: s for s in SECTIONS}
 
 
@@ -968,6 +1042,38 @@ def _sections_for(site):
         if audience == "all" or (audience == "b2b" and site.is_b2b) or (audience == "d2c" and site.is_d2c):
             out.append(section)
     return out
+
+
+#: Home-tab layout pickers that only Template 1 renders. Template 2 (the
+#: template3 theme) has one fixed hero and one fixed collections layout, so
+#: these pickers, and the section-level fields tied to a Template 1 hero style,
+#: are left out of its editor. Nothing is deleted: save_section only writes the
+#: fields the editor sends, so the stored choices come back intact if the owner
+#: switches to Template 1 again.
+_TEMPLATE1_ONLY_HOME_FIELDS = {"hero_banner_style", "category_section_style"}
+
+_TEMPLATE2_HERO_HELP = (
+    "Fill the banners shown at the top of your homepage. Each banner's image, "
+    "text and button render exactly as entered."
+)
+
+
+def _section_for_theme(section, site):
+    """``section`` as this store's design shows it in the editor (a copy; the
+    shared SECTIONS constant is never mutated)."""
+    if section["key"] != "home" or site.template_dir not in site.JS_THEMES:
+        return section
+    fields = []
+    for f in section["fields"]:
+        if f["name"] in _TEMPLATE1_ONLY_HOME_FIELDS or f.get("style_only"):
+            continue
+        if f["name"] == "_h_hero":
+            f = {**f, "help": _TEMPLATE2_HERO_HELP}
+        # Style-only fields inside each banner stay in the spec: the editor
+        # keeps them hidden (no style picker = no style) but still round-trips
+        # their values, so a Template 2 save never blanks them.
+        fields.append(f)
+    return {**section, "fields": fields}
 
 
 def editor_tab_choices():
@@ -1359,7 +1465,7 @@ def editor(request, site_id):
         locked = allowed_tabs is not None and section["key"] not in allowed_tabs
         return {**section, "locked": locked, "fields": [] if locked else section["fields"]}
 
-    sections = [_with_lock(s) for s in _sections_for(site)]
+    sections = [_with_lock(_section_for_theme(s, site)) for s in _sections_for(site)]
 
     # Surface the reels strip's videos (stored nested at
     # ``video_section.videos``) as the flat ``reels`` list the editor field
@@ -1407,6 +1513,13 @@ def editor(request, site_id):
     for _section in SECTIONS:
         _restore_removed_media(_section["fields"], content_data)
 
+    # reCAPTCHA keys live on the Site (Contact tab). The secret never goes back
+    # to the browser: a saved one is shown as a sentinel the save keeps as is.
+    content_data["recaptcha_site_key"] = site.recaptcha_site_key or ""
+    content_data["recaptcha_secret_key"] = (
+        RECAPTCHA_SECRET_KEPT if (site.recaptcha_secret_key or "").strip() else ""
+    )
+
     context = store_context(request, site, "editor")
     context.update(
         {
@@ -1427,9 +1540,231 @@ def editor(request, site_id):
             },
             "allows_custom_scripts": site.allows_custom_scripts,
             "storefront_url": site.storefront_url(request),
+            # The Magic SEO pencil on the SEO tab (None = not shown).
+            "magic_seo": _magic_seo_context(request, site),
         }
     )
     return render(request, "store/editor.html", context)
+
+
+# --------------------------------------------------------------------------
+# Magic SEO (marketplace app): the SEO tab's pencil
+# --------------------------------------------------------------------------
+# The pencil appears only while the store's owner has a Magic SEO app installed
+# and licensed (marketplace.modules.magic_seo) and the SEO tab is in their plan.
+# A click starts a background run (prompts.magic_seo) that writes every field of
+# every page; the editor polls for progress and, when done, redraws the SEO tab
+# from the saved content. The last run can be undone.
+
+
+def _magic_seo_context(request, site):
+    """What the editor needs to draw the pencil, or ``None`` to hide it."""
+    try:
+        from commerce import features
+        from marketplace.modules.magic_seo import available
+
+        if features.is_editor_tab_locked(request, "seo") or not available(request, site):
+            return None
+        from django.urls import reverse
+
+        from prompts import magic_seo, seo_images
+
+        run = magic_seo.latest_run(site)
+        return {
+            "start_url": reverse("store:editor_magic_seo_start", kwargs={"site_id": site.pk}),
+            "status_url": reverse("store:editor_magic_seo_status", kwargs={"site_id": site.pk}),
+            "undo_url": reverse("store:editor_magic_seo_undo", kwargs={"site_id": site.pk}),
+            "report_url": reverse("store:editor_magic_seo_report", kwargs={"site_id": site.pk}),
+            "run": magic_seo.payload(run),
+            "tones": [{"value": k, "label": v} for k, v in magic_seo.TONES.items()],
+            "languages": [{"value": k, "label": v} for k, v in magic_seo.LANGUAGES.items()],
+            "brief_max": magic_seo.BRIEF_FIELDS,
+            "max_pages": magic_seo.LIMITS["max_pages"],
+            "max_images": seo_images.MAX_IMAGES,
+        }
+    except Exception:
+        import logging
+
+        logging.getLogger("onewooz.magic_seo").warning("magic seo context failed", exc_info=True)
+        return None
+
+
+def _magic_seo_seo_state(site):
+    """The SEO tab as the editor loads it (content + page list), after a run
+    or an undo, so the open tab is redrawn without a page reload."""
+    import copy
+
+    site.refresh_from_db(fields=["content"])
+    content = site.content or {}
+    values = {k: copy.deepcopy(content.get(k)) for k in ("seo", "seo_pages", "seo_mode")}
+    spec = _SECTION_BY_KEY.get("seo")
+    if spec:
+        _restore_removed_media(spec["fields"], values)
+    return {
+        "content": values,
+        "datasets": {"seo_pages": _seo_page_catalog(site), "seo_home_auto": _seo_home_auto(site)},
+    }
+
+
+def _magic_seo_locked(request):
+    from commerce import features
+
+    if features.is_editor_tab_locked(request, "seo"):
+        return JsonResponse(
+            {"ok": False, "upgrade_required": True,
+             "error": "The SEO tab isn’t included in your plan. Upgrade to edit it."},
+            status=402,
+        )
+    return None
+
+
+@require_POST
+@login_required
+def magic_seo_start(request, site_id):
+    from core import audit, ratelimit
+    from marketplace.modules.magic_seo import entitled
+    from prompts import magic_seo
+
+    site = get_owned_site(request, site_id)
+    locked = _magic_seo_locked(request)
+    if locked is not None:
+        return locked
+    try:
+        ok = entitled(site)
+    except Exception:
+        ok = False
+    if not ok:
+        return JsonResponse(
+            {"ok": False, "error": "Magic SEO isn’t active on this store. Get it from OneWooz Apps."}, status=403,
+        )
+
+    current = magic_seo.latest_run(site)
+    magic_seo.payload(current)  # closes a stale run first
+    if current is not None and current.is_active:
+        return JsonResponse({"ok": True, "run": magic_seo.payload(current)})
+
+    reason = magic_seo.unavailable_reason()
+    if reason:
+        import logging
+
+        logging.getLogger("onewooz.magic_seo").error("magic seo unavailable: %s", reason)
+        return JsonResponse(
+            {"ok": False, "error": "Magic SEO is resting for a moment. Please try again shortly."}, status=503,
+        )
+    if not ratelimit.consume("editor.magic_seo", str(site.pk)).allowed:
+        return JsonResponse(
+            {"ok": False, "error": "Magic SEO has run several times in the last hour. Please try again a little later."},
+            status=429,
+        )
+    try:
+        body = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON.")
+    if not isinstance(body, dict):
+        return HttpResponseBadRequest("Invalid JSON.")
+
+    run, created = magic_seo.start(site, request.user, mode=str(body.get("mode") or ""), brief=body.get("brief"))
+    if created:
+        audit.record(
+            "store.magic_seo.started", request=request, target=site, target_kind="Site", target_label=site.name,
+            context={"run": str(run.pk), "mode": run.mode},
+        )
+    run = magic_seo.latest_run(site) or run
+    out = {"ok": True, "run": magic_seo.payload(run)}
+    if run.status == "done":
+        out.update(_magic_seo_seo_state(site))
+    return JsonResponse(out)
+
+
+@login_required
+def magic_seo_status(request, site_id):
+    from prompts import magic_seo
+
+    site = get_owned_site(request, site_id)
+    run = magic_seo.latest_run(site)
+    out = {"ok": True, "run": magic_seo.payload(run)}
+    # The finished run the editor was waiting for: hand back the new SEO tab.
+    if run is not None and run.status == "done" and request.GET.get("run") == str(run.pk):
+        out.update(_magic_seo_seo_state(site))
+    return JsonResponse(out)
+
+
+@login_required
+def magic_seo_report(request, site_id):
+    """What one run changed and kept, per page and field (the editor's
+    "Changed / Not changed" view). Loaded only when the owner opens it."""
+    from prompts import magic_seo
+
+    site = get_owned_site(request, site_id)
+    report = magic_seo.report_for(site, (request.GET.get("run") or "").strip()) if request.GET.get("run") else None
+    if report is None:
+        return JsonResponse({"ok": False, "error": "There is no change report for that run."}, status=404)
+    return JsonResponse({"ok": True, "report": report})
+
+
+@require_POST
+@login_required
+def magic_seo_undo(request, site_id):
+    from core import audit
+    from prompts import magic_seo
+
+    site = get_owned_site(request, site_id)
+    locked = _magic_seo_locked(request)
+    if locked is not None:
+        return locked
+    try:
+        body = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON.")
+    run = magic_seo.latest_run(site)
+    if run is None or str(run.pk) != str((body or {}).get("run") or "") or not magic_seo.undo(run):
+        return JsonResponse(
+            {"ok": False, "error": "That Magic SEO run can no longer be undone."}, status=409,
+        )
+    audit.record(
+        "store.magic_seo.undone", request=request, target=site, target_kind="Site", target_label=site.name,
+        context={"run": str(run.pk)},
+    )
+    activity.record(
+        "store.content.updated", request=request, site=site, target=site, target_kind="Site",
+        label="SEO (Magic SEO undone)", changes={"section": "seo", "magic_seo_undo": True},
+    )
+    return JsonResponse({"ok": True, **_magic_seo_seo_state(site)})
+
+
+#: What the editor shows in the reCAPTCHA secret field when a secret is saved
+#: (rendered as dots in a password box). Sent back unchanged = keep the key.
+RECAPTCHA_SECRET_KEPT = "__saved_secret__"
+
+_RECAPTCHA_KEY_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+)
+
+
+def _apply_recaptcha_keys(site, values, update_fields) -> str:
+    """Store the Contact tab's reCAPTCHA keys on ``site``. Returns a warning
+    for the editor (nothing stored), or "" when saved.
+
+    Empty site key = captcha off (both keys cleared). Secret: the sentinel
+    keeps the saved key, "" removes it, anything else replaces it.
+    """
+    site_key = values.get("recaptcha_site_key", site.recaptcha_site_key or "")
+    secret = values.get("recaptcha_secret_key", RECAPTCHA_SECRET_KEPT)
+    for label, key in (("site key", site_key), ("secret key", secret)):
+        if key and key != RECAPTCHA_SECRET_KEPT and (
+            len(key) > 100 or not set(key) <= _RECAPTCHA_KEY_CHARS
+        ):
+            return f"That reCAPTCHA {label} doesn't look right. Copy it again from the Google reCAPTCHA admin console."
+    if secret == RECAPTCHA_SECRET_KEPT:
+        secret = site.recaptcha_secret_key or ""
+    if not site_key:
+        secret = ""
+    site.recaptcha_site_key = site_key
+    site.recaptcha_secret_key = secret
+    for name in ("recaptcha_site_key", "recaptcha_secret_key"):
+        if name not in update_fields:
+            update_fields.append(name)
+    return ""
 
 
 @require_POST
@@ -1463,6 +1798,7 @@ def save_section(request, site_id, section):
     values = payload.get("values") or {}
     content = dict(site.content or {})
     update_fields = ["content", "updated_at"]
+    recaptcha_values = {}
 
     for field in spec["fields"]:
         # "heading" fields are visual dividers only  they carry no value.
@@ -1489,6 +1825,8 @@ def save_section(request, site_id, section):
                 site.allows_custom_scripts = bool(cleaned)
                 if "allows_custom_scripts" not in update_fields:
                     update_fields.append("allows_custom_scripts")
+            elif name in ("recaptcha_site_key", "recaptcha_secret_key"):
+                recaptcha_values[name] = str(cleaned or "").strip()
             continue
         # Resolve each banner's link type/target into a concrete button_url.
         if name == "hero_banners" and isinstance(cleaned, list):
@@ -1568,8 +1906,24 @@ def save_section(request, site_id, section):
             ci["map_embed_url"] = prev.get("map_embed_url", "")
         maps.apply_to_contact_info(ci)
 
+    # A key that doesn't look like a Google key is not stored, but the rest
+    # of the tab still saves; the editor shows the warning as a toast.
+    recaptcha_warning = (
+        _apply_recaptcha_keys(site, recaptcha_values, update_fields) if recaptcha_values else ""
+    )
+
     site.content = content
     site.save(update_fields=update_fields)
+
+    # Regenerate the store's llms.txt once the owner stops editing (debounced
+    # Celery job; it only calls OpenAI when the required content is filled in
+    # and the store's data actually changed). Never blocks or breaks the save.
+    try:
+        from prompts.llms_txt import schedule as schedule_llms_txt
+
+        schedule_llms_txt(site)
+    except Exception:
+        pass
 
     activity.record(
         "store.content.updated", request=request, site=site,
@@ -1577,7 +1931,10 @@ def save_section(request, site_id, section):
         changes={"section": section},
     )
 
-    return JsonResponse({"ok": True, "saved_at": timezone.now().strftime("%H:%M:%S")})
+    out = {"ok": True, "saved_at": timezone.now().strftime("%H:%M:%S")}
+    if recaptcha_warning:
+        out["warning"] = recaptcha_warning
+    return JsonResponse(out)
 
 
 @require_POST
@@ -1651,6 +2008,74 @@ def map_preview(request, site_id):
     return JsonResponse({"ok": True, "embed": embed, "link": maps.open_link(raw, ci if isinstance(ci, dict) else {})})
 
 
+def _preview_csp() -> str:
+    """The storefront's own CSP, for a storefront page rendered on the app host.
+
+    The preview (editor iframe, and Settings → Storefront design → "Preview with
+    my content") renders a storefront theme on the dashboard origin, so it must
+    admit every origin the real storefront loads from. Built from the same
+    settings the storefront surface uses (see core.middleware
+    SecurityHeadersMiddleware): crucially that includes the static CDN origin
+    production adds to CSP_SCRIPT_SRC / CSP_STYLE_SRC / CSP_FONT_SRC. A policy of
+    bare 'self' blocked every theme stylesheet and script served from the CDN,
+    which is why the preview used to load as plain, unstyled HTML.
+    """
+    from django.conf import settings as dj
+
+    def merge(*groups) -> str:
+        seen: list[str] = []
+        for group in groups:
+            for value in group or ():
+                if value not in seen:
+                    seen.append(value)
+        return " ".join(seen)
+
+    from storefront import recaptcha
+
+    # Google reCAPTCHA hosts too: a previewed page of a store with captcha on
+    # loads the widget like the live store (the live CSP adds them per store).
+    script_src = merge(
+        ("'self'", "'unsafe-inline'"),
+        getattr(dj, "CSP_SCRIPT_SRC", ()),
+        getattr(dj, "CSP_STOREFRONT_SCRIPT_EXTRA", ()),
+        recaptcha.CSP_SCRIPT,
+    )
+    style_src = merge(
+        ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"),
+        getattr(dj, "CSP_STYLE_SRC", ()),
+        getattr(dj, "CSP_STOREFRONT_STYLE_EXTRA", ()),
+    )
+    font_src = merge(
+        ("'self'", "data:", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"),
+        getattr(dj, "CSP_FONT_SRC", ()),
+        getattr(dj, "CSP_STOREFRONT_FONT_EXTRA", ()),
+    )
+    connect_src = merge(
+        ("'self'",),
+        getattr(dj, "CSP_CONNECT_SRC", ()),
+        getattr(dj, "CSP_STOREFRONT_CONNECT_EXTRA", ()),
+    )
+    img_src = merge(("'self'", "data:", "blob:", "https:"), getattr(dj, "CSP_IMG_SRC", ()))
+    # media-src must admit the same origins the main storefront CSP does (the
+    # uploads bucket / CDN, plus the demo-video hosts) or reels and product
+    # videos are blocked in this preview.
+    media_src = merge(
+        getattr(dj, "CSP_MEDIA_SRC", ("'self'", "data:", "blob:")),
+        getattr(dj, "CSP_STOREFRONT_MEDIA_EXTRA", ()),
+    )
+    frame_src = merge(
+        getattr(dj, "CSP_FRAME_SRC", ("'self'",)),
+        getattr(dj, "CSP_STOREFRONT_FRAME_EXTRA", ()),
+        recaptcha.CSP_FRAME,
+    )
+    return (
+        f"default-src 'self'; script-src {script_src}; style-src {style_src}; "
+        f"font-src {font_src}; img-src {img_src}; connect-src {connect_src}; "
+        f"media-src {media_src}; frame-src {frame_src}; frame-ancestors 'self'; "
+        "base-uri 'self'; object-src 'none'"
+    )
+
+
 @xframe_options_sameorigin
 @login_required
 def preview(request, site_id):
@@ -1662,7 +2087,20 @@ def preview(request, site_id):
     from storefront.context import home_extra
 
     site = get_owned_site(request, site_id)
-    template = f"storefront/{site.template_dir}/home.html"
+    from storefront.views import theme_template
+
+    # Settings → Storefront design previews a design before switching to it:
+    # ?theme=1|2 renders this one response in that design. In memory only;
+    # nothing is saved (the switch itself is store:settings_theme).
+    picked = (request.GET.get("theme") or "").strip()
+    from billing.website_templates import registered_keys
+
+    if picked in registered_keys():
+        from tenancy.models import Site as _Site
+
+        site.theme = _Site.theme_for_choice(picked, site.business_model)
+
+    template = theme_template(site, "home.html")
     ctx = build_context(
         request, site, page_title="Preview", embedded=False, **home_extra(request, site)
     )
@@ -1670,6 +2108,12 @@ def preview(request, site_id):
     previous_urlconf = get_urlconf()
     set_urlconf("onewooz.urls.storefront")
     try:
+        if site.template_dir in ("template3", "template4"):
+            # Template 3's (and 4's) data feed reverses storefront URLs, so build it
+            # under the storefront urlconf (build_context ran under the app's).
+            from storefront import template3 as _t3
+
+            ctx["t3_data"] = _t3.build(request, site, dict(site.content or {}), ctx)
         response = render(request, template, ctx)
         _ = response.content
     except Exception as exc:  # pragma: no cover - dev aid
@@ -1683,24 +2127,6 @@ def preview(request, site_id):
     finally:
         set_urlconf(previous_urlconf)
 
-    # media-src must admit the same origins the main storefront CSP does (the
-    # uploads bucket / CDN, plus the demo-video hosts) or reels and product
-    # videos are blocked in this preview iframe. Built from settings so it stays
-    # in step with the real storefront policy.
-    media_src = " ".join(
-        list(getattr(settings, "CSP_MEDIA_SRC", ("'self'", "data:", "blob:")))
-        + list(getattr(settings, "CSP_STOREFRONT_MEDIA_EXTRA", ()))
-    )
-    frame_src = " ".join(
-        list(getattr(settings, "CSP_FRAME_SRC", ("'self'",)))
-        + list(getattr(settings, "CSP_STOREFRONT_FRAME_EXTRA", ()))
-    )
     response["X-Frame-Options"] = "SAMEORIGIN"
-    response["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
-        "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
-        "img-src 'self' data: blob: https:; "
-        f"media-src {media_src}; frame-src {frame_src}; frame-ancestors 'self'"
-    )
+    response["Content-Security-Policy"] = _preview_csp()
     return response

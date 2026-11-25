@@ -224,6 +224,13 @@ class Campaign(TenantScopedModel, SoftDeleteMixin):
         max_length=12, choices=ProductMode.choices, default=ProductMode.MULTI
     )
     product_ids = models.JSONField(default=list, blank=True)
+    # Whether the product cards in the email show each product's price (and
+    # struck-through MRP). Off = title + picture only, for owners who prefer
+    # shoppers to see the price on the store.
+    show_product_price = models.BooleanField(
+        default=True,
+        help_text="Show each product's price in the email's product grid.",
+    )
 
     # Drip content.
     drip = models.ForeignKey(

@@ -1,0 +1,13 @@
+{% load ask_tags %}
+{% comment %}One question as a card (card view). Context: row = {q, preview, by, accepted, voted}.{% endcomment %}
+{% with q=row.q %}
+<article class="ask-card">
+  {% if q.topic %}<a class="ask-card__topic" href="{{ q.topic.get_absolute_url }}">{{ q.topic.name }}</a>{% endif %}
+  <h3 class="ask-card__title"><a href="{{ q.get_absolute_url }}">{{ q.title }}</a></h3>
+  {% if row.preview %}<p class="ask-card__text">{{ row.preview }}</p>{% endif %}
+  <div class="ask-card__foot">
+    <span>↑ {{ q.score }} · {{ q.answer_count }} answer{{ q.answer_count|pluralize }}</span>
+    <span>{% if row.accepted %}<span class="ask-accepted">Accepted</span>{% elif row.by == "team" %}OneWooz team{% elif row.by == "ai" %}Instant AI{% elif row.by %}{{ row.by }}{% else %}Needs an answer{% endif %}</span>
+  </div>
+</article>
+{% endwith %}

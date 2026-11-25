@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order Confirmed | velora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+<main class="container container--narrow" style="max-width:980px">
+  <div class="confirm-hero">
+    <div class="confirm-check" data-check></div>
+    <p class="eyebrow">Order #VLR-24816</p>
+    <h1 class="h1" style="margin:8px 0">Thank you, <em class="hl">Aarav!</em></h1>
+    <p class="muted">Your order is confirmed. We have sent a confirmation to <b style="color:#000">aarav.mehta@example.com</b> and on WhatsApp.</p>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><b>Estimated delivery</b><div class="muted small" data-eta></div></div>
+      <span class="status status--processing">Processing</span>
+    </div>
+    <div class="tracker">
+      <div class="done"><i data-tick></i>Order placed</div>
+      <div class="done"><i>2</i>Packed</div>
+      <div><i>3</i>Shipped</div>
+      <div><i>4</i>Delivered</div>
+    </div>
+    <p class="small muted center">You can edit or cancel this order until it is packed, usually within 6 hours.</p>
+  </div>
+
+  <div class="cart-layout cart-layout--narrow" style="margin-top:22px">
+    <div class="card">
+      <h2 class="h4" style="margin-bottom:14px">Order items</h2>
+      <div data-items></div>
+    </div>
+    <div class="card card--soft">
+      <h2 class="h4" style="margin-bottom:10px">Payment summary</h2>
+      <div class="sum-rows" data-rows></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:22px">
+    <div class="info-grid">
+      <div><h4>Shipping address</h4><p>Aarav Mehta<br>B-1204, Lodha Splendora<br>Andheri West, near Infiniti Mall<br>Mumbai, Maharashtra 400053<br>+91 98765 43210</p></div>
+      <div><h4>Payment method</h4><p data-pay>UPI · Paid</p><h4 style="margin-top:18px">Shipping method</h4><p>Standard delivery · Free</p></div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:28px">
+    <a class="btn btn--black" href="account.html#orders">Track order</a>
+    <a class="btn btn--grey" href="order-invoice.html" onclick="T3.toast('Invoice downloads once the order ships');return false;">Download Invoice</a>
+    <a class="btn btn--outline" href="shop.html">Continue Shopping</a>
+  </div>
+
+  <section class="section" style="padding-bottom:0">
+    <div class="sec-head"><h2 class="h2">Complete the <em class="hl">ritual.</em></h2></div>
+    <div class="grid grid--4" data-more></div>
+  </section>
+</main>
+<div data-footer></div>
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$;
+  $('[data-check]').innerHTML = I.check.replace(/14/g, '34');
+  $('[data-tick]').innerHTML = I.check;
+  document.querySelectorAll('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
+  const last = T3.store.get('t4_last_order', null);
+  const items = (last && last.items && last.items.length) ? last.items : T3.getCart();
+  const d1 = new Date(Date.now() + 3 * 864e5), d2 = new Date(Date.now() + 5 * 864e5), f = d => d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+  $('[data-eta]').textContent = `${f(d1)} to ${f(d2)}`;
+  let sub = 0;
+  $('[data-items]').innerHTML = items.map(l => { const p = T3.byId(l.id); sub += p.price * l.qty; return `<div class="sum-item" style="grid-template-columns:72px 1fr auto"><div class="sum-item__img" style="aspect-ratio:3/4"><img src="${p.img[0]}" alt=""><span>${l.qty}</span></div><div><b>${p.name}</b><small>${p.catName} · ${l.size}</small></div><b>${T3.inr(p.price * l.qty)}</b></div>`; }).join('');
+  const pre = Math.round(sub * .05);
+  $('[data-rows]').innerHTML = `<div><span class="muted">Subtotal</span><span>${T3.inr(sub)}</span></div><div style="color:var(--ok)"><span>Prepaid discount</span><span>- ${T3.inr(pre)}</span></div><div><span class="muted">Shipping</span><span>Free</span></div><div class="total"><span>Paid</span><span>${T3.inr(sub - pre)}</span></div>`;
+  if (last && last.pay) $('[data-pay]').textContent = { online: 'UPI · Paid', cod: 'Cash on Delivery', partial: 'Partial COD · ₹299 paid' }[last.pay];
+  $('[data-more]').innerHTML = D.products.slice(16, 20).map(p => T3.card(p)).join('');
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

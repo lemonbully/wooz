@@ -1,166 +1,338 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Checkout | velora</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
+{% extends "storefront/template4/_base.html" %}
+{% comment %}
+  Template 3 checkout, wired to the platform's checkout: the live cart
+  (cart/data/), coupons, store credit for a verified email, saved addresses,
+  and order placing through checkout/place/ (COD, store credit, or the store's
+  Razorpay / Cashfree, full or partial). Shipping is free on every order.
+{% endcomment %}
+{% block header %}
 <header class="co-header">
   <div class="container">
-    <a href="index.html" class="logo">velora</a>
-    <div class="co-steps hide-sm"><a href="cart.html">Cart</a> › <b>Information</b> › Shipping › Payment</div>
-    <a href="cart.html" class="icon-btn cart-btn" aria-label="Back to cart" data-bagicon></a>
+    <a href="{% url 'public_website' %}" class="logo" data-co-logo></a>
+    <div class="co-steps hide-sm"><a href="{% url 'public_cart' %}">Cart</a> › <b>Information</b> › Shipping › Payment</div>
+    <a href="{% url 'public_cart' %}" class="icon-btn cart-btn" aria-label="Back to cart" data-bagicon></a>
   </div>
 </header>
+{% endblock %}
+{% block footer %}{% endblock %}
 
+{% block main %}
 <button class="m-summary-toggle" data-msum><span style="display:flex;gap:8px;align-items:center" data-msum-label>Show order summary</span><b data-msum-total></b></button>
 
 <div class="co-layout">
   <form class="co-main" data-checkout novalidate>
+    {% csrf_token %}
     <h1 class="sr-only">Checkout</h1>
-    <p class="small muted center" style="margin-bottom:12px">Express checkout</p>
-    <div class="co-express">
-      <button type="button" style="background:#5a31f4;color:#fff">UPI</button>
-      <button type="button" style="background:#ffc439">PayPal</button>
-      <button type="button" style="background:#000;color:#fff">G Pay</button>
-    </div>
-    <div class="or-line">OR</div>
 
     <div class="co-block">
-      <h2>Contact <a href="login.html">Sign in</a></h2>
+      <h2>Contact {% if not customer_email %}<a href="{% url 'public_user_account' %}?next={% url 'public_checkout' %}">Sign in</a>{% endif %}</h2>
       <div style="display:grid;gap:12px">
-        <input class="input" type="email" placeholder="Email" value="aarav.mehta@example.com" required aria-label="Email">
-        <div style="display:grid;grid-template-columns:auto 1fr;gap:10px"><span class="input" style="width:auto;display:grid;place-items:center;font-weight:700">+91</span><input class="input" type="tel" placeholder="Mobile number" value="98765 43210" required aria-label="Mobile"></div>
-        <label class="check"><input type="checkbox" checked> Email me with news and offers</label>
+        <label class="check"><input type="checkbox" data-gst> I have a GST number (for business invoice)</label>
+        <div class="form-grid hide" data-gst-row style="margin:0"><input class="input" placeholder="Company name" aria-label="Company" data-f="company"><input class="input" placeholder="GSTIN" aria-label="GSTIN" maxlength="15" style="text-transform:uppercase" data-f="gstin"></div>
+        <input class="input" type="email" name="email" placeholder="Email" required aria-label="Email" autocomplete="email" data-email>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:10px"><span class="input" style="width:auto;display:grid;place-items:center;font-weight:700">+91</span><input class="input" type="tel" name="phone" placeholder="Mobile number" required aria-label="Mobile" inputmode="tel" autocomplete="tel-national" data-phone></div>
+        <label class="check"><input type="checkbox" data-news> Email me with news and offers</label>
+        {% if credit_email %}<p class="small muted" style="margin:0">Signed in as {{ credit_email }}. Store credit on this email is applied automatically.</p>{% endif %}
       </div>
     </div>
 
     <div class="co-block">
       <h2>Delivery address</h2>
-      <div class="pill-tabs" style="margin-bottom:12px" data-saved>
-        <button type="button" class="is-active">Home · Andheri</button><button type="button">Work · BKC</button><button type="button">+ New address</button>
-      </div>
+      <div class="addr-pick" data-saved="billing" data-title="Saved billing addresses" hidden></div>
       <div class="form-grid">
-        <input class="input" placeholder="First name" value="Aarav" aria-label="First name">
-        <input class="input" placeholder="Last name" value="Mehta" aria-label="Last name">
-        <input class="input span-2" placeholder="House / flat number, building" value="B-1204, Lodha Splendora" aria-label="House">
-        <input class="input span-2" placeholder="Street, area, landmark" value="Andheri West, near Infiniti Mall" aria-label="Street">
-        <input class="input" placeholder="Pincode" value="400053" aria-label="Pincode">
-        <input class="input" placeholder="City" value="Mumbai" aria-label="City">
-        <select class="select" aria-label="State"><option>Maharashtra</option><option>Karnataka</option><option>Delhi</option><option>Tamil Nadu</option><option>Telangana</option><option>Gujarat</option></select>
+        <input class="input" placeholder="First name" aria-label="First name" autocomplete="given-name" required data-f="first">
+        <input class="input" placeholder="Last name" aria-label="Last name" autocomplete="family-name" data-f="last">
+        <input class="input span-2" placeholder="House / flat number, building" aria-label="House" autocomplete="address-line1" required data-f="house">
+        <input class="input span-2" placeholder="Street, area, landmark" aria-label="Street" autocomplete="address-line2" required data-f="street">
+        <input class="input" placeholder="Pincode" aria-label="Pincode" maxlength="6" inputmode="numeric" autocomplete="postal-code" required data-f="pincode">
+        <input class="input" placeholder="City" aria-label="City" autocomplete="address-level2" required data-f="city">
+        <select class="select" aria-label="State" required data-f="state" data-states></select>
         <select class="select" aria-label="Country"><option>India</option></select>
-        <label class="check span-2"><input type="checkbox" data-gst> I have a GST number (for business invoice)</label>
-        <div class="span-2 form-grid hide" data-gst-row style="margin:0"><input class="input" placeholder="Company name" aria-label="Company"><input class="input" placeholder="GSTIN" aria-label="GSTIN"></div>
         <label class="check span-2"><input type="checkbox" data-diff> Ship to a different address</label>
-        <div class="span-2 hide" data-diff-row><textarea class="textarea" placeholder="Full shipping address" aria-label="Shipping address"></textarea></div>
+        <div class="span-2 hide" data-diff-row>
+          <div class="addr-pick" data-saved="shipping" data-title="Saved shipping addresses" hidden></div>
+          <div class="form-grid" style="margin:0">
+            <input class="input span-2" placeholder="House / flat number, building" aria-label="Shipping house" data-s="house">
+            <input class="input span-2" placeholder="Street, area, landmark" aria-label="Shipping street" data-s="street">
+            <input class="input" placeholder="Pincode" aria-label="Shipping pincode" maxlength="6" inputmode="numeric" data-s="pincode">
+            <input class="input" placeholder="City" aria-label="Shipping city" data-s="city">
+            <select class="select" aria-label="Shipping state" data-s="state" data-states></select>
+            <input class="input" type="tel" placeholder="Phone at this address" aria-label="Shipping phone" inputmode="tel" data-s="phone">
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="co-block">
       <h2>Shipping method</h2>
       <div class="ship-opts" data-ship>
-        <label class="is-active"><input type="radio" name="ship" value="0" checked><span class="grow"><b>Standard delivery</b><small>Arrives in 3 to 5 days</small></span><b>Free</b></label>
-        <label><input type="radio" name="ship" value="149"><span class="grow"><b>Express delivery</b><small>Arrives tomorrow, before 9 PM</small></span><b>₹149</b></label>
+        <label class="ship-opt is-active"><input type="radio" name="ship" value="0" checked><span class="radio" aria-hidden="true"></span><span class="grow"><b>Standard delivery</b><small>Tracked delivery to your door</small></span><b class="ship-opt__price">Free</b></label>
       </div>
     </div>
 
     <div class="co-block" id="payment">
       <h2>Payment</h2>
       <p class="small muted" style="margin:-6px 0 14px">All transactions are secure and encrypted.</p>
+      {% if gateway_ready or cod_enabled %}
       <div class="pay-cards" data-pay>
-        <label class="pay-card is-active"><input type="radio" name="pay" value="online" checked><span class="radio"></span><b>Pay online</b><small>UPI, cards, wallets and netbanking</small><span class="badge badge--new">5% off</span></label>
-        <label class="pay-card"><input type="radio" name="pay" value="cod"><span class="radio"></span><b>Cash on Delivery</b><small>Pay when your order arrives. ₹49 fee.</small></label>
-        <label class="pay-card"><input type="radio" name="pay" value="partial"><span class="radio"></span><b>Partial COD</b><small data-partial-label>Pay ₹299 now, rest on delivery</small></label>
+        {% if gateway_ready %}<label class="pay-card is-active"><input type="radio" name="method" value="gateway" checked><span class="radio"></span><b>Pay online</b><small>UPI, cards, wallets and netbanking</small></label>{% endif %}
+        {% if cod_enabled %}<label class="pay-card{% if not gateway_ready %} is-active{% endif %}"><input type="radio" name="method" value="cod"{% if not gateway_ready %} checked{% endif %}><span class="radio"></span><b>Cash on Delivery</b><small>Pay when your order arrives.</small></label>{% endif %}
+        {% if partial_enabled %}<label class="pay-card"><input type="radio" name="method" value="partial"><span class="radio"></span><b>Partial COD</b><small data-partial-label></small></label>{% endif %}
       </div>
+      {% else %}
+      <p class="co-err">Payments are not set up for this store yet, so orders can't be placed right now.</p>
+      {% endif %}
     </div>
 
     <div class="co-block">
       <h2>Order notes <span class="small muted" style="font-weight:500">Optional</span></h2>
-      <textarea class="textarea" placeholder="Anything we should know?" aria-label="Order notes"></textarea>
+      <textarea class="textarea" placeholder="Anything we should know?" aria-label="Order notes" data-f="notes"></textarea>
     </div>
 
-    <button class="btn btn--black btn--block" style="height:58px;font-size:16px" data-place>Place Order · <span data-place-total></span></button>
-    <p class="small muted center" style="margin-top:14px">By placing this order you agree to our <a class="link" href="policy.html?type=terms">Terms</a> and <a class="link" href="policy.html?type=privacy">Privacy Policy</a>.</p>
+    {% if request.GET.payment == 'incomplete' %}<p class="co-err">Your payment wasn't completed, so no order was placed. You can try again below.</p>{% endif %}
+    <p class="co-err" data-stock-err>{% if stock_message %}{{ stock_message }}{% endif %}</p>
+    <p class="co-err" data-err></p>
+    <button class="btn btn--black btn--block" style="height:58px;font-size:16px" data-place {% if not gateway_ready and not cod_enabled %}disabled data-payments-off{% endif %}>Place Order · <span data-place-total></span></button>
+    <p class="small muted center" style="margin-top:14px">By placing this order you agree to our <a class="link" href="{% url 'public_terms' %}">Terms</a> and <a class="link" href="{% url 'privacy_policy_page' %}">Privacy Policy</a>.</p>
     <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:26px;font-size:13px;font-weight:600" class="muted">
-      <a href="policy.html?type=refund">Refund policy</a><a href="policy.html?type=shipping">Shipping</a><a href="policy.html?type=privacy">Privacy</a><a href="policy.html?type=terms">Terms of service</a>
+      <a href="{% url 'public_refund' %}">Refund policy</a><a href="{% url 'public_shipping' %}">Shipping</a><a href="{% url 'privacy_policy_page' %}">Privacy</a><a href="{% url 'public_terms' %}">Terms of service</a>
     </div>
   </form>
 
   <aside class="co-side" data-side>
     <div class="co-side__inner">
       <div data-items></div>
-      <div class="coupon-row"><input class="input" placeholder="Discount code or gift card" data-code-input aria-label="Discount code"><button class="btn btn--black" type="button" data-apply>Apply</button></div>
+      <div class="coupon-row"><input class="input" placeholder="Discount code" data-code-input aria-label="Discount code" style="text-transform:uppercase"><button class="btn btn--black" type="button" data-apply>Apply</button></div>
       <div class="coupon-list" data-codes></div>
-      <div class="card" style="background:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span class="small"><b>Store credit</b><br><span class="muted">₹250 available</span></span>
-        <label class="check"><input type="checkbox" data-credit> Use</label>
+      <div class="card" style="background:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px;flex-wrap:wrap" data-credit-card hidden>
+        <span class="small"><b>Store credit</b><br><span class="muted" data-credit-note></span></span>
+        <label class="check" data-credit-use><input type="checkbox" data-credit checked disabled> Use</label>
+        <div style="flex-basis:100%;display:none;gap:8px" data-credit-verify>
+          <input class="input" inputmode="numeric" maxlength="6" placeholder="6-digit code" aria-label="Verification code" style="background:#fff" data-credit-code>
+          <button type="button" class="btn btn--black btn--sm" data-credit-check>Verify</button>
+        </div>
       </div>
       <div class="sum-rows" data-rows></div>
-      <div class="faq-help" style="background:#fff"><span data-shield></span><div class="small"><b>Safe &amp; secure</b><div class="muted">256-bit SSL encrypted payments. Easy 15 day returns.</div></div></div>
+      <div class="faq-help" style="background:#fff"><span data-shield></span><div class="small"><b>Safe &amp; secure</b><div class="muted">Encrypted payments through trusted gateways.</div></div></div>
     </div>
   </aside>
 </div>
+{{ prefill|json_script:"co-prefill" }}
+{{ address_book|json_script:"co-book" }}
+{% endblock %}
 
-<script src="assets/js/data.js"></script>
-<script>
+{% block page_scripts %}
+{% if gateway_ready and gateway_name == 'razorpay' %}<script src="https://checkout.razorpay.com/v1/checkout.js"></script>{% endif %}
+{% if gateway_ready and gateway_name == 'cashfree' %}<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>{% endif %}
+<script nonce="{{ csp_nonce }}">
+window.T3CO = {
+  creditEmail: '{{ credit_email|default:""|lower|escapejs }}',
+  partialType: '{{ partial_type|default:"percent"|escapejs }}',
+  partialValue: parseFloat('{{ partial_value|default:"0"|escapejs }}') || 0,
+  checkoutUrl: '{% url "public_checkout" %}',
+  placeUrl: '{% url "public_checkout_place" %}',
+  verifyUrl: '{% url "public_payment_verify" %}',
+  otpSend: '{% url "public_account_send_otp" %}',
+  otpVerify: '{% url "public_account_verify_otp" %}',
+};
 window.T3Page = function () {
-  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$;
+  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$, esc = T3.esc, L = D.urls, C = window.T3CO;
+  const read = id => { try { return JSON.parse(document.getElementById(id).textContent) || {}; } catch (e) { return {}; } };
+  const pre = read('co-prefill'), book = read('co-book');
+  $('[data-co-logo]').innerHTML = T3.logoHTML('header');
   $('[data-bagicon]').innerHTML = I.bag;
   $('[data-shield]').innerHTML = I.shield;
-  if (!T3.getCart().length) T3.setCart([{ id: 'argan-milk-serum', size: 'M', color: 0, qty: 1 }, { id: 'sunset-spf-fluid', size: 'S', color: 0, qty: 1 }]);
-  const COUPONS = { GLOW10: .10, FIRST15: .15 };
-  const st = { ship: 0, pay: 'online', code: null, credit: false };
-  $('[data-codes]').innerHTML = Object.keys(COUPONS).map(c => `<button type="button" data-c="${c}">${c} · ${COUPONS[c] * 100}% off</button>`).join('');
 
-  function render() {
-    const cart = T3.getCart();
-    $('[data-items]').innerHTML = cart.map(l => { const p = T3.byId(l.id); return `<div class="sum-item"><div class="sum-item__img"><img src="${p.img[0]}" alt=""><span>${l.qty}</span></div><div><b>${p.name}</b><small>${l.size}</small></div><b>${T3.inr(p.price * l.qty)}</b></div>`; }).join('');
-    const sub = T3.cartTotal(), mrp = T3.cartMrp();
-    const off = st.code ? Math.round(sub * COUPONS[st.code]) : 0;
-    const prepaid = st.pay === 'online' ? Math.round((sub - off) * .05) : 0;
-    const cod = st.pay === 'cod' ? 49 : 0;
-    const credit = st.credit ? 250 : 0;
-    const total = Math.max(0, sub - off - prepaid + st.ship + cod - credit);
-    const tax = Math.round(total - total / 1.12);
-    $('[data-rows]').innerHTML = `
-      <div><span class="muted">Subtotal · ${T3.cartCount()} items</span><span>${T3.inr(sub)}</span></div>
-      ${mrp > sub ? `<div style="color:var(--ok)"><span>You saved on MRP</span><span>${T3.inr(mrp - sub)}</span></div>` : ''}
-      ${off ? `<div style="color:var(--ok)"><span>Discount <span class="tag" style="height:22px;font-size:11.5px;margin-left:4px">${st.code} <button type="button" data-rm-code aria-label="Remove">✕</button></span></span><span>- ${T3.inr(off)}</span></div>` : ''}
-      ${prepaid ? `<div style="color:var(--ok)"><span>Prepaid discount (5%)</span><span>- ${T3.inr(prepaid)}</span></div>` : ''}
-      ${credit ? `<div style="color:var(--ok)"><span>Store credit</span><span>- ${T3.inr(credit)}</span></div>` : ''}
-      <div><span class="muted">Shipping</span><span>${st.ship ? T3.inr(st.ship) : 'Free'}</span></div>
-      ${cod ? `<div><span class="muted">COD fee</span><span>${T3.inr(cod)}</span></div>` : ''}
-      <div class="muted small"><span>Includes GST</span><span>${T3.inr(tax)}</span></div>
-      <div class="total"><span>Total</span><span><small>INR</small>${T3.inr(total)}</span></div>
-      ${st.pay === 'partial' ? `<div class="card" style="background:#fff;padding:12px 14px;margin-top:10px;display:block"><div style="display:flex;justify-content:space-between"><span>Pay now</span><b>${T3.inr(299)}</b></div><div style="display:flex;justify-content:space-between" class="muted"><span>Pay on delivery</span><b>${T3.inr(total - 299)}</b></div></div>` : ''}`;
-    $('[data-place-total]').textContent = st.pay === 'partial' ? `Pay ${T3.inr(299)} now` : T3.inr(total);
-    $('[data-msum-total]').textContent = T3.inr(total);
-    $('[data-partial-label]').textContent = `Pay ${T3.inr(299)} now, rest ${T3.inr(Math.max(0, total - 299))} on COD`;
-  }
-  render();
-  document.addEventListener('t3:cart', render);
+  /* ---- states ---- */
+  const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry'];
+  $$('[data-states]').forEach(s => s.innerHTML = '<option value="">State</option>' + STATES.map(x => `<option>${x}</option>`).join(''));
+  const F = k => $(`[data-f="${k}"]`), S = k => $(`[data-s="${k}"]`);
+  const set = (el, v) => { if (!el) return; v = v == null ? '' : String(v);
+    if (el.tagName === 'SELECT') { const hit = [...el.options].find(o => o.value && o.value.toLowerCase() === v.toLowerCase()); el.value = hit ? hit.value : ''; } else el.value = v; };
+  const val = el => (el && el.value || '').trim();
 
-  $('[data-ship]').addEventListener('change', e => { st.ship = +e.target.value; $$('[data-ship] label').forEach(l => l.classList.toggle('is-active', l.contains(e.target))); render(); });
-  $('[data-pay]').addEventListener('change', e => { st.pay = e.target.value; $$('.pay-card').forEach(l => l.classList.toggle('is-active', l.contains(e.target))); render(); });
-  $('[data-apply]').onclick = () => { const v = $('[data-code-input]').value.trim().toUpperCase(); if (COUPONS[v]) { st.code = v; T3.toast(`${v} applied`); render(); } else T3.toast('That code is not valid'); };
-  document.addEventListener('click', e => {
-    const c = e.target.closest('[data-c]'); if (c) { st.code = c.dataset.c; $('[data-code-input]').value = c.dataset.c; T3.toast(`${st.code} applied`); render(); }
-    if (e.target.closest('[data-rm-code]')) { st.code = null; render(); }
-    const s = e.target.closest('[data-saved] button'); if (s) { $$('[data-saved] button').forEach(b => b.classList.toggle('is-active', b === s)); }
-  });
-  $('[data-credit]').onchange = e => { st.credit = e.target.checked; render(); };
+  /* ---- prefill (signed-in shopper or this session's last checkout) ---- */
+  const nm = String(pre.name || '').trim().split(/\s+/);
+  set(F('first'), nm.shift() || ''); set(F('last'), nm.join(' '));
+  set($('[data-email]'), pre.email); set($('[data-phone]'), pre.phone);
+  ['house', 'street', 'city', 'state', 'pincode', 'notes'].forEach(k => set(F(k), pre[k]));
+  if (pre.gstin) { $('[data-gst]').checked = true; $('[data-gst-row]').classList.remove('hide'); set(F('company'), pre.company_name); set(F('gstin'), pre.gstin); }
+
+  /* ---- saved addresses ---- */
+  const fillBilling = a => { ['house', 'street', 'city', 'state', 'pincode'].forEach(k => set(F(k), a[k]));
+    if (a.phone && !val($('[data-phone]'))) set($('[data-phone]'), a.phone);
+    if (a.has_gst) { $('[data-gst]').checked = true; $('[data-gst-row]').classList.remove('hide'); set(F('company'), a.company_name); set(F('gstin'), a.gstin); } };
+  const fillShipping = a => ['house', 'street', 'city', 'state', 'pincode', 'phone'].forEach(k => set(S(k), a[k]));
+  /* Saved addresses as cards (as Template 1): the address's name with a
+     Default tag, the full address line under it, and a dashed "New address"
+     card that clears the fields. Typing into the fields selects "New". */
+  const pills = (kind, list, current, fill, fields) => {
+    const box = $(`[data-saved="${kind}"]`);
+    if (!list || !list.length) return;
+    box.hidden = false;
+    const name = `ab_${kind}`, title = esc(box.dataset.title || 'Saved addresses');
+    const card = (id, on, body, extra = '') => `<label class="addr-opt${extra}${on ? ' is-active' : ''}"><input type="radio" name="${name}" value="${esc(id)}"${on ? ' checked' : ''}><span class="radio" aria-hidden="true"></span><span class="addr-opt__body">${body}</span></label>`;
+    box.innerHTML = `<p class="addr-pick__title">${title}</p><div class="addr-pick__list" role="radiogroup" aria-label="${title}">`
+      + list.map(a => card(a.id, a.id === current, `<b>${esc(a.label)}${a.is_default ? '<em class="addr-opt__tag">Default</em>' : ''}</b>${a.line ? `<small>${esc(a.line)}</small>` : ''}`)).join('')
+      + card('new', !current, '<b><span class="addr-opt__plus" aria-hidden="true">+</span>New address</b><small>Clear the fields and enter a different address</small>', ' addr-opt--new')
+      + '</div>';
+    const mark = v => $$('.addr-opt', box).forEach(l => { const r = l.querySelector('input'); r.checked = r.value === v; l.classList.toggle('is-active', r.checked); });
+    box.addEventListener('change', e => { const r = e.target.closest('input[type=radio]'); if (!r) return;
+      mark(r.value);
+      if (r.value === 'new') { fields.forEach(el => set(el, '')); fields[0] && fields[0].focus(); }
+      else fill(list.find(a => String(a.id) === r.value) || {}); });
+    fields.forEach(el => el && el.addEventListener('input', e => { if (e.isTrusted) mark('new'); }));
+  };
+  pills('billing', book.billing, book.billing_id, fillBilling, ['house', 'street', 'city', 'state', 'pincode'].map(F));
+  pills('shipping', book.shipping, book.ship_diff ? book.shipping_id : '', fillShipping, ['house', 'street', 'city', 'state', 'pincode', 'phone'].map(S));
+  if (book.ship_diff) { $('[data-diff]').checked = true; $('[data-diff-row]').classList.remove('hide'); fillShipping(book.ship || {}); }
+
   $('[data-gst]').onchange = e => $('[data-gst-row]').classList.toggle('hide', !e.target.checked);
   $('[data-diff]').onchange = e => $('[data-diff-row]').classList.toggle('hide', !e.target.checked);
   $('[data-msum]').onclick = () => { const o = $('[data-side]').classList.toggle('is-open'); $('[data-msum-label]').textContent = o ? 'Hide order summary' : 'Show order summary'; };
-  $('[data-checkout]').addEventListener('submit', e => { e.preventDefault(); const b = $('[data-place]'); b.textContent = 'Placing order…'; b.disabled = true;
-    T3.store.set('t4_last_order', { items: T3.getCart(), pay: st.pay, total: $('[data-msum-total]').textContent });
-    setTimeout(() => { location.href = 'order-confirmation.html'; }, 900); /* preview keeps the cart filled */ });
+
+  /* ---- summary ---- */
+  const method = () => { const m = $('[name=method]:checked'); return m ? m.value : ''; };
+  const creditOn = () => { const t = T3.getTotals(); return !!C.creditEmail && t.credit > 0 && val($('[data-email]')).toLowerCase() === C.creditEmail; };
+  const grand = () => { const t = T3.getTotals(); return creditOn() ? t.total : t.before; };
+  const split = total => { let now = C.partialType === 'fixed' ? C.partialValue : total * C.partialValue / 100; now = Math.min(Math.max(0, Math.round(now * 100) / 100), total); return [now, Math.max(0, total - now)]; };
+  let loaded = false;
+  function render() {
+    const cart = T3.getCart(), t = T3.getTotals();
+    if (loaded && !cart.length) { location.href = L.cart; return; }
+    $('[data-items]').innerHTML = cart.map(l => `<div class="sum-item"><div class="sum-item__img"><img src="${l.img}" alt=""><span>${l.qty}</span></div><div><b>${esc(l.name)}</b>${l.meta ? `<small>${esc(l.meta)}</small>` : ''}${l.short ? `<small style="color:var(--badge-sale)">${l.inStock ? 'Only a few left in stock' : 'Out of stock'}</small>` : ''}</div><b>${T3.inr(l.line)}</b></div>`).join('');
+    const sub = t.subtotal, mrp = T3.cartMrp(), total = grand(), m = method();
+    const [now, rest] = split(total);
+    $('[data-rows]').innerHTML = `
+      <div><span class="muted">Subtotal · ${T3.cartCount()} item${T3.cartCount() === 1 ? '' : 's'}</span><span>${T3.inr(sub)}</span></div>
+      ${mrp > sub ? `<div style="color:var(--ok)"><span>You saved on MRP</span><span>${T3.inr(mrp - sub)}</span></div>` : ''}
+      ${t.discount > 0 ? `<div style="color:var(--ok)"><span>Discount${t.coupon ? ` <span class="tag" style="height:22px;font-size:11.5px;margin-left:4px">${esc(t.coupon)} <button type="button" data-rm-code aria-label="Remove">✕</button></span>` : ''}</span><span>- ${T3.inr(t.discount)}</span></div>` : ''}
+      ${creditOn() ? `<div style="color:var(--ok)"><span>Store credit</span><span>- ${T3.inr(t.credit)}</span></div>` : ''}
+      <div><span class="muted">Shipping</span><span>Free</span></div>
+      ${t.tax > 0 ? `<div class="muted small"><span>GST</span><span>${T3.inr(t.tax)}</span></div>` : ''}
+      <div class="total"><span>Total</span><span><small>${esc(D.currency || 'INR')}</small>${T3.inr(total)}</span></div>
+      ${m === 'partial' ? `<div class="card" style="background:#fff;padding:12px 14px;margin-top:10px;display:block"><div style="display:flex;justify-content:space-between"><span>Pay now</span><b>${T3.inr(now)}</b></div><div style="display:flex;justify-content:space-between" class="muted"><span>Pay on delivery</span><b>${T3.inr(rest)}</b></div></div>` : ''}`;
+    $('[data-place-total]').textContent = m === 'partial' ? `Pay ${T3.inr(now)} now` : T3.inr(total);
+    $('[data-msum-total]').textContent = T3.inr(total);
+    const pl = $('[data-partial-label]'); if (pl) pl.textContent = `Pay ${T3.inr(now)} now, rest ${T3.inr(rest)} on COD`;
+    const blocked = cart.some(l => !l.inStock || l.short);
+    if (loaded) $('[data-stock-err]').textContent = blocked ? 'Some items in your cart are out of stock. Remove them or lower the quantity to continue.' : '';
+    const btn = $('[data-place]'); if (!btn.hasAttribute('data-payments-off') && !btn.dataset.busy) btn.disabled = blocked;
+    if (!$('[data-code-input]').value && t.coupon) $('[data-code-input]').value = t.coupon;
+    renderCredit();
+  }
+  function renderCredit() {
+    const t = T3.getTotals(), card = $('[data-credit-card]');
+    if (C.creditEmail && t.credit > 0) {
+      card.hidden = false; $('[data-credit-use]').style.display = '';
+      $('[data-credit-note]').textContent = creditOn() ? `${T3.inr(t.credit)} applied` : `${T3.inr(t.credit)} available on ${C.creditEmail}`;
+      $('[data-credit]').checked = creditOn();
+    } else if (!C.creditEmail) {
+      card.hidden = false; $('[data-credit-use]').style.display = 'none';
+      if (!card.dataset.sent) $('[data-credit-note]').innerHTML = `Have store credit? <button type="button" class="link" data-credit-send>Verify your email</button> to use it.`;
+    } else card.hidden = true;
+  }
+  document.addEventListener('t3:cart', () => { loaded = true; render(); });
+  render();
+  $('[data-email]').addEventListener('input', render);
+  $('[data-pay]')?.addEventListener('change', e => { $$('.pay-card').forEach(l => l.classList.toggle('is-active', l.contains(e.target))); render(); });
+
+  /* ---- coupon ---- */
+  const applyCode = code => T3.post(L.coupon, { code: code || '' }).then(res => { const j = res.data || {};
+    if (code) T3.toast(j.message || (res.ok ? 'Code applied' : 'That code is not valid')); return T3.loadCart(); });
+  $('[data-apply]').onclick = () => applyCode(val($('[data-code-input]')));
+  $('[data-code-input]').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyCode(val(e.target)); } });
+  document.addEventListener('click', e => { if (e.target.closest('[data-rm-code]')) { $('[data-code-input]').value = ''; applyCode(''); } });
+
+  /* ---- store credit: prove the order email with a one-time code ---- */
+  let cvEmail = '';
+  document.addEventListener('click', e => {
+    if (!e.target.closest('[data-credit-send]')) return;
+    cvEmail = val($('[data-email]'));
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cvEmail)) { T3.toast('Enter your email above first.'); $('[data-email]').focus(); return; }
+    T3.post(C.otpSend, { email: cvEmail }).then(res => {
+      if (res.ok && res.data && res.data.success) { const card = $('[data-credit-card]'); card.dataset.sent = '1';
+        $('[data-credit-note]').textContent = `We sent a code to ${cvEmail}.`; $('[data-credit-verify]').style.display = 'flex'; $('[data-credit-code]').focus(); }
+      else T3.toast((res.data && res.data.error) || 'We could not send a code. Please try again.');
+    });
+  });
+  $('[data-credit-check]').onclick = () => {
+    const code = val($('[data-credit-code]')); if (!code) { T3.toast('Enter the code from your email.'); return; }
+    T3.post(C.otpVerify, { email: cvEmail, otp: code }).then(res => {
+      if (res.ok && res.data && res.data.success) { T3.toast('Email verified. Applying your store credit…'); location.reload(); }
+      else T3.toast((res.data && res.data.error) || 'That code is incorrect or has expired.');
+    });
+  };
+
+  /* ---- place order ---- */
+  const err = $('[data-err]'), btn = $('[data-place]');
+  const btnLabel = btn.innerHTML;
+  const fail = m => { err.textContent = m || 'Something went wrong. Please try again.'; delete btn.dataset.busy; btn.disabled = false; btn.innerHTML = btnLabel; render(); };
+  function payload() {
+    const diff = $('[data-diff]').checked;
+    const g = (k, sk) => diff && sk ? val(S(sk)) : val(F(k));
+    const phone = val($('[data-phone]'));
+    const p = {
+      name: [val(F('first')), val(F('last'))].filter(Boolean).join(' '),
+      email: val($('[data-email]')),
+      phone: diff && val(S('phone')) ? val(S('phone')) : phone,
+      address: [g('house', 'house'), g('street', 'street'), val(F('notes'))].filter(Boolean).join(', '),
+      house: val(F('house')), street: val(F('street')), notes: val(F('notes')),
+      city: g('city', 'city'), state: g('state', 'state'), pincode: g('pincode', 'pincode'),
+      company_name: $('[data-gst]').checked ? val(F('company')) : '',
+      gstin: $('[data-gst]').checked ? val(F('gstin')).toUpperCase() : '',
+      bill_city: val(F('city')), bill_state: val(F('state')), bill_pincode: val(F('pincode')), bill_phone: phone,
+      method: method(),
+    };
+    if (diff) Object.assign(p, {
+      billing_address: [val(F('house')), val(F('street')), val(F('city')), val(F('state')), val(F('pincode'))].filter(Boolean).join(', '),
+      ship_diff: '1', ship_house: val(S('house')), ship_street: val(S('street')), ship_city: val(S('city')),
+      ship_state: val(S('state')), ship_pincode: val(S('pincode')), ship_phone: val(S('phone')),
+    });
+    return p;
+  }
+  function verify(body, onFail) {
+    return T3.post(C.verifyUrl, body).then(res => { if (res.ok && res.data.ok) location.href = res.data.redirect; else fail(onFail); });
+  }
+  function openRazorpay(p) {
+    if (typeof Razorpay !== 'function') { fail('Could not open the payment window. Please refresh and try again.'); return; }
+    new Razorpay({ key: p.key_id, order_id: p.order_id, amount: p.amount, currency: p.currency, name: p.name, prefill: p.prefill || {},
+      handler: r => verify({ payment_id: p.payment_id, razorpay_payment_id: r.razorpay_payment_id || '', razorpay_signature: r.razorpay_signature || '' },
+        'We could not confirm your payment, so no order was placed yet. If money was debited, your order will be confirmed automatically. Please do not pay again.'),
+      modal: { ondismiss: () => fail('Payment cancelled. No order was placed.') } }).open();
+  }
+  function openCashfree(p) {
+    if (typeof Cashfree !== 'function') { fail('Could not open the payment window. Please refresh and try again.'); return; }
+    Cashfree({ mode: p.mode === 'production' ? 'production' : 'sandbox' }).checkout({ paymentSessionId: p.payment_session_id, redirectTarget: '_modal' }).then(result => {
+      result = result || {};
+      if (result.redirect) return;
+      if (result.error) return verify({ payment_id: p.payment_id }, ((result.error && result.error.message) || 'Payment was cancelled.') + ' No order was placed.');
+      return verify({ payment_id: p.payment_id }, 'Payment was not completed, so no order was placed. If money was debited, your order will be confirmed automatically. Please do not pay again.');
+    }).catch(() => fail('Could not open the payment window. Please try again.'));
+  }
+  const missing = () => {
+    const need = [[F('first'), 'your first name'], [$('[data-email]'), 'your email'], [$('[data-phone]'), 'your mobile number'], [F('house'), 'your house or flat'], [F('street'), 'your street or area'], [F('pincode'), 'your pincode'], [F('city'), 'your city'], [F('state'), 'your state']];
+    if ($('[data-diff]').checked) need.push([S('house'), 'the shipping house or flat'], [S('pincode'), 'the shipping pincode'], [S('city'), 'the shipping city'], [S('state'), 'the shipping state']);
+    const hit = need.find(([el]) => !val(el)); if (hit) { hit[0].focus(); return `Please enter ${hit[1]}.`; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val($('[data-email]')))) return 'Please enter a valid email address.';
+    if (!/^\d{6}$/.test(val(F('pincode'))) || ($('[data-diff]').checked && !/^\d{6}$/.test(val(S('pincode'))))) return 'Please enter a valid 6 digit pincode.';
+    if (!method()) return 'Please choose a payment method.';
+    return '';
+  };
+  $('[data-checkout]').addEventListener('submit', e => {
+    e.preventDefault(); err.textContent = '';
+    const m = missing(); if (m) { fail(m); return; }
+    btn.dataset.busy = '1'; btn.disabled = true; btn.textContent = 'Placing order…';
+    if ($('[data-news]').checked) T3.post(L.newsletter, { email: val($('[data-email]')), source: 'checkout' }).catch(() => {});
+    T3.post(C.placeUrl, payload()).then(res => {
+      const d = res.data || {};
+      if (!res.ok || !d.ok) { fail(d.error); if (d.out_of_stock) T3.loadCart(); return; }
+      if (d.redirect) { location.href = d.redirect; return; }
+      if (d.gateway === 'razorpay') openRazorpay(d);
+      else if (d.gateway === 'cashfree') openCashfree(d);
+      else fail('Payment could not be started.');
+    }).catch(() => fail());
+  });
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

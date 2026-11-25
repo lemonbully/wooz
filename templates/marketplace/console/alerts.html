@@ -1,0 +1,67 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Alerts{% endblock %}
+{% block crumbs %}<span>/</span><span>Alerts</span>{% endblock %}
+{% block heading %}Alerts{% endblock %}
+{% block lead %}<p>Who is emailed when an app pauses itself, a payment and a licence don't match, or a store build fails. Repeats about the same app are held back for each person's quiet period.</p>{% endblock %}
+
+{% block main %}
+<div class="mc-grid2">
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Recipients</h2>{% if recipient %}<a class="mc-panel__link" href="{% url 'mkt_console:alerts' %}">+ Add new</a>{% endif %}</div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <thead><tr><th>Person</th><th>Gets</th><th>Apps</th><th>Quiet</th><th></th></tr></thead>
+        <tbody>
+          {% for r in recipients %}
+          <tr>
+            <td><b>{{ r.name }}</b><br><span class="mc-muted" style="font-size:.8rem;">{{ r.email }}</span>{% if not r.is_active %} <span class="mc-chip">Off</span>{% endif %}</td>
+            <td style="max-width:16rem;">{% for t in r.alert_types %}<span class="mc-chip" style="margin:.1rem;">{{ t|cut:"_"|truncatechars:14 }}</span>{% empty %}<span class="mc-chip mc-chip--accent">Everything</span>{% endfor %}</td>
+            <td>{% for a in r.apps.all %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="mc-muted">All apps</span>{% endfor %}</td>
+            <td class="mc-mono">{{ r.min_interval_minutes }}m</td>
+            <td style="white-space:nowrap;">
+              <a class="mc-panel__link" href="{% url 'mkt_console:alert_edit' r.pk %}">Edit</a>
+              {% if can_write %}
+              <form method="post" action="{% url 'mkt_console:alert_action' r.pk %}" class="mc-inline">{% csrf_token %}<input type="hidden" name="action" value="test"><button class="mc-linkbtn" type="submit">Test</button></form>
+              <form method="post" action="{% url 'mkt_console:alert_action' r.pk %}" class="mc-inline">{% csrf_token %}<input type="hidden" name="action" value="toggle"><button class="mc-linkbtn" type="submit">{% if r.is_active %}Mute{% else %}Unmute{% endif %}</button></form>
+              <form method="post" action="{% url 'mkt_console:alert_action' r.pk %}" class="mc-inline" data-confirm="Remove {{ r.name }} from marketplace alerts?">{% csrf_token %}<input type="hidden" name="action" value="delete"><button class="mc-linkbtn mc-linkbtn--danger" type="submit">Remove</button></form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}<tr><td colspan="5" class="mc-empty">Nobody yet. Until you add someone, alerts go to the site admins in settings (if any).</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if can_write %}
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">{% if recipient %}Edit {{ recipient.name }}{% else %}Add a recipient{% endif %}</h2></div>
+    <form method="post" class="mc-panel__body" style="display:grid;gap:1rem;">
+      {% csrf_token %}
+      {% for field in form %}{% include "marketplace/console/_field.html" %}{% endfor %}
+      <div class="mc-actions"><button class="pal-btn" type="submit">{% if recipient %}Save{% else %}Add recipient{% endif %} <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button></div>
+    </form>
+  </section>
+  {% endif %}
+</div>
+
+<section class="mc-panel">
+  <div class="mc-panel__head"><h2 class="mc-panel__title">Alert log</h2></div>
+  <div class="mc-tablewrap">
+    <table class="mc-table">
+      <thead><tr><th>When</th><th>Alert</th><th>App</th><th>Sent to</th><th>Delivered</th></tr></thead>
+      <tbody>
+        {% for al in log %}
+        <tr>
+          <td class="mc-mono mc-muted">{{ al.created_at|date:"j M, H:i" }}</td>
+          <td><b>{{ al.subject }}</b><br><span class="mc-chip">{{ al.kind }}</span></td>
+          <td>{{ al.app.name|default:"-" }}</td>
+          <td class="mc-trunc" title="{{ al.recipients }}">{{ al.recipients|default:"Nobody" }}</td>
+          <td>{% if al.delivered %}<span class="mc-chip mc-chip--ok">Yes</span>{% else %}<span class="mc-chip mc-chip--failed" title="{{ al.error }}">No</span>{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="5" class="mc-empty">No alerts sent yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

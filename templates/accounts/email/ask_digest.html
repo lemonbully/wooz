@@ -1,0 +1,39 @@
+{% extends "email/base.html" %}
+{% block preheader %}{% if top %}{{ top.title }}{% else %}This week on Ask OneWooz{% endif %} · {{ stats.questions }} questions, {{ stats.answers }} answers{% endblock %}
+{% block kicker %}Ask OneWooz weekly{% endblock %}
+{% block content %}
+  {% with wk=week|stringformat:"s" %}{% include "email/_marker.html" with text="Week "|add:wk %}{% endwith %}
+  <p style="margin:0 0 18px 0; font-size:13px; color:#66666b;">{{ range }} · {{ stats.questions }} question{{ stats.questions|pluralize }} · {{ stats.answers }} answer{{ stats.answers|pluralize }}</p>
+
+  {% if top %}
+  <p style="margin:0 0 6px 0; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#4b2bf5;">Question of the week</p>
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:22px; letter-spacing:-0.02em; line-height:1.2; color:#0a0a0b; margin:0 0 10px 0;"><a href="{{ top.url }}" style="color:#0a0a0b; text-decoration:none;">{{ top.title }}</a></h1>
+  {% if top.preview %}<p style="margin:0 0 10px 0; color:#3a3a3f;">{{ top.preview }}</p>{% endif %}
+  <p style="margin:0 0 22px 0; font-size:13px; color:#66666b;">↑ {{ top.score }} · {{ top.answers }} answer{{ top.answers|pluralize }} · <a href="{{ top.url }}" style="color:#4b2bf5;">Read the thread</a></p>
+  {% endif %}
+
+  {% if helpful %}
+  <p style="margin:0 0 8px 0; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#66666b;">Most helpful answers</p>
+  {% for a in helpful %}<p style="margin:0 0 8px 0;"><a href="{{ a.url }}" style="color:#0a0a0b;">{{ a.title }}</a><br><span style="font-size:12px; color:#66666b;">↑ {{ a.score }} · {{ a.by }}</span></p>{% endfor %}
+  <div style="height:14px;"></div>
+  {% endif %}
+
+  {% if busy_questions %}
+  <p style="margin:0 0 8px 0; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#66666b;">New this week in {{ busy_topic }}</p>
+  {% for q in busy_questions %}<p style="margin:0 0 8px 0;"><a href="{{ q.url }}" style="color:#0a0a0b;">{{ q.title }}</a></p>{% endfor %}
+  <div style="height:14px;"></div>
+  {% endif %}
+
+  {% if waiting %}
+  <p style="margin:0 0 8px 0; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#66666b;">Still waiting for an answer</p>
+  {% for q in waiting %}<p style="margin:0 0 8px 0;"><a href="{{ q.url }}" style="color:#0a0a0b;">{{ q.title }}</a></p>{% endfor %}
+  <div style="height:14px;"></div>
+  {% endif %}
+
+  {% if contributors %}
+  <p style="margin:0 0 18px 0; font-size:13px; color:#66666b;">Thanks to this week's top helpers: {% for c in contributors %}{{ c.name }} ({{ c.n }}){% if not forloop.last %}, {% endif %}{% endfor %}.</p>
+  {% endif %}
+
+  {% include "email/_button.html" with url=weekly_url label="Open this week on Ask OneWooz" %}
+{% endblock %}
+{% block footer_links %}<div><a class="em-link" href="{{ unsubscribe_url }}" style="color:#9a9aa0; text-decoration:underline;">Unsubscribe from the weekly digest</a></div>{% endblock %}

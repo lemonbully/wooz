@@ -1,86 +1,147 @@
 {% extends "web/_shell.html" %}
+{% load static onewooz %}
 
 {% comment %}
-Core-pages index  the single footer "Core pages" link lands here. Shows the
-whole published tree (page → subpage → child) as links; each is a real page you
-can open.  marketing system (onewooz_design.md): squared, hairline,
-mono metadata, one accent.
+Resource centre hub (/pages/): every published core page as a numbered section
+of topic cards (subpages), each listing its articles (child pages). A quick
+start row surfaces the first steps; the search box (web/core-pages.js) filters
+topics and articles instantly and is hidden until the script runs, so without
+JS the page is simply the full, crawlable tree.
+
+Styles: css/onewooz-core-pages.css (.cph-*). SEO: the view sets the title,
+description, breadcrumb and an ItemList of every node (web.schema).
 {% endcomment %}
 
+{% block title %}{{ seo.title }}{% endblock %}
 
 {% block head %}{{ block.super }}
-<style nonce="{{ csp_nonce }}">
-  .cp-tree { border: 1px solid var(--pal-line); }
-  .cp-tree__page { border-top: 1px solid var(--pal-line); }
-  .cp-tree__page:first-child { border-top: 0; }
-  .cp-tree__page > a { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-    padding: 1.15rem 1.35rem; text-decoration: none; color: var(--pal-ink);
-    font-family: var(--pal-font-display); font-weight: 500; font-size: 1.15rem; letter-spacing: -0.01em;
-    transition: background 140ms ease, color 140ms ease; }
-  .cp-tree__page > a:hover { background: var(--pal-paper-2); color: var(--pal-accent); }
-  .cp-tree__page > a .arw { font-family: var(--pal-font-mono); font-size: 0.8rem; color: var(--pal-accent); }
-
-  .cp-tree__branch { padding: 0 1.35rem 1.1rem 1.35rem; }
-  .cp-tree__sub { margin-top: 0.65rem; }
-  .cp-tree__sub > a { display: inline-block; font-family: var(--pal-font-mono); font-size: 0.78rem; letter-spacing: 0.02em;
-    color: var(--pal-ink-2); text-decoration: none; padding: 0.15rem 0; }
-  .cp-tree__sub > a:hover { color: var(--pal-accent); }
-  .cp-tree__nested { margin: 0.35rem 0 0.35rem 0.85rem; border-left: 1px solid var(--pal-line); padding-left: 0.85rem; }
-  .cp-tree__nested a { display: block; font-family: var(--pal-font-mono); font-size: 0.72rem; color: var(--pal-muted);
-    text-decoration: none; padding: 0.2rem 0; }
-  .cp-tree__nested a:hover { color: var(--pal-accent); }
-
-  .cp-index-empty { border: 1px solid var(--pal-line); padding: clamp(2.5rem, 1.5rem + 3vw, 4rem); text-align: center; color: var(--pal-muted); }
-</style>
+<link rel="stylesheet" href="{% static 'css/onewooz-core-pages.css' %}">
+<script src="{% static 'js/website/core-pages.js' %}" defer></script>
 {% endblock %}
 
 {% block main %}
-<section class="pal-pagehead pal-blueprint">
-  <div class="pal-container">
-    <nav class="pal-breadcrumb" aria-label="Breadcrumb">
-      <a href="{% url 'web:home' %}">Home</a>
-      <span aria-hidden="true"> / </span>
-      <span aria-current="page">Pages</span>
-    </nav>
-    <h1 class="pal-pagehead__title">Pages</h1>
-    <p class="pal-pagehead__lead">Every guide, policy and resource, laid out as a tree. Open any page to read it.</p>
+<section class="cph-hero pal-blueprint">
+  <div class="pal-container cph-hero__inner">
+    <div>
+      <nav class="cpa-crumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{% url 'web:home' %}">Home</a></li>
+          <li><span aria-current="page">Resources</span></li>
+        </ol>
+      </nav>
+      <p class="cp-eyebrow" style="margin-top:1.5rem;">Resource centre</p>
+      <h1 class="cph-hero__title">Help, guides and answers for your online store</h1>
+      <p class="cph-hero__lead">Step-by-step help for every part of running a OneWooz store, from your first product to payments, shipping, domains and growth. Written by the team that builds it.</p>
+
+      <form class="cph-search" role="search" data-cp-search hidden action="#">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <label for="cp-q" class="cp-sr">Search the resource centre</label>
+        <input id="cp-q" type="search" placeholder="Search, e.g. custom domain, COD, GST" autocomplete="off" spellcheck="false">
+        <kbd aria-hidden="true">/</kbd>
+      </form>
+    </div>
+
+    {% if pages %}
+    <dl class="cph-stats" aria-label="Resource centre at a glance">
+      <div><dt>Sections</dt><dd>{{ pages|length }}</dd></div>
+      <div><dt>Topics</dt><dd>{{ topic_count }}</dd></div>
+      <div><dt>Articles</dt><dd>{{ article_count }}</dd></div>
+      <div><dt>Last updated</dt><dd class="is-date">{% if updated_at %}<time datetime="{{ updated_at|date:'c' }}">{{ updated_at|date:"j M Y" }}</time>{% else %}&ndash;{% endif %}</dd></div>
+    </dl>
+    {% endif %}
   </div>
 </section>
 
-<section class="pal-section pal-section--tight pal-ruled">
-  <div class="pal-container pal-container--narrow">
-    {% if pages %}
-    <ul class="cp-tree">
-      {% for p in pages %}
-      <li class="cp-tree__page">
-        <a href="{{ p.get_absolute_url }}">
-          <span>{{ p.title }}</span>
-          <span class="arw" aria-hidden="true">&rarr;</span>
-        </a>
-        {% if p.subpages.all %}
-        <ul class="cp-tree__branch">
-          {% for sp in p.subpages.all %}
-          <li class="cp-tree__sub">
-            <a href="{{ sp.get_absolute_url }}">{{ sp.title }}</a>
-            {% if sp.children.all %}
-            <div class="cp-tree__nested">
-              {% for c in sp.children.all %}
-              <a href="{{ c.get_absolute_url }}">{{ c.title }}</a>
-              {% endfor %}
-            </div>
-            {% endif %}
-          </li>
+{% if pages %}
+<nav class="cph-jump" aria-label="Sections">
+  <div class="pal-container cph-jump__inner">
+    {% for p in pages %}
+    <a href="#{{ p.slug }}"><span>{{ forloop.counter|stringformat:"02d" }}</span>{{ p.title }}</a>
+    {% endfor %}
+  </div>
+</nav>
+
+{% if quick %}
+<section class="cph-quick" data-cp-quick aria-labelledby="cph-quick-title">
+  <div class="pal-container">
+    <div class="cph-quick__head">
+      <h2 class="cph-quick__title" id="cph-quick-title">New here? Start with these</h2>
+      <a class="cph-textlink" href="{{ quick_topic.get_absolute_url }}">{{ quick_topic.title }} <span class="cp-arrow" aria-hidden="true">&rarr;</span></a>
+    </div>
+    <div class="cph-quick__grid">
+      {% for c in quick %}
+      <a class="cph-step" href="{{ c.get_absolute_url }}">
+        <span class="cph-step__num">Step {{ forloop.counter|stringformat:"02d" }}</span>
+        <span class="cph-step__title">{{ c.title }}</span>
+        <span class="cph-step__foot"><span>Read guide</span><span class="cp-arrow" aria-hidden="true">&rarr;</span></span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<div class="pal-container">
+  <p class="cph-noresults" data-cp-noresults hidden role="status">No articles match <strong data-cp-term></strong>. Try a shorter word, or <a href="{% url 'web:contact' %}">ask our team</a>.</p>
+</div>
+
+{% for p in pages %}
+{% with sec_num=forloop.counter %}
+<section class="cph-sec" id="{{ p.slug }}" data-cp-section data-search="{{ p.title }}" aria-labelledby="sec-{{ p.slug }}">
+  <div class="pal-container cph-sec__grid">
+    <header class="cph-sec__head">
+      <p class="cph-sec__num">{{ sec_num|stringformat:"02d" }} / {{ pages|length|stringformat:"02d" }}</p>
+      <h2 class="cph-sec__title" id="sec-{{ p.slug }}"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a></h2>
+      {% if p.summary %}<p class="cph-sec__desc">{{ p.summary|truncatechars:200 }}</p>{% endif %}
+      <div class="cph-sec__foot">
+        <span class="cph-sec__meta">{{ p.subs|length }} topic{{ p.subs|length|pluralize }}</span>
+        <a class="cph-textlink" href="{{ p.get_absolute_url }}">Overview <span class="cp-arrow" aria-hidden="true">&rarr;</span></a>
+      </div>
+    </header>
+
+    {% if p.subs %}
+    <div class="cph-cards">
+      {% for sp in p.subs %}
+      <article class="cph-card" data-cp-card data-search="{{ sp.title }} {{ sp.summary }}">
+        <div class="cph-card__top">
+          <span>{{ sec_num }}.{{ forloop.counter }}</span>
+          <span class="cph-card__count">{% if sp.kids %}{{ sp.kids|length }} article{{ sp.kids|length|pluralize }}{% else %}Article{% endif %}</span>
+        </div>
+        <h3 class="cph-card__title"><a href="{{ sp.get_absolute_url }}">{{ sp.title }}</a></h3>
+        {% if sp.summary %}<p class="cph-card__desc">{{ sp.summary }}</p>{% endif %}
+        {% if sp.kids %}
+        <ul class="cph-card__list">
+          {% for c in sp.kids %}
+          <li data-cp-item data-search="{{ c.title }}"><a href="{{ c.get_absolute_url }}">{{ c.title }}<span class="cp-arrow" aria-hidden="true">&rarr;</span></a></li>
           {% endfor %}
         </ul>
         {% endif %}
-      </li>
+        <a class="cph-textlink cph-card__more" href="{{ sp.get_absolute_url }}" aria-label="Open {{ sp.title }}">{% if sp.kids %}View topic{% else %}Read{% endif %} <span class="cp-arrow" aria-hidden="true">&rarr;</span></a>
+      </article>
       {% endfor %}
-    </ul>
-    {% else %}
-    <div class="cp-index-empty">
-      <p>No pages have been published yet.</p>
     </div>
     {% endif %}
+  </div>
+</section>
+{% endwith %}
+{% endfor %}
+
+{% else %}
+<div class="pal-container">
+  <div class="cph-empty"><p>No resources have been published yet.</p></div>
+</div>
+{% endif %}
+
+<section class="cp-help">
+  <div class="pal-container cp-help__inner">
+    <div>
+      <h2 class="cp-help__title">Can&rsquo;t find what you need?</h2>
+      <p class="cp-help__text">Our team answers every question in plain language, usually the same working day. Store owners can also raise a ticket from Business Hub in the dashboard.</p>
+    </div>
+    <div class="pal-btn-row">
+      <a class="pal-btn" href="{% url 'web:contact' %}">Contact support <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      <a class="pal-btn pal-btn--ghost" href="{% surface_url 'app' '/sign-up/' %}">Deploy a store</a>
+    </div>
   </div>
 </section>
 {% endblock %}

@@ -1,0 +1,55 @@
+{% comment %}
+  One order in Template 3's order-card design (account page). Context: order
+  (annotated by user_account: first_item / more_items / track_url /
+  is_returned / can_cancel / can_replace / can_support and the latest
+  requests), sym. The full details sit in a hidden block the "View details"
+  modal copies.
+{% endcomment %}
+<div class="order-card">
+  <div class="order-card__head">
+    <div><b>#{{ order.display_number }}{% if order.is_replacement %} · Replacement{% endif %}</b><small>Placed on {{ order.created_at|date:"M d, Y" }}</small></div>
+    {% if order.is_returned %}<span class="status status--cancelled">Returned</span>
+    {% elif order.status == 'delivered' %}<span class="status status--delivered">Delivered</span>
+    {% elif order.status == 'shipped' %}<span class="status status--shipped">Shipped</span>
+    {% elif order.status == 'cancelled' %}<span class="status status--cancelled">Cancelled</span>
+    {% else %}<span class="status status--processing">{% if order.status == 'created' %}Placed{% else %}{{ order.get_status_display }}{% endif %}</span>{% endif %}
+  </div>
+  <div class="order-card__items">
+    {% if order.first_item.thumb %}<img src="{{ order.first_item.thumb.url }}" alt="" loading="lazy">{% endif %}
+    <div style="margin-left:6px">
+      <b>{% if order.first_item %}{{ order.first_item.title }}{% if order.first_item.variant_label %} ({{ order.first_item.variant_label }}){% endif %} × {{ order.first_item.quantity }}{% else %}Order items{% endif %}</b>
+      {% if order.more_items %}<div class="small muted">+ {{ order.more_items }} more item{{ order.more_items|pluralize }}</div>{% endif %}
+      {% if order.status == 'shipped' %}<div class="small" style="color:var(--ok);font-weight:700">On its way</div>{% endif %}
+      {% if order.cancel_request %}<div class="small muted">Cancellation request: <b>{{ order.cancel_request.get_status_display }}</b></div>{% endif %}
+      {% if order.replace_request %}<div class="small muted">Replacement request: <b>{{ order.replace_request.get_status_display }}</b></div>{% endif %}
+      {% if order.support_request %}<div class="small muted">Support request{% if order.support_request.reason %} ({{ order.support_request.reason }}){% endif %}: <b>{% if order.support_request.status == 'pending' %}Waiting for the store{% elif order.support_reply %}Answered{% else %}{{ order.support_request.get_status_display }}{% endif %}</b></div>
+        {% if order.support_reply %}<div class="small" style="margin-top:4px"><b>Store's reply:</b> {{ order.support_reply|linebreaksbr }}</div>{% endif %}{% endif %}
+    </div>
+  </div>
+  <div class="order-card__foot"><b>{{ sym }}{{ order.total }}</b><div style="display:flex;gap:8px;flex-wrap:wrap">
+    {% if order.can_replace %}<button type="button" class="btn btn--grey btn--sm" data-req="replace" data-url="{% url 'public_order_request' order.id %}" data-order="{{ order.display_number }}">Return / Replace</button>{% endif %}
+    {% if order.status == 'delivered' %}<a class="btn btn--grey btn--sm" href="{% url 'public_order_invoice' order.id %}" target="_blank" rel="noopener">Invoice</a>{% endif %}
+    {% if order.can_cancel %}<button type="button" class="btn btn--grey btn--sm" data-req="cancel" data-url="{% url 'public_order_request' order.id %}" data-order="{{ order.display_number }}">Cancel</button>{% endif %}
+    {% if order.can_support %}<button type="button" class="btn btn--grey btn--sm" data-req="support" data-url="{% url 'public_order_request' order.id %}" data-order="{{ order.display_number }}">Need help?</button>{% endif %}
+    {% if order.status == 'shipped' and order.track_url %}<a class="btn btn--black btn--sm" href="{{ order.track_url }}" target="_blank" rel="noopener noreferrer">Track order</a>{% endif %}
+    <button type="button" class="btn btn--{% if order.status == 'shipped' and order.track_url %}grey{% else %}black{% endif %} btn--sm" data-view-order="{{ order.id }}">View details</button>
+  </div></div>
+</div>
+<template id="order-detail-{{ order.id }}">
+  <p class="eyebrow muted">Order #{{ order.display_number }}</p>
+  <h3 class="h3" style="margin:6px 0 4px">{% if order.is_returned %}Returned{% elif order.status == 'created' %}Placed{% else %}{{ order.get_status_display }}{% endif %}</h3>
+  <p class="small muted">Placed on {{ order.created_at|date:"M d, Y, g:i A" }}</p>
+  <div class="info-grid" style="margin:18px 0">
+    <div><h4>Customer</h4><p>{{ order.customer_name }}{% if order.customer_email %}<br>{{ order.customer_email }}{% endif %}{% if order.customer_phone %}<br>{{ order.customer_phone }}{% endif %}</p></div>
+    {% if order.shipping_address or order.shipping_city %}<div><h4>Shipping address</h4><p>{{ order.shipping_address }}{% if order.shipping_city %}<br>{{ order.shipping_city }}{% endif %}{% if order.shipping_state %}, {{ order.shipping_state }}{% endif %} {{ order.shipping_pincode }}</p></div>{% endif %}
+  </div>
+  <div>{% for item in order.items.all %}<div class="sum-item" style="grid-template-columns:1fr auto"><div><b>{{ item.title }}</b><small>{% if item.variant_label %}{{ item.variant_label }} · {% endif %}Qty {{ item.quantity }} · {{ sym }}{{ item.unit_price }} each</small></div><b>{{ sym }}{{ item.line_total }}</b></div>{% endfor %}</div>
+  <div class="sum-rows" style="margin-top:12px">
+    <div><span class="muted">Subtotal</span><span>{{ sym }}{{ order.subtotal }}</span></div>
+    {% if order.discount_amount %}<div style="color:var(--ok)"><span>Discount</span><span>- {{ sym }}{{ order.discount_amount }}</span></div>{% endif %}
+    {% if order.credit_discount_amount %}<div style="color:var(--ok)"><span>Store credit</span><span>- {{ sym }}{{ order.credit_discount_amount }}</span></div>{% endif %}
+    {% if order.tax_amount %}<div><span class="muted">Tax</span><span>{{ sym }}{{ order.tax_amount }}</span></div>{% endif %}
+    <div><span class="muted">Shipping</span><span>{% if order.shipping_amount %}{{ sym }}{{ order.shipping_amount }}{% else %}Free{% endif %}</span></div>
+    <div class="total"><span>Total</span><span>{{ sym }}{{ order.total }}</span></div>
+  </div>
+</template>

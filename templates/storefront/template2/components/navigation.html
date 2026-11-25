@@ -336,6 +336,10 @@
     /* Align nav container with page content (left edge/red mark) */
     @media (min-width: 1025px) and (max-width: 1200px) {
         .nav-inner { padding: 0 1rem; }
+        /* Six links and the centred logo share this width: tighten the links
+           so the last one does not run under the logo. */
+        .nav-left { gap: 14px; }
+        .nav-left a { font-size: 13px; }
     }
 
     @media (min-width: 1201px) and (max-width: 1366px) {
@@ -605,7 +609,7 @@
                 {% website_base_path website request as website_base %}
                 <nav class="nav-left" aria-label="Primary">
                     <a href="{{ website_base }}">Home</a>
-                    <a href="{{ website_base }}products/">Shop</a>
+                    <a href="{{ website_base }}shop/">Shop</a>
                     <div class="relative group" id="nav-categories-wrapper">
                         {% with d2c_cfg=website.content.d2c_config %}
                         {# Default to mega menu when flag is missing or not explicitly "off" #}
@@ -675,9 +679,9 @@
                         {% endif %}
                         {% endwith %}
                     </div>
-                    <a href="{{ website_base }}about-us">About Us</a>
+                    <a href="{{ website_base }}about/">About Us</a>
                     <a href="{{ website_base }}blogs/">Blogs</a>
-                    <a href="{{ website_base }}enquiry/">Contact</a>
+                    <a href="{{ website_base }}contact/">Contact</a>
                 </nav>
             </div>
 
@@ -770,7 +774,7 @@
     <!-- Toggleable search bar (desktop + mobile) -->
             <div class="search-bar-container" role="search">
         <div class="nav-inner">
-            <form class="search-form" method="get" action="{{ website_base }}products/">
+            <form class="search-form" method="get" action="{{ website_base }}shop/">
                 <div class="search-suggestions">
                     <input type="text" name="q" class="search-input" placeholder="SEARCH PRODUCTS..." aria-label="Search products" autocomplete="off">
                     <div class="search-suggestions-panel" id="nav-search-suggestions" role="listbox" aria-label="Product suggestions"></div>
@@ -789,7 +793,7 @@
         </div>
         <div class="nav-drawer-links">
             <a href="{{ website_base }}">Home</a>
-            <a href="{{ website_base }}products/">Shop</a>
+            <a href="{{ website_base }}shop/">Shop</a>
             <div>
                 {# Use an <a> so it inherits the exact drawer link styling (padding/border/typography) #}
                 <a href="#" id="drawer-categories-toggle" class="flex items-center justify-between" role="button" aria-expanded="false" aria-controls="drawer-categories-panel">
@@ -810,9 +814,9 @@
                     </div>
                 </div>
             </div>
-            <a href="{{ website_base }}about-us/">About Us</a>
+            <a href="{{ website_base }}about/">About Us</a>
             <a href="{{ website_base }}blogs/">Blogs</a>
-            <a href="{{ website_base }}enquiry/">Contact</a>
+            <a href="{{ website_base }}contact/">Contact</a>
             {% if is_d2c or website.template.is_D2C %}
             <a href="#" id="drawer-cart-open">Cart</a>
             {% endif %}
@@ -1025,7 +1029,7 @@
                 '  <img src="https://cdn-icons-png.flaticon.com/512/2038/2038854.png" alt="Empty Cart" class="mx-auto w-40 h-40 object-contain opacity-90"/>' +
                 '  <h3 class="mt-4 text-lg font-semibold">Your Cart is Empty!</h3>' +
                 '  <p class="mt-1 text-sm text-gray-600">It looks like you haven\'t added any items yet.</p>' +
-                '  <a href="{{ website_base }}products/" class="mt-6 inline-flex items-center justify-center px-5 py-3 rounded-md bg-black text-white hover:bg-gray-900">Browse Products</a>' +
+                '  <a href="{{ website_base }}shop/" class="mt-6 inline-flex items-center justify-center px-5 py-3 rounded-md bg-black text-white hover:bg-gray-900">Browse Products</a>' +
                 '</div>';
             footer.innerHTML = '';
         }

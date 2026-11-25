@@ -1,0 +1,56 @@
+{% extends "store/_shell.html" %}
+{% load static %}
+{% comment %}
+OneWooz Templates, the default app (marketplace.modules.storefront_designs.home):
+the designs in this store's library, then the ones that can be added to it.
+{% endcomment %}
+{% block title %}{{ app.name }} · {{ site.name }}{% endblock %}
+{% block crumb %}{{ app.name }}{% endblock %}
+
+{% block main %}
+<link rel="stylesheet" href="{% static 'css/design-mock.css' %}">
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">OneWooz Apps</p>
+    <h1 class="app-head__title pal-mt-4">{{ app.name }}</h1>
+    <p class="app-head__lead">Choose how {{ site.name }} looks. Your products, pages, SEO and settings carry over, and you can switch back any time.</p>
+  </div>
+  <div class="app-head__actions">
+    <a class="pal-btn pal-btn--ghost" href="{{ storefront_url }}" target="_blank" rel="noopener">View storefront &#8599;</a>
+  </div></div>
+
+  <section class="app-block" aria-labelledby="dz-mine">
+    <div class="app-block__head"><h2 class="app-block__title" id="dz-mine">Your designs</h2></div>
+    {% include "store/_design_cards.html" with design_from="templates" %}
+  </section>
+
+  {% if more_designs %}
+  <section class="app-block" aria-labelledby="dz-more">
+    <div class="app-block__head"><h2 class="app-block__title" id="dz-more">More designs</h2></div>
+    <div class="dz-grid">
+      {% for d in more_designs %}
+      <article class="dz-card">
+        <a class="dz-card__stage" href="{% url 'store:editor_preview' site.id %}?theme={{ d.key }}" target="_blank" rel="noopener" aria-label="Preview {{ d.name }} with your content">
+          <span class="dz-card__shot">{% if d.thumbnail_url %}<img src="{{ d.thumbnail_url }}" alt="{{ d.name }} preview" loading="lazy">{% else %}{% include "marketplace/surface/_design_mock.html" with look=d.key name=d.name %}{% endif %}</span>
+        </a>
+        <div class="dz-card__body">
+          <div class="dz-card__row">
+            <h3 class="dz-card__name">{{ d.name }}</h3>
+            <span class="dz-card__price">{% if d.is_priced %}<b>&#8377;{{ d.price|floatformat:'-2' }}</b> + GST {% if d.is_yearly %}/ year{% else %}one-time{% endif %}{% else %}Included{% endif %}</span>
+          </div>
+          {% if d.description %}<p class="dz-card__text">{{ d.description|striptags }}</p>{% endif %}
+          {% if d.lapsed %}<p class="dz-card__note dz-card__note--warn">Your yearly licence has expired. Buy it again to use it.</p>{% endif %}
+        </div>
+        <div class="dz-card__foot">
+          <a class="dz-card__link" href="{% url 'store:editor_preview' site.id %}?theme={{ d.key }}" target="_blank" rel="noopener">Preview &#8599;</a>
+          <a class="pal-btn pal-btn--ghost pal-btn--sm" href="{{ d.add_url }}">{% if d.is_priced %}Buy this design{% else %}Add to library{% endif %}</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+<script nonce="{{ csp_nonce }}" src="{% static 'js/app/design-picker.js' %}"></script>
+{% if design_checkout %}<script nonce="{{ csp_nonce }}" src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>{% endif %}
+{% endblock %}

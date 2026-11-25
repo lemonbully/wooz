@@ -1,0 +1,12 @@
+{% extends "marketplace/surface/base.html" %}
+
+{% block content %}
+<section class="pal-section pal-blueprint">
+  <div class="pal-container mk-center">
+    <div class="pal-marker"><span class="pal-marker__num">400</span><span>Sign-in link</span></div>
+    <h1 class="pal-pagehead__title">That sign-in link didn't work.</h1>
+    <p class="pal-lead mk-intro">Sign-in links work once, for one minute, in the browser that asked for them.</p>
+    <div class="pal-btn-row mk-intro"><a class="pal-btn" href="{{ connect_url }}">Sign in again <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a></div>
+  </div>
+</section>
+{% endblock %}

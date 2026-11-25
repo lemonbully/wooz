@@ -1,0 +1,24 @@
+{% extends "community/_base.html" %}
+
+{% block ask_main %}
+<section class="ask-pagehead">
+  <div class="pal-container">
+    <p class="ask-eyebrow"><a href="{% url 'ask:topics' %}">Topics</a> / {{ room.name }}</p>
+    <h1 class="ask-pagehead__title">{{ room.name }}</h1>
+    {% if room.description %}<p class="ask-pagehead__lead">{{ room.description }}</p>{% endif %}
+    <a href="{% url 'ask:ask_home' %}#ask-q" class="pal-btn ask-pagehead__cta">Ask a question <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+  </div>
+</section>
+
+<section class="ask-body">
+  <div class="pal-container ask-layout">
+    <div class="ask-main">
+      <h2 class="sr-only">{{ room.name }} questions</h2>
+      {% with base_url=room.get_absolute_url %}
+        {% include "community/_feed.html" %}
+      {% endwith %}
+    </div>
+    {% include "community/_sidebar.html" %}
+  </div>
+</section>
+{% endblock %}

@@ -476,7 +476,7 @@ posts the billing address separately (billing_address).
           <p class="my-3 text-sm text-red-600 hidden" data-checkout-error></p>
 
           <div id="order-cta-row" class="gap-4 sm:flex sm:items-center my-2" data-cta-section>
-            <a href="{{ website_base }}products/" class="w-full text-center rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100">Return to Shopping</a>
+            <a href="{{ website_base }}shop/" class="w-full text-center rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100">Return to Shopping</a>
             <button type="button" id="place-order" data-place
                     {% if not gateway_ready and not cod_enabled or stock_message %}disabled{% endif %}
                     {% if not gateway_ready and not cod_enabled %}data-payments-off{% endif %}

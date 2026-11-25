@@ -1,0 +1,1 @@
+{% autoescape on %}<div class="ow-wrap">{% if w.heading %}<h3 class="ow-h">{{ w.heading }}</h3>{% endif %}{% for q, a in pairs %}<details class="ow-acc"><summary>{{ q }}</summary><div class="ow-acc__body">{{ a|linebreaksbr }}</div></details>{% endfor %}</div>{% endautoescape %}

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Article | oakline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+<main class="container">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><a href="blogs.html">Journal</a><span class="sep">/</span><span data-crumb></span></nav>
+  <header style="max-width:860px;margin:10px auto 0;text-align:center">
+    <span class="badge badge--popular" data-tag></span>
+    <h1 class="mega" style="margin:16px 0" data-title></h1>
+    <div class="author" style="justify-content:center"><img src="" data-author alt=""><div style="text-align:left"><b>Meera Iyer</b><div class="small muted" data-meta></div></div></div>
+  </header>
+  <div class="article-hero"><img src="" data-hero alt=""></div>
+
+  <div class="article-layout">
+    <aside class="toc"><p class="eyebrow" style="margin-bottom:10px">In this article</p><a href="#s1">Start with the room</a><a href="#s2">The five pieces</a><a href="#s3">Mix materials</a><a href="#s4">Buy slowly</a></aside>
+    <article class="prose">
+      <p>A good room is not about owning more furniture. It is about a few pieces that work so well together that the room feels finished, calm and easy to live in.</p>
+      <h2 id="s1">Start with the room</h2>
+      <p>Measure first, then decide how the room will be used. A reading corner, a dining nook and a family sofa each ask for different proportions.</p>
+      <blockquote>“Buy fewer pieces, but buy the ones you will keep.”</blockquote>
+      <h2 id="s2">The five pieces</h2>
+      <ul><li>A sofa deep enough to nap on</li><li>A solid wood table that seats everyone</li><li>One lounge chair with a lamp beside it</li><li>Open shelving for books and ceramics</li><li>A rug that grounds the room</li></ul>
+      <img src="" data-inline alt="">
+      <h2 id="s3">Mix materials</h2>
+      <p>Pair warm wood with linen and one metal finish. Repeat each material at least twice so the room feels considered rather than collected.</p>
+      <h2 id="s4">Buy slowly</h2>
+      <p>Live with the room for a month before adding more. The gaps usually tell you what is missing.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:30px"><span class="tag">Interior</span><span class="tag">Basics</span><span class="tag">Wood</span></div>
+    </article>
+    <aside class="aside-r">
+      <div style="position:sticky;top:100px">
+        <p class="eyebrow" style="margin-bottom:12px">Shop the article</p>
+        <div style="display:grid;gap:14px" data-shop></div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="section" style="padding-bottom:0">
+    <div class="sec-head"><h2 class="h2">Keep reading</h2><a href="blogs.html" class="btn btn--outline btn--sm">All articles</a></div>
+    <div class="grid grid--3" data-more></div>
+  </section>
+</main>
+<div data-footer></div>
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, $ = T3.$;
+  const b = D.blogs.find(x => x.slug === T3.qs('b')) || D.blogs[0];
+  document.title = `${b.title} | oakline`;
+  $('[data-crumb]').textContent = b.title; $('[data-tag]').textContent = b.tag; $('[data-title]').textContent = b.title;
+  $('[data-meta]').textContent = `${b.date} · ${b.read}`;
+  $('[data-author]').src = D.U(D.IMG.p5, 100, 100);
+  $('[data-hero]').src = b.img.replace('w=1200', 'w=2000').replace('h=900', 'h=860');
+  $('[data-inline]').src = D.U(D.IMG.living5, 1400, 800);
+  $('[data-shop]').innerHTML = D.products.slice(0, 3).map(p => `<a class="search-hit" href="product.html?p=${p.id}"><img src="${p.img[0]}" alt=""><span><b>${p.name}</b>${T3.priceHTML(p)}</span></a>`).join('');
+  $('[data-more]').innerHTML = D.blogs.filter(x => x.slug !== b.slug).slice(0, 3).map(x => `<a class="blog-card reveal" href="blog.html?b=${x.slug}"><div class="blog-card__media"><img src="${x.img}" alt="" loading="lazy"><span class="badge badge--light">${x.tag}</span></div><div class="blog-card__meta">${x.date}<i></i>${x.read}</div><h3>${x.title}</h3><p>${x.excerpt}</p></a>`).join('');
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+{% load static %}{% comment %}
+Browser push notifications: everything the owner sees to turn them on.
+
+Rendered inside the top bar (ud/_topbar_actions.html) on every dashboard page,
+only when push is available (``push`` from ud.context_processors.dashboard_nav:
+never while an admin is impersonating). js/app/push.js drives it:
+
+* ``#ow-push``  configuration (VAPID key, endpoints, CSRF, whether this login
+  session is already subscribed).
+* The pulsing "Turn on alerts" pill in the top bar, shown until this browser
+  is subscribed (or "Alerts blocked" / "Get alerts on iPhone").
+* ``data-push-layer`` overlays, moved to <body> by the script so the sticky top
+  bar never clips them:
+    ask      the explainer popup (opens by itself on the first visit) with a
+             replica of the browser's permission box showing which button to
+             click, then working / done (with a test button) / dismissed / error;
+    coach    the full-screen arrow pointing at where the browser's real box
+             appears, while it is open;
+    blocked  how to unblock, written for the browser in use;
+    ios      Add to Home Screen steps (iPhone/iPad allow push only there).
+
+Elements carrying ``data-push-when="ask blocked …"`` are shown only in those
+states (the bell strip and the Profile card use this too).
+{% endcomment %}{% if push.enabled %}
+<div id="ow-push" hidden
+     data-key="{{ push.key }}"
+     data-sw="{% url 'accounts:service_worker' %}"
+     data-subscribe="{% url 'accounts:push_subscribe' %}"
+     data-unsubscribe="{% url 'accounts:push_unsubscribe' %}"
+     data-test="{% url 'accounts:push_test' %}"
+     data-csrf="{{ csrf_token }}"
+     data-user="{{ request.user.pk }}"
+     data-bound="{% if push.bound %}1{% else %}0{% endif %}"></div>
+
+<button type="button" class="ow-push-pill" data-push-pill data-push-when="ask blocked ios" hidden>
+  <span class="ow-push-pill__ico" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+  </span>
+  <span class="ow-push-pill__label" data-push-pill-label>Turn on alerts</span>
+</button>
+
+{# ── 1. The explainer popup ─────────────────────────────────────── #}
+<div class="ow-push-layer ow-push-modal" data-push-layer="ask" data-step="ask" role="dialog" aria-modal="true" aria-labelledby="ow-push-ask-title" hidden>
+  <div class="ow-push-modal__backdrop" data-push-later></div>
+  <div class="ow-push-modal__card">
+    <button type="button" class="ow-push-x" data-push-later aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+
+    <div class="ow-push-step ow-push-step--ask" data-push-step="ask">
+      <div class="ow-push-hero">
+        <span class="ow-push-hero__bell" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span class="ow-push-hero__dot"></span>
+        </span>
+        <span class="ow-push-chip">Recommended · takes 2 seconds</span>
+      </div>
+      <h2 class="ow-push-title" id="ow-push-ask-title">Never miss a new order</h2>
+      <p class="ow-push-lead">Get an instant alert on this <span data-push-device>computer</span> the moment something needs you, even when OneWooz is closed.</p>
+      <ul class="ow-push-list">
+        <li>New orders and payments</li>
+        <li>Customer requests, cancellations and returns</li>
+        <li>Low stock, shipment updates and messages from OneWooz</li>
+      </ul>
+
+      <div class="ow-push-how">
+        <p class="ow-push-how__k"><span class="ow-push-how__num">1</span> <span>Click the purple button below.</span></p>
+        <p class="ow-push-how__k"><span class="ow-push-how__num">2</span> <span>Your browser shows a small box like this one. Click <mark class="ow-push-mark">Allow</mark></span></p>
+        <div class="ow-push-mock" aria-hidden="true">
+          <div class="ow-push-mock__site">
+            <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span><b data-push-host>app.onewooz.com</b> wants to</span>
+          </div>
+          <div class="ow-push-mock__row">
+            <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            Show notifications
+          </div>
+          <div class="ow-push-mock__btns">
+            <span class="ow-push-mock__point">Click Allow <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            <span class="ow-push-mock__btn ow-push-mock__btn--no">Block</span>
+            <span class="ow-push-mock__btn ow-push-mock__btn--yes">Allow</span>
+          </div>
+        </div>
+        <p class="ow-push-warn"><strong>Please don’t click Block.</strong> If you do, the browser won’t let us ask again and you’ll have to change it in its settings.</p>
+      </div>
+
+      <button type="button" class="ow-push-cta" data-push-enable>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        Turn on notifications
+      </button>
+      <button type="button" class="ow-push-later" data-push-later>Maybe later</button>
+      <p class="ow-push-fine">Only for your account. You can switch them off any time from Profile.</p>
+    </div>
+
+    <div class="ow-push-step ow-push-step--center" data-push-step="working" hidden>
+      <span class="ow-push-spin" aria-hidden="true"></span>
+      <h2 class="ow-push-title">Turning on notifications…</h2>
+      <p class="ow-push-lead">Connecting this browser to your account.</p>
+    </div>
+
+    <div class="ow-push-step ow-push-step--center" data-push-step="done" hidden>
+      <span class="ow-push-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+      <h2 class="ow-push-title">You’re all set</h2>
+      <p class="ow-push-lead">Notifications are on for this browser. We’ll alert you the moment an order or update comes in, even when OneWooz is closed.</p>
+      <button type="button" class="ow-push-cta" data-push-test>Send me a test notification</button>
+      <button type="button" class="ow-push-later" data-push-close>Done</button>
+    </div>
+
+    <div class="ow-push-step ow-push-step--center" data-push-step="dismissed" hidden>
+      <span class="ow-push-hero__bell ow-push-hero__bell--still" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      </span>
+      <h2 class="ow-push-title">The box closed before you chose</h2>
+      <p class="ow-push-lead">No problem. Click below and choose <mark class="ow-push-mark">Allow</mark> this time.</p>
+      <button type="button" class="ow-push-cta" data-push-enable>Show the box again</button>
+      <button type="button" class="ow-push-later" data-push-later>Maybe later</button>
+    </div>
+
+    <div class="ow-push-step ow-push-step--center" data-push-step="error" hidden>
+      <h2 class="ow-push-title">Couldn’t finish turning them on</h2>
+      <p class="ow-push-lead" data-push-error>Your browser allowed notifications, but connecting it to OneWooz failed. Check your connection and try again.</p>
+      <button type="button" class="ow-push-cta" data-push-enable>Try again</button>
+      <button type="button" class="ow-push-later" data-push-close>Close</button>
+    </div>
+  </div>
+</div>
+
+{# ── 2. Arrow to the browser's real permission box ─────────────── #}
+<div class="ow-push-layer ow-push-coach" data-push-layer="coach" data-pos="topleft" aria-live="assertive" hidden>
+  <div class="ow-push-coach__arrow" aria-hidden="true">
+    <svg viewBox="0 0 64 64"><path d="M52 52 14 14M14 14v24M14 14h24"/></svg>
+  </div>
+  <div class="ow-push-coach__card">
+    <p class="ow-push-coach__k">Last step</p>
+    <p class="ow-push-coach__t" data-push-coach-text>Click <mark class="ow-push-mark">Allow</mark> in the box at the top left of your browser</p>
+    <div class="ow-push-mock ow-push-mock--sm" aria-hidden="true">
+      <div class="ow-push-mock__row">
+        <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        Show notifications
+      </div>
+      <div class="ow-push-mock__btns">
+        <span class="ow-push-mock__btn ow-push-mock__btn--no">Block</span>
+        <span class="ow-push-mock__btn ow-push-mock__btn--yes">Allow</span>
+      </div>
+    </div>
+    <p class="ow-push-coach__hint" data-push-coach-hint hidden>
+      Don’t see the box? Look at the <strong>right end of the address bar</strong> for a small bell icon with a line through it.
+      Click it, then choose <strong>Allow</strong>.
+    </p>
+  </div>
+</div>
+
+{# ── 3. Blocked: how to unblock, per browser ──────────────────────── #}
+<div class="ow-push-layer ow-push-modal" data-push-layer="blocked" role="dialog" aria-modal="true" aria-labelledby="ow-push-blocked-title" hidden>
+  <div class="ow-push-modal__backdrop" data-push-close></div>
+  <div class="ow-push-modal__card">
+    <button type="button" class="ow-push-x" data-push-close aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="ow-push-step">
+      <div class="ow-push-hero">
+        <span class="ow-push-hero__bell ow-push-hero__bell--off" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M3 3l18 18"/></svg>
+        </span>
+        <span class="ow-push-chip ow-push-chip--warn">Blocked in this browser</span>
+      </div>
+      <h2 class="ow-push-title" id="ow-push-blocked-title">Let’s unblock notifications</h2>
+      <p class="ow-push-lead">This browser is set to block OneWooz notifications, so we can’t ask again. Changing it takes about 10 seconds:</p>
+
+      <ol class="ow-push-steps" data-push-browser="chrome">
+        <li>Click the small icon at the <strong>left end of the address bar</strong> (it looks like a lock, an “i” or two sliders).</li>
+        <li>Find <strong>Notifications</strong> and switch it to <mark class="ow-push-mark">Allow</mark>.</li>
+        <li>Click the button below to reload this page.</li>
+      </ol>
+      <ol class="ow-push-steps" data-push-browser="android" hidden>
+        <li>Tap the small icon at the <strong>left of the address bar</strong>, then <strong>Permissions</strong>.</li>
+        <li>Tap <strong>Notifications</strong> and choose <mark class="ow-push-mark">Allow</mark>.</li>
+        <li>Tap the button below to reload this page.</li>
+      </ol>
+      <ol class="ow-push-steps" data-push-browser="firefox" hidden>
+        <li>Click the small icon at the <strong>left end of the address bar</strong>.</li>
+        <li>Next to <strong>Send notifications</strong>, click the <strong>×</strong> to clear “Blocked”.</li>
+        <li>Reload with the button below, then click <strong>Turn on alerts</strong> and choose <mark class="ow-push-mark">Allow</mark>.</li>
+      </ol>
+      <ol class="ow-push-steps" data-push-browser="safari" hidden>
+        <li>In the menu bar, open <strong>Safari › Settings</strong> and go to the <strong>Websites</strong> tab.</li>
+        <li>Choose <strong>Notifications</strong> on the left, find this site and set it to <mark class="ow-push-mark">Allow</mark>.</li>
+        <li>Click the button below to reload this page.</li>
+      </ol>
+
+      <button type="button" class="ow-push-cta" data-push-reload>I’ve allowed it, reload the page</button>
+      <button type="button" class="ow-push-later" data-push-close>Close</button>
+    </div>
+  </div>
+</div>
+
+{# ── 4. iPhone / iPad: Add to Home Screen first ───────────────────── #}
+<div class="ow-push-layer ow-push-modal" data-push-layer="ios" role="dialog" aria-modal="true" aria-labelledby="ow-push-ios-title" hidden>
+  <div class="ow-push-modal__backdrop" data-push-close></div>
+  <div class="ow-push-modal__card">
+    <button type="button" class="ow-push-x" data-push-close aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="ow-push-step">
+      <div class="ow-push-hero">
+        <span class="ow-push-hero__bell" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span class="ow-push-hero__dot"></span>
+        </span>
+        <span class="ow-push-chip">One-time setup</span>
+      </div>
+      <h2 class="ow-push-title" id="ow-push-ios-title">Get order alerts on your iPhone</h2>
+      <p class="ow-push-lead">Apple only allows alerts from websites added to your Home Screen. It takes three taps:</p>
+      <ol class="ow-push-steps">
+        <li>Tap the <strong>Share</strong> button
+          <svg class="ow-push-inline" viewBox="0 0 24 24" aria-label="Share"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+          in Safari.</li>
+        <li>Scroll down, tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+        <li>Open <strong>OneWooz</strong> from your Home Screen and tap <mark class="ow-push-mark">Turn on alerts</mark>.</li>
+      </ol>
+      <button type="button" class="ow-push-cta" data-push-close>Got it</button>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/app/push.js' %}" defer></script>
+{% endif %}

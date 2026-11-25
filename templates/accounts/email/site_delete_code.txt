@@ -2,12 +2,14 @@ Confirm deleting your OneWooz store
 
 {{ code }}
 
-Use this code to confirm permanently deleting "{{ site_name }}".
+Use this code to confirm deleting "{{ site_name }}".
 It expires in {{ minutes }} minutes and works once.
 
-Deleting a store removes it from your dashboard and takes its storefront
-offline. If you didn't ask to delete this store, do NOT share this code 
-ignore this email and the store stays exactly as it is.
+Deleting a store takes it off your dashboard and its storefront offline.
+Its data stays on our servers for {{ retention_days }} days; to get it back
+within that time, contact OneWooz support. If you didn't ask to delete this
+store, do NOT share this code. Ignore this email and the store stays exactly
+as it is.
 
 We will never ask you for this code by phone, chat or email. If someone does,
 they are not from OneWooz.

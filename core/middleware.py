@@ -34,6 +34,7 @@ _URLCONF_FOR_SURFACE = {
     host_utils.Surface.ADMIN: "onewooz.urls.admin",
     host_utils.Surface.STOREFRONT: "onewooz.urls.storefront",
     host_utils.Surface.REFERRAL: "onewooz.urls.referral",
+    host_utils.Surface.MARKETPLACE: "onewooz.urls.marketplace",
 }
 
 
@@ -101,13 +102,46 @@ class EdgeDeliveryMiddleware:
             links.append(f"<{origin}>; rel=preconnect; crossorigin")
         self.preconnect = ", ".join(links)
 
+    # Bodies that may carry stored media URLs (pages, JSON feeds, sitemaps,
+    # llms.txt). Rewritten S3 → CDN so no page ever loads media off the bucket.
+    _CDN_REWRITE_TYPES = ("text/html", "application/json", "application/xml", "text/xml", "text/plain", "application/ld+json")
+
     def __call__(self, request):
         response = self.get_response(request)
         self._guard_shared_cache(response)
+        self._rehost_s3_urls(response)
         if self.preconnect and response.get("Content-Type", "").startswith("text/html"):
             existing = response.get("Link", "")
             response["Link"] = f"{existing}, {self.preconnect}" if existing else self.preconnect
         return response
+
+    def _rehost_s3_urls(self, response):
+        """Swap any S3 URL of our buckets in the body for the CDN host.
+
+        Storage already emits CDN URLs; this catches absolute S3 URLs frozen in
+        stored data (editor uploads saved before the CDN existed, pasted blog
+        HTML). A cheap substring test gates the regex, so pages without such a
+        URL pay one ``in`` scan.
+        """
+        from . import cdn
+
+        if getattr(response, "streaming", False) or response.has_header("Content-Encoding"):
+            return
+        if not response.get("Content-Type", "").startswith(self._CDN_REWRITE_TYPES):
+            return
+        body = response.content
+        if b"amazonaws.com" not in body or not cdn.enabled():
+            return
+        charset = getattr(response, "charset", None) or "utf-8"
+        try:
+            text = body.decode(charset)
+        except (UnicodeDecodeError, LookupError):
+            return
+        new = cdn.rewrite_text(text)
+        if new != text:
+            response.content = new.encode(charset)
+            if response.has_header("Content-Length"):
+                response["Content-Length"] = str(len(response.content))
 
     @staticmethod
     def _guard_shared_cache(response):
@@ -150,6 +184,56 @@ class HealthProbeMiddleware:
         if request.path in self.PATHS:
             return HttpResponse("ok", content_type="text/plain")
         return self.get_response(request)
+
+
+class CanonicalPlatformHostMiddleware:
+    """One canonical origin for each platform host, with a clean Location.
+
+    For onewooz.com, www.onewooz.com, app and admin (never storefronts or custom
+    domains) a single 301 to ``https://<host><path>`` when the request:
+
+    * arrived on ``www.`` (served as the bare marketing host),
+    * named an explicit default port (``onewooz.com:443``), which would
+      otherwise be served with a 200 and leak the port into canonical URLs, or
+    * came in over plain HTTP on the load balancer's public :80 listener.
+
+    The load balancer's own redirect actions always write ``:443`` into the
+    Location header; doing the redirect here gives ``https://onewooz.com/``
+    instead (see deploy/aws/ha/05-canonical-redirects.ps1, which hands these
+    requests to the app). The HTTP check keys on ``X-Forwarded-Port: 80`` so a
+    request relayed internally over HTTP (Caddy to the ALB's :8080 listener) is
+    never bounced. Off in DEBUG, where loopback hosts route by path.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if not settings.DEBUG:
+            target = self._redirect_target(request)
+            if target:
+                from django.http import HttpResponsePermanentRedirect
+
+                return HttpResponsePermanentRedirect(target)
+        return self.get_response(request)
+
+    @staticmethod
+    def _redirect_target(request) -> str | None:
+        meta = request.META
+        raw = (meta.get("HTTP_X_FORWARDED_HOST") or meta.get("HTTP_HOST") or "").split(",")[0]
+        raw = raw.strip().lower()
+        hostname, _, port = raw.partition(":")
+        if hostname not in settings.PLATFORM_HOSTS:
+            return None
+        www = f"www.{settings.MARKETING_HOST}"
+        target_host = settings.MARKETING_HOST if hostname == www else hostname
+        plain_http = (
+            meta.get("HTTP_X_FORWARDED_PROTO", "").split(",")[0].strip() == "http"
+            and meta.get("HTTP_X_FORWARDED_PORT", "").split(",")[0].strip() == "80"
+        )
+        if target_host == hostname and port not in ("80", "443") and not plain_http:
+            return None
+        return f"https://{target_host}{request.get_full_path()}"
 
 
 class CaddyAskMiddleware:
@@ -216,7 +300,7 @@ class CaddyAskMiddleware:
     def _is_platform(domain):
         names = {
             getattr(settings, name, "")
-            for name in ("MARKETING_HOST", "APP_HOST", "ADMIN_HOST")
+            for name in ("MARKETING_HOST", "APP_HOST", "ADMIN_HOST", "MARKETPLACE_HOST")
         }
         names.discard("")
         return domain in names
@@ -548,6 +632,43 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             connect_src.extend(getattr(settings, "CSP_PAYMENT_CONNECT_EXTRA", ()))
             form_action.extend(getattr(settings, "CSP_PAYMENT_FORM_EXTRA", ()))
 
+        # Google reCAPTCHA on the contact form (Edit Content > Contact): the
+        # widget's script and frames, admitted only on a storefront whose owner
+        # set both keys (storefront.recaptcha). Other stores stay unchanged.
+        if is_storefront and site is not None:
+            from storefront import recaptcha
+
+            try:
+                captcha_on = recaptcha.enabled(site)
+            except Exception:  # an undecryptable secret must not break the page
+                captcha_on = False
+            if captcha_on:
+                for origin in recaptcha.CSP_SCRIPT:
+                    if origin not in script_src:
+                        script_src.append(origin)
+                for origin in recaptcha.CSP_FRAME:
+                    if origin not in frame_src:
+                        frame_src.append(origin)
+
+        # Per-response additions set while rendering (marketplace tracking-pixel
+        # widgets admit only origins staff approved on that app, and only on
+        # stores that render it). Storefront surface only; https origins only.
+        extra = getattr(request, "csp_extra", None)
+        if is_storefront and isinstance(extra, dict):
+            for directive, target in (("script-src", script_src), ("connect-src", connect_src)):
+                for origin in extra.get(directive, ()) or ():
+                    if isinstance(origin, str) and origin.startswith("https://") and " " not in origin and ";" not in origin:
+                        if origin not in target:
+                            target.append(origin)
+        # A marketplace app page that embeds a partner page (sandboxed iframe)
+        # admits that one https origin for that one dashboard response.
+        frame_extra = getattr(request, "csp_frame_extra", None)
+        if surface is host_utils.Surface.APP and isinstance(frame_extra, (list, tuple)):
+            for origin in frame_extra:
+                if isinstance(origin, str) and origin.startswith("https://") and " " not in origin and ";" not in origin:
+                    if origin not in frame_src:
+                        frame_src.append(origin)
+
         directives = {
             "default-src": settings.CSP_DEFAULT_SRC,
             "script-src": tuple(script_src),
@@ -562,4 +683,9 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             "form-action": tuple(form_action),
             "object-src": settings.CSP_OBJECT_SRC,
         }
+        # The owner dashboard registers its push service worker (/sw.js).
+        # Other surfaces keep the implicit script-src fallback unchanged.
+        # BROWSER PUSH: DISABLED (commented out, not removed). Uncomment to re-enable.
+        # if surface is host_utils.Surface.APP:
+        #     directives["worker-src"] = tuple(getattr(settings, "CSP_WORKER_SRC", ("'self'",)))
         return "; ".join(f"{name} {' '.join(values)}" for name, values in directives.items())

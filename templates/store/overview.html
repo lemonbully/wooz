@@ -1,4 +1,5 @@
 {% extends "store/_shell.html" %}
+{% load marketplace_points %}
 {% block title %}{{ site.name }} · Overview{% endblock %}
 {% block crumb %}Overview{% endblock %}
 
@@ -92,4 +93,5 @@
   </div>
 
 </div>
+{% app_point "overview_card" %}
 {% endblock %}

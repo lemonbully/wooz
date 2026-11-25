@@ -33,8 +33,10 @@ urlpatterns = [
     # ``<page:slug>`` route below never matches them; declared here for clarity.
     path("robots.txt", views.robots_txt, name="robots_txt"),
     path("sitemap.xml", views.sitemap_xml, name="sitemap_xml"),
+    path("llms.txt", views.llms_txt, name="llms_txt"),
     path("platform/", views.platform, name="platform"),
     path("pricing/", views.pricing, name="pricing"),
+    path("demo/", views.demo, name="demo"),
     path("solutions/", views.solutions, name="solutions"),
     path("customers/", views.customers, name="customers"),
     path("about/", views.about, name="about"),
@@ -54,6 +56,10 @@ urlpatterns = [
         views.core_child,
         name="core_child",
     ),
+    # Old call-to-action paths still linked from pasted content: 301 to pricing,
+    # where a plan is chosen and the account is created (sign-up is post-purchase).
+    path("signup/", views.legacy_redirect, name="legacy_signup"),
+    path("sign-up/", views.legacy_redirect, name="legacy_sign_up"),
     # Admin-authored legal policies (listed in the footer under "Legal").
     path("legal/<slug:slug>/", views.policy, name="policy"),
     # Restricted converter (only the two legal pages)  keep last.

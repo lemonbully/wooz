@@ -75,6 +75,7 @@ def _editor_context(request, site):
     members = _member_rows(site)
     used = len(members)
     context = store_context(request, site, "")
+    context["guide_key"] = "staff"  # its Business Hub page guide
     context.update(
         {
             "members": members,

@@ -18,6 +18,7 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import TruncDate
@@ -301,11 +302,26 @@ def _campaign_recipient_rows(site, campaign):
     Aggregated across every delivery (all drip days): opened if any open was
     recorded, clicked / unsubscribed if ever, sent-at = the latest send.
     """
+    return _recipient_rows(site, campaign=campaign)
+
+
+def _recipient_rows(site, campaign=None):
+    """Engagement rows for one campaign, or for every campaign at once.
+
+    With ``campaign`` the rows are one per recipient email. Without it they
+    are one per (campaign, recipient email) pair, each carrying
+    ``campaign_id``, so "never opened" means never opened *that* campaign.
+    Only narrow columns are grouped and sorted (no wide rows reach the sort).
+    """
+    qs = EmailDelivery.objects.for_site(site).exclude(recipient_email="")
+    group = ["recipient_email"]
+    if campaign is not None:
+        qs = qs.filter(campaign=campaign)
+    else:
+        qs = qs.filter(campaign__isnull=False)
+        group = ["campaign_id", "recipient_email"]
     agg = (
-        EmailDelivery.objects.for_site(site)
-        .filter(campaign=campaign)
-        .exclude(recipient_email="")
-        .values("recipient_email")
+        qs.values(*group)
         .annotate(
             name=Max("recipient_name"),
             opens=Sum("open_count"),
@@ -321,6 +337,7 @@ def _campaign_recipient_rows(site, campaign):
         email = r["recipient_email"]
         rows.append(
             {
+                "campaign_id": r.get("campaign_id"),
                 "name": (r["name"] or "").strip() or email.split("@")[0],
                 "email": email,
                 "sent_at": r["last_sent"],
@@ -338,7 +355,152 @@ def _filter_segment(rows, seg):
         return [r for r in rows if not r["opened"]]
     if seg == "not_clicked":
         return [r for r in rows if r["opened"] and not r["clicked"]]
+    if seg == "never_clicked":
+        return [r for r in rows if not r["clicked"]]
+    if seg == "opened":
+        return [r for r in rows if r["opened"]]
+    if seg == "clicked":
+        return [r for r in rows if r["clicked"]]
+    if seg == "unsubscribed":
+        return [r for r in rows if r["unsubscribed"]]
     return rows
+
+
+# The lists the Export card (Analytics and Audiences pages) can download, in
+# the order its dropdown shows them. A superset of SEGMENTS.
+EXPORT_SEGMENTS = {
+    "non_openers": "Never opened the email",
+    "never_clicked": "Did not click the button (CTA)",
+    "not_clicked": "Opened, but did not click",
+    "opened": "Opened the email",
+    "clicked": "Clicked the button (CTA)",
+    "unsubscribed": "Unsubscribed",
+    "all": "All recipients",
+}
+
+
+def _export_campaigns(site) -> list:
+    """Campaigns that have sent to someone, newest first, for the Export card.
+
+    Campaign rows carry JSON design columns, so only primary keys are sorted
+    (core.queries.sorted_rows), never the wide rows.
+    """
+    from core.queries import sorted_rows
+
+    sent_ids = set(
+        EmailDelivery.objects.for_site(site)
+        .filter(campaign__isnull=False)
+        .values_list("campaign_id", flat=True)
+        .distinct()
+    )
+    if not sent_ids:
+        return []
+    return list(
+        sorted_rows(
+            Campaign.objects.for_site(site)
+            .filter(is_deleted=False, pk__in=sent_ids)
+            .order_by("-created_at"),
+        )
+    )
+
+
+def _export_card_context(site) -> dict:
+    return {
+        "export_campaigns": _export_campaigns(site),
+        "export_segments": [{"key": k, "label": v} for k, v in EXPORT_SEGMENTS.items()],
+    }
+
+
+@login_required
+def email_engagement_export(request, site_id):
+    """Download recipients by engagement as .xlsx, for one campaign or all.
+
+    ``?campaign=<uuid>|all`` picks the campaign(s); ``?segment=`` one of
+    :data:`EXPORT_SEGMENTS` (who never opened, who never clicked the CTA, ...).
+    For all campaigns every row names its campaign: one row per campaign and
+    recipient.
+    """
+    site = get_owned_site(request, site_id)
+    seg = request.GET.get("segment") or "non_openers"
+    if seg not in EXPORT_SEGMENTS:
+        seg = "non_openers"
+    raw = (request.GET.get("campaign") or "all").strip()
+    campaign = None
+    if raw != "all":
+        try:
+            campaign = (
+                Campaign.objects.for_site(site).filter(is_deleted=False, pk=raw).first()
+            )
+        except (ValueError, ValidationError):  # not a valid UUID
+            campaign = None
+        if campaign is None:
+            messages.error(request, "That campaign could not be found.")
+            return redirect("store:email_analytics", site_id=site.id)
+
+    rows = _filter_segment(_recipient_rows(site, campaign=campaign), seg)
+    names = {}
+    if campaign is None:
+        ids = {r["campaign_id"] for r in rows if r["campaign_id"]}
+        names = dict(
+            Campaign.objects.for_site(site).filter(pk__in=ids).values_list("pk", "name")
+        )
+        rows.sort(key=lambda r: (names.get(r["campaign_id"], ""), r["email"]))
+
+    from commerce import xlsx
+
+    label = EXPORT_SEGMENTS[seg]
+    scope = campaign.name if campaign is not None else "All campaigns"
+    headers = ["Name", "Email", "Sent at", "Opens", "Opened", "Clicked", "Unsubscribed"]
+    widths = [26, 34, 20, 9, 10, 10, 14]
+    if campaign is None:
+        headers = ["Campaign"] + headers
+        widths = [30] + widths
+    last_col = len(headers) - 1
+
+    wb = xlsx.Workbook()
+    ws = wb.add_sheet("Recipients")
+    ws.write(0, 0, f"{scope}: {label}", xlsx.STYLE_TITLE)
+    ws.merge(0, 0, 0, last_col)
+    ws.write(
+        1, 0,
+        f"{len(rows)} row(s) · exported {timezone.localtime():%d %b %Y, %H:%M}",
+        xlsx.STYLE_SUBTITLE,
+    )
+    ws.merge(1, 0, 1, last_col)
+    header_row = 3
+    for i, h in enumerate(headers):
+        ws.write(header_row, i, h, xlsx.STYLE_HEADER_NUM if h == "Opens" else xlsx.STYLE_HEADER)
+    ws.freeze_row = header_row + 1
+    for i, w in enumerate(widths):
+        ws.set_column_width(i, w)
+
+    for i, r in enumerate(rows):
+        rr = header_row + 1 + i
+        c = 0
+        if campaign is None:
+            ws.write(rr, 0, names.get(r["campaign_id"], ""), xlsx.STYLE_CELL)
+            c = 1
+        ws.write(rr, c, r["name"], xlsx.STYLE_CELL)
+        ws.write(rr, c + 1, r["email"], xlsx.STYLE_CELL)
+        ws.write(
+            rr, c + 2,
+            (timezone.localtime(r["sent_at"]).strftime("%d %b %Y, %H:%M") if r["sent_at"] else ""),
+            xlsx.STYLE_CELL,
+        )
+        ws.write(rr, c + 3, r["opens"], xlsx.STYLE_CELL_INT)
+        ws.write(rr, c + 4, "Yes" if r["opened"] else "No", xlsx.STYLE_CELL_CENTER)
+        ws.write(rr, c + 5, "Yes" if r["clicked"] else "No", xlsx.STYLE_CELL_CENTER)
+        ws.write(rr, c + 6, "Yes" if r["unsubscribed"] else "No", xlsx.STYLE_CELL_CENTER)
+
+    resp = HttpResponse(
+        wb.to_bytes(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    safe_scope = "".join(ch for ch in scope if ch.isalnum() or ch in " -_").strip()[:40] or "campaign"
+    safe_label = "".join(ch for ch in label if ch.isalnum() or ch in " -_").strip()
+    resp["Content-Disposition"] = f'attachment; filename="{safe_scope} - {safe_label}.xlsx"'
+    resp["Cache-Control"] = "no-store"
+    return resp
 
 
 @login_required
@@ -602,6 +764,7 @@ def email_analytics(request, site_id):
             "days": days,
             "day_ranges": [7, 30, 90],
             "has_activity": recipients > 0,
+            **_export_card_context(site),
         }
     )
     return render(request, "store/email_analytics.html", context)
@@ -704,6 +867,7 @@ def _render_composer(request, site, campaign):
             "store_url": promo_design.store_base_url(site),
             "products": products,
             "product_mode": (campaign.product_mode if campaign else Campaign.ProductMode.MULTI),
+            "show_product_price": (campaign.show_product_price if campaign else True),
             "selected_product_ids": (
                 [str(x) for x in (campaign.product_ids or [])] if campaign else []
             ),
@@ -768,6 +932,7 @@ def _save_campaign(request, site, campaign):
     if mode not in Campaign.ProductMode.values:
         mode = Campaign.ProductMode.MULTI
     campaign.product_mode = mode
+    campaign.show_product_price = request.POST.get("show_product_price") == "1"
     try:
         raw_ids = json.loads(request.POST.get("product_ids") or "[]")
     except (ValueError, TypeError):
@@ -1003,6 +1168,7 @@ def email_audiences(request, site_id):
             "subscriber_count": _subscriber_count(site),
             "suppressions": Suppression.objects.for_site(site).order_by("-created_at")[:100],
             "suppression_count": Suppression.objects.for_site(site).count(),
+            **_export_card_context(site),
         }
     )
     return render(request, "store/email_audiences.html", context)
@@ -1137,7 +1303,11 @@ def email_audience_from_customers(request, site_id):
 @require_POST
 def email_audience_member_delete(request, site_id, list_id, member_id):
     site = get_owned_site(request, site_id)
-    AudienceMember.objects.for_site(site).filter(pk=member_id, audience_list_id=list_id).delete()
+    removed, _ = AudienceMember.objects.for_site(site).filter(pk=member_id, audience_list_id=list_id).delete()
+    if removed:
+        messages.success(request, "Recipient removed from the list.")
+    else:
+        messages.error(request, "That recipient was already removed.")
     return redirect("store:email_audience_detail", site_id=site.id, list_id=list_id)
 
 
@@ -1388,14 +1558,18 @@ def email_design_preview(request, site_id):
             raw_ids = []
         ids = [str(x) for x in raw_ids if isinstance(x, (str, int))] if isinstance(raw_ids, list) else []
         preheader = (request.POST.get("preheader") or "").strip()
+        show_price = request.POST.get("show_product_price") == "1"
     else:
         data = promo_design.defaults(site)
         mode = Campaign.ProductMode.MULTI
         ids = []
         preheader = ""
+        show_price = True
 
     limit = _product_limit(mode, promo_design.DESIGN_KEY)
-    products = promo_design.load_products(site, ids=ids[:limit], limit=limit, demo=True)
+    products = promo_design.load_products(
+        site, ids=ids[:limit], limit=limit, demo=True, show_price=show_price
+    )
     html = promo_design.render(
         site, data, products=products, preheader=preheader, absolute=False, demo=True
     )

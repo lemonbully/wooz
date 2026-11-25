@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Category | Lumo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+<main class="container">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">&gt;</span><a href="categories.html">Collections</a><span class="sep">&gt;</span><span data-crumb></span></nav>
+
+  <section class="page-banner" data-banner>
+    <img src="" alt="" data-banner-img>
+    <div class="page-banner__text">
+      <span class="badge badge--glass" data-banner-count></span>
+      <h1 class="mega" style="margin-top:12px" data-banner-title></h1>
+      <p data-banner-desc></p>
+    </div>
+  </section>
+
+  <div class="sec-head sec-head--center" style="margin:30px 0 0">
+    <div class="pill-tabs" data-other-cats></div>
+  </div>
+
+  <div data-collection></div>
+
+  <section class="section" style="padding-bottom:0">
+    <div class="sec-head sec-head--center"><h2 class="h2">You may also like</h2></div>
+    <div class="slider" data-slider>
+      <div class="slider__track" data-related style="--col:calc((100% - 4*16px)/5);--col-sm:62%"></div>
+      <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
+    </div>
+  </section>
+</main>
+<div data-footer></div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/collection.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$;
+  const c = D.categories.find(x => x.slug === T3.qs('c')) || D.categories[3];
+  document.title = `${c.name} | Lumo`;
+  $('[data-crumb]').textContent = c.name;
+  $('[data-banner-img]').src = D.U(c.img, 1800, 700);
+  $('[data-banner-title]').textContent = c.name;
+  $('[data-banner-desc]').textContent = c.desc + '. Designed in-house, made in small batches and finished by hand.';
+  $('[data-banner-count]').textContent = `${c.count} products`;
+  $('[data-other-cats]').innerHTML = D.categories.map(x => `<a href="category.html?c=${x.slug}" class="${x.slug === c.slug ? 'is-active' : ''}">${x.name}</a>`).join('');
+  let list = D.products.filter(p => p.cat === c.slug);
+  const fill = D.products.filter(p => p.cat !== c.slug);
+  list = list.concat(fill.slice(0, Math.max(0, 9 - list.length))); // fuller preview grid
+  T3Collection({ root: '[data-collection]', products: list, showCats: false });
+  $('[data-related]').innerHTML = fill.slice(8, 18).map(p => T3.card(p, { reveal: false })).join('');
+  document.querySelectorAll('[data-prev]').forEach(e => e.innerHTML = I.left);
+  document.querySelectorAll('[data-next]').forEach(e => e.innerHTML = I.right);
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

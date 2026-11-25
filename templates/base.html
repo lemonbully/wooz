@@ -42,6 +42,7 @@
   also force 'unsafe-eval' into the Content-Security-Policy.
   {% endcomment %}
   <link rel="stylesheet" href="{% static 'css/onewooz.css' %}">
+  <link rel="stylesheet" href="{% static 'css/onewooz-toast.css' %}">
 
   {% comment %}
   Favicon: the one uploaded in admin → onewooz.com SEO, else the built-in
@@ -52,6 +53,12 @@
 </head>
 <body>
   {% block body %}{% endblock %}
+
+  {% comment %}
+  One toast stack for every page: Django messages and in-page results, success
+  in green, errors in red. Rendered after the body so it sits above any chrome.
+  {% endcomment %}
+  {% include "partials/_toasts.html" %}
 
   {% comment %}
   Every inline script must carry nonce="{{ csp_nonce }}". One that forgets is

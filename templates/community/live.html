@@ -1,0 +1,41 @@
+{% extends "community/_base.html" %}
+
+{% comment %}
+Live desk: the ask box on top, then today's pulse and three columns (live now,
+hot, waiting for an answer) that refresh on their own every few seconds.
+{% endcomment %}
+
+{% block ask_main %}
+<section class="ask-hero ask-hero--live">
+  <div class="pal-container">
+    <p class="ask-eyebrow"><span class="ask-live" aria-hidden="true"></span> Ask OneWooz live</p>
+    <h1 class="ask-hero__title">What's stopping you?</h1>
+    <form method="post" action="{% url 'ask:ask_new' %}" class="ask-askbox" id="ask-form" novalidate>
+      {% csrf_token %}
+      <label class="sr-only" for="ask-q">Your question</label>
+      <div class="ask-askbox__field">
+        <textarea name="question" id="ask-q" rows="1" maxlength="{{ max_length }}" required
+                  data-autosize data-suggest="{% url 'ask:search_json' %}"
+                  placeholder="Ask the OneWooz community…"></textarea>
+        <button type="submit" class="pal-btn ask-askbox__btn" data-busy-label="Asking">Ask <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+      </div>
+      <div class="ask-suggest" data-suggest-list hidden>
+        <p class="ask-suggest__label">Already asked</p>
+        <ul></ul>
+      </div>
+      <div class="ask-hp" aria-hidden="true">
+        <label for="ask-website">Website</label>
+        <input type="text" name="website" id="ask-website" tabindex="-1" autocomplete="off">
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="ask-body">
+  <div class="pal-container">
+    <div id="ask-live-board" data-refresh-url="{{ refresh_url }}" data-refresh-seconds="{{ refresh_seconds }}" aria-live="off">
+      {% include "community/_live_columns.html" %}
+    </div>
+  </div>
+</section>
+{% endblock %}

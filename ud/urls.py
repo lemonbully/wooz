@@ -28,8 +28,8 @@ urlpatterns = [
     # Notification bell (top navbar): mark read + a light unread-count poll.
     path("notifications/read/", views.notifications_read, name="notifications_read"),
     path("notifications/unread/", views.notifications_unread, name="notifications_unread"),
-    # Dashboard AI assistant (text via Grok, images via OpenAI)  server-side.
-    path("assistant/", views.ai_chat, name="ai_chat"),
+    # Sidebar unread counters, re-read when a page is shown from history.
+    path("stores/<uuid:site_id>/nav-counts/", views.store_nav_counts, name="store_nav_counts"),
     path("new/", views.create_site, name="create_site"),
     path("new/subcategories/", views.subcategories_json, name="subcategories_json"),
     path("stores/<uuid:site_id>/template/", views.select_template, name="select_template"),

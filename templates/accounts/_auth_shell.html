@@ -46,8 +46,8 @@ present and usable the instant the page loads.
       built origin  "/" here would land on the dashboard and bounce an
       unauthenticated visitor straight back to this page.
       {% endcomment %}
-      <a href="{% surface_url 'marketing' '/' %}" class="pal-brand pal-auth__brand">
-        <img class="pal-brand__img" src="{% brand_logo_url %}" alt="" width="26" height="26">
+      <a href="{% surface_url 'marketing' '/' %}" class="pal-brand pal-auth__brand" aria-label="OneWooz home">
+        <img class="pal-brand__img" src="{% brand_logo_url %}" alt="OneWooz" width="26" height="26">
       </a>
 
       <h1 class="auth__title">{% block auth_title %}{% endblock %}</h1>

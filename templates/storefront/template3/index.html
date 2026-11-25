@@ -1,28 +1,16 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mellow Studio | Soft essentials for everyday</title>
-<meta name="description" content="Template 3 preview: soft, story-rich D2C storefront.">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Caveat:wght@700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body data-float="1" data-popup="1">
-<div data-header></div>
-
-<main>
+{% extends "storefront/template3/_base.html" %}
+{% block body_attrs %}data-float="1" data-popup="1"{% endblock %}
+{% block main %}
+<main data-home>
   <!-- 1. Hero banner -->
   <section class="hero" aria-label="Featured" data-hero></section>
 
-  <div class="roll-up">
+  <div class="roll-up" data-sec-cats>
     <!-- 2. Categories -->
     <section class="section" style="padding-top:clamp(40px,5vw,72px)">
       <div class="container">
         <div class="sec-head">
-          <h2 class="h2">Explore Categories</h2>
-          <div class="pill-tabs" data-cat-tabs><button class="is-active" data-set="all">All</button><button data-set="her">For Her</button><button data-set="him">For Him</button></div>
+          <div><h2 class="h2" data-cats-title>Explore Categories</h2><p data-cats-sub hidden></p></div>
         </div>
         <div class="slider" data-slider>
           <div class="slider__track" data-cat-track style="--col:calc((100% - 5*16px)/6);--col-sm:42%"></div>
@@ -33,86 +21,66 @@
   </div>
 
   <!-- 3. Best sellers -->
-  <section class="section" style="padding-top:0">
+  <section class="section" style="padding-top:0" data-sec-best>
     <div class="container">
       <div class="sec-head">
-        <div><p class="eyebrow">Loved by 50,000+ customers</p><h2 class="h2">Best Sellers</h2></div>
-        <div class="pill-tabs" data-prod-tabs><button class="is-active" data-set="best">Best Sellers</button><button data-set="new">New Arrivals</button><button data-set="sale">On Sale</button></div>
+        <div><p class="eyebrow" data-best-eyebrow></p><h2 class="h2" data-best-title>Best Sellers</h2></div>
       </div>
       <div class="slider" data-slider>
         <div class="slider__track" data-best-track style="--col:calc((100% - 3*16px)/4);--col-sm:62%"></div>
-        <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><a class="btn btn--outline btn--sm" href="shop.html">View all</a><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
+        <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><a class="btn btn--outline btn--sm" href="{% url 'public_all_products' %}">View all</a><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
       </div>
     </div>
   </section>
 
-  <!-- Story banner pair (collection highlight) -->
-  <section class="container">
-    <div class="grid grid--2" style="gap:16px" data-highlights></div>
+  <!-- 4. Service badges (delivery, returns, payments, support): directly above About -->
+  <section class="section" style="padding-top:0;padding-bottom:0" data-sec-services>
+    <div class="container" data-services></div>
   </section>
 
-  <!-- 4. Video / shoppable reels -->
-  <section class="section">
-    <div class="container">
-      <div class="sec-head sec-head--center">
-        <p class="eyebrow">Watch &amp; shop</p>
-        <h2 class="h2">Seen on our community</h2>
-        <p>Real outfits from real customers. Tap any reel to shop the look.</p>
-      </div>
-      <div class="slider" data-slider>
-        <div class="slider__track" data-reels style="--col:calc((100% - 4*16px)/5);--col-sm:62%"></div>
-        <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 5. About / our story -->
-  <section class="section" style="padding-top:0">
-    <div class="container story">
+  <!-- 5. About / our story (Edit Content → Home sections → About) -->
+  <section class="section" data-sec-about>
+    <div class="container story story--home">
       <div class="story__text reveal">
-        <p class="eyebrow">Our story</p>
-        <h2 class="h1" style="margin-top:12px">Soft fabrics,<br>made to be lived in.</h2>
-        <p>We started Mellow in a tiny Tiruppur studio with one belief: everyday clothes should feel as good on the hundredth wear as the first. Today every piece is still cut, stitched and checked by the same hands, in organic cotton and linen that breathe with you.</p>
-        <a href="about.html" class="btn btn--black btn--arrow">Learn More <span class="btn__dot" data-ico="arrow"></span></a>
+        <p class="eyebrow" data-about-label>Our story</p>
+        <h2 class="story__title" data-about-title></h2>
+        <div class="story__body" data-about-text></div>
+        <a href="{% url 'public_about' %}" class="btn btn--black btn--arrow" data-about-btn><span data-about-btn-text>Learn More</span><span class="sr-only" data-about-btn-sr></span> <span class="btn__dot" data-ico="right"></span></a>
       </div>
       <div class="story__media reveal">
-        <span class="sticker sticker--pill" style="top:10%;left:-4%">Wow</span>
-        <div class="story__circle"><img src="" data-src-id="beach" alt="Customer wearing a linen outfit on the beach"></div>
-        <span class="sticker sticker--blob" style="bottom:12%;right:-2%">Comfy</span>
+        <span class="sticker sticker--pill" aria-hidden="true">Wow</span>
+        <div class="story__circle"><img src="" data-about-img alt=""></div>
+        <span class="sticker sticker--blob" aria-hidden="true">Playful</span>
       </div>
     </div>
   </section>
 
-  <!-- Marquee band -->
-  <div class="band" aria-hidden="true"><div class="band__track" data-band></div></div>
-
-  <!-- 6. Blog -->
-  <section class="section">
-    <div class="container">
-      <div class="sec-head">
-        <div><p class="eyebrow">The Journal</p><h2 class="h2">Stories &amp; style notes</h2></div>
-        <a class="btn btn--outline btn--sm" href="blogs.html">Read all articles</a>
-      </div>
-      <div class="grid grid--3" data-blogs></div>
+  <!-- 6. Blog: directly below About, as on Template 1's homepage -->
+  {% comment %} Pebble's journal row: a centred heading, then a sideways-scrolling strip of rounded photos in four alternating shapes (wide, large, narrow, tall), each with a frosted tag, the post title and a short description. {% endcomment %}
+  <section class="section journal" data-sec-blogs>
+    <div class="container"><h2 class="h2 journal__title" data-blog-title>Stories &amp; notes</h2></div>
+    <div class="slider journal__slider" data-slider>
+      <div class="journal__track slider__track" data-blogs></div>
+      <div class="container"><div class="slider__foot journal__foot"><div class="slider__bar"><i></i></div></div></div>
     </div>
   </section>
 
   <!-- 7. Why choose us -->
-  <section class="section" style="padding-top:0">
+  <section class="section" style="padding-top:0" data-sec-why>
     <div class="container">
-      <div class="sec-head sec-head--center"><p class="eyebrow">Why choose us</p><h2 class="h2">Feel good &amp; enjoy every day</h2></div>
+      <div class="sec-head sec-head--center"><p class="eyebrow">Why choose us</p><h2 class="h2" data-why-title>Feel good &amp; enjoy every day</h2></div>
       <div class="features" data-why></div>
     </div>
   </section>
 
   <!-- 8. Testimonials -->
-  <section class="section reviews-sec">
+  <section class="section reviews-sec" data-sec-reviews>
     <div class="container">
       <div class="sec-head">
-        <div><p class="eyebrow">What customers say</p><h2 class="h1">Over 12,000<br>Happy Reviews</h2></div>
+        <div><p class="eyebrow">What customers say</p><h2 class="h1" data-reviews-title></h2></div>
         <div class="review-score">
           <div class="avatars" data-avatars></div>
-          <div><b style="font-size:22px">4.8</b> <span class="stars" data-stars-big></span><div class="small muted">Average rating on 12,480 reviews</div></div>
+          <div><b style="font-size:22px" data-score></b> <span class="stars" data-stars-big></span><div class="small muted" data-score-note></div></div>
         </div>
       </div>
       <div class="slider" data-slider>
@@ -123,101 +91,244 @@
   </section>
 
   <!-- 9. FAQ -->
-  <section class="section" id="faq">
+  <section class="section" id="faq" data-sec-faq>
     <div class="container faq-wrap">
       <div class="faq-aside">
         <p class="eyebrow">Need help?</p>
-        <h2 class="h1" style="margin-top:10px">Frequently asked questions</h2>
-        <p>Everything about orders, delivery, sizing and returns. Still curious? Our team replies within an hour.</p>
-        <a href="contact.html" class="btn btn--black btn--arrow">Contact Us <span class="btn__dot" data-ico="arrow"></span></a>
-        <div class="faq-help"><img src="" data-src-id="p3" alt=""><div><b>Talk to Neha</b><div class="small muted">Customer care, Mon to Sat, 9 AM to 8 PM</div></div></div>
+        <h2 class="h1" style="margin-top:10px" data-faq-title>Frequently asked questions</h2>
+        <p data-faq-sub>Everything about orders, delivery and returns. Still curious? Our team is happy to help.</p>
+        <a href="{% url 'public_enquiry' %}" class="btn btn--black btn--arrow">Contact Us <span class="btn__dot" data-ico="arrow"></span></a>
       </div>
       <div data-acc-single data-faqs></div>
     </div>
   </section>
+
+  <!-- 10. Video / shoppable reels: after the FAQs by default; moved directly below Best Sellers when the owner picks that position (as in Template 1) -->
+  <section class="section" style="padding-top:0" data-sec-reels>
+    <div class="container">
+      <div class="sec-head sec-head--center">
+        <p class="eyebrow">Watch &amp; shop</p>
+        <h2 class="h2" data-reels-title>Seen on our community</h2>
+        <p>Real moments from our customers. Tap any reel to shop the look.</p>
+      </div>
+      <div class="slider" data-slider>
+        <div class="slider__track" data-reels style="--col:calc((100% - 4*16px)/5);--col-sm:62%"></div>
+        <div class="slider__foot"><div class="slider__bar"><i></i></div><div class="slider__arrows"><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. Discuss your needs (B2B stores, as Template 1's catalogue homepage) -->
+  <section class="section" style="padding-top:0" data-sec-discuss hidden>
+    <div class="container">
+      <div class="sec-head sec-head--center"><p class="eyebrow">Bulk &amp; trade orders</p><h2 class="h2">Discuss your needs</h2><p>Tell us what you are looking for and how many. Our team will get back to you with pricing and availability.</p></div>
+      <form class="card card--soft" style="max-width:880px;margin:0 auto" data-discuss data-ow-recaptcha-manual>
+        <div class="form-grid">
+          <div class="field"><label for="dn-cat">Category</label><select id="dn-cat" class="select" data-dn-cat></select></div>
+          <div class="field"><label for="dn-prod">Product</label><select id="dn-prod" class="select" data-dn-prod></select></div>
+          <div class="field"><label for="dn-qty">Quantity</label><input id="dn-qty" class="input" type="number" min="1" step="1" required placeholder="Quantity" data-dn-qty></div>
+          <div class="field"><label for="dn-mob">Mobile number</label><input id="dn-mob" class="input" type="tel" inputmode="tel" required placeholder="Mobile number" data-dn-mob></div>
+          <div class="field span-2"><label for="dn-msg">Message <span class="muted" style="font-weight:500">(optional)</span></label><textarea id="dn-msg" class="textarea" placeholder="Anything else we should know?" data-dn-msg></textarea></div>
+        </div>
+        <p class="co-err" data-dn-err style="margin-top:12px"></p>
+        {% include "storefront/_recaptcha.html" %}
+        <button class="btn btn--black btn--arrow" style="margin-top:14px">Submit enquiry <span class="btn__dot" data-ico="arrow"></span></button>
+      </form>
+    </div>
+  </section>
 </main>
+{% endblock %}
 
-<div data-footer></div>
-
-<script src="assets/js/data.js"></script>
-<script>
+{% block page_scripts %}
+<script nonce="{{ csp_nonce }}">
 window.T3Page = function () {
-  const D = T3, I = T3.I, $ = T3.$;
+  const D = T3, I = T3.I, $ = T3.$, esc = T3.esc, L = D.urls, H = D.home || {};
+  const hide = (sel) => { const el = $(sel); if (el) el.hidden = true; };
   document.querySelectorAll('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
   document.querySelectorAll('[data-prev]').forEach(e => e.innerHTML = I.left);
   document.querySelectorAll('[data-next]').forEach(e => e.innerHTML = I.right);
-  document.querySelectorAll('[data-src-id]').forEach(e => e.src = D.U(D.IMG[e.dataset.srcId], 900, 900));
 
   /* Hero slideshow */
   const hero = $('[data-hero]');
-  hero.innerHTML = D.heroSlides.map((s, i) => `
-    <div class="hero__slide ${i === 0 ? 'is-active' : ''}" style="--bg:${s.bg}">
-      <img src="${s.img}" style="object-position:50% ${s.pos || "30%"}" alt="" ${i ? 'loading="lazy"' : 'fetchpriority="high"'}>
+  const slides = D.heroSlides.length ? D.heroSlides : [{ eyebrow: '', title: D.brand, text: D.tagline || '', cta: 'Shop Now', url: L.shop, img: '@hero0', bg: '#d9b27a', pos: '30%', fallback: true }];
+  /* Each banner exactly as saved in Edit Content: image or video (each with
+     its mobile version), overlay colour + darkness, title, description, their
+     colours, and the button's text, link and colours. */
+  const heroMedia = (s, i) => {
+    if (s.video) {
+      const one = (src, cls) => `<video class="hero__video ${cls}" src="${esc(src)}" ${s.img && !/^@/.test(s.img) ? `poster="${esc(D.U(s.img, 2000))}"` : ''} autoplay muted loop playsinline preload="${i ? 'none' : 'auto'}" aria-hidden="true"></video>`;
+      return s.mobileVideo && s.mobileVideo !== s.video
+        ? one(s.video, 'hero__video--desk') + one(s.mobileVideo, 'hero__video--mob')
+        : one(s.video, '');
+    }
+    if (!s.img) return '';
+    return `<picture>${s.mobileImg ? `<source media="(max-width: 760px)" srcset="${esc(s.mobileImg)}">` : ''}<img src="${D.U(s.img, 2000)}" style="object-position:50% ${s.pos || "30%"}" alt="${esc(s.alt || '')}" ${i ? 'loading="lazy"' : 'fetchpriority="high"'}></picture>`;
+  };
+  hero.innerHTML = slides.map((s, i) => {
+    const owned = !s.fallback;
+    const btnStyle = [s.btnBg && `background:${s.btnBg}`, s.btnColor && `color:${s.btnColor}`].filter(Boolean).join(';');
+    const dotStyle = [s.btnColor && `background:${s.btnColor}`, s.btnBg && `color:${s.btnBg}`].filter(Boolean).join(';');
+    const heading = s.title ? (i === 0 ? `<h1${s.titleColor ? ` style="color:${s.titleColor}"` : ''}>${esc(s.title)}</h1>` : `<h2${s.titleColor ? ` style="color:${s.titleColor}"` : ''}>${esc(s.title)}</h2>`) : '';
+    return `
+    <div class="hero__slide ${i === 0 ? 'is-active' : ''} ${owned ? 'hero__slide--owned' : ''}" style="--bg:${esc(s.bg || '#d9b27a')}">
+      ${heroMedia(s, i)}
+      ${owned ? `<span class="hero__overlay" style="background:${s.overlayColor || '#000000'};opacity:${+s.overlay || 0}"></span>` : ''}
       <div class="hero__content"><div class="container">
-        <p class="eyebrow">${s.eyebrow}</p>
-        ${i === 0 ? `<h1>${s.title}</h1>` : `<h2>${s.title}</h2>`}
-        <a href="shop.html" class="btn btn--white btn--arrow">${s.cta} <span class="btn__dot">${I.arrow}</span></a>
+        ${s.eyebrow ? `<p class="eyebrow">${esc(s.eyebrow)}</p>` : ''}
+        ${heading}
+        ${s.text ? `<p class="hero__text"${s.textColor ? ` style="color:${s.textColor}"` : ''}>${esc(s.text)}</p>` : ''}
+        ${s.cta ? `<a href="${esc(s.url || L.shop)}" class="btn btn--white btn--arrow"${btnStyle ? ` style="${btnStyle}"` : ''}>${esc(s.cta)} <span class="btn__dot"${dotStyle ? ` style="${dotStyle}"` : ''}>${I.arrow}</span></a>` : ''}
       </div></div>
-    </div>`).join('') + `
-    <div class="hero__controls"><span data-hero-count>1 / ${D.heroSlides.length}</span><div class="hero__progress"><i></i></div>
+    </div>`; }).join('') + `
+    <div class="hero__controls"><span data-hero-count>1 / ${slides.length}</span><div class="hero__progress"><i></i></div>
       <button class="hero__arrow" data-hero-prev aria-label="Previous slide">${I.left}</button><button class="hero__arrow" data-hero-next aria-label="Next slide">${I.right}</button></div>`;
-  let cur = 0, timer; const slides = hero.querySelectorAll('.hero__slide'), bar = hero.querySelector('.hero__progress i');
-  const go = n => { slides[cur].classList.remove('is-active'); cur = (n + slides.length) % slides.length; slides[cur].classList.add('is-active');
-    hero.querySelector('[data-hero-count]').textContent = `${cur + 1} / ${slides.length}`; bar.classList.remove('run'); void bar.offsetWidth; bar.classList.add('run');
-    clearTimeout(timer); timer = setTimeout(() => go(cur + 1), 6000); };
+  let cur = 0, timer; const sl = hero.querySelectorAll('.hero__slide'), bar = hero.querySelector('.hero__progress i');
+  /* Only the visible slide's video plays (and loads); the rest wait. */
+  const playOnly = k => sl.forEach((el, j) => el.querySelectorAll('video').forEach(v => {
+    if (j === k) { if (v.preload === 'none') v.preload = 'auto'; const p = v.play(); if (p && p.catch) p.catch(() => {}); } else v.pause();
+  }));
+  const go = n => { sl[cur].classList.remove('is-active'); cur = (n + sl.length) % sl.length; sl[cur].classList.add('is-active'); playOnly(cur);
+    hero.querySelector('[data-hero-count]').textContent = `${cur + 1} / ${sl.length}`; bar.classList.remove('run'); void bar.offsetWidth; bar.classList.add('run');
+    clearTimeout(timer); if (sl.length > 1) timer = setTimeout(() => go(cur + 1), 6000); };
   hero.querySelector('[data-hero-prev]').onclick = () => go(cur - 1);
   hero.querySelector('[data-hero-next]').onclick = () => go(cur + 1);
   go(0);
 
   /* Categories */
-  const sets = { all: D.categories, her: D.categories.filter(c => ['dresses','knitwear','bags','accessories','t-shirts','sneakers'].includes(c.slug)), him: D.categories.filter(c => ['t-shirts','shirts','denim','outerwear','sneakers','accessories'].includes(c.slug)) };
-  const renderCats = k => { $('[data-cat-track]').innerHTML = sets[k].map(c => `<a class="cat-card" href="category.html?c=${c.slug}"><div class="cat-card__media"><img src="${D.U(c.img, 500, 620)}" alt="${c.name}" loading="lazy"></div><div class="cat-card__name">${c.name} <sup>${c.count}</sup></div></a>`).join(''); };
-  renderCats('all');
-  $('[data-cat-tabs]').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('[data-cat-tabs] .is-active').classList.remove('is-active'); b.classList.add('is-active'); renderCats(b.dataset.set); $('[data-cat-track]').scrollLeft = 0; });
+  if (H.categoriesTitle) $('[data-cats-title]').textContent = H.categoriesTitle;
+  if (H.categoriesSubtitle) { const cs = $('[data-cats-sub]'); cs.textContent = H.categoriesSubtitle; cs.hidden = false; }
+  /* Every category in one slider (no All / Featured switch). */
+  $('[data-cat-track]').innerHTML = D.categories.map(c => `<a class="cat-card" href="${c.url}"><div class="cat-card__media"><img src="${D.U(c.img, 500, 620)}" alt="${esc(c.name)}" loading="lazy"></div><div class="cat-card__name">${esc(c.name)}</div></a>`).join('');
+  if (!D.categories.length) hide('[data-sec-cats]');
 
   /* Best sellers */
-  const pset = { best: [...D.products].sort((a, b) => b.reviews - a.reviews).slice(0, 10), new: D.products.filter(p => p.badges.includes('new')), sale: D.products.filter(p => p.mrp) };
-  const renderBest = k => { $('[data-best-track]').innerHTML = pset[k].map(p => T3.card(p, { reveal: false })).join(''); };
-  renderBest('best');
-  $('[data-prod-tabs]').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('[data-prod-tabs] .is-active').classList.remove('is-active'); b.classList.add('is-active'); renderBest(b.dataset.set); $('[data-best-track]').scrollLeft = 0; });
+  const all = D.products;
+  /* One slider of best sellers, in the order the owner set on the dashboard
+     Products page (rank 1 first, up to 8, as Template 1); with none marked,
+     the most reviewed products. */
+  const best = (D.bestOrder || []).map(id => all.find(p => p.id === id)).filter(Boolean);
+  const bestList = best.length ? best.slice(0, 8) : [...all].sort((a, b) => b.reviews - a.reviews).slice(0, 10);
+  if (H.bestTitle) $('[data-best-title]').textContent = H.bestTitle;
+  $('[data-best-eyebrow]').textContent = H.bestSubtitle || `${D.brand} favourites`;
+  $('[data-best-track]').innerHTML = bestList.map(p => T3.card(p, { reveal: false })).join('');
+  if (!all.length) hide('[data-sec-best]');
 
-  /* Highlights */
-  $('[data-highlights]').innerHTML = [
-    { t: 'Made to Move,<br>Built for Comfort', e: 'Move collection', img: 'streetDenim', bg: 'var(--lime)', c: 'outerwear' },
-    { t: 'Easy linen for<br>long summer days', e: 'New in', img: 'whiteDress', bg: 'var(--lilac)', c: 'dresses' },
-  ].map(h => `<a href="category.html?c=${h.c}" class="highlight-card reveal" style="background:${h.bg}">
-      <div><p class="eyebrow">${h.e}</p><h3 class="h2">${h.t}</h3><span class="btn btn--black btn--arrow" style="align-self:flex-start">Shop Now <span class="btn__dot">${I.arrow}</span></span></div>
-      <div style="padding:0;overflow:hidden"><img src="${D.U(D.IMG[h.img], 600, 800)}" alt="" loading="lazy"></div>
-    </a>`).join('');
-
-  /* Reels */
+  /* Reels: Template 1 shows them directly below Best Sellers or (default)
+     at the bottom after the FAQs. */
+  if (H.reelsPosition === 'below_best_sellers') {
+    const best = $('[data-sec-best]'), reelsSec = $('[data-sec-reels]');
+    if (best && reelsSec) best.insertAdjacentElement('afterend', reelsSec);
+  }
+  if (H.reelsTitle) $('[data-reels-title]').textContent = H.reelsTitle;
   $('[data-reels]').innerHTML = D.reels.map(r => { const p = T3.byId(r.product); return `<div class="reel">
-      <img src="${r.img}" alt="" loading="lazy"><span class="reel__views">${I.eye} ${r.views}</span><span class="reel__play">${I.play}</span>
-      <a class="reel__product" href="product.html?p=${p.id}"><img src="${p.img[0]}" alt=""><span><b>${p.name}</b><small>${T3.inr(p.price)}</small></span><span class="btn btn--white btn--sm" style="height:32px;padding:0 12px">Shop</span></a>
+      ${r.video ? `<video src="${esc(r.video)}" poster="${D.U(r.img, 700, 1100)}" autoplay muted loop playsinline preload="metadata"></video>` : `<img src="${D.U(r.img, 700, 1100)}" alt="" loading="lazy">`}
+      ${r.views ? `<span class="reel__views">${I.eye} ${esc(r.views)}</span>` : ''}<span class="reel__play">${I.play}</span>
+      ${p ? `<a class="reel__product" href="${p.url}"><img src="${p.img[0]}" alt=""><span><b>${esc(p.name)}</b>${D.showPrice ? `<small>${T3.inr(p.price)}</small>` : ''}</span><span class="btn btn--white btn--sm" style="height:32px;padding:0 12px">Shop</span></a>` : ''}
     </div>`; }).join('');
+  if (!D.reels.length) hide('[data-sec-reels]');
 
-  /* Band */
-  const band = [['leaf','Organic Cotton'],['truck','Free Shipping'],['return','Easy Returns'],['heart','Made in India'],['shield','Secure Checkout']].map(([i, t]) => `<span class="band__item">${I[i]} ${t} <a class="btn btn--white" href="shop.html">Shop</a></span>`).join('');
-  $('[data-band]').innerHTML = band + band;
+  /* About: label, title, body, button and image from Edit Content */
+  if (H.aboutLabel) $('[data-about-label]').textContent = H.aboutLabel;
+  /* Title: the first two words on the first row, the rest on the second. */
+  const aboutWords = String(H.aboutTitle || `About ${D.brand}`).trim().split(/\s+/);
+  $('[data-about-title]').innerHTML = aboutWords.length > 2
+    ? `${esc(aboutWords.slice(0, 2).join(' '))}<br>${esc(aboutWords.slice(2).join(' '))}`
+    : esc(aboutWords.join(' '));
+  $('[data-about-text]').innerHTML = T3.paras(H.aboutText || D.tagline || '');
+  if (H.aboutBtnText) $('[data-about-btn-text]').textContent = H.aboutBtnText;
+  /* "Learn More" alone is not descriptive link text (SEO): name the destination for crawlers + screen readers. */
+  { const btnTxt = $('[data-about-btn-text]').textContent.replace(/[^\w\s]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
+    $('[data-about-btn-sr]').textContent = /^(click here|click this|go|here|information|learn more|more|more info|more information|right here|read more|see more|start|this|know more|view more|find out more)$/.test(btnTxt) ? ` about ${D.brand}` : ''; }
+  if (H.aboutBtnUrl) $('[data-about-btn]').href = H.aboutBtnUrl;
+  $('[data-about-img]').src = D.U(H.aboutImage || 'beach', 1000, 1000);
+  $('[data-about-img]').alt = H.aboutTitle || D.brand;
 
   /* Blogs */
-  $('[data-blogs]').innerHTML = D.blogs.slice(0, 3).map(b => `<a class="blog-card reveal" href="blog.html?b=${b.slug}"><div class="blog-card__media"><img src="${b.img}" alt="" loading="lazy"><span class="badge badge--light">${b.tag}</span></div><div class="blog-card__meta">${b.date}<i></i>${b.read}</div><h3>${b.title}</h3><p>${b.excerpt}</p></a>`).join('');
+  if (H.blogTitle) $('[data-blog-title]').textContent = H.blogTitle;
+  /* Home blog cards: titles show at most 5 words and descriptions at most
+     10 words, then an ellipsis */
+  const clipWords = (t, n) => { const s = String(t || '').trim(), w = s.split(/\s+/); return w.length > n ? w.slice(0, n).join(' ') + '\u2026' : s; };
+  const words5 = t => clipWords(t, 5);
+  $('[data-blogs]').innerHTML = D.blogs.slice(0, 8).map(b => `<a class="journal-card" href="${esc(b.url || L.blogs)}">
+      <span class="journal-card__media"><img src="${D.U(b.img, 1000, 1000)}" alt="${esc(b.title)}" loading="lazy">${b.tag ? `<span class="journal-card__tag" title="${esc(b.tag)}">${esc(b.tag)}</span>` : ''}</span>
+      <h3 class="journal-card__title" title="${esc(b.title)}">${esc(words5(b.title))}</h3>
+      ${b.excerpt ? `<p class="journal-card__text">${esc(clipWords(b.excerpt, 10))}</p>` : ''}
+    </a>`).join('');
+  /* The progress bar only when the strip can actually scroll. */
+  requestAnimationFrame(() => { const tr = $('[data-blogs]'); if (tr && tr.scrollWidth <= tr.clientWidth + 4) $('.journal__foot').hidden = true; });
+  if (!D.blogs.length) hide('[data-sec-blogs]');
 
   /* Why */
-  $('[data-why]').innerHTML = D.why.map(w => `<div class="feature reveal"><div class="feature__icon">${I[w.icon]}</div><h3>${w.title}</h3><p>${w.text}</p></div>`).join('');
+  if (D.whySubtitle) $('[data-why-title]').textContent = D.whySubtitle;
+  $('[data-why]').innerHTML = D.why.map(w => `<div class="feature reveal"><div class="feature__icon">${I[w.icon] || I.heart}</div><h3>${esc(w.title)}</h3><p>${esc(w.text)}</p></div>`).join('');
+  if (!D.why.length) hide('[data-sec-why]');
 
-  /* Reviews */
-  $('[data-avatars]').innerHTML = D.reviews.slice(0, 5).map(r => `<img src="${r.avatar}" alt="">`).join('');
-  $('[data-stars-big]').outerHTML = T3.stars(5);
-  $('[data-reviews]').innerHTML = D.reviews.map(r => { const p = T3.byId(r.product); return `<div class="review-card">${T3.stars(5)}
-      <blockquote><b>“${r.title}</b>${r.text}”</blockquote>
-      <div class="review-card__who"><div style="display:flex;align-items:center;gap:10px"><img src="${r.avatar}" alt=""><div><b>${r.name}</b><div class="small muted">${r.city} · <span class="verified">${I.check} Verified</span></div></div></div>
-      <a class="prod" href="product.html?p=${p.id}"><img src="${p.img[0]}" alt=""></a></div></div>`; }).join('');
+  /* Reviews (the owner's testimonials) */
+  const R = D.reviews;
+  if (R.length) {
+    const avg = R.reduce((n, r) => n + (r.rating || 5), 0) / R.length;
+    $('[data-reviews-title]').textContent = D.reviewsTitle || 'Loved by our customers';
+    $('[data-avatars]').innerHTML = R.slice(0, 5).map(r => `<img src="${D.U(r.avatar, 120, 120)}" alt="">`).join('');
+    $('[data-score]').textContent = avg.toFixed(1);
+    $('[data-stars-big]').outerHTML = T3.stars(avg);
+    $('[data-score-note]').textContent = D.reviewsSubtitle || `Average rating from ${R.length} reviews`;
+    $('[data-reviews]').innerHTML = R.map(r => { const p = T3.byId(r.product); return `<div class="review-card">${T3.stars(r.rating || 5)}
+      <blockquote>${r.title ? `<b>“${esc(r.title)}</b>${esc(r.text)}”` : `“${esc(r.text)}”`}</blockquote>
+      <div class="review-card__who"><div style="display:flex;align-items:center;gap:10px"><img src="${D.U(r.avatar, 120, 120)}" alt=""><div><b>${esc(r.name)}</b><div class="small muted">${r.city ? `${esc(r.city)} · ` : ''}<span class="verified">${I.check} Verified</span></div></div></div>
+      ${p ? `<a class="prod" href="${p.url}" aria-label="${esc(p.name)}"><img src="${p.img[0]}" alt=""></a>` : ''}</div></div>`; }).join('');
+  } else hide('[data-sec-reviews]');
 
   /* FAQ */
-  $('[data-faqs]').innerHTML = D.faqs.map((f, i) => T3.acc(f.q, `<p>${f.a}</p>`, i === 0)).join('');
+  if (H.faqTitle) $('[data-faq-title]').textContent = H.faqTitle;
+  if (H.faqSubtitle) $('[data-faq-sub]').textContent = H.faqSubtitle;
+  $('[data-faqs]').innerHTML = D.faqs.map((f, i) => T3.acc(esc(f.q), T3.paras(f.a), i === 0)).join('');
+  if (!D.faqs.length) hide('[data-sec-faq]');
+
+  /* Discuss your needs: B2B stores only, the last section (as Template 1). */
+  if (D.isB2B && !D.isD2C) {
+    $('[data-sec-discuss]').hidden = false;
+    const catSel = $('[data-dn-cat]'), prodSel = $('[data-dn-prod]');
+    catSel.innerHTML = '<option value="">All categories</option>' + D.categories.map(c => `<option value="${esc(c.slug)}">${esc(c.name)}</option>`).join('');
+    const fillProducts = () => {
+      const cat = catSel.value;
+      const list = D.products.filter(x => !cat || x.cat === cat);
+      prodSel.innerHTML = '<option value="">Select a product</option>' + list.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+    };
+    fillProducts(); catSel.addEventListener('change', fillProducts);
+    const form = $('[data-discuss]'), err = $('[data-dn-err]');
+    form.addEventListener('submit', e => {
+      e.preventDefault(); err.textContent = '';
+      const qty = $('[data-dn-qty]').value.trim(), mobile = $('[data-dn-mob]').value.trim();
+      if (!qty || +qty < 1) { err.textContent = 'Please enter the quantity you need.'; return; }
+      if (!/^[+\d][\d\s-]{7,15}$/.test(mobile)) { err.textContent = 'Please enter a valid mobile number.'; return; }
+      const catName = catSel.value ? catSel.options[catSel.selectedIndex].text : '';
+      const prodName = prodSel.value ? prodSel.options[prodSel.selectedIndex].text : '';
+      const lines = [catName && `Category: ${catName}`, prodName && `Product: ${prodName}`, `Quantity: ${qty}`, $('[data-dn-msg]').value.trim()].filter(Boolean);
+      const body = { mobile_number: mobile, subject: 'Bulk enquiry from the homepage', message: lines.join('\n'), product_id: prodSel.value || '' };
+      /* Google reCAPTCHA (when the store has it on): ticked box required,
+         and a fresh box after every send (a token works once). */
+      const OWC = window.OWCaptcha, captcha = !!(OWC && OWC.has(form));
+      const send = tok => {
+        if (captcha) body['g-recaptcha-response'] = tok;
+        return T3.post(L.contact, body);
+      };
+      (captcha ? OWC.get(form) : Promise.resolve('')).then(tok => {
+        if (captcha && !tok) { err.textContent = OWC.message; return null; }
+        if (captcha) OWC.reset(form);
+        return send(tok);
+      }).then(res => {
+        if (!res) return;
+        const j = res.data || {};
+        if (!res.ok || j.status === 'error') { err.textContent = j.message || 'Could not send your enquiry. Please try again.'; return; }
+        T3.toast(j.message || 'Thanks! We will be in touch shortly.'); form.reset(); fillProducts();
+      }).catch(() => { err.textContent = 'Network error. Please try again.'; });
+    });
+  }
+
+  /* When the reels end the page, pull the footer up closer to them (the
+     footer's own top margin would otherwise double the gap below the reels). */
+  const lastSec = [...document.querySelectorAll('main > section')].filter(s => !s.hidden).pop();
+  if (lastSec && lastSec.hasAttribute('data-sec-reels')) document.body.classList.add('home--reels-last');
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

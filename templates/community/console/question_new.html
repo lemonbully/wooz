@@ -1,0 +1,37 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}Write a question{% endblock %}
+{% block crumbs %}<span>/</span><a href="{% url 'ask_console:questions' %}">Questions</a><span>/</span><span>Write a question</span>{% endblock %}
+{% block heading %}Write a question{% endblock %}
+{% block lead %}<p>Ask a question and answer it yourself. For each post you choose the name it is shown under, the date, the votes and, for the question, the views.</p>{% endblock %}
+
+{% block main %}
+<form method="post" class="ac-compose">
+  {% csrf_token %}
+  {% if qform.errors or aset.total_error_count %}<div class="mc-errors">Nothing was saved yet. Check the highlighted fields below.</div>{% endif %}
+
+  <section class="mc-card">
+    <div class="mc-card__head"><span class="mc-card__title">The question</span></div>
+    {% include "community/console/_post_fields.html" with f=qform %}
+  </section>
+
+  <h2 class="ac-h2">Answers</h2>
+  {{ aset.management_form }}
+  {% for e in aset.non_form_errors %}<div class="mc-errors">{{ e }}</div>{% endfor %}
+  <div class="mc-cards" data-answer-list>
+    {% for f in aset %}{% include "community/console/_answer_card.html" with f=f n=forloop.counter %}{% endfor %}
+  </div>
+  <template id="answer-template">{% include "community/console/_answer_card.html" with f=aset.empty_form n="__num__" %}</template>
+
+  <div class="mc-actions">
+    <button type="button" class="pal-btn pal-btn--ghost" data-add-answer>Add another answer</button>
+    <span class="mc-help">Up to {{ max_answers }} answers. You can add more later from the thread.</span>
+  </div>
+
+  <div class="mc-actions">
+    <button class="pal-btn" type="submit">Save question <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+    <a class="pal-btn pal-btn--ghost" href="{% url 'ask_console:questions' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}{{ block.super }}{% include "community/console/_author_js.html" %}{% endblock %}

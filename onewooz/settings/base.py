@@ -44,6 +44,9 @@ env.load_dotenv(BASE_DIR / ".env")
 MARKETING_HOST = env.get("ONEWOOZ_MARKETING_HOST", "onewooz.com")
 APP_HOST = env.get("ONEWOOZ_APP_HOST", "app.onewooz.com")
 ADMIN_HOST = env.get("ONEWOOZ_ADMIN_HOST", "arcane.onewooz.com")
+# OneWooz Apps, the marketplace: its own surface (browse + library only; installs
+# and payments happen on APP_HOST behind a fresh re-authentication).
+MARKETPLACE_HOST = env.get("ONEWOOZ_MARKETPLACE_HOST", "marketplace.onewooz.com")
 
 # Apex under which generated storefronts get their subdomain. Separate
 # registrable domain from MARKETING_HOST on purpose  see module docstring.
@@ -107,13 +110,14 @@ CADDY_VERIFIED_DOMAINS_KEY = env.get(
 )
 
 # Hosts that are ours and are never treated as a tenant storefront.
-PLATFORM_HOSTS = {MARKETING_HOST, f"www.{MARKETING_HOST}", APP_HOST, ADMIN_HOST}
+PLATFORM_HOSTS = {MARKETING_HOST, f"www.{MARKETING_HOST}", APP_HOST, ADMIN_HOST, MARKETPLACE_HOST}
 
 ALLOWED_HOSTS = env.get_list("ONEWOOZ_ALLOWED_HOSTS") or [
     MARKETING_HOST,
     f"www.{MARKETING_HOST}",
     APP_HOST,
     ADMIN_HOST,
+    MARKETPLACE_HOST,
     f".{STOREFRONT_APEX}",
     f".{REFERRAL_ROOT_DOMAIN}",
 ]
@@ -150,6 +154,12 @@ INSTALLED_APPS = [
     "outreach",
     "ud",
     "custom_admin",
+    # OneWooz Apps: the marketplace (see MARKETPLACE_PLAN.md).
+    "marketplace",
+    # Admin-written AI prompts + what is generated from them (store llms.txt).
+    "prompts",
+    # Ask OneWooz community at onewooz.com/ask (questions, answers, votes).
+    "community",
 ]
 
 MIDDLEWARE = [
@@ -163,6 +173,10 @@ MIDDLEWARE = [
     # Health probes short-circuit before any host resolution: load balancer
     # checks arrive with a non-matching Host header and must never 404.
     "core.middleware.HealthProbeMiddleware",
+    # www -> apex, explicit :443 -> none, and HTTP -> HTTPS for the platform
+    # hosts, as one clean 301 (the ALB's own redirects write ":443" into the
+    # Location). After the health probe so probes are never redirected.
+    "core.middleware.CanonicalPlatformHostMiddleware",
     # Answers Caddy's on-demand-TLS "ask" before host resolution, for the same
     # reason as the health probe: it arrives with a non-matching Host header.
     "core.middleware.CaddyAskMiddleware",
@@ -181,6 +195,11 @@ MIDDLEWARE = [
     # sees the owner. No-op on every other surface. Runs before the dashboard's
     # own gates so they evaluate against the owner being impersonated.
     "accounts.impersonation.ImpersonationMiddleware",
+    # Signed-in state across surfaces (community.bridge): the app surface keeps
+    # the identity-free "ow_signed_in" navbar hint in step with the login, and
+    # Ask pages link a signed-in OneWooz user to their community member.
+    "community.bridge.SignedInHintMiddleware",
+    "community.bridge.AskAccountLinkMiddleware",
     # No-op on every surface but admin, where it enforces the network
     # allowlist, the staff flag, the passkey requirement and the idle timeout.
     "custom_admin.middleware.AdminAccessMiddleware",
@@ -227,7 +246,11 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.security",
                 "ud.context_processors.dashboard_nav",
+                # Lazy: an updated user agreement the signed-in owner must accept.
+                "billing.context_processors.agreement_update_gate",
                 "web.context_processors.footer_pages",
+                # Marketing navbar: "Dashboard" instead of "Sign in" when signed in.
+                "community.bridge.nav_context",
                 "web.context_processors.seo",
             ],
         },
@@ -303,6 +326,9 @@ CSRF_COOKIE_HTTPONLY = False  # read by fetch() to populate X-CSRFToken
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_DOMAIN = None
 CSRF_USE_SESSIONS = False
+# A failed CSRF check shows OneWooz's own branded page (core.errors), never
+# Django's bare "Forbidden (403) CSRF verification failed" page.
+CSRF_FAILURE_VIEW = "core.errors.csrf_failure"
 
 # Static origins. Verified tenant domains are added per-request by
 # HostRoutingMiddleware rather than enumerated here  that is what lets
@@ -312,6 +338,7 @@ CSRF_TRUSTED_ORIGINS = [
     f"https://www.{MARKETING_HOST}",
     f"https://{APP_HOST}",
     f"https://{ADMIN_HOST}",
+    f"https://{MARKETPLACE_HOST}",
 ]
 
 # --------------------------------------------------------------------------
@@ -350,6 +377,9 @@ CSP_OBJECT_SRC = ("'none'",)
 # Audio/video sources. Self-hosted media plus data:/blob:. Storefronts widen
 # this (below) to admit the short-video hosts their reels are served from.
 CSP_MEDIA_SRC = ("'self'", "data:", "blob:")
+# Web workers. Only the dashboard's own push service worker (/sw.js on the app
+# host) is registered; stated explicitly rather than left to fall back.
+CSP_WORKER_SRC = ("'self'",)
 
 # The generated storefronts are ported from a Tailwind + Font Awesome design
 # that relies on inline <style> blocks, dynamic style="" attributes and a
@@ -519,12 +549,19 @@ RATE_LIMITS = {
     "signup.ip": (10, 3600),
     "password_reset.send": (5, 3600),
     "domain.verify": (5, 120),
+    # Admin Excel reports (custom_admin.views.export_excel), per staff account.
+    "admin.export": (30, 300),
     "cart.mutate": (120, 60),
     # Content editor's live Google Maps preview (may resolve a share link).
     "editor.map_preview": (30, 60),
+    # Magic SEO pencil (Edit content > SEO): runs started per store per hour.
+    # Each run is many AI calls, so this bounds cost; status polls are not counted.
+    "editor.magic_seo": (6, 3600),
     "checkout.submit": (10, 300),
     # Storefront account self-service (details / address book saves).
     "account.profile": (30, 300),
+    # Owner "Delete My Account" (accounts.views.account_delete_*), per account.
+    "account.delete": (10, 900),
     "analytics.ingest": (300, 60),
     "webhook.courier": (600, 60),
     # Live courier tracking pulls: store-wide "Sync now" (Shipping page) and the
@@ -539,6 +576,32 @@ RATE_LIMITS = {
     # call, so this is deliberately modest.
     "ai.generate": (30, 3600),
     "enquiry.submit": (10, 3600),
+    # onewooz.com/ask: questions per visitor IP, plus a platform-wide daily
+    # ceiling on AI answers so a flood cannot run up the OpenAI bill (over it,
+    # questions still save and wait for a team reply). Polling an answer's
+    # status is cheap but still capped per IP.
+    "ask.submit": (8, 3600),
+    "ask.ai.global": (500, 86400),
+    "ask.status": (300, 300),
+    # Ask OneWooz community. Joining is an email code (per address + per IP);
+    # posting limits are per member.
+    "ask.join.send": (5, 900),
+    "ask.join.send.ip": (20, 900),
+    "ask.join.verify": (6, 900),
+    "ask.profile.save": (12, 3600),
+    "ask.link": (30, 3600),  # dashboard -> Ask account-link hand-offs per user  # photo / website / brand edits per member
+    "ask.post": (10, 3600),
+    "ask.answer": (30, 3600),
+    "ask.reply": (40, 3600),
+    "ask.vote": (120, 300),
+    "ask.report": (20, 3600),
+    "ask.search": (90, 60),
+    # Live desk column refreshes, weekly digest sign-ups, and the team desk's
+    # AI-drafted answers (an OpenAI call each, so per team member).
+    "ask.live": (120, 300),
+    "ask.digest.subscribe": (6, 3600),
+    "ask.digest.subscribe.email": (3, 86400),
+    "ask.desk.suggest": (60, 3600),
     "review.submit": (5, 3600),
     "newsletter.subscribe": (10, 3600),
     # Business Hub support tickets, per owner.
@@ -566,6 +629,20 @@ RATE_LIMITS = {
     # absorb genuine correction of a mistyped field, tight enough that the
     # account-creating endpoint can't be hammered.
     "onboarding.submit": (20, 300),
+    # Browser push: saving this browser's subscription (also re-run after each
+    # sign-in) and the "send a test notification" button, per account.
+    "push.subscribe": (30, 3600),
+    "push.test": (10, 600),
+    # OneWooz Apps (marketplace). Re-authentication attempts per account and per
+    # IP (a wrong password / code counts), the email code that re-authenticates,
+    # hand-offs from the dashboard to the marketplace, installs and paid checkouts.
+    "marketplace.reauth": (8, 900),
+    "marketplace.reauth.ip": (30, 900),
+    "marketplace.reauth.code": (4, 900),
+    "marketplace.handoff": (30, 300),
+    "marketplace.install": (20, 600),
+    "marketplace.buy": (10, 300),
+    "marketplace.settings": (30, 300),
 }
 
 # --------------------------------------------------------------------------
@@ -629,7 +706,56 @@ CELERY_TASK_ALWAYS_EAGER = True  # dev default; prod overrides
 # worker (a separate service) runs the resulting tasks  the actual email sends
 # happen there, never in a web request. With the database scheduler in prod
 # (django_celery_beat) this static schedule is synced into the DB on startup.
+# Marketplace work can run on its own queue so it never delays order emails,
+# courier syncs or bills. Opt-in by environment: set ONEWOOZ_MARKETPLACE_QUEUE
+# (e.g. "marketplace") only once that queue exists and a worker consumes it
+# (deploy/entrypoint.sh: CELERY_QUEUES). Unset = everything on the default
+# queue, so deploying this code alone can never strand or break a task.
+MARKETPLACE_QUEUE = env.get("ONEWOOZ_MARKETPLACE_QUEUE", "")
+CELERY_TASK_ROUTES = {"marketplace.tasks.*": {"queue": MARKETPLACE_QUEUE}} if MARKETPLACE_QUEUE else {}
+
+# Video re-encoding (commerce.tasks.optimise_video) is CPU-heavy and can take a
+# few minutes, so it runs on its own "media" queue, consumed by the
+# worker-media service that scales from zero when a video arrives. Same opt-in
+# rule as above: unset = default queue.
+MEDIA_QUEUE = env.get("ONEWOOZ_MEDIA_QUEUE", "")
+if MEDIA_QUEUE:
+    CELERY_TASK_ROUTES["commerce.tasks.optimise_video"] = {"queue": MEDIA_QUEUE}
+
+# Video compression tunables (commerce.video_optimise).
+VIDEO_OPTIMISE_MIN_BYTES = env.get_int("ONEWOOZ_VIDEO_OPTIMISE_MIN_BYTES", 8 * 1024 * 1024)
+VIDEO_OPTIMISE_MAX_SIDE = env.get_int("ONEWOOZ_VIDEO_OPTIMISE_MAX_SIDE", 1280)
+VIDEO_OPTIMISE_CRF = env.get_int("ONEWOOZ_VIDEO_OPTIMISE_CRF", 26)
+# CloudFront distribution in front of the uploads bucket; when set, a replaced
+# video's cached copy is invalidated so the small file is served at once.
+MEDIA_CDN_DISTRIBUTION_ID = env.get("ONEWOOZ_MEDIA_CDN_DISTRIBUTION_ID", "")
+
+# Longest side, in pixels, of an uploaded raster image after WebP conversion
+# (core.image_webp). Phone photos arrive at 4000+ px; 2000 px stays sharp on a
+# full-width retina hero and product zoom while cutting the bytes several-fold.
+# 0 disables the cap.
+IMAGE_MAX_DIMENSION = env.get_int("ONEWOOZ_IMAGE_MAX_DIMENSION", 2000)
+
+# Dashboard notification bell polling (templates/ud/_topbar_actions.html), in
+# milliseconds. Every open dashboard tab polls, so this is the single largest
+# source of dashboard requests: 15 s visible / 60 s hidden is a third of the
+# load of the old 5 s / 10 s with no practical difference to the owner.
+BELL_POLL_VISIBLE_MS = env.get_int("ONEWOOZ_BELL_POLL_VISIBLE_MS", 15000)
+BELL_POLL_HIDDEN_MS = env.get_int("ONEWOOZ_BELL_POLL_HIDDEN_MS", 60000)
+
 CELERY_BEAT_SCHEDULE = {
+    # Ask OneWooz weekly digest. Checks hourly and sends last week's issue once
+    # Monday 09:00 IST has passed; community.DigestIssue stops a second send.
+    "community-weekly-digest": {
+        "task": "community.tasks.send_weekly_digest",
+        "schedule": 60.0 * 60,  # hourly
+    },
+    # Store llms.txt: daily re-check of every store on a verified domain, so
+    # catalogue changes reach the file. Unchanged data costs no API call.
+    "prompts-refresh-store-llms-txt": {
+        "task": "prompts.tasks.refresh_all_store_llms_txt",
+        "schedule": 60.0 * 60 * 24,  # daily
+    },
     "outreach-dispatch-due-campaigns": {
         "task": "outreach.tasks.dispatch_due_campaigns",
         "schedule": 60.0,  # every minute
@@ -647,11 +773,22 @@ CELERY_BEAT_SCHEDULE = {
         "task": "commerce.tasks.google_merchant_refresh_all",
         "schedule": 60.0 * 60 * 6,  # every 6 hours
     },
+    # Marketplace app logs (console > Logs): drop lines past retention.
+    "marketplace-purge-app-logs": {
+        "task": "marketplace.tasks.purge_app_logs",
+        "schedule": 60.0 * 60 * 24,  # daily
+    },
     # Shiprocket wallet: catch a balance below Rs.100 and alert the owner
     # (email + bell) even when nobody has the dashboard open.
     "commerce-check-shiprocket-wallets": {
         "task": "commerce.tasks.check_shiprocket_wallets",
         "schedule": 60.0 * 60,  # hourly
+    },
+    # Abandoned cart reminders: 1h / 6h / 24h / 48h / 72h after a signed-in
+    # shopper's last cart change, at stores that opted in.
+    "commerce-abandoned-cart-reminders": {
+        "task": "commerce.tasks.send_abandoned_cart_reminders",
+        "schedule": 60.0 * 5,  # every 5 minutes
     },
     "commerce-purge-abandoned-checkouts": {
         "task": "commerce.tasks.purge_abandoned_checkouts",
@@ -662,6 +799,41 @@ CELERY_BEAT_SCHEDULE = {
     "commerce-generate-due-bills": {
         "task": "commerce.tasks.generate_due_bills",
         "schedule": 60.0 * 60,  # hourly
+    },
+    # Website templates: a store on a design whose yearly licence has lapsed
+    # falls back to a free design until the owner buys it again.
+    # Deleted owner accounts: close the ones whose recovery window has passed
+    # (accounts.deletion). Nothing is erased; only self-service restore ends.
+    "accounts-close-lapsed-deleted-accounts": {
+        "task": "accounts.tasks.close_lapsed_deleted_accounts",
+        "schedule": 60.0 * 60 * 6,  # every 6 hours
+    },
+    "billing-expire-template-licences": {
+        "task": "billing.tasks.expire_template_licences",
+        "schedule": 60.0 * 60 * 6,  # every 6 hours
+    },
+    # OneWooz Apps (marketplace): lapse licences, remind before they lapse,
+    # resume paused apps (circuit breaker), confirm missed payments, and migrate
+    # owners who never log in into the design library.
+    "marketplace-expire-licences": {
+        "task": "marketplace.tasks.expire_licences_task",
+        "schedule": 60.0 * 15,
+    },
+    "marketplace-renewal-reminders": {
+        "task": "marketplace.tasks.renewal_reminders_task",
+        "schedule": 60.0 * 60 * 6,
+    },
+    "marketplace-breaker-tick": {
+        "task": "marketplace.tasks.breaker_tick_task",
+        "schedule": 60.0,
+    },
+    "marketplace-reconcile-orders": {
+        "task": "marketplace.tasks.reconcile_orders_task",
+        "schedule": 60.0 * 30,
+    },
+    "marketplace-library-sweep": {
+        "task": "marketplace.tasks.library_sweep_task",
+        "schedule": 60.0 * 10,
     },
 }
 
@@ -680,7 +852,20 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "onewooz" / "static"]
+STATICFILES_DIRS = [
+    BASE_DIR / "onewooz" / "static",
+    # Template 3 (the owner-facing "Template 2") keeps its CSS/JS beside its
+    # pages; served as static/storefront-t3/... so edits there go live as-is.
+    ("storefront-t3", BASE_DIR / "templates" / "storefront" / "template3" / "assets"),
+    # Template 4 (the owner-facing "Template 3", Eurus look), same arrangement.
+    ("storefront-t4", BASE_DIR / "templates" / "storefront" / "template4" / "assets"),
+]
+# Django's defaults, with the file-system finder swapped for one that resolves
+# prefixed STATICFILES_DIRS (above) on Windows too (see core.staticfinders).
+STATICFILES_FINDERS = [
+    "core.staticfinders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -750,6 +935,19 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # Inbox that receives support tickets raised from the owner Business Hub.
 # Blank → the address in DEFAULT_FROM_EMAIL (see ud.support.team_address).
 SUPPORT_TICKETS_EMAIL = env.get("ONEWOOZ_SUPPORT_EMAIL", "")
+
+# --------------------------------------------------------------------------
+# Browser push notifications (Web Push)  accounts.webpush
+# --------------------------------------------------------------------------
+# Every bell notification is also popped up on each browser the owner allowed
+# notifications in. The VAPID signing key is generated automatically on first
+# use and stored encrypted (accounts.WebPushKey), so nothing needs creating by
+# hand; ONEWOOZ_VAPID_PRIVATE_KEY (base64url raw P-256 scalar, or PEM) overrides
+# it. The contact is sent to the push services (Google, Mozilla, Apple,
+# Microsoft) so they can reach the operator; it must be mailto: or https:.
+WEBPUSH_ENABLED = env.get_bool("ONEWOOZ_WEBPUSH_ENABLED", True)
+WEBPUSH_VAPID_PRIVATE_KEY = env.get("ONEWOOZ_VAPID_PRIVATE_KEY", "")
+WEBPUSH_CONTACT = env.get("ONEWOOZ_WEBPUSH_CONTACT", "mailto:hello@onewooz.com")
 
 # --------------------------------------------------------------------------
 # Google Merchant Center (Merchant API v1)
@@ -860,6 +1058,24 @@ WEBAUTHN_CHALLENGE_TTL = 300
 # --------------------------------------------------------------------------
 
 TOKEN_TTL = {
+    # "Your account is deleted" page link handed out right after the delete.
+    "account.deleted": 3600,
+    # Dashboard -> marketplace sign-in hand-off: single use, one minute.
+    "marketplace.handoff": 60,
+    # Dashboard -> Ask OneWooz account link (community.bridge): single use, two minutes.
+    "ask.link": 120,
+    # Ties a marketplace Cashfree return URL to its order.
+    "marketplace.order.return": 3600,
+    # Signed per-store token appended to an app's external link.
+    "marketplace.external": 600,
+    # A visitor's own question + answer page on onewooz.com/ask (bookmarkable,
+    # and linked from the "the team replied" email).
+    "ask.question": 180 * 86400,
+    # Ask OneWooz emails: confirm a digest sign-up, and one-click opt-outs
+    # (minted fresh in every email, so a long life is harmless).
+    "ask.digest.confirm": 3 * 86400,
+    "ask.digest.unsub": 400 * 86400,
+    "ask.notify.off": 400 * 86400,
     "auth.magic_link": 900,
     "auth.email_verify": 86400,
     "auth.password_reset": 3600,
@@ -931,6 +1147,18 @@ PLATFORM_CASHFREE_WEBHOOK_SECRET = env.get("ONEWOOZ_PLATFORM_CASHFREE_WEBHOOK_SE
 
 # GST added on top of the (discounted) subscription amount, as a percentage.
 SUBSCRIPTION_GST_RATE = env.get_int("ONEWOOZ_SUBSCRIPTION_GST_RATE", 18)
+
+# Days a lapsed owner's store data is kept after their paid plan ends. The admin
+# "Deletion today" / "Deletion in 7 days" Excel reports list owners whose
+# deletion date (plan end + this many days) falls in that window.
+SUBSCRIPTION_DATA_RETENTION_DAYS = env.get_int("ONEWOOZ_SUBSCRIPTION_DATA_RETENTION_DAYS", 30)
+
+# Deleted stores and deleted owner accounts (accounts.deletion) stay on the
+# server, recoverable, for this many days. An account is restored by signing in
+# within the window (renewing first if its paid plan lapsed); a single store by
+# asking support. Nothing is ever erased afterwards either: orders, customers
+# and the account row are kept; only self-service recovery ends.
+ACCOUNT_DELETION_RETENTION_DAYS = env.get_int("ONEWOOZ_ACCOUNT_DELETION_RETENTION_DAYS", 60)
 
 # --------------------------------------------------------------------------
 # Logging

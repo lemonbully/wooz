@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumo | Smart home, quietly done</title>
+<meta name="description" content="Template 6 preview: clean, product-led D2C storefront.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body data-float="1" data-popup="1">
+<div data-header></div>
+
+<!--
+  Section order follows Template 1's homepage exactly:
+  1 Hero, 2 Categories, 3 Best Sellers, 4 About, 5 Blog, 6 Why Choose Us,
+  7 Testimonials, 8 FAQ, 9 Video (after FAQ by default, or directly below
+  Best Sellers when VIDEO_POSITION is "below_best_sellers").
+-->
+<main>
+  <!-- 1. Hero banner -->
+  <section class="hero" aria-label="Featured" data-hero></section>
+
+  <!-- 2. Categories: full-bleed image with a glass accordion -->
+  <section class="cat-show" data-catshow>
+    <div class="cat-show__bg" data-cat-bg></div>
+    <div class="container" style="padding:0">
+      <h2>Categories</h2>
+      <div class="cat-panel" data-cat-panel></div>
+    </div>
+  </section>
+
+  <!-- 3. Best sellers -->
+  <section class="section" data-sec-best>
+    <div class="container">
+      <div class="sec-head">
+        <h2 class="h2">Bestsellers</h2>
+        <div class="sec-aside"><p>Our most popular devices for a smarter, safer and more comfortable home. Customers choose them for reliable performance, quick setup and the difference they make every day.</p><a href="shop.html?sort=best" class="btn btn--outline">Discover More</a></div>
+      </div>
+      <div class="slider" data-slider>
+        <div class="slider__track" data-best-track style="--col:calc((100% - 2*24px)/3);--col-sm:78%"></div>
+        <div class="slider__foot"><div class="slider__bar"><i></i></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. About -->
+  <section class="section" style="padding-top:0" data-sec-about>
+    <div class="container">
+      <div class="sec-head">
+        <h2 class="h2">A Complete Setup For<br>Your Smart Home</h2>
+        <div class="sec-aside"><p>A ready-made smart home where every device works together as one. Control everything from a single app, run smart scenes and enjoy thoughtful design without complicated configuration.</p><a href="about.html" class="btn btn--outline">Our Story</a></div>
+      </div>
+      <div class="spot-wrap reveal" data-spots><img src="" data-src-id="living3" alt="A living room set up with Lumo devices"></div>
+    </div>
+  </section>
+
+  <!-- 5. Blog -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="sec-head">
+        <h2 class="h2">Blog</h2>
+        <div class="sec-aside"><p>Here we share the latest news, updates and events from the world of smart living, plus guides for getting more from every device.</p><a href="blogs.html" class="btn btn--outline">Read More</a></div>
+      </div>
+      <div class="grid grid--3" data-blogs></div>
+    </div>
+  </section>
+
+  <!-- 6. Why choose us: image tabs -->
+  <section class="section" style="padding-top:0">
+    <div class="container itabs">
+      <div>
+        <h2>Intelligent Solutions for<br>Your Home</h2>
+        <div class="itabs__list" role="tablist" data-itabs></div>
+        <p class="itabs__text" data-itext></p>
+      </div>
+      <div class="itabs__media" data-imedia></div>
+    </div>
+  </section>
+
+  <!-- 7. Testimonials -->
+  <section class="section" style="padding-top:0">
+    <div class="container tsplit">
+      <div>
+        <h2>Thousands of Users Have Already Made Their Homes Smarter</h2>
+        <div class="tsplit__nav"><button class="circle-btn" data-tprev aria-label="Previous review"></button><button class="circle-btn" data-tnext aria-label="Next review"></button></div>
+      </div>
+      <div class="tstack" data-tstack></div>
+    </div>
+  </section>
+
+  <!-- 8. FAQ -->
+  <section class="section" id="faq" style="padding-top:0">
+    <div class="container faq-split">
+      <div><h2>FAQ</h2><p class="lead">You probably have a couple of questions left. We have gathered the most popular ones. If you don't find what you need, just write to us and we'll help.</p><a href="contact.html" class="btn btn--black" style="margin-top:26px">Ask a Question</a></div>
+      <div data-acc-single data-faqs></div>
+    </div>
+  </section>
+
+  <!-- 9. Video / shoppable reels -->
+  <section class="section" style="padding-top:0" data-sec-reels>
+    <div class="container">
+      <div class="sec-head">
+        <h2 class="h2">Seen at Home</h2>
+        <div class="sec-aside"><p>Real setups from our community. Tap any video to shop the device in it.</p></div>
+      </div>
+      <div class="slider" data-slider>
+        <div class="slider__track" data-reels style="--col:calc((100% - 4*24px)/5);--col-sm:62%"></div>
+        <div class="slider__foot"><div class="slider__bar"><i></i></div><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div data-footer></div>
+
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$;
+  const TRI = '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.1V7.9c0-.4.43-.63.77-.42l6.55 4.1a.5.5 0 0 1 0 .85l-6.55 4.1A.5.5 0 0 1 9 16.1Z"/></svg>';
+  const TRI_L = TRI.replace('<path', '<path transform="rotate(180 12 12)"');
+  $$('[data-prev]').forEach(e => e.innerHTML = TRI_L);
+  $$('[data-next]').forEach(e => e.innerHTML = TRI);
+  $$('[data-src-id]').forEach(e => e.src = D.U(D.IMG[e.dataset.srcId], 1800));
+
+  /* 1. Hero: bottom-left heading, white pill button, product card */
+  const hero = $('[data-hero]'), N = D.heroSlides.length;
+  hero.innerHTML = D.heroSlides.map((s, i) => { const p = T3.byId(s.card.product); return `
+    <div class="hero__slide ${i === 0 ? 'is-active' : ''}">
+      <img src="${s.img}" style="object-position:50% ${s.pos}" alt="" ${i ? 'loading="lazy"' : 'fetchpriority="high"'}>
+      <div class="hero__content"><div class="container"><div class="hero__box">
+        <p class="eyebrow" style="display:block">${s.eyebrow}</p>
+        ${i === 0 ? '<h1>' : '<h2>'}${s.title}${i === 0 ? '</h1>' : '</h2>'}
+        <div class="hero__ctas"><a href="shop.html" class="btn btn--white">${s.cta}</a></div>
+      </div></div></div>
+      <a class="hero__card" href="product.html?p=${p.id}"><img src="${p.thumb}" alt=""><span><small>${s.card.label}</small><b>${p.name}</b></span></a>
+    </div>`; }).join('') + `<div class="hero__dots">${D.heroSlides.map((_, i) => `<button data-go="${i}" aria-label="Slide ${i + 1}"></button>`).join('')}</div>`;
+  let cur = -1, timer; const slides = $$('.hero__slide', hero), dots = $$('.hero__dots button', hero);
+  const go = n => { if (cur >= 0) slides[cur].classList.remove('is-active'); cur = (n + N) % N; slides[cur].classList.add('is-active'); dots.forEach((b, i) => b.classList.toggle('is-active', i === cur)); clearTimeout(timer); timer = setTimeout(() => go(cur + 1), 7000); };
+  dots.forEach(b => b.onclick = () => go(+b.dataset.go)); go(0);
+
+  /* 2. Categories: background follows the open item */
+  $('[data-cat-bg]').innerHTML = D.categories.map((c, i) => `<img src="${D.U(c.slug === 'audio' ? D.IMG.lounge : c.slug === 'wearables' ? D.IMG.yellowRoom : c.slug === 'workspace' ? D.IMG.deskChairs : c.slug === 'home' ? D.IMG.livingPlants : D.IMG.living4, 2000)}" class="${i ? '' : 'is-active'}" alt="">`).join('');
+  $('[data-cat-panel]').innerHTML = D.categories.map((c, i) => `<div class="cat-item ${i ? '' : 'is-open'}"><button class="cat-item__head" data-ci="${i}">${c.name}${TRI}</button>
+    <div class="cat-item__body"><div><a href="category.html?c=${c.slug}"><img src="${D.U(c.img, 800, 500)}" alt="" loading="lazy"><span class="btn btn--white btn--sm">Shop ${c.name}</span></a></div></div></div>`).join('');
+  $('[data-cat-panel]').addEventListener('click', e => { const b = e.target.closest('[data-ci]'); if (!b) return; const i = +b.dataset.ci;
+    $$('.cat-item').forEach((x, k) => x.classList.toggle('is-open', k === i)); $$('[data-cat-bg] img').forEach((x, k) => x.classList.toggle('is-active', k === i)); });
+
+  /* 3. Best sellers */
+  $('[data-best-track]').innerHTML = [...D.products].sort((a, b) => b.reviews - a.reviews).slice(0, 9).map(p => T3.card(p, { reveal: false })).join('');
+
+  /* 4. About: hotspots over a styled room */
+  const spots = [['halo-floor-lamp', 14, 30], ['terra-diffuser', 33, 58], ['orbit-pendant', 52, 18], ['mesa-smart-planter', 80, 64]];
+  $('[data-spots]').insertAdjacentHTML('beforeend', spots.map(([id, x, y]) => { const p = T3.byId(id); return `<a class="spot" href="product.html?p=${id}" style="left:${x}%;top:${y}%" aria-label="${p.name}">${I.plus}<span class="spot__card"><img src="${p.thumb}" alt=""><span><b>${p.name}</b><small>${T3.inr(p.price)}</small></span></span></a>`; }).join(''));
+
+  /* 5. Blog: image cards with overlay text */
+  $('[data-blogs]').innerHTML = D.blogs.slice(0, 3).map(b => `<a class="blog-card reveal" href="blog.html?b=${b.slug}"><div class="blog-card__media"><img src="${b.img}" alt="" loading="lazy"><span class="badge">${b.tag}</span></div><div class="blog-card__body"><div class="blog-card__meta">Lumo Team<i></i>${b.date}</div><h3>${b.title}</h3><p>${b.excerpt}</p></div></a>`).join('');
+
+  /* 6. Why choose us: image tabs */
+  $('[data-itabs]').innerHTML = D.why.map((w, i) => `<button role="tab" class="${i === 1 ? 'is-active' : ''}" data-it="${i}">${w.title}</button>`).join('');
+  $('[data-imedia]').innerHTML = D.why.map((w, i) => `<img src="${w.img}" class="${i === 1 ? 'is-active' : ''}" alt="" loading="lazy">`).join('');
+  const setTab = i => { $$('[data-it]').forEach((b, k) => b.classList.toggle('is-active', k === i)); $$('[data-imedia] img').forEach((m, k) => m.classList.toggle('is-active', k === i)); $('[data-itext]').textContent = D.why[i].text; };
+  setTab(1);
+  $('[data-itabs]').addEventListener('click', e => { const b = e.target.closest('[data-it]'); if (b) setTab(+b.dataset.it); });
+  $('[data-itabs]').addEventListener('mouseover', e => { const b = e.target.closest('[data-it]'); if (b) setTab(+b.dataset.it); });
+
+  /* 7. Testimonials: stacked cards */
+  $('[data-tstack]').innerHTML = D.reviews.map((r, i) => { const p = T3.byId(r.product); return `<div class="tcard ${i ? '' : 'is-active'}">
+    <div class="tcard__who"><img src="${r.avatar}" alt=""><div><b>${r.name}</b>${T3.stars(5)}</div></div>
+    <p>${r.text}</p>
+    <a class="tcard__prod" href="product.html?p=${p.id}"><img src="${p.thumb}" alt=""><span><b>${p.name}</b><span class="link small">View Product</span></span></a></div>`; }).join('');
+  let ti = 0; const tc = $$('.tcard');
+  const tGo = d => { tc[ti].classList.remove('is-active'); ti = (ti + d + tc.length) % tc.length; tc[ti].classList.add('is-active'); };
+  $('[data-tprev]').innerHTML = TRI_L; $('[data-tnext]').innerHTML = TRI;
+  $('[data-tprev]').onclick = () => tGo(-1); $('[data-tnext]').onclick = () => tGo(1);
+
+  /* 8. FAQ: grey pills with + / x */
+  $('[data-faqs]').innerHTML = D.faqs.map((f, i) => T3.acc(f.q, `<p>${f.a}</p>`, i === 1).replace('class="acc', 'class="acc acc--pill')).join('');
+
+  /* 9. Reels (Template 1 position rule) */
+  const VIDEO_POSITION = 'bottom'; /* or 'below_best_sellers' */
+  if (VIDEO_POSITION === 'below_best_sellers') $('[data-sec-best]').after($('[data-sec-reels]'));
+  $('[data-reels]').innerHTML = D.reels.map(r => { const p = T3.byId(r.product); return `<div class="reel">
+      <img src="${r.img}" alt="" loading="lazy"><span class="reel__views">${I.eye} ${r.views}</span><span class="reel__play">${I.play}</span>
+      <a class="reel__product" href="product.html?p=${p.id}"><img src="${p.thumb}" alt=""><span><b>${p.name}</b><small>${T3.inr(p.price)}</small></span></a></div>`; }).join('');
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

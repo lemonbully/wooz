@@ -56,6 +56,20 @@ WEBP_QUALITY = getattr(settings, "IMAGE_WEBP_QUALITY", 82)
 WEBP_METHOD = getattr(settings, "IMAGE_WEBP_METHOD", 6)
 # Decompression-bomb ceiling shared with commerce.media_processing.
 MAX_IMAGE_PIXELS = getattr(settings, "MEDIA_LIBRARY_MAX_IMAGE_PIXELS", 40_000_000)
+# Longest side kept after conversion (0 = no cap). Phone photos arrive at
+# 4000+ px; nothing on a storefront displays wider than ~2000 px, so the extra
+# pixels only cost CDN transfer on every visit.
+MAX_DIMENSION = int(getattr(settings, "IMAGE_MAX_DIMENSION", 2000) or 0)
+
+
+def _cap(frame):
+    """Downscale a still frame so its longest side is at most MAX_DIMENSION."""
+    if MAX_DIMENSION and max(frame.size) > MAX_DIMENSION:
+        from PIL import Image
+
+        frame = frame.copy()
+        frame.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
+    return frame
 
 # Broaden Pillow's decoder set to HEIC/HEIF/AVIF when the optional plugin is
 # installed, so those phone-camera formats convert instead of passing through.
@@ -131,12 +145,17 @@ def convert_to_webp(raw: bytes) -> tuple[bytes, int, int] | None:
         # Not a decodable raster image (or a decompression bomb): don't convert.
         return None
 
-    if (img.format or "").upper() == "WEBP":
-        return None  # already WebP; nothing to gain
+    is_animated = getattr(img, "is_animated", False) and getattr(img, "n_frames", 1) > 1
+    if (img.format or "").upper() == "WEBP" and (
+        is_animated or not MAX_DIMENSION or max(img.size) <= MAX_DIMENSION
+    ):
+        return None  # already WebP at a sensible size; nothing to gain
 
     try:
         out = io.BytesIO()
-        if getattr(img, "is_animated", False) and getattr(img, "n_frames", 1) > 1:
+        if is_animated:
+            # Animated images keep their size: resizing every frame is costly and
+            # they are small banners/stickers in practice.
             frames, durations = [], []
             for frame in ImageSequence.Iterator(img):
                 frames.append(frame.convert("RGBA"))
@@ -156,6 +175,9 @@ def convert_to_webp(raw: bytes) -> tuple[bytes, int, int] | None:
                 frame = frame.convert("RGBA")
             else:
                 frame = frame.convert("RGB")
+            # Cap after the mode conversion so the resize runs in full colour
+            # (Pillow would fall back to nearest-neighbour on palette images).
+            frame = _cap(frame)
             frame.save(out, format="WEBP", quality=WEBP_QUALITY, method=WEBP_METHOD)
             width, height = frame.size
         return out.getvalue(), width, height

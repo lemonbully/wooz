@@ -1,0 +1,409 @@
+/* Template 3 shared behaviour: header, footer, drawers, cart, cards, sliders. */
+(function () {
+  const D = window.T3;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const qs = (k) => new URLSearchParams(location.search).get(k);
+  const inr = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
+  const byId = (id) => D.products.find((p) => p.id === id);
+
+  /* ---------- Icons ---------- */
+  const I = {
+    search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+    user: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+    bag: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.4a1 1 0 0 0 1-.8L21 7H6"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>',
+    heart: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-9-9.2C1.7 7.4 4 4 7.4 4c2 0 3.6 1.1 4.6 2.7C13 5.1 14.6 4 16.6 4 20 4 22.3 7.4 21 10.8 19 15.6 12 20 12 20Z"/></svg>',
+    chev: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>',
+    left: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m15 5-7 7 7 7"/></svg>',
+    right: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 5 7 7-7 7"/></svg>',
+    arrow: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+    close: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    menu: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
+    minus: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+    plus: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>',
+    play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>',
+    eye: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>',
+    star: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>',
+    truck: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7z"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>',
+    return: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>',
+    card: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19M6 15h4"/></svg>',
+    chat: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+    leaf: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5 19c0-8 5-13 15-14-1 10-6 15-14 15"/><path d="M5 19 13 11"/></svg>',
+    box: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="m12 3 8.5 4.5v9L12 21l-8.5-4.5v-9z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/></svg>',
+    shield: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>',
+    pin: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>',
+    mail: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+    phone: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2Z"/></svg>',
+    clock: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    filter: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/></svg>',
+    grid2: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>',
+    grid3: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>',
+    share: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/></svg>',
+    trend: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></svg>',
+    ig: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>',
+    x: '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.3L5.3 21H2.2l7.2-8.3L2 3h6.3l4.4 5.8zm-1.1 16.2h1.7L7.4 4.7H5.6z"/></svg>',
+    yt: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22 8.2a3 3 0 0 0-2.1-2.1C18 5.6 12 5.6 12 5.6s-6 0-7.9.5A3 3 0 0 0 2 8.2 31 31 0 0 0 1.6 12 31 31 0 0 0 2 15.8a3 3 0 0 0 2.1 2.1c1.9.5 7.9.5 7.9.5s6 0 7.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .4-3.8 31 31 0 0 0-.4-3.8ZM10 15V9l5.2 3z"/></svg>',
+    fb: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8.5V6.8c0-.8.5-1 .9-1h2.4V2h-3.3C10.4 2 9.6 4.7 9.6 6.4v2.1H7.5v3.9h2.1V22H14v-9.6h2.9l.4-3.9z"/></svg>',
+    pinterest: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.6 19.3c-.1-.8-.2-2 0-2.9l1.2-5s-.3-.6-.3-1.5c0-1.4.8-2.4 1.8-2.4.9 0 1.3.6 1.3 1.4 0 .9-.5 2.1-.8 3.3-.2 1 .5 1.8 1.5 1.8 1.8 0 3.1-1.9 3.1-4.6 0-2.4-1.7-4.1-4.2-4.1-2.9 0-4.5 2.1-4.5 4.4 0 .9.3 1.8.8 2.3l.1.4-.3 1.1c0 .2-.2.2-.4.1-1.3-.6-2-2.4-2-3.9 0-3.2 2.3-6.1 6.7-6.1 3.5 0 6.2 2.5 6.2 5.8 0 3.5-2.2 6.3-5.2 6.3-1 0-2-.5-2.3-1.1l-.6 2.4c-.2.9-.9 2-1.3 2.7A10 10 0 1 0 12 2Z"/></svg>',
+    wa: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.4 5 5.1-1.3A10 10 0 1 0 12 2Zm5.8 14.1c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-5-4.3-5.1-4.5-.2-.2-1.2-1.6-1.2-3.1s.8-2.2 1.1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.3.5-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.2.1.7-.1 1.3Z"/></svg>',
+  };
+  window.T3.I = I;
+
+  /* ---------- Storage (safe) ---------- */
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  };
+  let cart = store.get("t6_cart", null);
+  if (!cart) {
+    cart = [
+      { id: "argan-milk-serum", size: "30 ml", color: 0, qty: 2 },
+      { id: "barrier-repair-cream", size: "50 ml", color: 0, qty: 1 },
+      { id: "rose-quartz-roller", size: "One size", color: 0, qty: 1 },
+    ];
+    store.set("t6_cart", cart);
+  }
+  cart = cart.filter((l) => byId(l.id));
+  let wish = store.get("t6_wish", ["sunset-spf-fluid", "vitamin-c-glow-drops", "golden-hour-eau", "green-clay-mask"]);
+  const saveCart = () => { store.set("t6_cart", cart); renderCart(); };
+  const cartCount = () => cart.reduce((n, l) => n + l.qty, 0);
+  const cartTotal = () => cart.reduce((n, l) => n + (byId(l.id)?.price || 0) * l.qty, 0);
+  const cartMrp = () => cart.reduce((n, l) => { const p = byId(l.id); return n + ((p?.mrp || p?.price) || 0) * l.qty; }, 0);
+
+  function addToCart(id, opts = {}) {
+    const p = byId(id); if (!p) return;
+    const size = opts.size || p.sizes.find((s) => !p.out.includes(s));
+    const color = opts.color || 0;
+    const ex = cart.find((l) => l.id === id && l.size === size && l.color === color);
+    if (ex) ex.qty += opts.qty || 1; else cart.push({ id, size, color, qty: opts.qty || 1 });
+    saveCart();
+    if (opts.silent) return;
+    openDrawer("cart");
+  }
+  function toggleWish(id) {
+    wish = wish.includes(id) ? wish.filter((x) => x !== id) : [...wish, id];
+    store.set("t6_wish", wish);
+    $$(`[data-wish="${id}"]`).forEach((b) => b.classList.toggle("is-on", wish.includes(id)));
+    toast(wish.includes(id) ? "Saved to your wishlist" : "Removed from wishlist");
+    $$("[data-wish-count]").forEach((e) => (e.textContent = wish.length));
+    document.dispatchEvent(new CustomEvent("t3:wish"));
+  }
+  Object.assign(window.T3, { $, $$, qs, inr, byId, addToCart, toggleWish, store, getCart: () => cart, setCart: (c) => { cart = c; saveCart(); }, cartTotal, cartMrp, cartCount, getWish: () => wish });
+
+  /* ---------- Product card ---------- */
+  const BADGE = { new: "New", hot: "Hot", popular: "Popular", sale: "Sale", best: "Best seller" };
+  function priceHTML(p) {
+    const sale = p.mrp && p.mrp > p.price;
+    return `<div class="price ${sale ? "price--sale" : ""}"><span class="price__now">${inr(p.price)}</span>${sale ? `<span class="price__was">${inr(p.mrp)}</span><span class="price__off">${Math.round((1 - p.price / p.mrp) * 100)}% off</span>` : ""}</div>`;
+  }
+  function card(p, o = {}) {
+    const href = `product.html?p=${p.id}`;
+    const sw = p.colors.length > 1 ? `<div class="swatches">${p.colors.slice(0, 2).map((c) => `<i style="background:${c}"></i>`).join("")}${p.colors.length > 2 ? `<span class="more">+${p.colors.length - 2}</span>` : ""}</div>` : "";
+    return `<article class="p-card ${o.reveal === false ? "" : "reveal"}">
+      <div class="p-card__media">
+        <a href="${href}" aria-label="${p.name}">
+          <img class="main" src="${p.img[0]}" alt="${p.name}" loading="lazy">
+          ${p.img[1] ? `<img class="alt" src="${p.img[1]}" alt="" loading="lazy">` : ""}
+        </a>
+        <div class="p-card__badges">${p.badges.map((b) => `<span class="badge badge--${b}">${BADGE[b]}</span>`).join("")}</div>
+        <button class="p-card__wish ${wish.includes(p.id) ? "is-on" : ""}" data-wish="${p.id}" aria-label="Add to wishlist">${I.heart}</button>
+        ${o.quick === false ? "" : `<button class="btn btn--white p-card__quick" data-add="${p.id}">${p.sizes.length > 1 || p.colors.length > 1 ? "Choose Options" : "Add To Cart"}</button>`}
+      </div>
+      <div class="p-card__body">
+        <a href="${href}" class="p-card__title">${p.name}</a>
+        ${priceHTML(p)}
+        ${o.swatch === false ? "" : sw}
+      </div>
+    </article>`;
+  }
+  window.T3.card = card; window.T3.priceHTML = priceHTML;
+
+  function stars(r) {
+    return `<span class="stars">${Array.from({ length: 5 }, (_, i) => `<span style="opacity:${i < Math.round(r) ? 1 : .25}">${I.star}</span>`).join("")}</span>`;
+  }
+  window.T3.stars = stars;
+
+  /* ---------- Header ---------- */
+  function header() {
+    const float = document.body.dataset.float === "1";
+    const msgs = ["10% off your first order with code HOME10", "Free shipping over ₹2,999", "No cost EMI on every device", "2 year warranty, 5 years of updates"];
+    const run = Array(4).fill(msgs).flat().map((t) => `<span>${t}</span>`).join("");
+    return `
+    <div class="announce" role="region" aria-label="Announcements"><div class="announce__inner"><div class="announce__msg"><div class="marq">${run}</div></div></div></div>
+    <header class="header ${float ? "header--float" : ""}" id="site-header">
+      <div class="header__bar">
+        <div class="header__left">
+          <button class="icon-btn menu-toggle" data-open="menu" aria-label="Menu" style="display:inline-grid"><span class="dots-ico"><i></i><i></i><i></i><i></i></span></button>
+          <nav class="nav" aria-label="Main">
+            <div class="nav__item"><a class="nav__link" href="shop.html">Shop ${I.chev}</a>
+              <div class="mega-menu">
+                <div><h4>Categories</h4><ul>${D.categories.map((c) => `<li><a href="category.html?c=${c.slug}">${c.name}</a></li>`).join("")}</ul></div>
+                <div><h4>Featured</h4><ul><li><a href="shop.html?sort=new">New Arrivals</a></li><li><a href="shop.html?sort=best">Bestsellers</a></li><li><a href="shop.html?sale=1">Sale</a></li><li><a href="shop.html">Shop All</a></li></ul></div>
+                <div class="mega-menu__cards">
+                  <a class="mega-card" href="category.html?c=lighting"><img src="${D.U(D.IMG.pendants, 600, 450)}" alt=""><span>Lighting</span></a>
+                  <a class="mega-card" href="category.html?c=audio"><img src="${D.U(D.IMG.headphones, 600, 450)}" alt=""><span>Audio</span></a>
+                </div>
+              </div>
+            </div>
+            <div class="nav__item"><a class="nav__link" href="about.html">Company ${I.chev}</a>
+              <div class="dropdown"><ul><li><a href="about.html">About</a></li><li><a href="blogs.html">Journal</a></li><li><a href="contact.html">Contact</a></li><li><a href="policy.html">Policies</a></li></ul></div>
+            </div>
+            <div class="nav__item"><a class="nav__link" href="categories.html">Features</a></div>
+          </nav>
+        </div>
+        <a href="index.html" class="logo logo--mob" aria-label="${D.brand} home">${D.brand[0].toUpperCase() + D.brand.slice(1)}</a>
+        <div class="header__tools">
+          <a class="hdr-btn hide-sm" href="contact.html"><span class="dots-ico" style="grid-template-columns:4px"><i></i><i></i></span><span class="lbl">Region</span></a>
+          <button class="hdr-btn search-sm" data-open="search" aria-label="Search">${I.search}<span class="lbl">Search</span></button>
+          <a class="hdr-btn hide-sm" href="account.html" aria-label="Account">${I.user}<span class="lbl">Account</span></a>
+          <button class="hdr-btn cart-btn" data-open="cart" aria-label="Cart"><span class="lbl">Cart</span><span class="cart-count" data-cart-count>0</span></button>
+        </div>
+      </div>
+    </header>`;
+  }
+
+  /* ---------- Footer ---------- */
+  function footer() {
+    const B = D.brand[0].toUpperCase() + D.brand.slice(1);
+    return `
+    <footer class="footer">
+      <div class="container">
+        <div class="footer__head"><a href="index.html" class="logo">${B}</a>
+          <div class="footer__social"><a href="#">Instagram</a><a href="#">Pinterest</a><a href="#">YouTube</a><a href="#">Threads</a><a href="#">X</a></div></div>
+        <div class="footer__cols">
+          <div class="footer__form footer__news"><p>Subscribe to our newsletter to be the first to learn about new products, promotions and special offers</p>
+            <form data-newsletter><div class="search-field"><input type="email" required placeholder="Your Email *" aria-label="Email"><button aria-label="Subscribe">${I.mail.replace(/22/g, "16")}</button></div></form>
+            <small style="display:block;margin-top:12px">By pressing the button, you agree to the terms of the <a class="link" href="policy.html?type=terms">User Agreement</a> and consent to the processing of personal data.</small></div>
+          <div><h4>Shop</h4><ul>${D.categories.map((c) => `<li><a href="category.html?c=${c.slug}">${c.name}</a></li>`).join("")}</ul></div>
+          <div><h4>Company</h4><ul><li><a href="about.html">About</a></li><li><a href="blogs.html">Journal</a></li><li><a href="contact.html">Stores</a></li><li><a href="contact.html">Contact</a></li></ul></div>
+          <div><h4>Legal</h4><ul><li><a href="policy.html?type=terms">Terms of Service</a></li><li><a href="policy.html?type=privacy">Privacy Policy</a></li><li><a href="policy.html?type=refund">Refund Policy</a></li><li><a href="policy.html?type=shipping">Shipping Policy</a></li></ul></div>
+        </div>
+        <div class="footer__bottom">
+          <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><div class="pay-icons"><span>UPI</span><span>VISA</span><span>MC</span><span>RUPAY</span><span>AMEX</span></div>
+            <span class="footer__legal-links"><a href="policy.html?type=privacy">Privacy policy</a><a href="policy.html?type=refund">Refund policy</a><a href="policy.html?type=terms">Terms of service</a></span></div>
+          <span style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><span style="color:#fff">English / India (INR ₹)</span><span>© 2026 ${B}. Powered by OneWooz</span></span>
+        </div>
+      </div>
+    </footer>`;
+  }
+
+  /* Azimuth arrow buttons: label + play-triangle; on hover the trailing
+     triangle exits, a leading one slides in and the label follows. */
+  const ARW = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.1V7.9c0-.4.43-.63.77-.42l6.55 4.1a.5.5 0 0 1 0 .85l-6.55 4.1A.5.5 0 0 1 9 16.1Z"/></svg>';
+  function arrowize(root = document) {
+    $$("a.btn, button.btn", root).forEach((b) => {
+      if (b.dataset.arw || b.classList.contains("p-card__quick") || b.querySelector("svg:not(.btn__ar svg), img, input")) return;
+      if (!(b.classList.contains("has-arrow-auto") || b.classList.contains("btn--black") || b.classList.contains("btn--white") || b.classList.contains("btn--outline") || b.classList.contains("btn--outline-white") || b.classList.contains("btn--olive"))) return;
+      const txt = b.textContent.trim(); if (!txt || txt.length > 26) return;
+      b.dataset.arw = 1; b.classList.add("has-arrow");
+      b.innerHTML = `<span class="btn__in"><span class="btn__ar btn__ar--l">${ARW}</span><span class="btn__label">${txt}</span><span class="btn__ar btn__ar--r">${ARW}</span></span>`;
+    });
+  }
+  window.T3.arrowize = arrowize;
+
+  /* ---------- Drawers ---------- */
+  function drawers() {
+    const trend = ["Floor lamp", "Headphones", "Earbuds", "Smartwatch", "Standing desk", "Diffuser"];
+    return `
+    <div class="overlay" data-overlay></div>
+    <aside class="drawer" id="drawer-cart" aria-label="Cart">
+      <div class="drawer__head"><h3 class="title-count">Your cart <sup data-cart-count></sup></h3><button class="icon-btn" data-close>${I.close}</button></div>
+      <div class="drawer__body" data-cart-lines></div>
+      <div class="drawer__foot" data-cart-foot></div>
+    </aside>
+    <aside class="drawer drawer--left m-menu" id="drawer-menu" aria-label="Menu">
+      <div class="drawer__head"><a href="index.html" class="logo">${D.brand}</a><button class="icon-btn" data-close>${I.close}</button></div>
+      <div class="drawer__body">
+        <div class="m-menu__cats">${D.categories.slice(0, 6).map((c) => `<a href="category.html?c=${c.slug}"><img src="${D.U(c.img, 300, 300)}" alt=""><span>${c.name}</span></a>`).join("")}</div>
+        <a class="m-link" href="shop.html">Shop All ${I.right}</a>
+        <a class="m-link" href="categories.html">All Categories ${I.right}</a>
+        <a class="m-link" href="shop.html?sort=new">New Arrivals ${I.right}</a>
+        <a class="m-link" href="blogs.html">Journal ${I.right}</a>
+        <a class="m-link" href="about.html">About Us ${I.right}</a>
+        <a class="m-link" href="contact.html">Contact ${I.right}</a>
+        <a class="m-link" href="account.html">My Account ${I.right}</a>
+      </div>
+    </aside>
+    <div class="search-pop" id="drawer-search" role="dialog" aria-label="Search">
+      <div class="container">
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="search-field" style="flex:1">${I.search}<input type="search" placeholder="Search lamps, audio, wearables…" data-search-input aria-label="Search"></div>
+          <button class="icon-btn" data-close aria-label="Close search">${I.close}</button>
+        </div>
+        <div class="search-pop__grid">
+          <div class="search-pop__trend"><p class="eyebrow" style="margin-bottom:12px">Trending searches</p>${trend.map((t) => `<a class="tag" href="#" data-trend="${t}">${t}</a>`).join("")}</div>
+          <div><p class="eyebrow" style="margin-bottom:12px" data-search-label>Popular products</p><div class="search-results" data-search-results></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal" id="modal-newsletter" role="dialog" aria-label="Newsletter">
+      <div class="modal__backdrop" data-close></div>
+      <div class="modal__box">
+        <button class="modal__close" data-close aria-label="Close">${I.close}</button>
+        <div class="modal__media"><img src="${D.U(D.IMG.chairPlant, 700, 800)}" alt=""></div>
+        <div class="modal__content">
+          <a class="logo" style="justify-content:center;font-size:24px">${D.brand}</a>
+          <h3 class="h2">Get 10% off your first order</h3>
+          <p class="small">Be the first to learn about new devices, promotions and special offers.</p>
+          <form data-newsletter style="display:grid;gap:10px">
+            <input class="input" type="email" required placeholder="Enter your email" aria-label="Email">
+            <button class="btn btn--black btn--block">Get 10% OFF</button>
+          </form>
+          <button class="link small" data-close style="color:var(--muted)">I'll pay full price</button>
+        </div>
+      </div>
+    </div>
+    <div class="toast" data-toast><i>${I.check}</i><span></span></div>
+    <details class="preview-dock">
+      <summary>Template 6 pages ${I.chev}</summary>
+      <nav>${[
+        ["index.html", "Home"], ["categories.html", "All categories"], ["category.html?c=outerwear", "Category detail"], ["shop.html", "All products"],
+        ["product.html?p=argan-milk-serum", "Product detail"], ["cart.html", "Cart"], ["checkout.html", "Checkout"], ["order-confirmation.html", "Order confirmation"],
+        ["login.html", "Sign in"], ["account.html", "Account"], ["blogs.html", "Journal"], ["blog.html?b=capsule-wardrobe", "Article"],
+        ["about.html", "About"], ["contact.html", "Contact"], ["policy.html?type=refund", "Policies"],
+      ].map(([h, t]) => `<a href="${h}" class="${location.pathname.endsWith(h.split("?")[0]) ? "is-active" : ""}">${t}</a>`).join("")}</nav>
+    </details>`;
+  }
+
+  /* ---------- Cart rendering ---------- */
+  function renderCart() {
+    const n = cartCount();
+    $$("[data-cart-count]").forEach((e) => { e.textContent = e.classList.contains("cart-count") ? n : n || ""; e.dataset.count = n; });
+    const lines = $("[data-cart-lines]"), foot = $("[data-cart-foot]");
+    if (!lines) return;
+    const total = cartTotal(), left = Math.max(0, D.freeShip - total);
+    if (!cart.length) {
+      lines.innerHTML = `<div class="empty-state">${I.bag.replace(/20/g, "48")}<h3 class="h4">Your cart is empty</h3><p class="muted small" style="margin:6px 0 18px">Looks like you have not added anything yet.</p><a class="btn btn--black" href="shop.html">Start Shopping</a></div>`;
+      foot.innerHTML = ""; document.dispatchEvent(new CustomEvent("t3:cart")); return;
+    }
+    lines.innerHTML = `<div class="ship-progress">${left ? `Spend ${inr(left)} more to unlock free shipping` : "You have unlocked free shipping!"}<div class="ship-progress__bar"><i style="width:${Math.min(100, (total / D.freeShip) * 100)}%"></i></div></div>` +
+      cart.map((l, i) => { const p = byId(l.id); return `<div class="line-item">
+        <a class="line-item__img" href="product.html?p=${p.id}"><img src="${p.img[0]}" alt=""></a>
+        <div><a class="line-item__title" href="product.html?p=${p.id}">${p.name}</a>
+          <div class="line-item__meta">${l.size} · ${["Primary", "Alternate", "Third"][l.color] || "Primary"} colour</div>
+          ${priceHTML(p)}
+          <div class="line-item__row"><div class="qty"><button data-qty="${i}" data-d="-1" aria-label="Decrease">${I.minus}</button><input value="${l.qty}" readonly aria-label="Quantity"><button data-qty="${i}" data-d="1" aria-label="Increase">${I.plus}</button></div><button class="line-item__remove" data-remove="${i}">Remove</button></div>
+        </div></div>`; }).join("") +
+      `<div style="margin-top:22px"><h4 class="h4" style="margin-bottom:12px">You may also like</h4><div class="grid grid--2 keep-2">${D.products.filter((p) => !cart.some((l) => l.id === p.id)).slice(10, 12).map((p) => card(p, { reveal: false, swatch: false, tag: false, stars: false })).join("")}</div></div>`;
+    foot.innerHTML = `<div class="row"><span class="muted">Subtotal</span><b>${inr(total)}</b></div>
+      ${cartMrp() > total ? `<div class="row small" style="color:var(--ok)"><span>You save</span><b>${inr(cartMrp() - total)}</b></div>` : ""}
+      <p class="summary__note" style="margin:6px 0 14px">Taxes included. Shipping calculated at checkout.</p>
+      <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:10px"><a class="btn btn--outline" href="cart.html">View cart</a><a class="btn btn--black" href="checkout.html">Check out</a></div>`;
+    document.dispatchEvent(new CustomEvent("t3:cart"));
+    if (window.T3.arrowize) window.T3.arrowize($("[data-cart-foot]"));
+  }
+
+  /* ---------- Open/close ---------- */
+  function openDrawer(name) {
+    closeAll();
+    const el = $(`#drawer-${name}`) || $(`#modal-${name}`); if (!el) return;
+    el.classList.add("is-open");
+    if (!name.startsWith("search") && !el.classList.contains("modal")) $("[data-overlay]").classList.add("is-open");
+    if (name === "search") { $("[data-overlay]").classList.add("is-open"); setTimeout(() => $("[data-search-input]").focus(), 300); }
+    document.body.classList.add("no-scroll");
+  }
+  function closeAll() {
+    $$(".drawer.is-open, .search-pop.is-open, .modal.is-open, .filters.is-open").forEach((e) => e.classList.remove("is-open"));
+    $("[data-overlay]")?.classList.remove("is-open");
+    document.body.classList.remove("no-scroll");
+  }
+  Object.assign(window.T3, { openDrawer, closeAll });
+
+  let toastT;
+  function toast(msg) {
+    const t = $("[data-toast]"); if (!t) return;
+    t.querySelector("span").textContent = msg; t.classList.add("is-show");
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("is-show"), 2400);
+  }
+  window.T3.toast = toast;
+
+  /* ---------- Search ---------- */
+  function runSearch(q) {
+    const res = $("[data-search-results]"); if (!res) return;
+    const list = q ? D.products.filter((p) => (p.name + " " + p.catName).toLowerCase().includes(q.toLowerCase())) : D.products.slice(0, 8);
+    $("[data-search-label]").textContent = q ? `${list.length} results for “${q}”` : "Popular products";
+    res.innerHTML = list.slice(0, 8).map((p) => `<a class="search-hit" href="product.html?p=${p.id}"><img src="${p.img[0]}" alt=""><span><b>${p.name}</b>${priceHTML(p)}</span></a>`).join("") || `<p class="muted">No matches. Try “tee” or “denim”.</p>`;
+  }
+
+  /* ---------- Sliders ---------- */
+  function initSliders(root = document) {
+    $$("[data-slider]", root).forEach((s) => {
+      if (s.dataset.ready) return; s.dataset.ready = 1;
+      const track = $(".slider__track", s), bar = $(".slider__bar i", s), prev = $("[data-prev]", s), next = $("[data-next]", s);
+      const step = () => (track.firstElementChild?.getBoundingClientRect().width || 300) + 16;
+      const upd = () => {
+        const max = track.scrollWidth - track.clientWidth;
+        if (bar) { const w = Math.max(12, (track.clientWidth / track.scrollWidth) * 100); bar.style.width = w + "%"; bar.style.left = (max ? (track.scrollLeft / max) * (100 - w) : 0) + "%"; }
+        if (prev) prev.disabled = track.scrollLeft < 4; if (next) next.disabled = track.scrollLeft > max - 4;
+      };
+      prev?.addEventListener("click", () => track.scrollBy({ left: -step() }));
+      next?.addEventListener("click", () => track.scrollBy({ left: step() }));
+      track.addEventListener("scroll", upd, { passive: true }); addEventListener("resize", upd); setTimeout(upd, 60);
+    });
+  }
+  window.T3.initSliders = initSliders;
+
+  /* ---------- Accordions & reveal ---------- */
+  function initAcc(root = document) {
+    $$(".acc__btn", root).forEach((b) => {
+      if (b.dataset.ready) return; b.dataset.ready = 1;
+      b.addEventListener("click", () => {
+        const acc = b.closest(".acc"), group = acc.closest("[data-acc-single]");
+        if (group && !acc.classList.contains("is-open")) $$(".acc.is-open", group).forEach((a) => a.classList.remove("is-open"));
+        acc.classList.toggle("is-open"); b.setAttribute("aria-expanded", acc.classList.contains("is-open"));
+      });
+    });
+  }
+  window.T3.initAcc = initAcc;
+  window.T3.acc = (title, body, open) => `<div class="acc ${open ? "is-open" : ""}"><button class="acc__btn" aria-expanded="${!!open}">${title}<span class="chev">${I.chev}</span></button><div class="acc__panel"><div class="acc__inner"><div>${body}</div></div></div></div>`;
+
+  const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" }) : null;
+  const io2 = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { const c = e.target, im = c.querySelector("img.main"); const go = () => c.classList.add("is-loaded"); if (im && !im.complete) { im.addEventListener("load", go, { once: true }); im.addEventListener("error", go, { once: true }); } else go(); io2.unobserve(c); } }), { rootMargin: "0px 0px -20px 0px" }) : null;
+  function initReveal(root = document) {
+    $$(".reveal:not(.is-in)", root).forEach((el, i) => { el.style.transitionDelay = (i % 6) * 80 + "ms"; io ? io.observe(el) : el.classList.add("is-in"); });
+    $$(".p-card:not(.is-loaded)", root).forEach((c) => (io2 ? io2.observe(c) : c.classList.add("is-loaded")));
+    $$(".vbanner:not(.is-in), .page-banner:not(.is-in)", root).forEach((el) => (io ? io.observe(el) : el.classList.add("is-in")));
+  }
+  window.T3.initReveal = initReveal;
+  window.T3.refresh = (root) => { initSliders(root); initAcc(root); initReveal(root); };
+
+  /* ---------- Boot ---------- */
+  document.addEventListener("DOMContentLoaded", () => {
+    const h = $("[data-header]"); if (h) h.outerHTML = header();
+    const f = $("[data-footer]"); if (f) f.outerHTML = footer();
+    document.body.insertAdjacentHTML("beforeend", drawers());
+    renderCart(); runSearch("");
+
+    const hdr = $("#site-header");
+    if (hdr) {
+      const on = () => hdr.classList.toggle("is-scrolled", scrollY > (hdr.classList.contains("header--float") ? 120 : 40)); on(); addEventListener("scroll", on, { passive: true });
+    }
+    const ann = $$(".announce__msg div"); let ai = 0;
+    const annGo = (d) => { if (!ann.length) return; const old = ann[ai]; old.classList.remove("is-active"); old.classList.add("is-out"); setTimeout(() => old.classList.remove("is-out"), 500); ai = (ai + d + ann.length) % ann.length; ann[ai].classList.add("is-active"); };
+    let annT = setInterval(() => annGo(1), 4500);
+    $$("[data-ann]").forEach((b) => b.addEventListener("click", () => { clearInterval(annT); annGo(+b.dataset.ann); annT = setInterval(() => annGo(1), 4500); }));
+
+    document.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-open],[data-close],[data-overlay],[data-add],[data-wish],[data-qty],[data-remove],[data-trend]");
+      if (!t) return;
+      if (t.dataset.open) { e.preventDefault(); openDrawer(t.dataset.open); }
+      else if ("close" in t.dataset || "overlay" in t.dataset) { closeAll(); }
+      else if (t.dataset.add) { e.preventDefault(); addToCart(t.dataset.add); }
+      else if (t.dataset.wish) { e.preventDefault(); toggleWish(t.dataset.wish); }
+      else if (t.dataset.qty) { const l = cart[+t.dataset.qty]; l.qty = Math.max(1, l.qty + +t.dataset.d); saveCart(); }
+      else if (t.dataset.remove) { cart.splice(+t.dataset.remove, 1); saveCart(); toast("Item removed"); }
+      else if (t.dataset.trend) { e.preventDefault(); const i = $("[data-search-input]"); i.value = t.dataset.trend.split(" ").pop(); runSearch(i.value); }
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
+    $("[data-search-input]")?.addEventListener("input", (e) => runSearch(e.target.value.trim()));
+    $$("[data-newsletter]").forEach((f) => f.addEventListener("submit", (e) => { e.preventDefault(); closeAll(); toast("You're in! Code HOME10 is on its way"); f.reset(); }));
+
+    if (document.body.dataset.popup === "1" && !store.get("t6_popup", false)) {
+      setTimeout(() => { openDrawer("newsletter"); store.set("t6_popup", true); }, 6000);
+    }
+    if (typeof window.T3Page === "function") window.T3Page();
+    window.T3.refresh();
+    arrowize();
+  });
+})();

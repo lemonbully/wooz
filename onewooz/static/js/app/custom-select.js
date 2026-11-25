@@ -164,21 +164,84 @@
     api.opts.forEach(function (li, idx) { li.classList.toggle("is-active", idx === index); });
     if (index >= 0) {
       api.panel.setAttribute("aria-activedescendant", api.opts[index].id);
-      if (scroll) api.opts[index].scrollIntoView({ block: "nearest" });
+      if (scroll) scrollWithinPanel(api, api.opts[index]);
     } else {
       api.panel.removeAttribute("aria-activedescendant");
     }
   }
 
+  // Bring an option into view by scrolling the panel only. scrollIntoView()
+  // also scrolls every scrollable ancestor (a modal body, a scrolling list
+  // the select sits in), and that ancestor scroll then closed the menu.
+  function scrollWithinPanel(api, li) {
+    var p = api.panel;
+    var top = li.offsetTop;
+    var bottom = top + li.offsetHeight;
+    if (top < p.scrollTop) p.scrollTop = top;
+    else if (bottom > p.scrollTop + p.clientHeight) p.scrollTop = bottom - p.clientHeight;
+  }
+
+  // Is the select inside something that clips overflow (a scrolling list, a
+  // modal body)? Then an absolutely positioned panel would be cut off, so it
+  // floats with position:fixed instead. Not when an ancestor would become the
+  // fixed panel's containing block (transform, filter, contain...), where
+  // fixed coordinates would land in the wrong place.
+  function needsFloat(api) {
+    var clipped = false;
+    for (var n = api.wrap.parentElement; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+      var cs = window.getComputedStyle(n);
+      if (
+        (cs.transform && cs.transform !== "none") ||
+        (cs.filter && cs.filter !== "none") ||
+        (cs.perspective && cs.perspective !== "none") ||
+        (cs.backdropFilter && cs.backdropFilter !== "none") ||
+        /paint|layout|strict|content/.test(cs.contain || "") ||
+        /transform|filter|perspective/.test(cs.willChange || "")
+      ) return false;
+      if (cs.overflowX !== "visible" || cs.overflowY !== "visible") clipped = true;
+    }
+    return clipped;
+  }
+
+  function clearFloat(api) {
+    api.wrap.classList.remove("ow-cs--float");
+    var s = api.panel.style;
+    s.left = s.top = s.bottom = s.width = s.maxHeight = "";
+  }
+
   function openMenu(api) {
     if (OPEN && OPEN !== api) closeMenu(OPEN, false);
     OPEN = api;
+    clearTimeout(api.floatTimer);
+    var r = api.btn.getBoundingClientRect();
+    var vh = window.innerHeight;
+    var vw = document.documentElement.clientWidth || window.innerWidth;
+    var below = vh - r.bottom;
+    // Flip upward when there isn't room below.
+    var up = below < 260 && r.top > below;
+    api.wrap.classList.toggle("ow-cs--up", up);
+    if (needsFloat(api)) {
+      var s = api.panel.style;
+      var gap = 8;
+      var width = Math.min(Math.max(r.width, 240), vw - gap * 2);
+      var left = Math.max(gap, Math.min(r.left, vw - width - gap));
+      api.wrap.classList.add("ow-cs--float");
+      s.width = width + "px";
+      s.left = left + "px";
+      if (up) {
+        s.top = "auto";
+        s.bottom = (vh - r.top - 1) + "px";
+        s.maxHeight = Math.max(120, Math.min(240, r.top - gap)) + "px";
+      } else {
+        s.bottom = "auto";
+        s.top = (r.bottom - 1) + "px";
+        s.maxHeight = Math.max(120, Math.min(240, below - gap)) + "px";
+      }
+    } else {
+      clearFloat(api);
+    }
     api.wrap.classList.add("is-open");
     api.btn.setAttribute("aria-expanded", "true");
-    // Flip upward when there isn't room below.
-    var r = api.btn.getBoundingClientRect();
-    var below = window.innerHeight - r.bottom;
-    api.wrap.classList.toggle("ow-cs--up", below < 260 && r.top > below);
     setActive(api, api.select.selectedIndex >= 0 ? api.select.selectedIndex : firstEnabled(api), true);
   }
 
@@ -187,6 +250,11 @@
     api.btn.setAttribute("aria-expanded", "false");
     setActive(api, -1, false);
     if (OPEN === api) OPEN = null;
+    // Let the fade-out finish where the panel was before dropping the float.
+    clearTimeout(api.floatTimer);
+    api.floatTimer = setTimeout(function () {
+      if (!api.wrap.classList.contains("is-open")) clearFloat(api);
+    }, 160);
     if (focusBtn) api.btn.focus();
   }
 

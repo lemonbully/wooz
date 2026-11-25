@@ -1,49 +1,27 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Products | velora</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
-<div data-header></div>
+{% extends "storefront/template4/_base.html" %}
+{% load static %}
+{% block main %}
 <main class="container">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">&gt;</span><span>Products</span></nav>
-  <div class="page-head"><h1 class="h1">All <em class="hl">products.</em></h1><p>Clean, botanical formulas for every skin type. Free shipping over ₹1,499.</p></div>
-
-  <div class="slider" data-slider>
-    <div class="slider__track" data-subcats style="--col:calc((100% - 3*16px)/4);--col-sm:72%"></div>
-  </div>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'public_website' %}">Home</a><span class="sep">/</span><span>Products</span></nav>
+  <div class="page-head"><h1 class="h1" data-shop-title>{% if search_query %}Results for “{{ search_query }}”{% elif selected_category_names %}{{ selected_category_names|join:", " }}{% else %}All <em class="hl">products.</em>{% endif %}</h1></div>
 
   <div data-collection></div>
-
-  <section class="section" style="padding-bottom:0">
-    <div class="sec-head sec-head--center"><h2 class="h2">Shop by <em class="hl">skin concern.</em></h2></div>
-    <div class="grid grid--5" data-concerns style="row-gap:20px"></div>
-  </section>
 </main>
+<section class="section" style="padding-bottom:0"><div class="container" data-services></div></section>
+{% endblock %}
 
-<section class="section"><div class="container services" data-services></div></section>
-<div data-footer></div>
-
-<script src="assets/js/data.js"></script>
-<script src="assets/js/collection.js"></script>
-<script>
+{% block page_scripts %}
+<script src="{% static 'storefront-t4/js/collection.js' %}"></script>
+<script nonce="{{ csp_nonce }}">
 window.T3Page = function () {
-  const D = T3, I = T3.I, $ = T3.$;
-  $('[data-subcats]').innerHTML = D.categories.map(c => `<a class="cat-card" href="category.html?c=${c.slug}"><div class="cat-card__media"><img src="${D.U(c.img, 700, 525)}" alt="" loading="lazy"><span class="cat-card__pill">${c.name}</span></div></a>`).join('');
+  const D = T3, I = T3.I, esc = T3.esc, L = D.urls, P = D.page;
+  const list = P.products || D.products;
+  const onSale = D.showPrice && list.some(p => p.mrp);
   T3Collection({
-    root: '[data-collection]', products: D.products,
-    promo: `<a href="shop.html?sale=1" class="promo-tile reveal" style="background:url(${D.U(D.IMG.amberOrange, 700, 900)}) center/cover"><div style="position:relative;z-index:1"><span class="badge badge--sale">Up to 20% off</span><h3 style="margin:10px 0 14px">Body care<br><em class="hl">sale is live.</em></h3><span class="btn btn--white btn--sm">Shop sale</span></div></a>`
+    root: '[data-collection]', products: list,
+    sort: ({ price_asc: 'low', price_desc: 'high' })[P.sort] || '',
+    promo: onSale ? `<a href="${L.shop}?sale=1" class="promo-tile reveal" style="background:var(--neon);justify-content:flex-end"><div><h3 style="color:var(--heading)">Sale <em class="hl">is live.</em></h3><p class="small" style="margin:8px 0 18px;color:var(--text)">Favourites at special prices, while stocks last.</p><span class="btn btn--black">Shop sale</span></div></a>` : ''
   });
-  $('[data-concerns]').innerHTML = [['face2', 'Acne & Blemishes', 92], ['facial2', 'Dryness', 84], ['face3', 'Pores & Oily Skin', 64], ['orangeFace', 'Dullness', 51], ['mask', 'Redness', 38]]
-    .map(([k, n, c]) => `<a class="cat-circle reveal" href="shop.html"><div class="cat-circle__img"><img src="${D.U(D.IMG[k], 300, 300)}" alt="" loading="lazy"></div><b>${n}</b><div class="small">(${c})</div></a>`).join('');
-  $('[data-services]').innerHTML = [['truck', 'Free delivery', 'On orders above ₹1,499'], ['return', 'Skin match promise', 'One free exchange, even if opened'], ['card', 'Secure payments', 'UPI, cards, netbanking and COD'], ['chat', 'Skin experts', 'Mon to Sat, 9 AM to 8 PM']].map(([i, t, s]) => `<div class="service">${I[i]}<b>${t}</b><span>${s}</span></div>`).join('');
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

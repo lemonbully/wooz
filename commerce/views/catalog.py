@@ -170,7 +170,9 @@ def products(request, site_id):
     hover_swap = _content_flag(site, "enable_product_hover_swap")
     detail_zoom = _content_flag(site, "enable_product_detail_zoom")
     show_price = _content_flag(site, "show_price_in_lists", default=True)
-    abandoned_cart = _content_flag(site, "abandoned_cart_emails_enabled")
+    # The real switch is the Site field (Store settings); this page shows and
+    # flips the same one.
+    abandoned_cart = bool(site.abandoned_cart_emails_enabled)
     flags = [hover_swap, detail_zoom] + ([show_price, abandoned_cart] if site.is_d2c else [])
     active_count = sum(1 for p in products_all if p.is_active)
 
@@ -215,7 +217,13 @@ def toggle_product_flag(request, site_id, flag):
     enabled = str(request.POST.get("enabled")).strip().lower() in ("1", "true", "yes", "on")
     content[key] = enabled
     site.content = content
-    site.save(update_fields=["content"])
+    fields = ["content"]
+    if flag == "abandoned_cart":
+        # Same switch as "Send abandoned cart emails" in Store settings, which
+        # is what the reminder scheduler (commerce.abandoned_cart) reads.
+        site.abandoned_cart_emails_enabled = enabled
+        fields.append("abandoned_cart_emails_enabled")
+    site.save(update_fields=fields)
     return JsonResponse({"success": True, "enabled": enabled})
 
 
@@ -1049,6 +1057,10 @@ def categories(request, site_id):
         )
     )
     cfg = _d2c_config(site)
+    featured = [i for i in _featured_pair(cfg) if any(str(c.pk) == i for c in qs)]
+    for c in qs:
+        # 1 = left card, 2 = right card on the Template 2 Categories page.
+        c.feature_pos = featured.index(str(c.pk)) + 1 if str(c.pk) in featured else 0
     context = store_context(request, site, "categories")
     context.update(
         {
@@ -1058,6 +1070,11 @@ def categories(request, site_id):
             # explicitly turned off  matches the reference's tri-state string.
             "mega_menu_enabled": cfg.get("categories_mega_menu_enabled", "on") != "off",
             "highlight_category_id": str(cfg.get("mega_highlight_category_id") or ""),
+            # Template 2 only: the two categories shown large at the top of
+            # the storefront Categories page, toggled per card.
+            "show_featured_pair": site.theme_choice in ("2", "3"),
+            "featured_pair_label": f"Template {site.theme_choice}",
+            "featured_count": len(featured),
             "trusted_icons_enabled": bool(cfg.get("category_as_certificates_enabled")),
             "trusted_icons": cfg.get("category_certificate_icons") or [],
         }
@@ -1074,6 +1091,49 @@ def toggle_categories_mega_menu(request, site_id):
     cfg["categories_mega_menu_enabled"] = "on" if enabled else "off"
     _save_d2c_config(site, cfg)
     return JsonResponse({"success": True, "enabled": enabled})
+
+
+def _featured_pair(cfg) -> list[str]:
+    pair = cfg.get("t3_featured_category_ids")
+    return [str(x) for x in pair if str(x or "").strip()][:2] if isinstance(pair, list) else []
+
+
+@login_required
+@require_POST
+def category_toggle_feature(request, site_id, category_id):
+    """Feature / unfeature a category at the top of the Template 2 Categories
+    page. Two at most, kept in pick order (first = left card). A third pick is
+    refused rather than silently replacing one, and a hidden category can't
+    be featured (the storefront would skip it)."""
+    site = get_owned_site(request, site_id)
+    category = get_object_or_404(Category.objects.for_site(site).filter(is_deleted=False), pk=category_id)
+    cfg = _d2c_config(site)
+    live = {
+        str(pk)
+        for pk in Category.objects.for_site(site)
+        .filter(is_deleted=False)
+        .order_by()
+        .values_list("pk", flat=True)
+    }
+    pair = [i for i in _featured_pair(cfg) if i in live]
+    cid = str(category.pk)
+    if cid in pair:
+        pair.remove(cid)
+        featured = False
+    elif not category.is_active:
+        return JsonResponse(
+            {"success": False, "error": "This category is hidden. Show it on your store first."}, status=400
+        )
+    elif len(pair) >= 2:
+        return JsonResponse(
+            {"success": False, "error": "Two categories are already featured. Remove one first."}, status=400
+        )
+    else:
+        pair.append(cid)
+        featured = True
+    cfg["t3_featured_category_ids"] = pair
+    _save_d2c_config(site, cfg)
+    return JsonResponse({"success": True, "featured": featured, "pair": pair})
 
 
 @login_required
@@ -1146,7 +1206,8 @@ def category_form(request, site_id, category_id=None):
             # Category image picked from the library (copied server-side). A
             # direct file upload on the model field still wins if one was sent.
             asset_id = request.POST.get("media_image_category")
-            if asset_id and not request.FILES.get("image"):
+            replaced = bool(request.FILES.get("image"))
+            if asset_id and not replaced:
                 asset = (
                     MediaAsset.objects.for_site(site)
                     .filter(pk=asset_id, kind=MediaAsset.Kind.IMAGE)
@@ -1155,8 +1216,13 @@ def category_form(request, site_id, category_id=None):
                 if asset is not None:
                     try:
                         category.image = clone_asset_file(asset, f"categories/{site.id}")
+                        replaced = True
                     except Exception:
                         pass
+            # The x on the saved image (or replacing it, then removing the new
+            # pick) posts remove_image: the category is saved without one.
+            if not replaced and request.POST.get("remove_image"):
+                category.image = None
             category.save()
             activity.record(
                 "store.category.updated" if instance else "store.category.created",

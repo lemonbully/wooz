@@ -1,0 +1,18 @@
+{% comment %}
+The answer block on an instant-answer page. Rendered on load and by
+ask:instant_status while the AI writes. Context: aq (prompts.AskQuestion),
+answer_html (escaped, safe), masked_email.
+{% endcomment %}
+{% if aq.status == "answered" and answer_html %}
+  <p class="ask-by">{% if aq.answer_source == "staff" %}Answered by the OneWooz team{% else %}Instant answer · AI, read by the OneWooz team{% endif %}</p>
+  <div class="ask-text pal-rte">{{ answer_html }}</div>
+{% elif aq.status == "pending" %}
+  <div class="ask-pending" role="status">
+    <span class="ask-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+    <span>Writing your answer. This usually takes a few seconds.</span>
+  </div>
+{% else %}
+  <p class="ask-by">With the OneWooz team</p>
+  <p class="ask-text">A person on our team will answer this soon.
+  {% if masked_email %}We'll email {{ masked_email }} when it's ready.{% else %}Bookmark this page to come back, or post it to the community below so other sellers can help sooner.{% endif %}</p>
+{% endif %}

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static marketplace_slots %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -62,7 +62,7 @@
     {% firstof seo.og_description website.content.seo.og_description seo.meta_description website.content.seo.meta_description page.content.meta_description website.content.meta_description website.content.description as ogd %}
     {% if ogd %}<meta property="og:description" content="{{ ogd }}">{% endif %}
     {% firstof seo.og_site_name website.content.site_name website.content.websiteName as ogsn %}
-    {% if ogsn %}<meta property="og:site_name" content="{{ ogsn }}">{% endif %}
+    {% if ogsn %}<meta property="og:site_name" content="{{ ogsn }}"><meta name="application-name" content="{{ ogsn }}">{% endif %}
     {% firstof seo.canonical_url canonical_url as page_canonical %}
     {% firstof seo.og_url page_canonical as ogu %}
     {% if ogu %}<meta property="og:url" content="{{ ogu }}">{% endif %}
@@ -117,9 +117,14 @@
     {% endif %}
 
     {% block extra_head %}{% endblock %}
+    {# Page-level <style>, after the theme's own head so a page can override it. #}
+    {% block extra_css %}{% endblock %}
+    {# OneWooz Apps: stylesheet + head fragments, only when this page has app content. #}
+    {% app_head %}
 </head>
 <body class="flex flex-col min-h-screen">
     {% include "storefront/_tracking_body.html" %}
+    {% if not embedded %}{% app_slot "body.start" %}{% app_slot "header.above" %}{% endif %}
     <!-- Header (hidden when embedded) -->
     {% if not embedded %}
     <header>
@@ -127,6 +132,7 @@
             {% include "storefront/components/navigation.html" %}
         {% endblock %}
     </header>
+    {% app_slot "header.below" %}
     {% endif %}
     
     <!-- Main Content -->
@@ -136,6 +142,7 @@
     
     <!-- Footer (hidden when embedded) -->
     {% if not embedded %}
+    {% app_slot "footer.above" %}
     <footer>
         {% block footer %}
             {% include "storefront/components/footer.html" %}
@@ -174,5 +181,7 @@
 
     {# Newsletter popup (Edit Content → Newsletter); renders nothing when off. #}
     {% include "storefront/shared/_newsletter_popup.html" %}
+    {% if not embedded %}{% app_tail %}{% endif %}
+{% include "storefront/_recaptcha_loader.html" %}
 </body>
 </html> 

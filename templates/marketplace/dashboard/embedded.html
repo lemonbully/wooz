@@ -1,0 +1,19 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ placement.label }} · {{ site.name }}{% endblock %}
+{% block crumb %}{{ placement.label }}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">{{ app.name }}</p>
+    <h1 class="app-head__title pal-mt-4">{{ placement.label }}</h1>
+  </div></div>
+  {% comment %}
+  Partner page in a sandboxed frame on its own origin: it can run its own
+  scripts and forms but can never reach the dashboard session or this page.
+  {% endcomment %}
+  <iframe class="mkt-embed app-block" src="{{ frame_url }}" title="{{ placement.label }}"
+          sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+          referrerpolicy="no-referrer" loading="lazy"></iframe>
+</div>
+{% endblock %}

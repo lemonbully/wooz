@@ -2,8 +2,10 @@
 
 These are global (not tenant-scoped) records managed from the Django admin. They
 mirror the storefront CMS an owner gets for their own store: a three-level core
-page tree (page → subpage → child page) plus a blog. Content is rich HTML
-authored with TinyMCE in the admin and rendered on the marketing site.
+page tree (page → subpage → child page) plus a blog. Content is plain HTML
+pasted into the admin (written in ChatGPT, Claude or by hand); every save runs
+it through web.content_html.clean_html, which keeps only the semantic tags the
+site's stylesheet styles, so pasted content always follows the theme.
 """
 
 from __future__ import annotations
@@ -14,6 +16,8 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from core.models import BaseModel
+
+from .content_html import clean_html
 
 __all__ = [
     "MarketingCorePage",
@@ -33,10 +37,11 @@ class DemoSiteLink(BaseModel):
     """A "see a live store" link the marketing site offers visitors.
 
     Operators build a real showcase store (D2C or B2B), then paste its public URL
-    here from the Django admin. The pricing page renders the active links grouped
-    by kind, so a visitor can open a finished D2C example and a finished B2B
-    example without us auto-provisioning anything. Platform-wide, not
-    tenant-scoped.
+    here from the Django admin. Every active link becomes a card (image, title,
+    "See demo") on the /demo/ page, sorted by ``order`` (1 first, then 2, …);
+    while at least one is active, the home hero's primary button reads
+    "See demo" and leads there. The pricing page also lists them as buttons.
+    Platform-wide, not tenant-scoped.
     """
 
     class Kind(models.TextChoices):
@@ -48,18 +53,27 @@ class DemoSiteLink(BaseModel):
         help_text="Which kind of store this demo shows.",
     )
     label = models.CharField(
+        "title",
         max_length=120,
-        help_text='Button text, e.g. "Fashion store (D2C)".',
+        help_text='Card title, e.g. "Fashion store (D2C)".',
     )
     url = models.URLField(
+        "demo link",
         max_length=500,
         help_text="Full public URL of the demo storefront (https://…).",
+    )
+    image = models.ImageField(
+        upload_to="marketing/demos/", blank=True, null=True,
+        help_text="Card image on the demo page. A landscape screenshot (16:10) fits best.",
     )
     description = models.CharField(
         max_length=200, blank=True, default="",
         help_text="Optional one-line note shown with the link.",
     )
-    order = models.PositiveIntegerField(default=0)
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Position on the demo page: 1 shows first, 2 second, and so on.",
+    )
     is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
@@ -74,6 +88,21 @@ class DemoSiteLink(BaseModel):
     def active(cls):
         """All active demo links, ordered (D2C first, then B2B), for the site."""
         return list(cls.objects.filter(is_active=True))
+
+    @classmethod
+    def cards(cls):
+        """Active links for the /demo/ page, in the admin's ``order`` (1, 2, 3…).
+
+        Sorted in Python: the table is tiny and this keeps the query free of an
+        ORDER BY no index serves."""
+        rows = cls.active()
+        rows.sort(key=lambda d: (d.order, d.created_at))
+        return rows
+
+    @classmethod
+    def any_active(cls) -> bool:
+        """Whether the home hero should offer "See demo"."""
+        return cls.objects.filter(is_active=True).exists()
 
 
 class TutorialVideo(BaseModel):
@@ -137,6 +166,7 @@ class MarketingCorePage(BaseModel):
         return self.title
 
     def save(self, *args, **kwargs):
+        self.content = clean_html(self.content)
         if not self.slug:
             self.slug = _unique_slug(MarketingCorePage, self.title, self.pk, "page")
         super().save(*args, **kwargs)
@@ -171,6 +201,7 @@ class MarketingCoreSubpage(BaseModel):
         return f"{self.core_page.title} → {self.title}"
 
     def save(self, *args, **kwargs):
+        self.content = clean_html(self.content)
         if not self.slug:
             self.slug = slugify(self.title) or "subpage"
         super().save(*args, **kwargs)
@@ -208,6 +239,7 @@ class MarketingCoreChildPage(BaseModel):
         return f"{self.subpage.title} → {self.title}"
 
     def save(self, *args, **kwargs):
+        self.content = clean_html(self.content)
         if not self.slug:
             self.slug = slugify(self.title) or "page"
         super().save(*args, **kwargs)
@@ -246,6 +278,7 @@ class MarketingBlog(BaseModel):
         return self.title
 
     def save(self, *args, **kwargs):
+        self.content = clean_html(self.content)
         if not self.slug:
             self.slug = _unique_slug(MarketingBlog, self.title, self.pk, "post")
         super().save(*args, **kwargs)

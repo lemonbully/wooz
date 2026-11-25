@@ -1,0 +1,99 @@
+{% extends "community/_base.html" %}
+{% load ask_tags %}
+
+{% comment %}
+Ask OneWooz weekly: one ISO week of the community set like a front page.
+Context: d (community.digest.build), prev_url, next_url, subscribed, member.
+{% endcomment %}
+
+{% block ask_main %}
+<section class="ask-body ask-body--thread">
+  <div class="pal-container">
+    <header class="ask-mast">
+      <div>
+        <p class="ask-eyebrow">Ask OneWooz / Weekly</p>
+        <h1 class="ask-mast__title">Ask OneWooz weekly</h1>
+      </div>
+      <div class="ask-mast__meta">
+        <span>Week {{ d.week }} · {{ d.start|date:"j M" }} to {{ d.last_day|date:"j M Y" }}{% if d.is_current %} · so far{% endif %}</span>
+        <span>{{ d.stats.questions }} question{{ d.stats.questions|pluralize }} · {{ d.stats.answers }} answer{{ d.stats.answers|pluralize }}</span>
+        <span class="ask-mast__nav">
+          <a href="{{ prev_url }}" class="ask-textbtn">← Previous week</a>
+          {% if next_url %}<a href="{{ next_url }}" class="ask-textbtn">Next week →</a>{% endif %}
+        </span>
+      </div>
+    </header>
+
+    {% if d.is_empty %}
+      <div class="ask-empty">
+        <p class="ask-empty__title">A quiet week{% if d.is_current %} so far{% endif %}.</p>
+        <p>Nothing was asked or answered in these seven days. <a class="pal-link" href="{% url 'ask:ask_home' %}">Ask the first question</a>.</p>
+      </div>
+    {% else %}
+      <div class="ask-front">
+        <article class="ask-front__lead">
+          {% if d.top %}
+            <p class="ask-front__label">Question of the week</p>
+            <h2 class="ask-front__title"><a href="{{ d.top.get_absolute_url }}">{{ d.top.title }}</a></h2>
+            {% if d.top_preview %}<p class="ask-front__text">{{ d.top_preview }}</p>{% endif %}
+            <p class="ask-front__meta">↑ {{ d.top.score }} · {{ d.top.answer_count }} answer{{ d.top.answer_count|pluralize }}{% if d.top.topic %} · {{ d.top.topic.name }}{% endif %} · asked by {{ d.top.author.display_name }} · <a href="{{ d.top.get_absolute_url }}" class="ask-accentlink">Read the thread →</a></p>
+          {% else %}
+            <p class="ask-front__label">Question of the week</p>
+            <p class="ask-front__text">No new questions this week, but answers kept coming. See below.</p>
+          {% endif %}
+        </article>
+        <aside class="ask-front__side">
+          <p class="ask-front__label">Top contributors</p>
+          <ol class="ask-rank">
+            {% for c in d.contributors %}
+              <li><span class="ask-rank__n">{{ forloop.counter }}</span><a href="{{ c.member.get_absolute_url }}">{{ c.member.display_name }}</a><span class="ask-rank__m">{{ c.n }} answer{{ c.n|pluralize }}</span></li>
+            {% empty %}
+              <li class="ask-rank__empty">No answers yet this week.</li>
+            {% endfor %}
+          </ol>
+        </aside>
+      </div>
+
+      <div class="ask-frontcols">
+        <section>
+          <h2 class="ask-front__label">Most helpful answers</h2>
+          {% for a in d.helpful %}
+            <a class="ask-frontitem" href="{{ a.question.get_absolute_url }}#a-{{ a.pk }}">{{ a.question.title }}<span>↑ {{ a.score }} · {{ a.author.display_name }}</span></a>
+          {% empty %}<p class="ask-frontitem ask-frontitem--empty">None yet.</p>{% endfor %}
+        </section>
+        <section>
+          <h2 class="ask-front__label">{% if d.busy_topic %}New this week in {{ d.busy_topic }}{% else %}Busiest topic{% endif %}</h2>
+          {% for q in d.busy_questions %}
+            <a class="ask-frontitem" href="{{ q.get_absolute_url }}">{{ q.title }}<span>{{ q.answer_count }} answer{{ q.answer_count|pluralize }}</span></a>
+          {% empty %}<p class="ask-frontitem ask-frontitem--empty">None yet.</p>{% endfor %}
+        </section>
+        <section class="ask-frontcols__waiting">
+          <h2 class="ask-front__label">Unanswered for 48 hours</h2>
+          {% for q in d.waiting %}
+            <a class="ask-frontitem" href="{{ q.get_absolute_url }}#answer">{{ q.title }}<span>asked {{ q.created_at|ago }} · answer it</span></a>
+          {% empty %}<p class="ask-frontitem ask-frontitem--empty">Nothing waiting. The community is quick.</p>{% endfor %}
+        </section>
+      </div>
+    {% endif %}
+
+    <div class="ask-subscribe" id="subscribe">
+      {% if subscribed %}
+        <p><strong>You're subscribed.</strong> This digest reaches {{ member.email }} every Monday morning.</p>
+      {% else %}
+        <p><strong>Get this every Monday.</strong> The question of the week, the most helpful answers and what still needs an answer. Nothing else.</p>
+        <form method="post" action="{% url 'ask:weekly_subscribe' %}" class="ask-subscribe__form">
+          {% csrf_token %}
+          {% if member %}
+            <button type="submit" class="pal-btn">Subscribe as {{ member.display_name }} <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+          {% else %}
+            <label class="sr-only" for="sub-email">Email</label>
+            <input id="sub-email" class="pal-input" type="email" name="email" autocomplete="email" required placeholder="you@yourbrand.com">
+            <button type="submit" class="pal-btn">Subscribe <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+          {% endif %}
+          <div class="ask-hp" aria-hidden="true"><label for="sub-website">Website</label><input id="sub-website" name="website" tabindex="-1" autocomplete="off"></div>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

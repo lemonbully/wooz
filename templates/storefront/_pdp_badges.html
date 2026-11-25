@@ -41,6 +41,11 @@
                 hyphens: auto;
               }
             }
+            /* Wider screens: badges that do not fit the details column wrap, and
+               icons line up at the top whatever their label's length. */
+            @media (min-width: 640px) {
+              div.trusted-row-mobile { flex-wrap: wrap; align-items: flex-start; row-gap: 0.9rem; }
+            }
             /* Return / replacement badges link to the refund policy. */
             a.trusted-badge { text-decoration: none; color: inherit; cursor: pointer; }
             a.trusted-badge:hover .trusted-badge__ico,

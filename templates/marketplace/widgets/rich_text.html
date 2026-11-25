@@ -1,0 +1,1 @@
+{% autoescape on %}<div class="ow-wrap"{% if w.max_width %} style="max-width:{{ w.max_width }}px"{% endif %}>{% if w.heading %}<h3 class="ow-h">{{ w.heading }}</h3>{% endif %}<div class="ow-rich{% if w.align == "center" %} ow-rich--center{% endif %}">{{ w.content|safe }}</div></div>{% endautoescape %}

@@ -16,6 +16,22 @@ from django.views.generic import RedirectView
 
 from . import hosted_pay, views
 
+
+def _alias(canonical_name: str, view):
+    """A duplicate path for a page: GET/HEAD 301 to the canonical URL (query
+    string kept), so search engines see one URL per page. Any other method is
+    still served by ``view``, so a form on a cached page that posts to the old
+    path keeps working instead of being turned into a GET by the redirect."""
+    redirect = RedirectView.as_view(pattern_name=canonical_name, permanent=True, query_string=True)
+
+    def alias(request, *args, **kwargs):
+        if request.method in ("GET", "HEAD"):
+            return redirect(request, *args, **kwargs)
+        return view(request, *args, **kwargs)
+
+    return alias
+
+
 urlpatterns = [
     path("", views.home, name="public_website"),
 
@@ -24,15 +40,18 @@ urlpatterns = [
     # them  but they are declared up here for clarity all the same.
     path("robots.txt", views.robots_txt, name="public_robots_txt"),
     path("sitemap.xml", views.sitemap_xml, name="public_sitemap_xml"),
+    # AI-generated from the store's own content (prompts.llms_txt); published
+    # only on the verified custom domain once the required content is in place.
+    path("llms.txt", views.llms_txt, name="public_llms_txt"),
     # The browser requests /favicon.ico for any response without an HTML head
     # (robots.txt, sitemap.xml, redirects), where <link rel="icon"> can't reach.
     # Serve the owner's favicon here so it renders on every page and every host.
     path("favicon.ico", views.favicon, name="public_favicon"),
 
-    # Catalogue
+    # Catalogue. /shop/ is the one all-products URL (nav, sitemap, canonical);
+    # /products/ is an alias kept for old links and owner menus (301, below).
     path("shop/", views.all_products, name="public_all_products"),
-    # The navigation's search form and legacy links target /products/.
-    path("products/", views.all_products, name="public_products_index"),
+    path("products/", _alias("public_all_products", views.all_products), name="public_products_index"),
     path("categories/", views.categories, name="public_categories"),
     path("category/<slug:category_slug>/", views.category_detail, name="public_category_detail"),
 
@@ -54,12 +73,12 @@ urlpatterns = [
     path("blog/", RedirectView.as_view(pattern_name="public_blogs", permanent=True, query_string=True), name="public_blogs_alias"),
     path("blog/<slug:blog_slug>/", RedirectView.as_view(pattern_name="public_blog_detail", permanent=True, query_string=True), name="public_blog_detail_alias"),
 
-    # Reference-path aliases. The ported navigation and footer link to the
-    # 1matrix literal paths (about-us, enquiry) rather than the canonical
-    # about/contact, so serve those paths too  otherwise those menu links
-    # 404 and the pages look "missing".
-    path("about-us/", views.about, name="public_about_us"),
-    path("enquiry/", views.enquiry, name="public_enquiry_alias"),
+    # Reference-path aliases (the 1matrix literal paths). Serving them as
+    # separate 200 pages made two self-canonical copies of About and Contact,
+    # so they 301 to /about/ and /contact/; owner menus that still say
+    # /about-us/ or /enquiry/ keep working.
+    path("about-us/", _alias("public_about", views.about), name="public_about_us"),
+    path("enquiry/", _alias("public_enquiry", views.enquiry), name="public_enquiry_alias"),
 
     # Core pages index. The ported nav and footer link to /core-pages/ and each
     # page lives at the bare slug (/<slug>/…), so this must precede the catch-all
@@ -91,6 +110,9 @@ urlpatterns = [
     path("cart/update/<str:product_id>/", views.cart_update, name="public_cart_update"),
     path("cart/remove/<str:product_id>/", views.cart_remove, name="public_cart_remove"),
     path("cart/coupon/", views.cart_apply_coupon, name="public_cart_coupon"),
+    # Abandoned cart reminder email links (signed, purpose-bound tokens).
+    path("cart/recover/<str:token>/", views.cart_recover, name="public_cart_recover"),
+    path("cart/reminders/stop/<str:token>/", views.cart_reminders_stop, name="public_cart_reminders_stop"),
     path("checkout/", views.checkout, name="public_checkout"),
     path("checkout/place/", views.checkout_place, name="public_checkout_place"),
     path("checkout/verify/", views.payment_verify, name="public_payment_verify"),

@@ -63,7 +63,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Your Rating</label>
                             <div class="flex items-center space-x-2">
                                 <template x-for="star in 5" :key="star">
-                                    <button type="button" @click="rating = star" @mouseover="hoverRating = star" @mouseleave="hoverRating = 0" 
+                                    <button :aria-label="'Rate ' + star + (star > 1 ? ' stars' : ' star')" type="button" @click="rating = star" @mouseover="hoverRating = star" @mouseleave="hoverRating = 0" 
                                         class="focus:outline-none transform hover:scale-110 transition duration-200">
                                         <svg class="w-10 h-10" :class="getStarColor(star)" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M10 15l-5.878 3.09 1.123-6.545L.489 7.02l6.56-.955L10 0l2.828 6.065 6.56.955-4.756 4.425 1.123 6.545z"/>

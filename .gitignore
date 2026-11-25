@@ -37,3 +37,8 @@ htmlcov/
 EMAILWORKING.md
 email.md
 emailworking.md
+
+# Never commit Markdown files or Claude Code config
+*.md
+*.MD
+.claude/

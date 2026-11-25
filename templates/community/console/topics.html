@@ -1,0 +1,57 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}Topic rooms{% endblock %}
+{% block crumbs %}<span>/</span><span>Topic rooms</span>{% endblock %}
+{% block heading %}Topic rooms{% endblock %}
+{% block lead %}<p>The rooms questions are filed under on /ask/topics/. Rename, reorder (lower number comes first), retire a room (hidden, questions kept) or remove it and move its questions.</p>{% endblock %}
+
+{% block main %}
+<div class="mc-grid2">
+  <div class="ac-rooms">
+    {% for room in rooms %}
+    <section class="mc-panel{% if not room.is_active %} ac-dim{% endif %}">
+      <div class="mc-panel__head">
+        <h2 class="mc-panel__title">{{ room.name }} {% if room.is_active %}<span class="mc-chip mc-chip--published">Open</span>{% else %}<span class="mc-chip mc-chip--retired">Retired</span>{% endif %}</h2>
+        <span class="mc-muted ac-sub">{{ room.published }} live · {{ room.total }} in total · {{ room.week }} this week</span>
+      </div>
+      {% if can_write %}
+      <form method="post" action="{% url 'ask_console:topic_save' room.pk %}" class="mc-panel__body ac-roomform">
+        {% csrf_token %}
+        <label class="mc-label">Name<input type="text" name="name" value="{{ room.name }}" maxlength="60" required></label>
+        <label class="mc-label">Address<input type="text" name="slug" value="{{ room.slug }}" maxlength="70"></label>
+        <label class="mc-label">Order<input type="number" name="position" value="{{ room.position }}" min="0" max="32767"></label>
+        <label class="mc-label ac-wide">Description<input type="text" name="description" value="{{ room.description }}" maxlength="200"></label>
+        <label class="mc-check ac-wide"><input type="checkbox" name="is_active" value="on"{% if room.is_active %} checked{% endif %}> <span>Open (shown on the site)</span></label>
+        <div class="mc-actions ac-wide"><button class="pal-btn pal-btn--ghost" type="submit">Save room</button></div>
+      </form>
+      <form method="post" action="{% url 'ask_console:topic_delete' room.pk %}" class="mc-panel__body ac-roomdel" data-confirm="Remove the room “{{ room.name }}”? Its {{ room.total }} question{{ room.total|pluralize }} move to the room you picked.">
+        {% csrf_token %}
+        <label class="mc-label">Remove room and move its questions to
+          <select name="move_to">
+            <option value="">No room</option>
+            {% for other in rooms %}{% if other.pk != room.pk %}<option value="{{ other.pk }}">{{ other.name }}</option>{% endif %}{% endfor %}
+          </select>
+        </label>
+        <button class="mc-linkbtn mc-linkbtn--danger" type="submit">Remove room</button>
+      </form>
+      {% else %}
+      <div class="mc-panel__body"><p class="mc-help">{{ room.description|default:"No description." }} · /{{ room.slug }}/</p></div>
+      {% endif %}
+    </section>
+    {% empty %}
+    <p class="mc-empty">No rooms yet.</p>
+    {% endfor %}
+    {% if untopiced %}<p class="mc-help">{{ untopiced }} question{{ untopiced|pluralize }} have no room. Filter by “No room” on the Questions page to file them.</p>{% endif %}
+  </div>
+
+  {% if can_write %}
+  <section class="mc-panel ac-sticky">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Add a room</h2></div>
+    <form method="post" class="mc-panel__body mc-form">
+      {% csrf_token %}
+      {% for field in new_form %}{% include "marketplace/console/_field.html" %}{% endfor %}
+      <div class="mc-actions"><button class="pal-btn" type="submit">Add room <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button></div>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

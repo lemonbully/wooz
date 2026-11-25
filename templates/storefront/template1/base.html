@@ -11,6 +11,29 @@
         --secondary-color: {{ website.content.secondary_color|default:'#1e293b' }};
         --accent-color: {{ website.content.accent_color|default:'#f59e0b' }};
         --header-height: 85px; /* Adjust this value based on your header's actual height */
+        /* Theme contract: the style every OneWooz app block uses on this design
+           (static/css/ow-apps.css). Map, never hardcode, in a new theme. */
+        --ow-font-body: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+        --ow-font-heading: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+        --ow-text: #111827;
+        --ow-muted: #6b7280;
+        --ow-line: #e5e7eb;
+        --ow-surface: #ffffff;
+        --ow-surface-alt: #f9fafb;
+        --ow-accent: var(--primary-color);
+        --ow-on-accent: #ffffff;
+        --ow-sale: #dc2626;
+        --ow-success: #15803d;
+        --ow-radius-card: 0.75rem;
+        --ow-radius-control: 9999px;
+        --ow-choice-radius: 0.25rem;
+        --ow-choice-bg: #f9fafb;
+        --ow-choice-border: #9ca3af;
+        --ow-choice-active-bg: #111827;
+        --ow-choice-active-fg: #ffffff;
+        --ow-choice-active-border: #111827;
+        --ow-label-weight: 500;
+        --ow-block-gap: 1.25rem;
     }
     
     body{

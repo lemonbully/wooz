@@ -29,7 +29,9 @@ register = template.Library()
 
 def _media_url() -> str:
     media_url = getattr(settings, "MEDIA_URL", "/media/") or "/media/"
-    if not media_url.startswith("/"):
+    # Production serves media from the CDN (an absolute MEDIA_URL); only a
+    # bare relative setting needs the leading slash.
+    if not media_url.startswith(("/", "http://", "https://")):
         media_url = "/" + media_url
     if not media_url.endswith("/"):
         media_url = media_url + "/"
@@ -232,13 +234,36 @@ def absolute_media_url(value: str) -> str:
         if not v:
             return v
         lv = v.lower()
-        if lv.startswith(("data:", "http://", "https://", "//")):
+        if lv.startswith(("http://", "https://")):
+            # A stored absolute S3 URL (persisted before the CDN existed)
+            # is re-hosted on the CDN; any other absolute URL is left alone.
+            from core.cdn import cdn_url
+
+            return cdn_url(v)
+        if lv.startswith(("data:", "//")):
             return v
         if v.startswith("/"):
             return v
         return _media_url() + v.lstrip("/")
     except Exception:
         return value
+
+
+# Link texts search engines treat as non-descriptive (Lighthouse "link-text").
+# A link whose label is one of these gets a visually hidden suffix naming its
+# destination, so the visible button copy can stay short.
+GENERIC_LINK_TEXTS = frozenset({
+    "click here", "click this", "go", "here", "information", "learn more",
+    "more", "more info", "more information", "right here", "read more",
+    "see more", "start", "this", "know more", "view more", "find out more",
+})
+
+
+@register.filter(name="generic_link_text")
+def generic_link_text(value) -> bool:
+    """True when ``value`` is a generic link label such as "Learn More"."""
+    text = re.sub(r"[^\w\s]", "", str(value or "")).strip().lower()
+    return re.sub(r"\s+", " ", text) in GENERIC_LINK_TEXTS
 
 
 @register.filter(name="media_cdn_url")

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from django.db.models import Prefetch
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -20,17 +19,14 @@ def _abs_crumbs(request, crumbs):
 
 def _desc_from_html(html, fallback=""):
     """A clean, single-line meta description from authored HTML content."""
+    from .core_tree import meta_description
+
     text = " ".join(strip_tags(html or "").split())
     if not text:
         return fallback
-    return text[:157] + "…" if len(text) > 158 else text
+    return meta_description(text)
 
-from .models import (
-    MarketingBlog,
-    MarketingCoreChildPage,
-    MarketingCorePage,
-    MarketingCoreSubpage,
-)
+from .models import MarketingBlog
 
 #: Long-form legal pages that still share the generic prose shell. Everything
 #: else now has a bespoke page. Restricting the converter to these two means an
@@ -41,8 +37,69 @@ PAGES = {
 }
 
 
+#: Admin-authored /legal/ policies that supersede the short built-in URLs. When
+#: one of these is published, /privacy/ or /terms/ 301s to it, so only one dated
+#: version of each document is ever live.
+LEGAL_SUCCESSORS = {
+    "privacy": ("privacy-policy",),
+    "terms": ("terms-of-service", "terms-and-conditions"),
+}
+
+
+def legal_url(slug: str) -> str:
+    """The live URL of the privacy/terms document: its /legal/ successor when
+    one is published, else the built-in short URL."""
+    for candidate in LEGAL_SUCCESSORS.get(slug, ()):
+        found = _published_policy(candidate)
+        if found is not None:
+            return found.get_absolute_url()
+    return reverse("web:page", kwargs={"slug": slug})
+
+
+def _visible_faq(key: str):
+    from .schema import visible_faq
+
+    try:
+        return visible_faq(key)
+    except Exception:
+        return []
+
+
+def legacy_redirect(request, **_kwargs):
+    """Old or mistyped marketing paths (``/signup``, renamed /pages/ slugs) that
+    still receive links: 301 to the live page (see :mod:`web.legacy_links`)."""
+    from .legacy_links import redirect_for
+
+    target = redirect_for(request)
+    if target is None:
+        raise Http404
+    return redirect(target, permanent=True)
+
+
 def home(request):
-    return render(request, "web/home.html")
+    from django.db import DatabaseError
+
+    from .models import DemoSiteLink
+
+    # Any active demo link swaps the hero's "Deploy a store" for "See demo".
+    try:
+        has_demos = DemoSiteLink.any_active()
+    except DatabaseError:
+        has_demos = False
+    return render(request, "web/home.html", {"has_demos": has_demos})
+
+
+def demo(request):
+    """``/demo/``: every active demo store as a card, in the admin's order."""
+    from django.db import DatabaseError
+
+    from .models import DemoSiteLink
+
+    try:
+        demos = DemoSiteLink.cards()
+    except DatabaseError:
+        demos = []
+    return render(request, "web/demo.html", {"demos": demos})
 
 
 def platform(request):
@@ -119,6 +176,7 @@ def pricing(request):
             "demo_links_d2c": demo_links_d2c,
             "demo_links_b2b": demo_links_b2b,
             "pricing_features": pricing_features,
+            "page_faq": _visible_faq("pricing"),
         },
     )
 
@@ -159,7 +217,7 @@ def contact(request):
     The POST branch only acknowledges the submission and mints a reference  no
     persistence yet; the routing/inbox wiring lands with the tenancy phase.
     """
-    context = {}
+    context = {"page_faq": _visible_faq("contact")}
     if request.method == "POST":
         context["sent"] = True
         context["ref"] = "ENQ-" + get_random_string(6, "0123456789")
@@ -196,7 +254,7 @@ def _published_policy(slug: str):
 
 def _render_policy(request, policy):
     request.seo_extra = {
-        "title": f"{policy.title}  OneWooz",
+        "title": f"{policy.title} | OneWooz",
         "description": _desc_from_html(
             policy.content, fallback=f"{policy.title} for OneWooz."
         ),
@@ -214,6 +272,10 @@ def _render_policy(request, policy):
 def page(request, slug: str):
     if slug not in PAGES:
         raise Http404
+    # A newer /legal/ document replaces the short URL outright.
+    live = legal_url(slug)
+    if live != reverse("web:page", kwargs={"slug": slug}):
+        return redirect(live, permanent=True)
     # A published policy authored in the admin with this slug replaces the
     # built-in page's content; otherwise the built-in page renders unchanged.
     policy = _published_policy(slug)
@@ -240,38 +302,148 @@ def policy(request, slug: str):
 # --------------------------------------------------------------------------
 # Marketing CMS  core pages (page → subpage → child) and the blog
 #
-# The public display mirrors the storefront's: a sidebar tree (the core page,
-# its subpages and their child pages) alongside the current node's content, plus
-# a /pages/ index that shows the whole tree as links. Everything is
-# server-rendered, one real URL per node, styled with the  marketing
-# system (onewooz_design.md).
+# /pages/ is a resource hub: every core page as a section of topic cards. Each
+# node renders as a documentation article: a section tree on the left, the
+# article (answer-first lead, anchored headings, child cards, previous/next) in
+# the middle and an "On this page" outline on the right. Loading and content
+# analysis live in web.core_tree; the structured data it feeds (TechArticle,
+# HowTo, FAQPage, ItemList, BreadcrumbList) is built by web.schema.
 # --------------------------------------------------------------------------
-def _published_tree():
-    """Published core pages with their published subpages and child pages,
-    prefetched so the whole tree renders without per-node queries."""
-    return MarketingCorePage.objects.filter(is_published=True).prefetch_related(
-        Prefetch(
-            "subpages",
-            queryset=MarketingCoreSubpage.objects.filter(is_published=True).prefetch_related(
-                Prefetch(
-                    "children",
-                    queryset=MarketingCoreChildPage.objects.filter(is_published=True),
-                )
-            ),
-        )
+def _pages_crumb():
+    return {"title": "Resources", "url": reverse("web:core_pages")}
+
+
+def core_pages_index(request):
+    """The /pages/ hub: every published core page with its topics and articles."""
+    from . import core_tree
+
+    roots = core_tree.load_tree()
+    latest = None
+    for root in roots:
+        root.summary = core_tree.summary_of(root.content)
+        for sub in root.subs:
+            sub.summary = core_tree.summary_of(sub.content)
+            for node in [sub, *sub.kids]:
+                if latest is None or node.updated_at > latest:
+                    latest = node.updated_at
+        if latest is None or root.updated_at > latest:
+            latest = root.updated_at
+
+    # "Start here": the first topic of the first page that has articles.
+    quick_topic = next((s for r in roots[:1] for s in r.subs if s.kids), None)
+
+    topics = sum(len(r.subs) for r in roots)
+    articles = core_tree.article_count(roots)
+    names = ", ".join(r.title for r in roots[:3])
+    request.seo_extra = {
+        "title": "Help Centre, Guides & Resources | OneWooz",
+        "description": core_tree.meta_description(
+            f"{articles} step-by-step articles on building, launching and growing an online "
+            f"store with OneWooz: {names}. Payments, shipping, domains, GST and more.",
+            158,
+        ),
+        "breadcrumbs": _abs_crumbs(request, [_pages_crumb()]),
+        "itemlist": [
+            {"name": n.title, "url": n.get_absolute_url()}
+            for r in roots
+            for n in core_tree.flatten(r)
+        ],
+    }
+    return render(
+        request,
+        "web/core_pages.html",
+        {
+            "page_title": "Resources",
+            "pages": roots,
+            "topic_count": topics,
+            "article_count": articles,
+            "updated_at": latest,
+            "quick_topic": quick_topic,
+            "quick": quick_topic.kids[:4] if quick_topic else [],
+        },
     )
 
 
-def _render_core(request, root, node, active_sub, children, crumbs):
-    # Structured data for a CMS node: a breadcrumb trail and a description drawn
-    # from the node's own content (see web.schema).
+def _core_node(request, slug, sub_slug=None, child_slug=None):
+    from . import core_tree
+
+    roots = core_tree.load_tree(slug)
+    if not roots:
+        raise Http404
+    root = roots[0]
+    sub = child = None
+    if sub_slug is not None:
+        sub = next((s for s in root.subs if s.slug == sub_slug), None)
+        if sub is None:
+            raise Http404
+    if child_slug is not None:
+        child = next((c for c in sub.kids if c.slug == child_slug), None)
+        if child is None:
+            raise Http404
+    node = child or sub or root
+
+    crumbs = [_pages_crumb(), {"title": root.title, "url": root.get_absolute_url()}]
+    if sub is not None:
+        crumbs.append({"title": sub.title, "url": sub.get_absolute_url()})
+    if child is not None:
+        crumbs.append({"title": child.title, "url": child.get_absolute_url()})
+
+    # The cards under the article: a page lists its topics, a topic its articles.
+    if node is root:
+        children = root.subs
+    elif node is sub:
+        children = sub.kids
+    else:
+        children = []
+    for c in children:
+        c.summary = core_tree.summary_of(c.content)
+
+    flat = core_tree.flatten(root)
+    index = next(i for i, n in enumerate(flat) if n is node)
+    prev_node = flat[index - 1] if index > 0 else None
+    next_node = flat[index + 1] if index + 1 < len(flat) else None
+
+    info = core_tree.analyse(node.content)
+    # Hand-typed links to pages that do not exist (old slugs, typos, guides not
+    # published yet) are pointed at the live page before the body is served.
+    from .legacy_links import LinkIndex, fix_links
+
+    info.body = fix_links(info.body, LinkIndex(), request)
+    section = sub.title if child is not None else root.title
+    if node is root:
+        seo_title = f"{root.title} | OneWooz"
+    elif child is None:
+        seo_title = f"{sub.title} | {root.title} | OneWooz"
+    else:
+        seo_title = f"{child.title} | {sub.title} | OneWooz"
+    # Keep titles inside the ~60 characters a results page shows.
+    if len(seo_title) > 60:
+        seo_title = f"{node.title} | OneWooz"
+    description = core_tree.meta_description(
+        info.summary or f"{node.title}: help and resources from OneWooz."
+    )
+
     request.seo_extra = {
-        "title": f"{node.title}  OneWooz",
-        "description": _desc_from_html(
-            getattr(node, "content", ""),
-            fallback=f"{node.title}  help and resources from OneWooz.",
-        ),
+        "title": seo_title,
+        "description": description,
+        "og_type": "article",
+        "kind": "CollectionPage" if children else "WebPage",
+        "keywords": [node.title, section, root.title, "OneWooz", "online store"],
         "breadcrumbs": _abs_crumbs(request, crumbs),
+        "faq": info.faqs or None,
+        "core_article": {
+            "headline": node.title,
+            "description": description,
+            "section": section,
+            "words": info.words,
+            "minutes": info.minutes,
+            "created": node.created_at,
+            "modified": node.updated_at,
+            "toc": info.toc,
+            "steps": info.steps,
+            "parent_url": crumbs[-2]["url"],
+        },
+        "itemlist": [{"name": c.title, "url": c.get_absolute_url()} for c in children] or None,
     }
     return render(
         request,
@@ -280,70 +452,41 @@ def _render_core(request, root, node, active_sub, children, crumbs):
             "page_title": node.title,
             "root": root,
             "node": node,
-            "active_sub": active_sub,
-            "subpages": list(root.subpages.all()),  # published (prefetched)
+            "active_sub": sub,
+            "section_title": section,
+            "subpages": root.subs,
             "children": children,
             "crumbs": crumbs,
+            "body": info.body,
+            "toc": info.toc,
+            "minutes": info.minutes,
+            "prev_node": prev_node,
+            "next_node": next_node,
+            "node_number": index,
+            "node_total": len(flat) - 1,
         },
     )
 
 
-def _pages_crumb():
-    return {"title": "Pages", "url": reverse("web:core_pages")}
-
-
-def core_pages_index(request):
-    """The /pages/ index  every core page shown as a tree of links."""
-    pages = list(_published_tree().order_by("order", "title"))
-    return render(
-        request,
-        "web/core_pages.html",
-        {"page_title": "Pages", "pages": pages},
-    )
+def _core_or_legacy(request, *args):
+    """Render a core node; a path that does not exist 301s to its live
+    replacement when there is one (renamed slug, typo, unpublished guide)."""
+    try:
+        return _core_node(request, *args)
+    except Http404:
+        return legacy_redirect(request)
 
 
 def core_page(request, slug: str):
-    root = get_object_or_404(_published_tree(), slug=slug)
-    crumbs = [_pages_crumb(), {"title": root.title, "url": root.get_absolute_url()}]
-    return _render_core(
-        request, root, node=root, active_sub=None,
-        children=list(root.subpages.all()), crumbs=crumbs,
-    )
+    return _core_or_legacy(request, slug)
 
 
 def core_subpage(request, slug: str, sub_slug: str):
-    root = get_object_or_404(_published_tree(), slug=slug)
-    sub = next((s for s in root.subpages.all() if s.slug == sub_slug), None)
-    if sub is None:
-        raise Http404
-    crumbs = [
-        _pages_crumb(),
-        {"title": root.title, "url": root.get_absolute_url()},
-        {"title": sub.title, "url": sub.get_absolute_url()},
-    ]
-    return _render_core(
-        request, root, node=sub, active_sub=sub,
-        children=list(sub.children.all()), crumbs=crumbs,
-    )
+    return _core_or_legacy(request, slug, sub_slug)
 
 
 def core_child(request, slug: str, sub_slug: str, child_slug: str):
-    root = get_object_or_404(_published_tree(), slug=slug)
-    sub = next((s for s in root.subpages.all() if s.slug == sub_slug), None)
-    if sub is None:
-        raise Http404
-    child = next((c for c in sub.children.all() if c.slug == child_slug), None)
-    if child is None:
-        raise Http404
-    crumbs = [
-        _pages_crumb(),
-        {"title": root.title, "url": root.get_absolute_url()},
-        {"title": sub.title, "url": sub.get_absolute_url()},
-        {"title": child.title, "url": child.get_absolute_url()},
-    ]
-    return _render_core(
-        request, root, node=child, active_sub=sub, children=[], crumbs=crumbs,
-    )
+    return _core_or_legacy(request, slug, sub_slug, child_slug)
 
 
 def blog_list(request):
@@ -352,6 +495,9 @@ def blog_list(request):
     # Posts carry their full article body; sort keys only (MySQL error 1038).
     posts = sorted_rows(MarketingBlog.objects.filter(is_published=True))
     request.seo_extra = {
+        # An empty blog index is thin content: keep it out of the index (and the
+        # sitemap, see web.seo) until the first post is published.
+        "noindex": not posts,
         "posts": posts,
         "breadcrumbs": _abs_crumbs(request, [
             {"title": "Blog", "url": reverse("web:blog_list")},
@@ -361,21 +507,48 @@ def blog_list(request):
 
 
 def blog_detail(request, slug: str):
+    from core.queries import sorted_rows
+
+    from . import core_tree
+
     post = get_object_or_404(MarketingBlog, slug=slug, is_published=True)
-    # A full BlogPosting/Article node plus a Home > Blog > post breadcrumb.
+    # Same article treatment as the core pages: anchored headings, outline,
+    # reading time, and FAQ structured data from question headings.
+    info = core_tree.analyse(post.content)
+    from .legacy_links import LinkIndex, fix_links
+
+    info.body = fix_links(info.body, LinkIndex(), request)
+    more = sorted_rows(
+        MarketingBlog.objects.filter(is_published=True).exclude(pk=post.pk).order_by("-published_at"),
+        limit=3,
+    )
     request.seo_extra = {
-        "title": f"{post.title}  OneWooz Blog",
+        "title": f"{post.title} | OneWooz Blog",
         "description": post.excerpt or _desc_from_html(post.content, fallback=post.title),
+        "og_type": "article",
         "post": post,
+        "faq": info.faqs or None,
         "breadcrumbs": _abs_crumbs(request, [
             {"title": "Blog", "url": reverse("web:blog_list")},
             {"title": post.title, "url": post.get_absolute_url()},
         ]),
     }
+    if post.cover_image:
+        try:
+            request.seo_extra["og_image"] = request.build_absolute_uri(post.cover_image.url)
+        except Exception:
+            pass
     return render(
         request,
         "web/blog_detail.html",
-        {"page_title": post.title, "post": post},
+        {
+            "page_title": post.title,
+            "post": post,
+            "body": info.body,
+            "toc": info.toc,
+            "minutes": info.minutes,
+            "more_posts": more,
+        },
     )
 
 
@@ -405,3 +578,14 @@ def sitemap_xml(request):
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
         )
     return HttpResponse(body, content_type="application/xml; charset=utf-8")
+
+
+def llms_txt(request):
+    """``/llms.txt``: a plain-text map of onewooz.com for AI assistants."""
+    from . import seo
+
+    try:
+        body = seo.llms_txt(request)
+    except Exception:
+        body = "# OneWooz\n"
+    return HttpResponse(body, content_type="text/plain; charset=utf-8")

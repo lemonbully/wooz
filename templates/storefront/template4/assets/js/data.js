@@ -47,15 +47,15 @@
     p({ id: "botanical-toner-trio", name: "Botanical Toner Trio", cat: "cleansers", price: 2490, mrp: 2990, img: [IMG.whiteRow, IMG.pastelRow], sizes: ["3 x 100 ml"], badges: ["sale"], reviews: 92 }),
     p({ id: "rose-quartz-roller", name: "Rose Quartz Face Roller", cat: "tools", price: 1490, img: [IMG.roller, IMG.stones], sizes: ["One size"], reviews: 174, tag: "Handmade" }),
     p({ id: "sunset-spf-fluid", name: "Sunset SPF 50 Fluid", cat: "moisturisers", price: 1150, img: [IMG.orangeTubes, IMG.amberOrange], sizes: ["50 ml"], badges: ["best"], rating: 4.9, reviews: 621, skin: SKIN }),
-    p({ id: "velvet-matte-lip", name: "Velvet Matte Lip", cat: "makeup", price: 890, img: [IMG.lipstick, IMG.cosmetics], colors: ["#b3342f", "#c46a5a", "#8c3b4a", "#d89a8a"], sizes: ["3.5 g"], badges: ["new"], reviews: 265, tag: "Vegan" }),
-    p({ id: "nude-eye-palette", name: "Nude Eye Palette", cat: "makeup", price: 1990, mrp: 2490, img: [IMG.palette, IMG.brushes], sizes: ["12 shades"], badges: ["sale"], reviews: 188 }),
+    p({ id: "velvet-matte-lip", name: "Velvet Matte Lip", cat: "makeup", price: 890, img: [IMG.palette, IMG.faceMakeup], colors: ["#b3342f", "#c46a5a", "#8c3b4a", "#d89a8a"], sizes: ["3.5 g"], badges: ["new"], reviews: 265, tag: "Vegan" }),
+    p({ id: "nude-eye-palette", name: "Nude Eye Palette", cat: "makeup", price: 1990, mrp: 2490, img: [IMG.brushes, IMG.palette], sizes: ["12 shades"], badges: ["sale"], reviews: 188 }),
     p({ id: "golden-hour-eau", name: "Golden Hour Eau de Parfum", cat: "fragrance", price: 3490, img: [IMG.perfumeGold, IMG.perfumeRose], sizes: ["50 ml", "100 ml"], badges: ["best"], rating: 4.8, reviews: 143, tag: "Clean scent" }),
     p({ id: "petal-mist", name: "Petal Rose Mist", cat: "fragrance", price: 1290, img: [IMG.perfumeRose, IMG.perfumeGold], sizes: ["100 ml"], reviews: 87 }),
     p({ id: "oat-milk-soap-bar", name: "Oat Milk Soap Bar", cat: "body", price: 390, img: [IMG.soapStack, IMG.soaps], sizes: ["100 g", "3 pack"], reviews: 309, tag: "Handmade" }),
     p({ id: "lavender-body-wash", name: "Lavender Body Wash", cat: "body", price: 690, mrp: 850, img: [IMG.pumpTowel, IMG.footSpa], sizes: ["250 ml", "500 ml"], badges: ["sale"], reviews: 211 }),
     p({ id: "niacinamide-10", name: "Niacinamide 10% Serum", cat: "serums", price: 1090, img: [IMG.bottleTall, IMG.whiteBottle], badges: ["best"], rating: 4.8, reviews: 702, skin: ["Oily", "Combination"] }),
     p({ id: "overnight-recovery-balm", name: "Overnight Recovery Balm", cat: "moisturisers", price: 1790, img: [IMG.handJar2, IMG.handJar], sizes: ["50 ml"], reviews: 129, skin: ["Dry", "Sensitive"] }),
-    p({ id: "silk-powder-veil", name: "Silk Powder Veil", cat: "makeup", price: 1390, img: [IMG.powders, IMG.cosmetics], colors: ["#f1d9c2", "#e2b994", "#c9946a"], sizes: ["10 g"], reviews: 96 }),
+    p({ id: "silk-powder-veil", name: "Silk Powder Veil", cat: "makeup", price: 1390, img: [IMG.powders, IMG.brushes], colors: ["#f1d9c2", "#e2b994", "#c9946a"], sizes: ["10 g"], reviews: 96 }),
     p({ id: "pro-brush-set", name: "Pro Brush Set", cat: "tools", price: 2190, img: [IMG.brushes, IMG.flatlay2], sizes: ["7 pieces"], badges: ["new"], reviews: 64, tag: "Vegan" }),
     p({ id: "pink-clay-shampoo-duo", name: "Pink Clay Hair Duo", cat: "body", price: 1590, img: [IMG.pinkBottles, IMG.pastelTubes], sizes: ["2 x 250 ml"], reviews: 118 }),
     p({ id: "amber-ritual-oil", name: "Amber Ritual Face Oil", cat: "serums", price: 2290, mrp: 2690, img: [IMG.amberOrange, IMG.amberBottle], badges: ["sale"], reviews: 157, skin: ["Dry", "Normal"] }),
@@ -119,6 +119,91 @@
   ];
 
   const brands = ["SUNDARI", "Kaya Leaf", "MOHA", "terra.", "Aranya", "ojas", "NILA", "Vanam"];
+
+  /* Product details in the same shape the live storefront serialises for
+     Template 1's product page: trust badges, Features checklist, "About this
+     item" bullets and the four information tabs (Description, Item Details,
+     Origin/Manufacturer & Packer, Others), plus product FAQs. */
+  const DESC = {
+    cleansers: "A gentle, low-foam cleanser that lifts away sunscreen, oil and city grime without stripping the skin barrier. Kerala grown botanicals keep skin soft and comfortable after every wash.",
+    serums: "A concentrated serum with clinically proven actives in a featherlight base. It absorbs in seconds, layers under any moisturiser and targets dullness, uneven tone and texture.",
+    moisturisers: "A barrier-loving moisturiser that delivers 72 hours of hydration. Ceramides and botanical oils seal in moisture while the breathable texture sits well under makeup.",
+    masks: "A weekly treatment mask that draws out impurities, refines the look of pores and leaves skin calm, smooth and glowing in ten minutes.",
+    body: "A nourishing body ritual made with cold-pressed oils and gentle cleansers. Leaves skin soft, scented and comfortable all day.",
+    makeup: "Skin-first colour in a lightweight, long-wear formula enriched with botanical oils. Buildable, breathable and kind to sensitive skin.",
+    fragrance: "A clean botanical fragrance blended with natural essential oils. Soft on the skin, long lasting and free from phthalates.",
+    tools: "A beauty tool crafted to make your routine feel like a spa ritual. Boosts circulation, helps products absorb and reduces morning puffiness.",
+  };
+  const FEAT = {
+    cleansers: ["Sulphate free", "pH balanced 5.5", "Removes SPF and makeup", "Non-drying formula"],
+    serums: ["Clinically proven actives", "Absorbs in seconds", "Fragrance free", "Suits all skin types"],
+    moisturisers: ["72 hour hydration", "Ceramide complex", "Non-comedogenic", "Works under makeup"],
+    masks: ["Ten minute treatment", "Kaolin and green clay", "Refines pores", "Weekly ritual"],
+    body: ["Cold-pressed oils", "Fast absorbing", "Paraben free", "Recyclable packaging"],
+    makeup: ["Long-wear formula", "Buildable colour", "Enriched with oils", "Vegan"],
+    fragrance: ["Natural essential oils", "Phthalate free", "Lasts 6 to 8 hours", "Travel friendly"],
+    tools: ["Natural stone", "Hand finished", "Cooling effect", "Lifetime guarantee"],
+  };
+  const MAT = { cleansers: "Gel cream", serums: "Lightweight serum", moisturisers: "Rich cream", masks: "Clay paste", body: "Oil and wash", makeup: "Cream to powder", fragrance: "Eau de parfum", tools: "Rose quartz" };
+  products.forEach((x, n) => {
+    const ml = parseInt(x.sizes[0], 10) || 50;
+    x.detail = {
+      desc: DESC[x.cat] + `\n\n${x.name} is dermatologist tested, cruelty-free and made in small batches at our Kochi lab.`,
+      bullets: [
+        `${x.name} is made for ${x.skin.join(", ").toLowerCase()} skin and is gentle enough for daily use, morning and night.`,
+        `Formulated with Kerala grown botanicals and proven actives, free from parabens, sulphates and synthetic colour.`,
+        `Dermatologist tested on sensitive skin, non-comedogenic and pH balanced so it never disturbs your skin barrier.`,
+        `Recyclable glass and FSC certified carton, with a refill pouch available on subscription.`,
+        `Every batch is quality checked twice and comes with a ${x.cat === "tools" ? "lifetime" : "12 month"} shelf life once opened.`,
+      ],
+      features: FEAT[x.cat],
+      item: [
+        { label: "Material", value: MAT[x.cat] },
+        { label: "Colour", value: x.colors.length ? `${x.colors.length} shades` : "Natural" },
+        { label: "Recommended Use", value: x.cat === "body" ? "Body" : x.cat === "tools" ? "Face and neck" : "Face" },
+        { label: "Handling Time", value: "1 to 2 business days" },
+        { label: "Includes", value: `1 x ${x.name}, care card` },
+        { label: "Product Dimensions", value: "4 x 4 x 12 cm" },
+        { label: "Package Dimensions", value: "6 x 6 x 14 cm" },
+        { label: "Product Weight", value: `${ml + 60} g` },
+        { label: "Package Weight", value: `${ml + 110} g` },
+        { label: "HSN Code", value: x.cat === "fragrance" ? "33030010" : "33049990" },
+        { label: "GST", value: "18%" },
+        { label: "Return Type", value: "7 day replacement" },
+        { label: "Skin Type", value: x.skin.join(", ") },
+        { label: "Key Ingredient", value: ["Niacinamide", "Vitamin C", "Hyaluronic acid", "Ceramides", "Green clay", "Argan oil"][n % 6] },
+      ],
+      warning: x.cat === "fragrance" ? "Flammable. Keep away from heat and open flame. For external use only." : "For external use only. Patch test before first use. Avoid contact with eyes.",
+      origin: [
+        { label: "Country of Origin", value: "India" },
+        { label: "Manufacturer Contact", value: "Velora Botanicals Pvt. Ltd., 21 Infopark Road, Kakkanad, Kochi, Kerala 682042" },
+        { label: "Packer Contact", value: "Velora Botanicals Pvt. Ltd., Unit 4, SIDCO Industrial Estate, Kochi, Kerala 682030" },
+        { label: "Importer Contact", value: "Not applicable, made in India" },
+        { label: "Guarantee/Warranty", value: x.cat === "tools" ? "Lifetime guarantee against breakage" : "Skin match promise: one free exchange within 30 days" },
+        { label: "Customer Support Number", value: "+91 484 400 1200" },
+        { label: "Customer Support Email", value: "care@velora.example" },
+      ],
+      extras: [
+        { label: "Shelf Life", value: "24 months unopened, 12 months after opening" },
+        { label: "Certifications", value: "Cruelty-free, vegan, dermatologist tested" },
+        { label: "Batch Number", value: `VLR-${2611 + n}-B` },
+        { label: "Storage", value: "Store below 30°C, away from direct sunlight" },
+      ],
+      badges: [
+        { icon: "leaf", label: "Cruelty Free" },
+        { icon: "return", label: "7 Day Replacement", url: "policy.html?type=refund" },
+        { icon: "truck", label: "Free Delivery" },
+        { icon: "shield", label: "Secure Payment" },
+      ],
+      faqs: [
+        { q: `Can I use ${x.name} every day?`, a: "Yes. It is gentle enough for twice daily use. Start once a day for the first week if your skin is sensitive." },
+        { q: "Is it safe during pregnancy?", a: "The formula is free from retinoids and salicylic acid, but we always suggest checking with your doctor first." },
+        { q: "How long does one pack last?", a: "Used as directed, one pack lasts about 8 weeks." },
+        { q: "Is Cash on Delivery available?", a: "Yes, COD is available on this product across 19,000+ pin codes." },
+      ],
+      video: n % 3 === 0,
+    };
+  });
 
   window.T3 = { U, IMG, categories, products, heroSlides, reels, reviews, blogs, faqs, why, brands, SKIN, brand: "velora", freeShip: 1499 };
 })();

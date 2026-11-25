@@ -18,6 +18,13 @@
 (function () {
   "use strict";
 
+  // Results surface in the universal toast stack (js/app/toast.js): errors in
+  // red, confirmations in green. Falls back to a plain alert if it's missing.
+  function owAlert(msg, ok) {
+    if (window.OWToast) { if (ok) window.OWToast.success(msg); else window.OWToast.error(msg); }
+    else window.alert(msg);
+  }
+
   var modal = document.getElementById("ow-media");
   var pageGrid = document.querySelector("[data-medlib-grid]");
   if (!modal && !pageGrid) return; // Not a media surface.
@@ -589,7 +596,7 @@
         // Restore empty states if a grid is now empty.
         refreshEmptyStates();
       })
-      .catch(function (e) { alert(e.message || "Delete failed."); });
+      .catch(function (e) { owAlert(e.message || "Delete failed."); });
   }
 
   /* ========================================================================
@@ -764,7 +771,7 @@
       })
       .catch(function (e) {
         updateManageUI();
-        alert(e.message || "Delete failed.");
+        owAlert(e.message || "Delete failed.");
       });
   }
 
@@ -920,7 +927,13 @@
     // preview (e.g. the product's current video on an edit form), so the field
     // shows only the newly-chosen media.
     if (!multiple && preview) {
-      Array.prototype.forEach.call(preview.querySelectorAll(".app-medfield__item[data-picked], .app-medfield__item[data-existing-video]"), function (n) {
+      Array.prototype.forEach.call(preview.querySelectorAll(".app-medfield__item[data-picked], .app-medfield__item[data-existing-video], .app-medfield__item[data-existing-image]"), function (n) {
+        // A saved image being replaced: flag it for removal as well, so the
+        // old image is gone even if the new pick is then removed before saving.
+        var rmName = n.hasAttribute("data-existing-image") && n.getAttribute("data-remove-name");
+        if (rmName && form && !form.querySelector('input[type="hidden"][name="' + rmName + '"]')) {
+          form.appendChild(el("input", null, { type: "hidden", name: rmName, value: "1" }));
+        }
         if (n.parentNode) n.parentNode.removeChild(n);
       });
     }

@@ -1,0 +1,112 @@
+{% extends "custom_admin/_shell.html" %}
+
+{% comment %}
+Deleted users (custom_admin.views.deleted_users). Owners who used Profile ->
+Delete My Account, filtered by when they deleted. Read-only: an owner restores
+their own account by signing in within the recovery window (accounts.deletion).
+{% endcomment %}
+
+{% block crumbs %} &rsaquo; Deleted users{% endblock %}
+
+{% block content %}
+<div class="owa-head">
+  <div>
+    <p class="owa-kicker">Users</p>
+    <h1 class="owa-page-title">Deleted users</h1>
+    <p class="owa-head__lead">Store owners who deleted their account, with their details, subscription and websites. Nothing is erased: an owner restores everything by signing in within {{ retention_days }} days of deleting (renewing first if their paid plan has expired).</p>
+  </div>
+  <a href="{% url 'custom_admin:overview' %}" class="owa-btn owa-btn--ghost">Back to home</a>
+</div>
+
+{% url 'custom_admin:deleted_users' as action %}
+{% include "custom_admin/_lifecycle_filter.html" with action=action past=True %}
+
+<div class="owa-kpis owa-life__kpis">
+  <div class="owa-kpi"><div class="owa-kpi__label">Deleted users</div><div class="owa-kpi__value">{{ counts.total }}</div><div class="owa-kpi__sub">{{ window.label }}</div></div>
+  <div class="owa-kpi"><div class="owa-kpi__label">Recoverable</div><div class="owa-kpi__value">{{ counts.recoverable }}</div><div class="owa-kpi__sub">By signing in</div></div>
+  <div class="owa-kpi"><div class="owa-kpi__label">Awaiting renewal</div><div class="owa-kpi__value">{{ counts.awaiting_renewal }}</div><div class="owa-kpi__sub">Plan expired</div></div>
+  <div class="owa-kpi"><div class="owa-kpi__label">Closed</div><div class="owa-kpi__value">{{ counts.closed }}</div><div class="owa-kpi__sub">Past {{ retention_days }} days</div></div>
+  <div class="owa-kpi"><div class="owa-kpi__label">Websites</div><div class="owa-kpi__value">{{ counts.stores }}</div><div class="owa-kpi__sub">Owned by these users</div></div>
+</div>
+
+<div class="owa-panel">
+  {% if page.object_list %}
+  <div class="owa-tablewrap">
+    <table class="owa-table owa-life__table">
+      <thead>
+        <tr><th>User</th><th>Deleted</th><th>Subscription</th><th>Websites</th><th>Recovery</th></tr>
+      </thead>
+      <tbody>
+        {% for r in page.object_list %}
+        <tr>
+          <td>
+            <a href="{% url 'admin:accounts_dashboarduser_change' r.user.pk %}" class="owa-strong">{{ r.name|default:r.email }}</a>
+            <div class="owa-sub">{{ r.email }}</div>
+            {% if r.phone %}<div class="owa-sub">{{ r.phone }}</div>{% endif %}
+            {% if r.company %}<div class="owa-sub">{{ r.company }}</div>{% endif %}
+          </td>
+          <td class="owa-mono">
+            {{ r.deleted_at|date:"d M Y, H:i" }}
+            <div class="owa-sub">{{ r.deleted_at|timesince }} ago</div>
+            {% if r.reason %}<div class="owa-life__reason">“{{ r.reason }}”</div>{% endif %}
+          </td>
+          <td>
+            <span class="owa-strong">{{ r.subscription.plan_name }}</span>
+            <div class="owa-sub">
+              {% if r.subscription.is_expired %}Expired{% elif r.subscription.is_paid %}Active, paid{% elif r.subscription.is_free %}Free{% else %}No plan{% endif %}{% if r.subscription.period_end %}{% if r.subscription.is_expired %} on{% else %} until{% endif %} {{ r.subscription.period_end|date:"d M Y" }}{% endif %}
+            </div>
+            {% if r.subscription.order %}<div class="owa-sub">{{ r.subscription.order.get_cycle_display }} · {{ r.subscription.order.currency }} {{ r.subscription.order.total_amount }} · {{ r.subscription.order.number }}</div>{% endif %}
+            {% if r.plan_at_deletion %}<div class="owa-sub">At deletion: {{ r.plan_at_deletion }}</div>{% endif %}
+          </td>
+          <td>
+            {% if r.sites %}
+            <ul class="owa-life__sites">
+              {% for s in r.sites %}
+              <li>
+                <span class="owa-strong">{{ s.name }}</span>
+                {% if not s.is_deleted %}<span class="owa-badge owa-badge--ok">Live</span>{% elif s.with_account %}<span class="owa-badge">With account</span>{% else %}<span class="owa-badge">Deleted earlier</span>{% endif %}
+                <div class="owa-sub">{{ s.address }}</div>
+              </li>
+              {% endfor %}
+            </ul>
+            {% elif r.sites_at_deletion %}
+              <span class="owa-sub">{{ r.sites_at_deletion }}</span>
+            {% else %}
+              <span class="owa-sub">No websites</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.state == "closed" %}
+              <span class="owa-badge owa-life__badge--danger">Closed</span>
+              <div class="owa-sub">Window ended {{ r.recover_until|date:"d M Y" }}</div>
+            {% elif r.state == "awaiting_renewal" %}
+              <span class="owa-badge owa-life__badge--warn">Renew to restore</span>
+              <div class="owa-sub">Until {{ r.recover_until|date:"d M Y" }} · {{ r.days_left }} day{{ r.days_left|pluralize }} left</div>
+            {% else %}
+              <span class="owa-badge owa-badge--ok">Recoverable</span>
+              <div class="owa-sub">Until {{ r.recover_until|date:"d M Y" }} · {{ r.days_left }} day{{ r.days_left|pluralize }} left</div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.has_other_pages %}
+  <div class="owa-life__pager">
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }} · {{ page.paginator.count }} users</span>
+    <span>
+      {% if page.has_previous %}<a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.previous_page_number }}">Previous</a>{% endif %}
+      {% if page.has_next %}{% if page.has_previous %} · {% endif %}<a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.next_page_number }}">Next</a>{% endif %}
+    </span>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="owa-empty">
+    <p class="owa-empty__title">No deleted users</p>
+    <p class="owa-empty__text">{% if q %}No deleted user matches “{{ q }}” in this period.{% else %}Nobody deleted their account in this period. Try a longer duration.{% endif %}</p>
+    {% if window.key != "all" %}<a href="{% url 'custom_admin:deleted_users' %}?range=all" class="owa-btn owa-btn--ghost">Show all time</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

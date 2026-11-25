@@ -1,0 +1,55 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}Members{% endblock %}
+{% block crumbs %}<span>/</span><span>Members</span>{% endblock %}
+{% block heading %}Members{% endblock %}
+{% block lead %}<p>Everyone who confirmed an email to post. Open a member to ban or unban them, give them the team label, hide or delete what they posted.</p>{% endblock %}
+
+{% block main %}
+<form method="get" class="mc-toolbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Name, handle or email">
+  <select name="flag">{% for k, l in filters %}<option value="{{ k }}"{% if flag == k %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="sort">
+    <option value="new"{% if sort == "new" %} selected{% endif %}>Newest first</option>
+    <option value="rep"{% if sort == "rep" %} selected{% endif %}>Highest reputation</option>
+    <option value="answers"{% if sort == "answers" %} selected{% endif %}>Most answers</option>
+  </select>
+  <button class="pal-btn pal-btn--ghost" type="submit">Filter</button>
+</form>
+
+<section class="mc-panel">
+  <div class="mc-tablewrap">
+    <table class="mc-table ac-table">
+      <thead><tr><th>Member</th><th>Email</th><th>Level</th><th class="num">Questions</th><th class="num">Answers</th><th class="num">Accepted</th><th>Joined</th><th></th></tr></thead>
+      <tbody>
+        {% for m in page %}
+        <tr>
+          <td>
+            <a class="ac-title" href="{% url 'ask_console:member' m.pk %}">{{ m.display_name }}</a>
+            <div class="mc-muted ac-sub">@{{ m.handle }}{% if m.store_url %} · runs a store{% endif %}</div>
+          </td>
+          <td class="mc-trunc"{% if not m.is_persona %} title="{{ m.email }}"{% endif %}>{% if m.is_persona %}<span class="mc-muted">Team-written name</span>{% else %}{{ m.email }}{% endif %}</td>
+          <td>
+            {% if m.is_banned %}<span class="mc-chip mc-chip--revoked">Banned</span>
+            {% elif m.is_team %}<span class="mc-chip mc-chip--accent">Team</span>
+            {% else %}<span class="mc-chip">{{ m.level }}</span>{% endif %}
+            <div class="mc-muted ac-sub">{{ m.reputation }} rep</div>
+          </td>
+          <td class="num">{{ m.question_count }}</td>
+          <td class="num">{{ m.answer_count }}</td>
+          <td class="num">{{ m.accepted_count }}</td>
+          <td class="mc-mono">{{ m.created_at|date:"j M Y" }}</td>
+          <td><a class="mc-panel__link" href="{% url 'ask_console:member' m.pk %}">Manage &rarr;</a></td>
+        </tr>
+        {% empty %}<tr><td colspan="8" class="mc-empty">No members match.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="mc-pager">
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }} &middot; {{ page.paginator.count }} members</span>
+    <span>{% if page.has_previous %}<a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.previous_page_number }}">&larr; Previous</a>{% endif %}
+    {% if page.has_next %}&nbsp; <a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}</span>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

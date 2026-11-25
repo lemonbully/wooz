@@ -1,0 +1,27 @@
+{% load static %}{% comment %}
+Generated preview of a storefront design, shown until staff upload a real
+screenshot (App items > thumbnail). `look` picks the design's character:
+1 original modern, 2 Pebble, 3 Eurus. Pure CSS + the site's own photos.
+{% endcomment %}
+<div class="mkt-mock" data-look="{% if look == '2' or look == '3' %}{{ look }}{% else %}1{% endif %}" role="img" aria-label="Preview of {{ name }}">
+  <div class="mkt-mock__bar">
+    <span class="mkt-mock__logo">{% if look == '2' %}pebble{% elif look == '3' %}Verdant &amp; Co{% else %}BRAND&amp;CO{% endif %}</span>
+    <span class="mkt-mock__nav" aria-hidden="true"><span>Shop</span><span>About</span><span>Cart (2)</span></span>
+  </div>
+  <div class="mkt-mock__hero">
+    <img src="{% if look == '2' %}{% static 'img/hero-img2.png' %}{% elif look == '3' %}{% static 'img/hero-img3.png' %}{% else %}{% static 'img/hero-img1.png' %}{% endif %}" alt="" loading="lazy">
+    <div class="mkt-mock__copy">
+      <div class="mkt-mock__kicker">{% if look == '3' %}New season{% else %}New arrivals{% endif %}</div>
+      <div class="mkt-mock__title">{% if look == '2' %}Soft things for slow days.{% elif look == '3' %}Grown with care.{% else %}Made to wear every day.{% endif %}</div>
+      <span class="mkt-mock__btn">Shop now</span>
+    </div>
+  </div>
+  <div class="mkt-mock__label">Best sellers</div>
+  <div class="mkt-mock__grid" aria-hidden="true">
+    <div class="mkt-mock__cell"><div class="mkt-mock__img"><img src="{% static 'img/orange_cap.png' %}" alt="" loading="lazy"></div><div class="mkt-mock__line"></div><div class="mkt-mock__line mkt-mock__line--s"></div></div>
+    <div class="mkt-mock__cell"><div class="mkt-mock__img"><img src="{% static 'img/maroon_hoodie.png' %}" alt="" loading="lazy"></div><div class="mkt-mock__line"></div><div class="mkt-mock__line mkt-mock__line--s"></div></div>
+    <div class="mkt-mock__cell"><div class="mkt-mock__img"><img src="{% static 'img/blue_shirt.png' %}" alt="" loading="lazy"></div><div class="mkt-mock__line"></div><div class="mkt-mock__line mkt-mock__line--s"></div></div>
+    <div class="mkt-mock__cell"><div class="mkt-mock__img"><img src="{% static 'img/yellow_cap.png' %}" alt="" loading="lazy"></div><div class="mkt-mock__line"></div><div class="mkt-mock__line mkt-mock__line--s"></div></div>
+  </div>
+  <div class="mkt-mock__foot" aria-hidden="true"></div>
+</div>

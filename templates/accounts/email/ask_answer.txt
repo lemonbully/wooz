@@ -1,0 +1,16 @@
+{% autoescape off %}We answered your question
+
+You asked:
+{{ question }}
+{% if preview %}
+{{ preview }}
+{% endif %}
+Read the full answer:
+
+  {{ url }}
+
+You're getting this because you left your email on onewooz.com/ask. We only
+use it to tell you about this question.
+
+{{ brand }}
+{% endautoescape %}

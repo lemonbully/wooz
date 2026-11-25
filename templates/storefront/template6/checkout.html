@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout | Lumo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<header class="co-header">
+  <div class="container">
+    <a href="index.html" class="logo">Lumo</a>
+    <div class="co-steps hide-sm"><a href="cart.html">Cart</a> › <b>Information</b> › Shipping › Payment</div>
+    <a href="cart.html" class="icon-btn cart-btn" aria-label="Back to cart" data-bagicon></a>
+  </div>
+</header>
+
+<button class="m-summary-toggle" data-msum><span style="display:flex;gap:8px;align-items:center" data-msum-label>Show order summary</span><b data-msum-total></b></button>
+
+<div class="co-layout">
+  <form class="co-main" data-checkout novalidate>
+    <h1 class="sr-only">Checkout</h1>
+    <p class="small muted center" style="margin-bottom:12px">Express checkout</p>
+    <div class="co-express">
+      <button type="button" style="background:#5a31f4;color:#fff">UPI</button>
+      <button type="button" style="background:#ffc439">PayPal</button>
+      <button type="button" style="background:#000;color:#fff">G Pay</button>
+    </div>
+    <div class="or-line">OR</div>
+
+    <div class="co-block">
+      <h2>Contact <a href="login.html">Sign in</a></h2>
+      <div style="display:grid;gap:12px">
+        <input class="input" type="email" placeholder="Email" value="aarav.mehta@example.com" required aria-label="Email">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:10px"><span class="input" style="width:auto;display:grid;place-items:center;font-weight:700">+91</span><input class="input" type="tel" placeholder="Mobile number" value="98765 43210" required aria-label="Mobile"></div>
+        <label class="check"><input type="checkbox" checked> Email me with news and offers</label>
+      </div>
+    </div>
+
+    <div class="co-block">
+      <h2>Delivery address</h2>
+      <div class="pill-tabs" style="margin-bottom:12px" data-saved>
+        <button type="button" class="is-active">Home · Andheri</button><button type="button">Work · BKC</button><button type="button">+ New address</button>
+      </div>
+      <div class="form-grid">
+        <input class="input" placeholder="First name" value="Aarav" aria-label="First name">
+        <input class="input" placeholder="Last name" value="Mehta" aria-label="Last name">
+        <input class="input span-2" placeholder="House / flat number, building" value="B-1204, Lodha Splendora" aria-label="House">
+        <input class="input span-2" placeholder="Street, area, landmark" value="Andheri West, near Infiniti Mall" aria-label="Street">
+        <input class="input" placeholder="Pincode" value="400053" aria-label="Pincode">
+        <input class="input" placeholder="City" value="Mumbai" aria-label="City">
+        <select class="select" aria-label="State"><option>Maharashtra</option><option>Karnataka</option><option>Delhi</option><option>Tamil Nadu</option><option>Telangana</option><option>Gujarat</option></select>
+        <select class="select" aria-label="Country"><option>India</option></select>
+        <label class="check span-2"><input type="checkbox" data-gst> I have a GST number (for business invoice)</label>
+        <div class="span-2 form-grid hide" data-gst-row style="margin:0"><input class="input" placeholder="Company name" aria-label="Company"><input class="input" placeholder="GSTIN" aria-label="GSTIN"></div>
+        <label class="check span-2"><input type="checkbox" data-diff> Ship to a different address</label>
+        <div class="span-2 hide" data-diff-row><textarea class="textarea" placeholder="Full shipping address" aria-label="Shipping address"></textarea></div>
+      </div>
+    </div>
+
+    <div class="co-block">
+      <h2>Shipping method</h2>
+      <div class="ship-opts" data-ship>
+        <label class="is-active"><input type="radio" name="ship" value="0" checked><span class="grow"><b>Standard delivery</b><small>Arrives in 3 to 5 days</small></span><b>Free</b></label>
+        <label><input type="radio" name="ship" value="149"><span class="grow"><b>Express delivery</b><small>Arrives tomorrow, before 9 PM</small></span><b>₹149</b></label>
+      </div>
+    </div>
+
+    <div class="co-block" id="payment">
+      <h2>Payment</h2>
+      <p class="small muted" style="margin:-6px 0 14px">All transactions are secure and encrypted.</p>
+      <div class="pay-cards" data-pay>
+        <label class="pay-card is-active"><input type="radio" name="pay" value="online" checked><span class="radio"></span><b>Pay online</b><small>UPI, cards, wallets and netbanking</small><span class="badge badge--new">5% off</span></label>
+        <label class="pay-card"><input type="radio" name="pay" value="cod"><span class="radio"></span><b>Cash on Delivery</b><small>Pay when your order arrives. ₹49 fee.</small></label>
+        <label class="pay-card"><input type="radio" name="pay" value="partial"><span class="radio"></span><b>Partial COD</b><small data-partial-label>Pay ₹299 now, rest on delivery</small></label>
+      </div>
+    </div>
+
+    <div class="co-block">
+      <h2>Order notes <span class="small muted" style="font-weight:500">Optional</span></h2>
+      <textarea class="textarea" placeholder="Anything we should know?" aria-label="Order notes"></textarea>
+    </div>
+
+    <button class="btn btn--black btn--block" style="height:58px;font-size:16px" data-place>Place Order · <span data-place-total></span></button>
+    <p class="small muted center" style="margin-top:14px">By placing this order you agree to our <a class="link" href="policy.html?type=terms">Terms</a> and <a class="link" href="policy.html?type=privacy">Privacy Policy</a>.</p>
+    <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:26px;font-size:13px;font-weight:600" class="muted">
+      <a href="policy.html?type=refund">Refund policy</a><a href="policy.html?type=shipping">Shipping</a><a href="policy.html?type=privacy">Privacy</a><a href="policy.html?type=terms">Terms of service</a>
+    </div>
+  </form>
+
+  <aside class="co-side" data-side>
+    <div class="co-side__inner">
+      <div data-items></div>
+      <div class="coupon-row"><input class="input" placeholder="Discount code or gift card" data-code-input aria-label="Discount code"><button class="btn btn--black" type="button" data-apply>Apply</button></div>
+      <div class="coupon-list" data-codes></div>
+      <div class="card" style="background:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span class="small"><b>Store credit</b><br><span class="muted">₹250 available</span></span>
+        <label class="check"><input type="checkbox" data-credit> Use</label>
+      </div>
+      <div class="sum-rows" data-rows></div>
+      <div class="faq-help" style="background:#fff"><span data-shield></span><div class="small"><b>Safe &amp; secure</b><div class="muted">256-bit SSL encrypted payments. Easy 15 day returns.</div></div></div>
+    </div>
+  </aside>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$;
+  $('[data-bagicon]').innerHTML = I.bag;
+  $('[data-shield]').innerHTML = I.shield;
+  if (!T3.getCart().length) T3.setCart([{ id: 'halo-floor-lamp', size: 'Standard', color: 0, qty: 1 }, { id: 'vita-smartwatch', size: 'Standard', color: 0, qty: 1 }]);
+  const COUPONS = { HOME10: .10, FIRST15: .15 };
+  const st = { ship: 0, pay: 'online', code: null, credit: false };
+  $('[data-codes]').innerHTML = Object.keys(COUPONS).map(c => `<button type="button" data-c="${c}">${c} · ${COUPONS[c] * 100}% off</button>`).join('');
+
+  function render() {
+    const cart = T3.getCart();
+    $('[data-items]').innerHTML = cart.map(l => { const p = T3.byId(l.id); return `<div class="sum-item"><div class="sum-item__img"><img src="${p.img[0]}" alt=""><span>${l.qty}</span></div><div><b>${p.name}</b><small>${l.size}</small></div><b>${T3.inr(p.price * l.qty)}</b></div>`; }).join('');
+    const sub = T3.cartTotal(), mrp = T3.cartMrp();
+    const off = st.code ? Math.round(sub * COUPONS[st.code]) : 0;
+    const prepaid = st.pay === 'online' ? Math.round((sub - off) * .05) : 0;
+    const cod = st.pay === 'cod' ? 49 : 0;
+    const credit = st.credit ? 250 : 0;
+    const total = Math.max(0, sub - off - prepaid + st.ship + cod - credit);
+    const tax = Math.round(total - total / 1.12);
+    $('[data-rows]').innerHTML = `
+      <div><span class="muted">Subtotal · ${T3.cartCount()} items</span><span>${T3.inr(sub)}</span></div>
+      ${mrp > sub ? `<div style="color:var(--ok)"><span>You saved on MRP</span><span>${T3.inr(mrp - sub)}</span></div>` : ''}
+      ${off ? `<div style="color:var(--ok)"><span>Discount <span class="tag" style="height:22px;font-size:11.5px;margin-left:4px">${st.code} <button type="button" data-rm-code aria-label="Remove">✕</button></span></span><span>- ${T3.inr(off)}</span></div>` : ''}
+      ${prepaid ? `<div style="color:var(--ok)"><span>Prepaid discount (5%)</span><span>- ${T3.inr(prepaid)}</span></div>` : ''}
+      ${credit ? `<div style="color:var(--ok)"><span>Store credit</span><span>- ${T3.inr(credit)}</span></div>` : ''}
+      <div><span class="muted">Shipping</span><span>${st.ship ? T3.inr(st.ship) : 'Free'}</span></div>
+      ${cod ? `<div><span class="muted">COD fee</span><span>${T3.inr(cod)}</span></div>` : ''}
+      <div class="muted small"><span>Includes GST</span><span>${T3.inr(tax)}</span></div>
+      <div class="total"><span>Total</span><span><small>INR</small>${T3.inr(total)}</span></div>
+      ${st.pay === 'partial' ? `<div class="card" style="background:#fff;padding:12px 14px;margin-top:10px;display:block"><div style="display:flex;justify-content:space-between"><span>Pay now</span><b>${T3.inr(299)}</b></div><div style="display:flex;justify-content:space-between" class="muted"><span>Pay on delivery</span><b>${T3.inr(total - 299)}</b></div></div>` : ''}`;
+    $('[data-place-total]').textContent = st.pay === 'partial' ? `Pay ${T3.inr(299)} now` : T3.inr(total);
+    $('[data-msum-total]').textContent = T3.inr(total);
+    $('[data-partial-label]').textContent = `Pay ${T3.inr(299)} now, rest ${T3.inr(Math.max(0, total - 299))} on COD`;
+  }
+  render();
+  document.addEventListener('t3:cart', render);
+
+  $('[data-ship]').addEventListener('change', e => { st.ship = +e.target.value; $$('[data-ship] label').forEach(l => l.classList.toggle('is-active', l.contains(e.target))); render(); });
+  $('[data-pay]').addEventListener('change', e => { st.pay = e.target.value; $$('.pay-card').forEach(l => l.classList.toggle('is-active', l.contains(e.target))); render(); });
+  $('[data-apply]').onclick = () => { const v = $('[data-code-input]').value.trim().toUpperCase(); if (COUPONS[v]) { st.code = v; T3.toast(`${v} applied`); render(); } else T3.toast('That code is not valid'); };
+  document.addEventListener('click', e => {
+    const c = e.target.closest('[data-c]'); if (c) { st.code = c.dataset.c; $('[data-code-input]').value = c.dataset.c; T3.toast(`${st.code} applied`); render(); }
+    if (e.target.closest('[data-rm-code]')) { st.code = null; render(); }
+    const s = e.target.closest('[data-saved] button'); if (s) { $$('[data-saved] button').forEach(b => b.classList.toggle('is-active', b === s)); }
+  });
+  $('[data-credit]').onchange = e => { st.credit = e.target.checked; render(); };
+  $('[data-gst]').onchange = e => $('[data-gst-row]').classList.toggle('hide', !e.target.checked);
+  $('[data-diff]').onchange = e => $('[data-diff-row]').classList.toggle('hide', !e.target.checked);
+  $('[data-msum]').onclick = () => { const o = $('[data-side]').classList.toggle('is-open'); $('[data-msum-label]').textContent = o ? 'Hide order summary' : 'Show order summary'; };
+  $('[data-checkout]').addEventListener('submit', e => { e.preventDefault(); const b = $('[data-place]'); b.textContent = 'Placing order…'; b.disabled = true;
+    T3.store.set('t6_last_order', { items: T3.getCart(), pay: st.pay, total: $('[data-msum-total]').textContent });
+    setTimeout(() => { location.href = 'order-confirmation.html'; }, 900); /* preview keeps the cart filled */ });
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

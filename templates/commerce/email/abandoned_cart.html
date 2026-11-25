@@ -1,0 +1,42 @@
+{% extends "email/base.html" %}
+{% comment %}Abandoned cart reminder (commerce.abandoned_cart). Context: brand, kicker,
+heading, lead, items [{title, variant_label, quantity, unit_price, line_total,
+image_url, product_url}], sym, subtotal, cart_url, stop_url, is_last,
+reply_to (bool), powered_by (bool).{% endcomment %}
+{% block preheader %}{{ lead }}{% endblock %}
+{% block kicker %}{{ kicker }}{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text=brand %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:22px; letter-spacing:-0.02em; line-height:1.18; color:#0a0a0b; margin:0 0 16px 0;">{{ heading }}</h1>
+  <div style="margin:0 0 18px 0; color:#26262a;">{{ lead }}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #d7d7d3;">
+    {% for it in items %}
+    <tr>
+      {% if it.image_url %}
+      <td width="64" style="padding:12px 12px 12px 0; border-bottom:1px solid #ececea; vertical-align:top;">
+        {% if it.product_url %}<a href="{{ it.product_url }}">{% endif %}<img src="{{ it.image_url }}" width="64" height="64" alt="{{ it.title }}" style="display:block; width:64px; height:64px; object-fit:cover; border:1px solid #ececea;">{% if it.product_url %}</a>{% endif %}
+      </td>
+      {% endif %}
+      <td style="padding:12px 0; border-bottom:1px solid #ececea; vertical-align:top;">
+        <div style="font-size:15px; font-weight:600; color:#0a0a0b;">{% if it.product_url %}<a href="{{ it.product_url }}" style="color:#0a0a0b; text-decoration:none;">{{ it.title }}</a>{% else %}{{ it.title }}{% endif %}</div>
+        {% if it.variant_label %}<div style="font-size:13px; color:#66666b; margin-top:2px;">{{ it.variant_label }}</div>{% endif %}
+        <div style="font-size:13px; color:#66666b; margin-top:2px;">Qty {{ it.quantity }} &times; {{ sym }}{{ it.unit_price }}</div>
+      </td>
+      <td style="padding:12px 0; border-bottom:1px solid #ececea; text-align:right; vertical-align:top; font-size:15px; font-weight:600; color:#0a0a0b; white-space:nowrap;">{{ sym }}{{ it.line_total }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+    <tr><td style="padding:3px 0; font-size:16px; font-weight:700; color:#0a0a0b;">Subtotal</td><td style="padding:3px 0; text-align:right; font-size:16px; font-weight:700; color:#0a0a0b;">{{ sym }}{{ subtotal }}</td></tr>
+  </table>
+  <div style="margin:6px 0 0 0; font-size:13px; color:#66666b;">Shipping, discounts and GST are worked out at checkout.</div>
+
+  {% include "email/_button.html" with url=cart_url label="Return to your cart" %}
+{% endblock %}
+{% block footer %}
+  <div style="color:#66666b;">{{ brand }}</div>
+  {% if powered_by %}<div style="color:#9a9aa0;">Powered by OneWooz</div>{% endif %}
+{% endblock %}
+{% block sub_footer %}{% if is_last %}This is the last reminder about this cart.{% else %}You're getting this because you left items in your cart at {{ brand }}.{% endif %} <a href="{{ stop_url }}" style="color:#66666b;">Stop these reminders</a>{% if reply_to %} · Reply to this email to reach {{ brand }}.{% endif %}{% endblock %}

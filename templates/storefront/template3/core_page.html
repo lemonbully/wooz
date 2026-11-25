@@ -1,0 +1,64 @@
+{% extends "storefront/template3/_base.html" %}
+{% comment %}
+  A core page and its subtree (page → subpages → children) in Template 3's
+  article layout. Every node is in the markup; the side navigation switches
+  between them and keeps the /<page>/<sub>/<child>/ URL in step, so a deep
+  link opens on its node.
+{% endcomment %}
+{% block main %}
+{% url 'public_core_page' page_slug=core_page.slug as page_url %}
+<main class="container">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'public_website' %}">Home</a><span class="sep">/</span><a href="{% url 'public_core_pages' %}">Guides</a><span class="sep">/</span><span data-cp-crumb>{{ core_page.title }}</span></nav>
+  <div class="policy-layout" style="margin-top:12px">
+    <nav class="policy-nav" aria-label="{{ core_page.title }}" data-cp-nav>
+      <a href="{{ page_url }}" data-node="" class="is-active">{{ core_page.title }}</a>
+      {% for sp in subpages %}
+      <a href="{{ page_url }}{{ sp.slug }}/" data-node="{{ sp.slug }}">{{ sp.title }}</a>
+      {% for n in sp.children %}{% if n.slug %}<a href="{{ page_url }}{{ sp.slug }}/{{ n.slug }}/" data-node="{{ sp.slug }}/{{ n.slug }}" style="padding-left:24px;font-size:.92em">{{ n.title }}</a>{% endif %}{% endfor %}
+      {% endfor %}
+    </nav>
+    <div>
+      <section data-cp-node="">
+        <div class="page-head" style="padding-top:0"><h1 class="h1">{{ core_page.title }}</h1>{% if core_page.subtitle %}<p>{{ core_page.subtitle }}</p>{% endif %}</div>
+        {% if core_page.image %}<div class="article-hero" style="margin:0 0 28px"><img src="{{ core_page.image }}" alt="{{ core_page.title }}"></div>{% endif %}
+        <article class="prose" style="max-width:760px">{{ core_page.content|safe }}</article>
+      </section>
+      {% for sp in subpages %}
+      <section data-cp-node="{{ sp.slug }}" hidden>
+        <div class="page-head" style="padding-top:0"><h2 class="h1">{{ sp.title }}</h2>{% if sp.subtitle %}<p>{{ sp.subtitle }}</p>{% endif %}</div>
+        {% if sp.image %}<div class="article-hero" style="margin:0 0 28px"><img src="{{ sp.image }}" alt="{{ sp.title }}" loading="lazy"></div>{% endif %}
+        <article class="prose" style="max-width:760px">{{ sp.content|safe }}</article>
+      </section>
+      {% for n in sp.children %}{% if n.slug %}
+      <section data-cp-node="{{ sp.slug }}/{{ n.slug }}" hidden>
+        <div class="page-head" style="padding-top:0"><h2 class="h1">{{ n.title }}</h2>{% if n.subtitle %}<p>{{ n.subtitle }}</p>{% endif %}</div>
+        {% if n.image %}<div class="article-hero" style="margin:0 0 28px"><img src="{{ n.image }}" alt="{{ n.title }}" loading="lazy"></div>{% endif %}
+        <article class="prose" style="max-width:760px">{{ n.content|safe }}</article>
+      </section>
+      {% endif %}{% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ csp_nonce }}">
+window.T3Page = function () {
+  const $$ = T3.$$, $ = T3.$;
+  const base = '{{ page_url|escapejs }}';
+  const show = (node, push) => {
+    const sec = $$('[data-cp-node]').find(s => s.dataset.cpNode === node) || $$('[data-cp-node]')[0];
+    $$('[data-cp-node]').forEach(s => s.hidden = s !== sec);
+    $$('[data-cp-nav] a').forEach(a => a.classList.toggle('is-active', a.dataset.node === sec.dataset.cpNode));
+    const link = $$('[data-cp-nav] a').find(a => a.dataset.node === sec.dataset.cpNode);
+    $('[data-cp-crumb]').textContent = link ? link.textContent : '';
+    if (push && link) history.pushState({ node: sec.dataset.cpNode }, '', link.href);
+  };
+  const rel = location.pathname.startsWith(base) ? location.pathname.slice(base.length).replace(/\/$/, '') : '';
+  show(rel, false);
+  $('[data-cp-nav]').addEventListener('click', e => { const a = e.target.closest('a[data-node]'); if (!a) return; e.preventDefault(); show(a.dataset.node, true); scrollTo({ top: 0, behavior: 'smooth' }); });
+  addEventListener('popstate', () => { const r = location.pathname.startsWith(base) ? location.pathname.slice(base.length).replace(/\/$/, '') : ''; show(r, false); });
+};
+</script>
+{% endblock %}

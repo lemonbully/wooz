@@ -13,14 +13,64 @@ only public handles, and both are unique across the platform.
 
 from __future__ import annotations
 
+from django.core.cache import cache
+
 from core import hosts as host_utils
 from tenancy.models import Site
+
+# Scanners request made-up store hosts (random subdomains of the wildcard
+# domains) hundreds of times a day; each would cost a database lookup that can
+# only miss. A miss is remembered briefly so repeats skip the database. Short on
+# purpose: a store created or verified a moment later is at most this many
+# seconds from being reachable. Cache errors are ignored (the lookup just runs).
+_MISS_TTL = 60
+
+
+def miss_key(kind: str, label: str) -> str:
+    """Cache key for a remembered miss. ``kind`` is "slug" or "ref"."""
+    return f"sf:miss:{kind}:{(label or '').lower()}"[:200]
+
+
+def forget_miss(kind: str, label: str) -> None:
+    """Drop a remembered miss (a store or collaboration just took that label)."""
+    if label:
+        try:
+            cache.delete(miss_key(kind, label))
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def _request_miss_key(request) -> str:
+    # Custom domains are not cached here: host routing only treats a host as a
+    # storefront once it is a verified custom domain (storefront.apps, with its
+    # own short cache and invalidation), so a miss there is already rare.
+    if getattr(request, "is_custom_domain", False):
+        return ""
+    slug = getattr(request, "site_slug", "") or ""
+    if not slug:
+        return ""
+    return miss_key("ref" if getattr(request, "is_referral", False) else "slug", slug)
 
 
 def resolve_site(request) -> Site | None:
     if getattr(request, "surface", None) is not host_utils.Surface.STOREFRONT:
         return None
+    try:
+        key = _request_miss_key(request)
+        if key and cache.get(key):
+            return None
+    except Exception:  # noqa: BLE001
+        key = ""
+    site = _resolve(request)
+    if site is None and key:
+        try:
+            cache.set(key, 1, _MISS_TTL)
+        except Exception:  # noqa: BLE001
+            pass
+    return site
 
+
+def _resolve(request) -> Site | None:
     base = Site.objects.filter(is_deleted=False)
 
     # A UGC collaboration store (<subdomain>.myugcstore.com): the subdomain maps

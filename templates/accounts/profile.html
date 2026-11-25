@@ -50,6 +50,41 @@
   .pf-sub-locked { margin-top: 1.1rem; padding: 0.9rem 1rem; border: 1px solid var(--pal-line); background: var(--pal-paper); }
   .pf-sub-locked__k { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-faint); }
   .pf-sub-locked__list { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--pal-muted); line-height: 1.5; }
+
+  /* ── Delete My Account ── */
+  .pf-del { border-color: #f0c4bf; }
+  .pf-del .h3 { color: #b42318; }
+  .pf-del__warn { margin-top: 1rem; padding: 0.9rem 1rem; border: 1px solid #f0c4bf; background: #fef3f2; color: #7a271a; font-size: 0.88rem; line-height: 1.55; }
+  .pf-del__warn strong { color: #b42318; }
+  .pf-acc { margin-top: 1rem; border: 1px solid var(--pal-line); }
+  .pf-acc__btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 1rem; border: 0; background: var(--pal-panel); color: var(--pal-ink); font: inherit; font-size: 0.92rem; font-weight: 500; text-align: left; cursor: pointer; }
+  .pf-acc__btn:hover { background: var(--pal-paper); }
+  .pf-acc__chev { flex: none; width: 1rem; height: 1rem; transition: transform 160ms ease; }
+  .pf-acc__btn[aria-expanded="true"] .pf-acc__chev { transform: rotate(180deg); }
+  .pf-acc__panel { padding: 0.2rem 1rem 1rem; border-top: 1px solid var(--pal-line-soft); }
+  .pf-acc__panel[hidden] { display: none; }
+  .pf-steps { list-style: none; counter-reset: pfstep; margin: 0.8rem 0 0; padding: 0; }
+  .pf-steps li { counter-increment: pfstep; position: relative; padding: 0 0 0.85rem 2.3rem; font-size: 0.88rem; line-height: 1.55; color: var(--pal-ink-2, var(--pal-ink)); }
+  .pf-steps li::before { content: counter(pfstep); position: absolute; left: 0; top: 0; width: 1.55rem; height: 1.55rem; border: 1px solid var(--pal-line); display: grid; place-items: center; font-family: var(--pal-font-mono); font-size: 0.7rem; color: var(--pal-muted); }
+  .pf-steps li strong { color: var(--pal-ink); }
+  .pf-btn-danger { border: 1px solid #b42318; background: #b42318; color: #fff; padding: 0.65rem 1.1rem; font: inherit; font-size: 0.9rem; cursor: pointer; }
+  .pf-btn-danger:hover { background: #912018; border-color: #912018; }
+  .pf-btn-danger[disabled] { opacity: 0.55; cursor: default; }
+  .pf-dlg { border: 1px solid var(--pal-line); padding: 0; width: min(34rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); background: var(--pal-panel); color: var(--pal-ink); }
+  .pf-dlg::backdrop { background: rgb(10 10 11 / 0.55); }
+  .pf-dlg__head { padding: 1.1rem 1.35rem; border-bottom: 1px solid var(--pal-line); display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+  .pf-dlg__title { margin: 0; font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em; }
+  .pf-dlg__x { border: 0; background: none; font-size: 1.3rem; line-height: 1; color: var(--pal-muted); cursor: pointer; padding: 0.1rem 0.3rem; }
+  .pf-dlg__body { padding: 1.2rem 1.35rem; font-size: 0.88rem; line-height: 1.55; }
+  .pf-dlg__body .pf-del__warn { margin-top: 0; }
+  .pf-dlg__list { margin: 1rem 0; padding-left: 1.1rem; }
+  .pf-dlg__list li + li { margin-top: 0.35rem; }
+  .pf-dlg__ack { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.86rem; cursor: pointer; margin-top: 0.9rem; }
+  .pf-dlg__ack input { margin-top: 0.2rem; width: 1rem; height: 1rem; accent-color: #b42318; flex: none; }
+  .pf-dlg__code { letter-spacing: 0.35em; text-align: center; font-family: var(--pal-font-mono); font-size: 1.15rem; }
+  .pf-dlg__err { margin: 0.75rem 0 0; color: #b42318; font-size: 0.82rem; }
+  .pf-dlg__link { border: 0; background: none; padding: 0; font: inherit; font-size: 0.8rem; color: var(--pal-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+  .pf-dlg__foot { padding: 1rem 1.35rem; border-top: 1px solid var(--pal-line); display: flex; justify-content: flex-end; gap: 0.6rem; flex-wrap: wrap; }
 </style>
 
 <div class="container section--tight">
@@ -58,13 +93,6 @@
     <h1 class="h1">Profile</h1>
     <p class="lead mt-3">Your account, how we reach you, and how you sign in.</p>
 
-    {% if messages %}
-      <div class="mt-5">
-        {% for message in messages %}
-          <p class="alert {% if message.tags == 'error' %}alert--error{% endif %}" role="status">{{ message }}</p>
-        {% endfor %}
-      </div>
-    {% endif %}
 
     {# ── Account snapshot ─────────────────────────────────────────── #}
     <section class="card card--pad-lg mt-7">
@@ -276,6 +304,75 @@
       </form>
     </section>
 
+    {# ── Browser notifications (push) ─────────────────────────────── #}
+    {% comment %}
+    State of THIS browser is read client-side by js/app/push.js (permission and
+    subscription live in the browser); the per-kind switches and the device
+    list are server-side. Hidden entirely while an admin impersonates.
+    {% endcomment %}
+    {% comment %}
+    BROWSER PUSH: DISABLED (commented out, not removed). Remove this comment
+    wrapper (it ends just above the Password section) to re-enable.
+    {% if push.enabled %}
+    <section class="card card--pad-lg mt-5" id="browser-notifications">
+      <h2 class="h3">Browser notifications</h2>
+      <p class="feature__body measure">
+        Pop-up alerts on your computer or phone the moment something happens in your store, even when
+        OneWooz is closed. Each browser is switched on separately, and stops when you sign out of it.
+      </p>
+
+      <div class="ow-push-status" data-push-status data-state="unsupported">
+        <span class="ow-push-status__dot" aria-hidden="true"></span>
+        <span class="ow-push-status__text"><strong>This browser:</strong> <span data-push-status-text>Checking…</span></span>
+        <span class="ow-push-status__actions">
+          <button type="button" class="btn btn--primary" data-push-enable data-push-when="ask off" hidden>Turn on notifications</button>
+          <button type="button" class="btn btn--primary" data-push-blocked-help data-push-when="blocked" hidden>How to unblock</button>
+          <button type="button" class="btn btn--primary" data-push-pill data-push-when="ios" hidden>Show me how</button>
+          <button type="button" class="btn btn--secondary" data-push-test data-push-when="on" hidden>Send a test notification</button>
+          <button type="button" class="btn btn--secondary" data-push-disable data-push-when="on" hidden>Turn off here</button>
+        </span>
+      </div>
+
+      <form method="post" class="mt-5">
+        {% csrf_token %}
+        <input type="hidden" name="intent" value="push_prefs">
+        <p class="label" style="margin:0">Pop up an alert for</p>
+        <div class="pf-toggles">
+          {% for k in push_kinds %}
+          <label class="pf-toggle">
+            <input type="checkbox" name="push_{{ k.key }}" {% if k.on %}checked{% endif %}>
+            <span><span class="pf-toggle__t">{{ k.label }}</span><span class="pf-toggle__d">{{ k.help }}</span></span>
+          </label>
+          {% endfor %}
+        </div>
+        <p class="pf-note">Everything still appears in the bell on your dashboard; these only control the pop-ups.</p>
+        <div class="pf-foot"><button class="btn btn--primary" type="submit">Save pop-up preferences</button></div>
+      </form>
+
+      {% if push_devices %}
+      <p class="label mt-5" style="margin-bottom:0">Browsers receiving notifications</p>
+      <ul class="pf-sub-stores">
+        {% for d in push_devices %}
+        <li class="pf-sub-store" data-push-device="{{ d.pk }}">
+          <span>
+            <span class="pf-sub-store__name">{{ d.device_label|default:"Browser" }}</span>
+            <span class="pf-badge pf-badge--ok" data-push-this hidden>This browser</span><br>
+            <span class="pf-sub-store__meta">Turned on {{ d.created_at|date:"j M Y" }}{% if d.last_success_at %} · last alert {{ d.last_success_at|date:"j M, g:i A" }}{% endif %}</span>
+          </span>
+          <form method="post" style="margin:0">
+            {% csrf_token %}
+            <input type="hidden" name="intent" value="push_remove">
+            <input type="hidden" name="device_id" value="{{ d.pk }}">
+            <button class="btn btn--secondary" type="submit">Remove</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+    {% endif %}
+    {% endcomment %}
+
     {# ── Password ─────────────────────────────────────────────────── #}
     <section class="card card--pad-lg mt-5">
       <h2 class="h3">{% if snapshot.has_password %}Change password{% else %}Set a password{% endif %}</h2>
@@ -316,6 +413,170 @@
       </div>
     </section>
 
+    {# ── Delete My Account ────────────────────────────────────────── #}
+    {% if not request.user.is_staff and not request.impersonation %}
+    <section class="card card--pad-lg mt-5 pf-del" id="delete-account">
+      <h2 class="h3">Delete My Account</h2>
+      {% if deletion.pending %}
+      <p class="feature__body measure">This account is scheduled for deletion. Renew your plan by <strong>{{ deletion.recover_until|date:"j M Y" }}</strong> and your account and stores come back automatically.</p>
+      <div class="pf-foot"><a href="{% url 'ud:upgrade' %}" class="btn btn--primary">Renew to restore</a></div>
+      {% else %}
+      <p class="feature__body measure">Delete your OneWooz account and every store on it.</p>
+
+      <div class="pf-del__warn" role="note">
+        <strong>Warning:</strong> deleting your account also deletes your {% if deletion.store_count %}{{ deletion.store_count }} website{{ deletion.store_count|pluralize }}{% else %}websites{% endif %}. Your account and website data stay on our servers for <strong>{{ deletion.retention_days }} days</strong>, and you can restore everything within that time.
+      </div>
+
+      <div class="pf-acc">
+        <button type="button" class="pf-acc__btn" aria-expanded="false" aria-controls="pf-recover" data-pf-acc>
+          <span>How to recover your account within {{ deletion.retention_days }} days</span>
+          <svg class="pf-acc__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="pf-acc__panel" id="pf-recover" hidden>
+          <ol class="pf-steps">
+            <li><strong>Go to the OneWooz sign-in page</strong> any time within {{ deletion.retention_days }} days of deleting your account.</li>
+            <li><strong>Sign in with the same email</strong> ({{ request.user.email }}) and your usual password, sign-in link, code or passkey.</li>
+            <li><strong>If your plan is still active</strong>, that’s it: your account, dashboard and all your websites come back the moment you sign in.</li>
+            <li><strong>If your plan has expired</strong>, you will see the renewal screen first. Renew your plan, and your dashboard and all your websites’ data are restored as soon as the payment goes through.</li>
+            <li><strong>After {{ deletion.retention_days }} days</strong>, or without renewing an expired plan, your account and websites can no longer be restored or recovered.</li>
+          </ol>
+          <p class="pf-note" style="margin-top:0">Your orders and customer records are kept on our servers either way.</p>
+        </div>
+      </div>
+
+      <div class="pf-foot">
+        <button type="button" class="pf-btn-danger" data-pf-del-open>Delete My Account</button>
+      </div>
+      {% endif %}
+    </section>
+
+    {% if not deletion.pending %}
+    <dialog class="pf-dlg" id="pf-del-dlg" aria-labelledby="pf-del-title"
+            data-send-url="{% url 'accounts:account_delete_send_code' %}"
+            data-confirm-url="{% url 'accounts:account_delete_confirm' %}">
+      <div class="pf-dlg__head">
+        <h2 class="pf-dlg__title" id="pf-del-title">Delete your account?</h2>
+        <button type="button" class="pf-dlg__x" data-pf-del-close aria-label="Close">&times;</button>
+      </div>
+
+      <div data-pf-del-step="warn">
+        <div class="pf-dlg__body">
+          <div class="pf-del__warn"><strong>Warning:</strong> your account and your websites will be deleted. Their data stays on our servers for <strong>{{ deletion.retention_days }} days</strong>; sign in again within that time to restore them (renew first if your plan has expired).</div>
+          <ul class="pf-dlg__list">
+            <li>You are signed out on every device straight away.</li>
+            <li>{% if deletion.store_count %}Your {{ deletion.store_count }} website{{ deletion.store_count|pluralize }} go{{ deletion.store_count|pluralize:"es," }} offline{% else %}Your websites go offline{% endif %} and leave your dashboard.</li>
+            <li>Orders and customer records stay on our servers.</li>
+            <li>After {{ deletion.retention_days }} days the account can no longer be restored.</li>
+          </ul>
+          <div class="field">
+            <label class="label" for="pf-del-reason">Why are you leaving? <span class="pf-note" style="display:inline">(optional)</span></label>
+            <input class="input" type="text" id="pf-del-reason" maxlength="300" placeholder="Anything we could do better" data-pf-del-reason>
+          </div>
+          <label class="pf-dlg__ack">
+            <input type="checkbox" data-pf-del-ack>
+            <span>I understand my account and websites will be deleted, and that I can restore them only by signing in within {{ deletion.retention_days }} days.</span>
+          </label>
+          <p class="pf-dlg__err" data-pf-del-err hidden role="alert"></p>
+        </div>
+        <div class="pf-dlg__foot">
+          <button type="button" class="btn btn--secondary" data-pf-del-close>Cancel</button>
+          <button type="button" class="pf-btn-danger" data-pf-del-send disabled>Email me a confirmation code</button>
+        </div>
+      </div>
+
+      <div data-pf-del-step="code" hidden>
+        <div class="pf-dlg__body">
+          <p style="margin:0 0 0.9rem;">We emailed a one-time code to <strong data-pf-del-email></strong>. Enter it to delete your account.</p>
+          <input class="input pf-dlg__code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="••••••" aria-label="Confirmation code" data-pf-del-code>
+          <p class="pf-dlg__err" data-pf-del-err hidden role="alert"></p>
+          <p class="pf-note">Didn’t get it? Check spam, or <button type="button" class="pf-dlg__link" data-pf-del-resend>send a new code</button>.</p>
+        </div>
+        <div class="pf-dlg__foot">
+          <button type="button" class="btn btn--secondary" data-pf-del-close>Cancel</button>
+          <button type="button" class="pf-btn-danger" data-pf-del-confirm>Delete My Account</button>
+        </div>
+      </div>
+    </dialog>
+    {% endif %}
+    {% endif %}
+
   </div>
 </div>
+
+<script nonce="{{ csp_nonce }}">
+  // Recovery steps accordion + Delete My Account dialog (warning, emailed
+  // code, then accounts.views.account_delete_confirm signs out and redirects).
+  (function () {
+    var acc = document.querySelector("[data-pf-acc]");
+    if (acc) {
+      acc.addEventListener("click", function () {
+        var open = acc.getAttribute("aria-expanded") === "true";
+        acc.setAttribute("aria-expanded", open ? "false" : "true");
+        var panel = document.getElementById(acc.getAttribute("aria-controls"));
+        if (panel) panel.hidden = open;
+      });
+    }
+
+    var dlg = document.getElementById("pf-del-dlg");
+    var opener = document.querySelector("[data-pf-del-open]");
+    if (!dlg || !opener) return;
+    var csrf = "{{ csrf_token }}";
+    var ack = dlg.querySelector("[data-pf-del-ack]");
+    var sendBtn = dlg.querySelector("[data-pf-del-send]");
+    var confirmBtn = dlg.querySelector("[data-pf-del-confirm]");
+    var codeInput = dlg.querySelector("[data-pf-del-code]");
+    var reason = dlg.querySelector("[data-pf-del-reason]");
+    function showErr(msg) {
+      Array.prototype.forEach.call(dlg.querySelectorAll("[data-pf-del-err]"), function (el) {
+        el.textContent = msg || ""; el.hidden = !msg;
+      });
+    }
+    function step(name) {
+      Array.prototype.forEach.call(dlg.querySelectorAll("[data-pf-del-step]"), function (el) {
+        el.hidden = el.getAttribute("data-pf-del-step") !== name;
+      });
+      showErr("");
+    }
+    function post(url, data) {
+      var body = new URLSearchParams();
+      Object.keys(data || {}).forEach(function (k) { body.set(k, data[k]); });
+      return fetch(url, {
+        method: "POST", credentials: "same-origin",
+        headers: { "X-CSRFToken": csrf, "X-Requested-With": "XMLHttpRequest", "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      }).then(function (r) { return r.json().catch(function () { return { ok: false }; }); });
+    }
+    function open() {
+      step("warn"); ack.checked = false; sendBtn.disabled = true; codeInput.value = "";
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+    }
+    function close() { if (dlg.close) dlg.close(); else dlg.removeAttribute("open"); }
+    opener.addEventListener("click", open);
+    Array.prototype.forEach.call(dlg.querySelectorAll("[data-pf-del-close]"), function (b) { b.addEventListener("click", close); });
+    ack.addEventListener("change", function () { sendBtn.disabled = !ack.checked; });
+    function sendCode(btn) {
+      var label = btn.textContent; btn.disabled = true; btn.textContent = "Sending…";
+      return post(dlg.getAttribute("data-send-url"), { acknowledge: ack.checked ? "1" : "" }).then(function (d) {
+        btn.disabled = false; btn.textContent = label;
+        if (!d || !d.ok) { showErr((d && d.error) || "We couldn't send the code. Please try again."); return; }
+        dlg.querySelector("[data-pf-del-email]").textContent = d.email || "your email";
+        step("code"); codeInput.focus();
+      }).catch(function () { btn.disabled = false; btn.textContent = label; showErr("Network error. Please try again."); });
+    }
+    sendBtn.addEventListener("click", function () { if (ack.checked) sendCode(sendBtn); });
+    dlg.querySelector("[data-pf-del-resend]").addEventListener("click", function (e) { sendCode(e.currentTarget); });
+    function confirmDelete() {
+      var code = (codeInput.value || "").replace(/\s+/g, "");
+      if (!code) { showErr("Enter the code we emailed you."); return; }
+      confirmBtn.disabled = true; confirmBtn.textContent = "Deleting…";
+      post(dlg.getAttribute("data-confirm-url"), { code: code, reason: (reason && reason.value) || "" }).then(function (d) {
+        if (d && d.ok) { window.location.href = d.redirect || "/"; return; }
+        confirmBtn.disabled = false; confirmBtn.textContent = "Delete My Account";
+        showErr((d && d.error) || "That code isn't right. Please try again.");
+      }).catch(function () { confirmBtn.disabled = false; confirmBtn.textContent = "Delete My Account"; showErr("Network error. Please try again."); });
+    }
+    confirmBtn.addEventListener("click", confirmDelete);
+    codeInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); confirmDelete(); } });
+  })();
+</script>
 {% endblock %}

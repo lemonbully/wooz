@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static onewooz %}
+
+{% comment %}
+Ask OneWooz console shell (admin surface). Same look as the Marketplace
+console: onewooz-pal.css + marketplace-console.css, plus ask-console.css for
+the few community-only pieces. Views set `section` and fill heading + main.
+{% endcomment %}
+
+{% block title %}{% block page_title %}Ask OneWooz{% endblock %} · Ask OneWooz console{% endblock %}
+
+{% block head %}
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/onewooz-pal.css' %}">
+<link rel="stylesheet" href="{% static 'css/marketplace-console.css' %}">
+<link rel="stylesheet" href="{% static 'css/ask-console.css' %}">
+{% endblock %}
+
+{% block body %}
+<div class="pal mc">
+  <aside class="mc-side" aria-label="Ask OneWooz console">
+    <a class="mc-brand" href="{% url 'ask_console:overview' %}">
+      <img class="pal-brand__img" src="{% brand_logo_url %}" alt="OneWooz" width="26" height="26">
+      <span class="mc-brand__label"><b>Ask OneWooz</b><span>Console</span></span>
+    </a>
+    <nav class="mc-nav">
+      {% for key, label in nav_items %}
+        <a href="{% url 'ask_console:'|add:key %}"{% if section == key %} aria-current="page"{% endif %}>
+          <span class="mc-nav__n">{{ forloop.counter|stringformat:"02d" }}</span>{{ label }}
+          {% if key == "queue" and held_count|add:report_count %}<span class="mc-nav__badge" title="Held posts and open reports">{{ held_count|add:report_count }}</span>{% endif %}
+        </a>
+      {% endfor %}
+    </nav>
+    <div class="mc-side__foot">
+      <span class="mc-who" title="{{ request.user.email }}">{{ request.user.email }}{% if not can_write %} &middot; view only{% endif %}</span>
+      <a href="{{ live_url }}" target="_blank" rel="noopener">Open Ask OneWooz &#8599;</a>
+      <a href="{{ admin_home }}">Admin home</a>
+      <a href="{{ db_url }}">Database (advanced)</a>
+      <form method="post" action="{% url 'custom_admin:sign_out' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+    </div>
+  </aside>
+
+  <div class="mc-main">
+    <header class="mc-top">
+      <div>
+        <nav class="mc-crumbs" aria-label="Breadcrumb"><a href="{% url 'ask_console:overview' %}">Ask OneWooz</a>{% block crumbs %}{% endblock %}</nav>
+        <h1>{% block heading %}Ask OneWooz{% endblock %}</h1>
+        {% block lead %}{% endblock %}
+      </div>
+      <div class="mc-top__actions">{% block actions %}{% endblock %}</div>
+    </header>
+    <div class="mc-body">
+      {% if not conf.posting_open and section != "settings" %}
+      <div class="mc-status mc-status--off">
+        <span class="mc-status__txt"><span class="mc-dot mc-dot--off"></span> The community is read-only. Nobody can post questions, answers or replies.</span>
+        <a class="pal-btn pal-btn--ghost" href="{% url 'ask_console:settings' %}">Change in settings</a>
+      </div>
+      {% endif %}
+      {% block main %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    // Ask before anything marked data-confirm is submitted. A button can carry
+    // its own message (data-confirm on the button that submits).
+    document.addEventListener("submit", function (e) {
+      var form = e.target;
+      var btn = e.submitter;
+      var msg = (btn && btn.getAttribute("data-confirm")) || (form.getAttribute && form.getAttribute("data-confirm"));
+      if (msg && !window.confirm(msg)) e.preventDefault();
+    });
+  })();
+</script>
+{% endblock %}

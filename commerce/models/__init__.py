@@ -21,6 +21,7 @@ from .catalog import (
 from .config import PaymentGatewayConfig, TrackingConfig
 from .media import MediaAsset
 from .customers import (
+    AbandonedCart,
     Customer,
     CustomerAddress,
     CustomerCredit,
@@ -48,6 +49,7 @@ from .marketing import (
     GoogleMerchantProductStatus,
 )
 from .team import StaffMember
+from .quantity import QuantityDiscountRule, QuantityDiscountSettings
 from .navigation import NavSeen
 
 __all__ = [
@@ -65,6 +67,7 @@ __all__ = [
     "MediaAsset",
     "PaymentGatewayConfig",
     "TrackingConfig",
+    "AbandonedCart",
     "Customer",
     "CustomerAddress",
     "CustomerCredit",
@@ -92,4 +95,6 @@ __all__ = [
     "GoogleMerchantConfig",
     "GoogleMerchantProductStatus",
     "StaffMember",
+    "QuantityDiscountRule",
+    "QuantityDiscountSettings",
 ]

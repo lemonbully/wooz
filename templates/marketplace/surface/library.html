@@ -1,0 +1,55 @@
+{% extends "marketplace/surface/base.html" %}
+
+{% block content %}
+<section class="pal-pagehead pal-blueprint mk-pagehead">
+  <div class="pal-container mk-headrow">
+    <div>
+      <div class="pal-marker"><span class="pal-marker__num">01</span><span>My apps</span></div>
+      <h1 class="pal-pagehead__title">Everything you have.</h1>
+      <p class="pal-lead pal-pagehead__lead">Set apps up, switch designs or remove an app from Apps in your dashboard.</p>
+      <div class="pal-btn-row mk-intro">
+        <a href="{{ my_apps_url }}" class="pal-btn">Manage in dashboard <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+        <a href="{% url 'marketplace:browse' %}" class="pal-btn pal-btn--ghost">Browse all apps</a>
+      </div>
+    </div>
+    <dl class="pal-specs mk-libspecs">
+      <div class="pal-specs__item"><dt class="pal-specs__label">Installed</dt><dd class="pal-specs__value">{{ apps|length }}</dd></div>
+      <div class="pal-specs__item"><dt class="pal-specs__label">Licences</dt><dd class="pal-specs__value">{{ licences|length }}</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="pal-section pal-section--tight">
+  <div class="pal-container">
+    <div class="pal-marker"><span class="pal-marker__num">02</span><span>Installed</span></div>
+    {% if apps %}
+    <div class="mk-cards mk-block">
+      {% for a in apps %}{% include "marketplace/surface/_app_card.html" with installed=a.slug %}{% endfor %}
+    </div>
+    {% else %}
+    <div class="mk-empty mk-empty--box mk-block">
+      <p class="pal-h3">No apps yet.</p>
+      <p>Start from a problem you want gone.</p>
+      <a class="pal-btn" href="{% url 'marketplace:home' %}#needs">Find apps for a need <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+    </div>
+    {% endif %}
+
+    {% if licences %}
+    <div class="pal-marker mk-block mk-block--lg"><span class="pal-marker__num">03</span><span>Licences</span></div>
+    <div class="mk-table mk-block" role="table" aria-label="Licences">
+      <div class="mk-table__row mk-table__row--head" role="row">
+        <span role="columnheader">Item</span><span role="columnheader">App</span><span role="columnheader">Source</span><span role="columnheader">Valid until</span>
+      </div>
+      {% for l in licences %}
+      <div class="mk-table__row" role="row">
+        <span role="cell" class="mk-table__name">{{ l.name_snapshot }}</span>
+        <span role="cell">{{ l.app.name }}</span>
+        <span role="cell">{{ l.get_source_display }}</span>
+        <span role="cell">{% if l.expires_at %}{{ l.expires_at|date:"j M Y" }}{% else %}Permanent{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

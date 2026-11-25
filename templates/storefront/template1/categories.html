@@ -170,6 +170,7 @@
                 <!-- Submit -->
                 <button type="submit" class="h-12 md:h-14 px-6 md:px-8 rounded-lg md:rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-colors">Submit</button>
             </div>
+            {% include "storefront/_recaptcha.html" with center=True %}
         </form>
 
         {# Flash messages for form submission #}

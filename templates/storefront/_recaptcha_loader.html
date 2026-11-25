@@ -1,0 +1,174 @@
+{% comment %}
+  Google reCAPTCHA for every storefront form that sends an enquiry (contact
+  page, "Send enquiry" pop-ups, "Discuss Your Needs", the Template 2/3 home
+  bulk form). Included ONCE per page by each design's base template; renders
+  nothing unless the owner set both keys in Edit Content > Contact
+  (recaptcha_site_key / recaptcha_version, from storefront.context).
+
+  Each form marks its captcha spot with storefront/_recaptcha.html (a
+  [data-ow-recaptcha] slot). The form's own submit script then sends the
+  g-recaptcha-response field, which storefront.views.enquiry verifies.
+
+  v2 ("I'm not a robot" checkbox): api.js loads with explicit rendering and
+  every slot gets its own checkbox. A capture-phase submit guard (it runs
+  before the form's own handler) stops a send while the box is unticked and
+  resets the box right after a send (a token works once).
+
+  v3 (score based, invisible): nothing is drawn in the form (Google shows its
+  small badge in the corner). On each send the guard holds the submit, gets a
+  fresh token for the action "enquiry", puts it in the form, then submits
+  again so the form's own script runs with the token in place.
+
+  A form whose script builds its own request body carries
+  data-ow-recaptcha-manual and calls window.OWCaptcha.get(form) (a Promise of
+  the token, for either version) itself.
+{% endcomment %}
+{% if recaptcha_site_key %}
+<style>
+  .ow-recaptcha { min-height: 78px; margin: 12px 0 4px; max-width: 100%; }
+  .ow-recaptcha--center { display: flex; flex-direction: column; align-items: center; }
+  .ow-recaptcha--v3 { min-height: 0; margin: 0; }
+  .ow-recaptcha__msg { margin: 6px 0 0; color: #b42318; font-size: 13px; line-height: 1.4; }
+  /* The v2 checkbox is a fixed 304px frame: shrink it on very narrow phones. */
+  @media (max-width: 360px) { .ow-recaptcha > div:first-child { transform: scale(.88); transform-origin: 0 0; } }
+</style>
+<script>
+(function () {
+  var KEY = "{{ recaptcha_site_key|escapejs }}";
+  var V3 = "{{ recaptcha_version|escapejs }}" === "v3";
+  var ACTION = "enquiry";
+  var MSG = V3
+    ? "We could not check the captcha. Please try again in a moment."
+    : "Please tick the “I’m not a robot” box before sending.";
+
+  function slotOf(form) { return form && form.querySelector ? form.querySelector("[data-ow-recaptcha]") : null; }
+  function note(form, text) {
+    var s = slotOf(form);
+    if (!s) return;
+    var m = s.querySelector(".ow-recaptcha__msg");
+    if (!m) {
+      m = document.createElement("p");
+      m.className = "ow-recaptcha__msg";
+      m.setAttribute("role", "alert");
+      s.appendChild(m);
+    }
+    m.textContent = text || "";
+    m.hidden = !text;
+  }
+
+  /* ---- v2: one checkbox per slot ---- */
+  function render(slot) {
+    if (slot.hasAttribute("data-wid") || !window.grecaptcha || !grecaptcha.render) return;
+    var box = document.createElement("div");
+    slot.insertBefore(box, slot.firstChild);
+    var form = slot.closest("form");
+    try {
+      slot.setAttribute("data-wid", String(grecaptcha.render(box, {
+        sitekey: KEY,
+        callback: function () { note(form, ""); }  // ticked: clear the reminder
+      })));
+    } catch (e) {}
+  }
+  function widgetId(form) {
+    var s = slotOf(form);
+    return s && s.hasAttribute("data-wid") ? +s.getAttribute("data-wid") : null;
+  }
+  function v2Token(form) {
+    var id = widgetId(form);
+    if (id === null) return "";
+    try { return grecaptcha.getResponse(id) || ""; } catch (e) { return ""; }
+  }
+
+  /* ---- v3: a fresh invisible token per send ---- */
+  function v3Token() {
+    return new Promise(function (resolve) {
+      if (!window.grecaptcha || !grecaptcha.ready) { resolve(""); return; }
+      grecaptcha.ready(function () {
+        try {
+          grecaptcha.execute(KEY, { action: ACTION }).then(
+            function (t) { resolve(t || ""); },
+            function () { resolve(""); }
+          );
+        } catch (e) { resolve(""); }
+      });
+    });
+  }
+  function putToken(form, tok) {
+    var s = slotOf(form);
+    var input = s.querySelector('input[name="g-recaptcha-response"]');
+    if (!input) {
+      input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "g-recaptcha-response";
+      s.appendChild(input);
+    }
+    input.value = tok;
+  }
+
+  window.OWCaptcha = {
+    version: V3 ? "v3" : "v2",
+    message: MSG,
+    note: note,
+    has: function (form) { return !!slotOf(form); },
+    // A Promise of a token for this form ("" when none), either version.
+    get: function (form) { return V3 ? v3Token() : Promise.resolve(v2Token(form)); },
+    token: v2Token,
+    reset: function (form) {
+      if (V3) return;
+      var id = widgetId(form);
+      if (id === null) return;
+      try { grecaptcha.reset(id); } catch (e) {}
+    }
+  };
+  window.owRecaptchaReady = function () {
+    if (V3) return;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ow-recaptcha]"), render);
+  };
+  if (V3) {
+    // This script sits at the end of <body>, so every slot already exists:
+    // v3 draws nothing in the form, so the slots take no space.
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ow-recaptcha]"), function (s) {
+      s.classList.add("ow-recaptcha--v3");
+    });
+  }
+
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (!slotOf(form) || form.hasAttribute("data-ow-recaptcha-manual")) return;
+    if (V3) {
+      // Second pass: the token is in place, let the form's own script run.
+      if (form._owCaptchaReady) { form._owCaptchaReady = false; return; }
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      var submitter = e.submitter || null;
+      v3Token().then(function (tok) {
+        if (!tok) { note(form, MSG); return; }
+        note(form, "");
+        putToken(form, tok);
+        form._owCaptchaReady = true;
+        if (form.requestSubmit) form.requestSubmit(submitter && submitter.form === form ? submitter : undefined);
+        else {
+          var ev = new Event("submit", { bubbles: true, cancelable: true });
+          if (form.dispatchEvent(ev)) form.submit();
+        }
+      });
+      return;
+    }
+    if (!v2Token(form)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      note(form, MSG);
+      return;
+    }
+    note(form, "");
+    // The form's own handler reads the token synchronously; reset after it.
+    setTimeout(function () { window.OWCaptcha.reset(form); }, 0);
+  }, true);
+})();
+</script>
+{% if recaptcha_version == "v3" %}
+<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key|urlencode }}" async defer></script>
+{% else %}
+<script src="https://www.google.com/recaptcha/api.js?onload=owRecaptchaReady&amp;render=explicit" async defer></script>
+{% endif %}
+{% endif %}

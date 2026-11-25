@@ -1,0 +1,8 @@
+{% comment %}
+  Where a form's Google reCAPTCHA checkbox goes. Include it INSIDE every
+  storefront form that posts an enquiry. Renders nothing unless the store has
+  captcha on; storefront/_recaptcha_loader.html (once per page, in each
+  design's base) renders the widget here and guards the form's submit.
+  Pass center=True to centre it under a wide single-row form.
+{% endcomment %}
+{% if recaptcha_site_key %}<div class="ow-recaptcha{% if center %} ow-recaptcha--center{% endif %}" data-ow-recaptcha></div>{% endif %}

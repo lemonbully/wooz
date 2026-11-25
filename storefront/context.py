@@ -515,9 +515,14 @@ def build_context(request, site: Site, *, page=None, **extra) -> dict:
         if mega_highlight_category is None or c.id != mega_highlight_category.id
     ][:24]
 
+    from . import recaptcha
+
     ctx = {
         "website": site,
         "content": content,
+        # Google reCAPTCHA site key for the contact form ("" = captcha off).
+        "recaptcha_site_key": recaptcha.site_key(site),
+        "recaptcha_version": recaptcha.version(site),
         # The ported policy/footer templates read ``global_content`` (the site's
         # whole content blob); it is the same wrapped dict as ``content``.
         "global_content": content,
@@ -575,6 +580,21 @@ def build_context(request, site: Site, *, page=None, **extra) -> dict:
         "tracking": _tracking_context(site),
     }
     ctx.update(extra)
+    # Template 3 renders from one JSON object (window.T3) instead of server
+    # markup; build it from the live store (storefront.template3). Never on a
+    # UGC collaborator storefront, whose shared pages use the referral chrome.
+    if site.template_dir in ("template3", "template4") and getattr(request, "collaboration", None) is None:
+        from . import template3 as _t3
+
+        try:
+            ctx["t3_data"] = _t3.build(request, site, merged, ctx)
+        except Exception:
+            import logging
+
+            logging.getLogger("onewooz.storefront").exception(
+                "template3 data build failed site=%s", site.pk
+            )
+            ctx["t3_data"] = None
     # Schema.org JSON-LD for this page (storefront.structured_data), printed by
     # theme_base.html. Built after ``extra`` so it reads the page's own objects
     # (the product and its reviews, the listed products, the blog post …).

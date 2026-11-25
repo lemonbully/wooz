@@ -1,0 +1,157 @@
+{% extends "community/_base.html" %}
+{% load ask_tags %}
+
+{% comment %}
+One question thread: the question, its folded instant AI answer, answers
+(accepted first, then by votes) with one level of replies, and the answer box.
+{% endcomment %}
+
+{% block ask_main %}
+<section class="ask-body ask-body--thread">
+  <div class="pal-container ask-layout">
+    <div class="ask-main">
+      <p class="ask-eyebrow"><a href="{% url 'ask:ask_home' %}">Ask OneWooz</a>{% if q.topic %} / <a href="{{ q.topic.get_absolute_url }}">{{ q.topic.name }}</a>{% endif %}</p>
+
+      {% if q.status == "held" %}
+        <div class="pal-alert ask-held" role="status">Only you can see this question for now. The team checks posts with links or reports before they go live, usually within a day.</div>
+      {% endif %}
+
+      <article class="ask-q">
+        <div class="ask-q__head">
+          {% url 'ask:question_vote' q.slug as vote_url %}
+          {% is_voted q as q_on %}
+          {% include "community/_vote.html" with url=vote_url n=q.score on=q_on label="Upvote this question" %}
+          <h1 class="ask-q__title">{{ q.title }}</h1>
+        </div>
+        {% with views=q.view_count|compact|add:" views" %}
+          {% include "community/_author.html" with m=q.author when=q.created_at extra=views %}
+        {% endwith %}
+        {% if q_html %}<div class="ask-text pal-rte">{{ q_html }}</div>{% endif %}
+        <div class="ask-q__foot">
+          {% if q.topic %}<a class="ask-tag" href="{{ q.topic.get_absolute_url }}">{{ q.topic.name }}</a>{% endif %}
+          <a class="ask-textbtn" href="#answer">Answer</a>
+          {% include "community/_report.html" with kind="question" obj=q %}
+          {% if console_url %}<a class="ask-textbtn ask-textbtn--team" href="{{ console_url }}" target="_blank" rel="noopener">Moderate this thread ↗</a>{% endif %}
+        </div>
+      </article>
+
+      {% if ai_html %}
+      <details class="ask-ai">
+        <summary><span class="ask-ai__mark" aria-hidden="true"></span>Instant AI answer the asker saw <span class="ask-ai__hint">Show</span></summary>
+        <div class="ask-text pal-rte">{{ ai_html }}</div>
+        <p class="ask-ai__note">Written by AI from OneWooz's own guidance. People's answers below may know more.</p>
+      </details>
+      {% endif %}
+
+      <h2 class="ask-answers__head">{{ answers|length }} answer{{ answers|length|pluralize }}</h2>
+
+      {% for a in answers %}
+      <article class="ask-answer{% if a.is_accepted %} is-accepted{% endif %}{% if a.author.is_team %} is-team{% endif %}" id="a-{{ a.pk }}">
+        {% url 'ask:answer_vote' a.pk as a_vote_url %}
+        {% is_voted a as a_on %}
+        {% include "community/_vote.html" with url=a_vote_url n=a.score on=a_on label="Upvote this answer" %}
+        <div class="ask-answer__body">
+          {% if a.is_accepted or a.author.is_team or a.status == "held" %}
+          <p class="ask-answer__flags">
+            {% if a.is_accepted %}<span class="ask-accepted">Accepted answer</span>{% endif %}
+            {% if a.author.is_team %}<span class="ask-level ask-level--team">OneWooz team</span>{% endif %}
+            {% if a.status == "held" %}<span class="ask-waiting">Waiting for review, only you can see it</span>{% endif %}
+          </p>
+          {% endif %}
+          {% include "community/_author.html" with m=a.author when=a.created_at extra="" %}
+          <div class="ask-text pal-rte">{{ a.html }}</div>
+
+          <div class="ask-answer__foot">
+            {% if can_accept and a.status == "published" %}
+              <form method="post" action="{% url 'ask:answer_accept' a.pk %}">{% csrf_token %}
+                <button type="submit" class="ask-textbtn{% if a.is_accepted %} is-on{% endif %}">{% if a.is_accepted %}Remove accepted mark{% else %}Accept this answer{% endif %}</button>
+              </form>
+            {% endif %}
+            {% if a.status == "published" %}
+            <details class="ask-replybox">
+              <summary class="ask-textbtn">Reply{% if a.reply_list %} · {{ a.reply_list|length }}{% endif %}</summary>
+              {% if member %}
+                <form method="post" action="{% url 'ask:reply_create' a.pk %}" class="ask-replybox__form">
+                  {% csrf_token %}
+                  <label class="sr-only" for="r-{{ a.pk }}">Your reply</label>
+                  <input id="r-{{ a.pk }}" name="body" class="pal-input" maxlength="600" required placeholder="Add a short reply">
+                  <button type="submit" class="pal-btn pal-btn--ghost ask-btn-sm">Reply</button>
+                </form>
+              {% else %}
+                <p class="ask-replybox__join"><a href="{{ join_url }}" class="pal-link">{% if ow_signed_in %}Continue with your OneWooz account{% else %}Join{% endif %}</a> to reply.</p>
+              {% endif %}
+            </details>
+            {% include "community/_report.html" with kind="answer" obj=a %}
+            {% if console_url %}<a class="ask-textbtn ask-textbtn--team" href="{{ console_url }}#a-{{ a.pk }}" target="_blank" rel="noopener">Moderate ↗</a>{% endif %}
+            {% endif %}
+          </div>
+
+          {% if a.reply_list %}
+          <ul class="ask-replies">
+            {% for r in a.reply_list %}
+              <li>
+                <span class="ask-replies__text">{{ r.body }}</span>
+                <span class="ask-replies__by"><a href="{{ r.author.get_absolute_url }}">{{ r.author.display_name }}</a>{% if r.author.is_team %} · OneWooz team{% endif %} · {{ r.created_at|ago }}{% if r.status == "held" %} · waiting for review{% endif %}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+      </article>
+      {% empty %}
+        <div class="ask-empty ask-empty--inline">
+          <p class="ask-empty__title">No answers yet.</p>
+          <p>If you've solved this for your own store, your answer could save someone a day.</p>
+        </div>
+      {% endfor %}
+
+      <section class="ask-compose" id="answer" aria-labelledby="answer-title">
+        <h2 class="ask-compose__title" id="answer-title">Your answer</h2>
+        {% if q.status != "published" %}
+          <p class="ask-compose__note">Answers open once this question is live.</p>
+        {% elif member %}
+          <form method="post" action="{% url 'ask:answer_create' q.slug %}">
+            {% csrf_token %}
+            <label class="sr-only" for="answer-body">Your answer</label>
+            <textarea id="answer-body" name="body" class="pal-textarea ask-compose__input" rows="5" maxlength="5000" minlength="{{ answer_min }}" required data-autosize
+                      placeholder="Share what worked for you. Be specific: settings, steps, numbers."></textarea>
+            <div class="ask-compose__row">
+              <p class="ask-compose__note">Blank line for a new paragraph · start lines with "- " for a list · **bold**</p>
+              <button type="submit" class="pal-btn">Post answer <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+            </div>
+          </form>
+        {% else %}
+          <div class="ask-joincard">
+            {% if ow_signed_in %}
+            <p>You're signed in to OneWooz, so there's nothing to register. Continue with your account to answer, vote and reply.</p>
+            <a class="pal-btn" href="{{ join_url }}">Continue with my OneWooz account <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+            {% else %}
+            <p>Confirm your email to answer, vote and reply. It takes one code, no password.</p>
+            <a class="pal-btn" href="{{ join_url }}">Join Ask OneWooz <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </section>
+    </div>
+
+    <aside class="ask-side" aria-label="More">
+      {% if related %}
+      <p class="ask-side__label">Related questions</p>
+      <ul class="ask-side__related">
+        {% for r in related %}
+          <li><a href="{{ r.get_absolute_url }}">{{ r.title }}</a><span>{{ r.answer_count }} answer{{ r.answer_count|pluralize }}</span></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <div class="ask-side__note">
+        <p class="ask-side__label">From the help guide</p>
+        <p><a class="pal-link" href="{% url 'web:core_pages' %}">Browse OneWooz guides</a></p>
+      </div>
+      <div class="ask-side__note">
+        <p class="ask-side__label">Still stuck?</p>
+        <p><a class="pal-link" href="{% url 'web:contact' %}">Talk to the OneWooz team</a></p>
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock %}

@@ -17,6 +17,7 @@ from django.db.models import F
 
 from commerce import credits
 from commerce import discounts as engine
+from commerce import quantity_pricing as qp
 from commerce import stock
 from commerce.cart import Cart
 from commerce.models import Coupon, Order, OrderItem
@@ -30,6 +31,12 @@ class CouponError(Exception):
     """A discount that was in the cart can no longer be honoured at checkout."""
 
 
+class QuantityLimitError(CouponError):
+    """A line is above the store's quantity-discount limit (the owner chose
+    "don't sell more than N" / "talk to us above N"). A :class:`CouponError` so
+    every checkout caller already reports it to the shopper."""
+
+
 # Orders that still count against a coupon's redemption limits.
 _LIVE_ORDER_STATES = (
     Order.Status.CREATED,
@@ -38,6 +45,15 @@ _LIVE_ORDER_STATES = (
     Order.Status.SHIPPED,
     Order.Status.DELIVERED,
 )
+
+
+def _sum_lines(items) -> Decimal:
+    """Subtotal of already-resolved cart lines (same as ``Cart.subtotal``,
+    without resolving the cart again)."""
+    total = Decimal("0")
+    for it in items:
+        total += Decimal(it["line_total"])
+    return total.quantize(Decimal("0.01"))
 
 
 def _redemption_error(site, coupon: Coupon, email: str) -> str | None:
@@ -83,13 +99,22 @@ def create_order_from_cart(
     if short:
         raise stock.OutOfStockError(stock.shortage_message(short))
 
-    subtotal = cart.subtotal()
+    # The store's quantity-discount limit, re-checked from live rules (the
+    # cart caps additions too; this stops a cart built before a rule changed).
+    over = qp.lines_over_limit(items)
+    if over:
+        raise QuantityLimitError(qp.limit_message(site, over))
+
+    subtotal = _sum_lines(items)
     email = (details.get("email") or "").strip().lower()
     customer = engine.resolve_customer(site, email)
 
     # Re-evaluate every discount strictly, now that we know who is buying.
+    # Lines at a quantity price are left out when the store doesn't let
+    # quantity prices combine with coupons.
+    coupon_items, coupon_base, _left_out = qp.coupon_lines(site, items)
     result = engine.compute(
-        site, lines=items, subtotal=subtotal, code=cart.coupon_code,
+        site, lines=coupon_items, subtotal=coupon_base, code=cart.coupon_code,
         customer=customer, currency=getattr(site, "currency", "₹") or "₹", strict=True,
     )
     if cart.coupon_code and result.code_error:
@@ -166,6 +191,12 @@ def create_order_from_cart(
                 quantity=it["quantity"],
                 unit_price=it["unit_price"],
                 line_total=it["line_total"],
+                # Quantity discount: the regular price and the frozen deal, so
+                # the order shows the saving and an owner edit re-prices fairly.
+                regular_unit_price=(
+                    it.get("regular_unit_price") if (it.get("qd") or {}).get("applied") else None
+                ),
+                quantity_discount=(it.get("qd") or {}).get("snapshot") or {},
             )
         if not awaiting_payment:
             # COD: take the units now, under row locks. A shortfall (someone

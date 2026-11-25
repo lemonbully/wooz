@@ -8,7 +8,7 @@ wishlist button's JS hook on pages that wire their own handler. The demo
 photo index comes from the surrounding loop's forloop.counter0.
 Styles: include components/product_card_styles.html once per page.
 {% endcomment %}
-<div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] md:m-[1rem] lg:m-4 product_card" style="border-radius: 8px;" data-product-id="{{ product.product_id }}" data-product-title="{{ product.title|lower }}">
+<div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] product_card" style="border-radius: 8px;" data-product-id="{{ product.product_id }}" data-product-title="{{ product.title|lower }}">
     <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
         {% if product.image1 %}
         <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
@@ -57,9 +57,9 @@ Styles: include components/product_card_styles.html once per page.
                 {% with specs=product.specifications %}
                     <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words best-seller-d2c-price">₹{{ product.price }}</span>
                     {% if specs and specs.mrp %}
-                        <span class="text-[15px] text-gray-400 line-through break-words">₹{{ specs.mrp }}</span>
+                        <span class="text-[15px] text-gray-400 ow-mrp break-words">₹{{ specs.mrp }}</span>
                     {% elif specs and specs.original_price %}
-                        <span class="text-[15px] text-gray-400 line-through break-words">₹{{ specs.original_price }}</span>
+                        <span class="text-[15px] text-gray-400 ow-mrp break-words">₹{{ specs.original_price }}</span>
                     {% endif %}
                 {% endwith %}
             </a>
@@ -100,10 +100,10 @@ Styles: include components/product_card_styles.html once per page.
                class="inline-flex items-baseline justify-center gap-2 hover:text-black transition-colors">
                 {% with specs=product.specifications %}
                     {% if specs and specs.mrp %}
-                        <span class="text-gray-400 line-through text-[11px]">₹{{ specs.mrp }}</span>
+                        <span class="text-gray-400 ow-mrp text-[11px]">₹{{ specs.mrp }}</span>
                         <span class="text-xs">₹{{ product.price }}</span>
                     {% elif specs and specs.original_price %}
-                        <span class="text-gray-400 line-through text-[11px]">₹{{ specs.original_price }}</span>
+                        <span class="text-gray-400 ow-mrp text-[11px]">₹{{ specs.original_price }}</span>
                         <span class="text-xs">₹{{ product.price }}</span>
                     {% else %}
                         <span class="text-xs">₹{{ product.price }}</span>

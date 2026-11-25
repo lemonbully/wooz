@@ -26,3 +26,15 @@ class EmailPasswordBackend(ModelBackend):
         if email:
             email = email.strip().lower()
         return super().authenticate(request, username=email, password=password, **kwargs)
+
+    def user_can_authenticate(self, user):
+        """Also refuse a deleted account whose recovery window has passed."""
+        if not super().user_can_authenticate(user):
+            return False
+        deleted_at = getattr(user, "account_deleted_at", None)
+        if deleted_at:
+            from .deletion import is_lapsed
+
+            if is_lapsed(deleted_at):
+                return False
+        return True

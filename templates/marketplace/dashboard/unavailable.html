@@ -1,0 +1,17 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ app.name|default:"App" }} · {{ site.name }}{% endblock %}
+{% block crumb %}{{ app.name|default:"App" }}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-empty app-block">
+    <div class="app-empty__ico" aria-hidden="true">{% include "store/_icons.html" with icon="alert" %}</div>
+    <h1 class="app-empty__title">{{ app.name|default:"This app" }} is temporarily unavailable</h1>
+    <p class="app-empty__text">
+      {% if paused %}OneWooz paused this app while we look into a problem.{% else %}Something went wrong inside this app.{% endif %}
+      The rest of your dashboard and your store are not affected, and your settings are safe. Please try again in a few minutes.
+    </p>
+    <p style="margin-top:1.25rem;"><a class="pal-btn pal-btn--ghost" href="{% url 'store:overview' site.id %}">Back to overview</a></p>
+  </div>
+</div>
+{% endblock %}

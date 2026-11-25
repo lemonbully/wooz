@@ -1,0 +1,21 @@
+{% load ask_tags %}
+{% comment %}One question in a feed. Context: row = {q, preview, by, accepted, voted}.{% endcomment %}
+{% with q=row.q %}
+<article class="ask-row">
+  {% url 'ask:question_vote' q.slug as vote_url %}
+  {% include "community/_vote.html" with url=vote_url n=q.score on=row.voted label="Upvote this question" %}
+  <div class="ask-row__body">
+    <h3 class="ask-row__title"><a href="{{ q.get_absolute_url }}">{{ q.title }}</a></h3>
+    {% if row.preview %}<p class="ask-row__preview">{{ row.preview }}</p>{% endif %}
+    <div class="ask-row__meta">
+      {% if q.topic %}<a class="ask-tag" href="{{ q.topic.get_absolute_url }}">{{ q.topic.name }}</a>{% endif %}
+      <span>{{ q.answer_count }} answer{{ q.answer_count|pluralize }}</span>
+      {% if row.accepted %}<span class="ask-accepted">Accepted answer</span>
+      {% elif row.by == "team" %}<span class="ask-accepted">Answered by OneWooz team</span>
+      {% elif row.by == "ai" and not q.answer_count %}<span>Instant AI answer</span>
+      {% elif not q.answer_count %}<span class="ask-waiting">Needs an answer</span>{% endif %}
+      <span>{{ q.author.display_name }} · {{ q.created_at|ago }}</span>
+    </div>
+  </div>
+</article>
+{% endwith %}

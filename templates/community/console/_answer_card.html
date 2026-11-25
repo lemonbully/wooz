@@ -1,0 +1,8 @@
+{% comment %}One answer card on the new-question page. Context: f (AnswerForm), n (its number).{% endcomment %}
+<div class="mc-card" data-answer-card>
+  <div class="mc-card__head">
+    <span class="mc-card__title">Answer {{ n }}</span>
+    <span class="mc-muted ac-sub">Leave the answer empty to skip this card.</span>
+  </div>
+  {% include "community/console/_post_fields.html" with f=f %}
+</div>

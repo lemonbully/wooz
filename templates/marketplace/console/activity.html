@@ -1,0 +1,50 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Activity{% endblock %}
+{% block crumbs %}<span>/</span><span>Activity</span>{% endblock %}
+{% block heading %}Activity{% endblock %}
+{% block lead %}<p>Every catalogue change (who, what, which fields) and the latest licence events. Nothing here can be edited or deleted.</p>{% endblock %}
+
+{% block main %}
+<div class="mc-grid2">
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Catalogue changes</h2></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <thead><tr><th>When</th><th>Who</th><th>App</th><th>What</th><th>Fields changed</th></tr></thead>
+        <tbody>
+          {% for r in revisions %}
+          <tr>
+            <td class="mc-mono mc-muted">{{ r.created_at|date:"j M, H:i" }}</td>
+            <td class="mc-trunc" title="{{ r.actor_label }}">{{ r.actor_label }}</td>
+            <td>{% if r.app %}<a class="mc-panel__link" href="{% url 'mkt_console:app_edit' r.app.pk %}">{{ r.app_slug }}</a>{% else %}{{ r.app_slug }}{% endif %}</td>
+            <td><span class="mc-chip">{{ r.object_kind }}</span>{% if not r.before %} <span class="mc-chip mc-chip--ok">new</span>{% endif %}</td>
+            <td class="mc-mono" style="font-size:.7rem;">{% for k in r.changed %}{{ k }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</td>
+          </tr>
+          {% empty %}<tr><td colspan="5" class="mc-empty">No changes yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if revisions.paginator.num_pages > 1 %}
+    <div class="mc-pager"><span>Page {{ revisions.number }} of {{ revisions.paginator.num_pages }}</span>
+      <span>{% if revisions.has_previous %}<a href="?page={{ revisions.previous_page_number }}">&larr; Newer</a>{% endif %} {% if revisions.has_next %}<a href="?page={{ revisions.next_page_number }}">Older &rarr;</a>{% endif %}</span></div>
+    {% endif %}
+  </section>
+
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Licence events</h2></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <tbody>
+          {% for e in events %}
+          <tr>
+            <td><span class="mc-chip">{{ e.event }}</span></td>
+            <td><b>{{ e.licence.name_snapshot }}</b><br><span class="mc-muted" style="font-size:.8rem;">{{ e.licence.owner_email }}{% if e.reason %} &middot; {{ e.reason }}{% endif %}</span></td>
+            <td class="mc-mono mc-muted">{{ e.created_at|date:"j M, H:i" }}</td>
+          </tr>
+          {% empty %}<tr><td class="mc-empty">No licence events yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

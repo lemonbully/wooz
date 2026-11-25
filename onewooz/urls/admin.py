@@ -26,9 +26,16 @@ urlpatterns = [
     path("health/live/", health.live, name="health_live"),
     # Full model admin (tables/CRUD) under /db/, gated by AdminAccessMiddleware.
     path("db/", admin.site.urls),
+    # OneWooz Apps control console (UI, not the model admin). Behind the same
+    # admin gate as everything on this surface.
+    path("marketplace/", include("marketplace.console_urls", namespace="mkt_console")),
+    # Ask OneWooz console: moderation, members, topic rooms, digest, settings.
+    path("ask/", include("community.console_urls", namespace="ask_console")),
     path("", include("custom_admin.urls")),
 ]
 
 # Surface-aware error pages  see onewooz.urls.marketing.
+handler400 = "core.errors.handler400"
+handler403 = "core.errors.handler403"
 handler404 = "core.errors.handler404"
 handler500 = "core.errors.handler500"

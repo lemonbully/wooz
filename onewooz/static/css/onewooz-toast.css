@@ -1,0 +1,68 @@
+/* Universal flash / toast notifications.
+ *
+ * Every dashboard page (store, account, profile, hub) shows Django messages and
+ * in-page AJAX results through one stack in the top-right corner:
+ *   success  → green
+ *   error    → red   (stays until dismissed)
+ *   warning  → amber
+ *   info     → neutral
+ * Rendered by templates/partials/_toasts.html, driven by js/app/toast.js.
+ */
+.ow-toasts {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: min(26rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+@media (max-width: 40rem) {
+  .ow-toasts { top: auto; bottom: 1rem; right: 1rem; left: 1rem; width: auto; }
+}
+.ow-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.85rem 0.9rem 0.85rem 1rem;
+  border: 1px solid;
+  border-left-width: 4px;
+  border-radius: 6px;
+  box-shadow: 0 10px 28px -12px rgb(16 24 40 / 0.35);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  animation: ow-toast-in 0.22s ease-out;
+}
+.ow-toast.is-leaving { animation: ow-toast-out 0.2s ease-in forwards; }
+.ow-toast__icon { flex: 0 0 auto; width: 1.15rem; height: 1.15rem; margin-top: 0.05rem; }
+.ow-toast__icon svg { width: 100%; height: 100%; display: block; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ow-toast__body { flex: 1 1 auto; min-width: 0; }
+.ow-toast__title { display: block; font-weight: 600; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.1rem; }
+.ow-toast__close {
+  flex: 0 0 auto; appearance: none; background: none; border: 0; cursor: pointer;
+  padding: 0 0.15rem; font-size: 1.15rem; line-height: 1; color: inherit; opacity: 0.6;
+}
+.ow-toast__close:hover { opacity: 1; }
+
+.ow-toast--success { background: #ecfdf3; border-color: #12b76a; color: #05603a; }
+.ow-toast--error   { background: #fef3f2; border-color: #f04438; color: #b42318; }
+.ow-toast--warning { background: #fffaeb; border-color: #f79009; color: #93370d; }
+.ow-toast--info    { background: #f5f5ff; border-color: #4b2bf5; color: #2d1a99; }
+
+@keyframes ow-toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes ow-toast-out { to { opacity: 0; transform: translateX(12px); } }
+@media (prefers-reduced-motion: reduce) {
+  .ow-toast, .ow-toast.is-leaving { animation: none; }
+}
+
+/* In-page alerts follow the same colour language: an alert that announces an
+   error (role="alert", e.g. a form's non-field errors) is red; a confirmation
+   (pal-alert--ok) is green. */
+.pal-alert[role="alert"] { border-color: #fda29b; border-left: 3px solid #f04438; background: #fef3f2; color: #b42318; }
+.pal-alert.pal-alert--ok { border-color: #a6f4c5; border-left: 3px solid #12b76a; background: #ecfdf3; color: #05603a; }
+.app-field-err { color: #b42318; }

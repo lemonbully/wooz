@@ -19,6 +19,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 
+from core.fields import EncryptedTextField
 from core.ids import uuid7
 from core.models import BaseModel, SoftDeleteMixin
 
@@ -169,6 +170,16 @@ class Site(BaseModel, SoftDeleteMixin):
         # they sell.
         TEMPLATE1 = "template1", "Catalogue storefront (B2B)"
         TEMPLATE2 = "template2", "Modern storefront (D2C)"
+        # The owner-facing "Template 2" at store creation: one design that
+        # serves both D2C and B2B stores (cart for D2C, enquiries for B2B).
+        TEMPLATE3 = "template3", "Pebble storefront (D2C and B2B)"
+        # The owner-facing "Template 3": the Eurus storefront. Same data feed
+        # and page set as TEMPLATE3 (storefront.template3), its own look.
+        TEMPLATE4 = "template4", "Eurus storefront (D2C and B2B)"
+
+    #: Themes rendered from the JavaScript data feed ``window.T3``
+    #: (storefront.template3) instead of server markup.
+    JS_THEMES = ("template3", "template4")
 
     class Currency(models.TextChoices):
         INR = "INR", "Indian rupee"
@@ -231,6 +242,15 @@ class Site(BaseModel, SoftDeleteMixin):
     # this host is relaxed to allow inline scripts. Never affects the dashboard.
     allows_custom_scripts = models.BooleanField(default=False)
 
+    # Google reCAPTCHA v2 ("I'm not a robot" checkbox) on the storefront
+    # contact form, set by the owner in Edit Content > Contact. Both keys come
+    # from the owner's own Google reCAPTCHA admin console for their domain.
+    # The site key is public (it is rendered into the page); the secret key is
+    # a credential, so it is encrypted at rest and never sent to a browser.
+    # Captcha is on only when both are set (see storefront.recaptcha).
+    recaptcha_site_key = models.CharField(max_length=100, blank=True, default="")
+    recaptcha_secret_key = EncryptedTextField(blank=True, default="")
+
     tagline = models.CharField(max_length=200, blank=True, default="")
     currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.INR)
     country = models.CharField(max_length=2, default="IN")
@@ -279,6 +299,13 @@ class Site(BaseModel, SoftDeleteMixin):
     maintenance_mode = models.BooleanField(default=False)
 
     published_at = models.DateTimeField(null=True, blank=True)
+
+    # Deletion (see accounts.deletion). ``is_deleted`` / ``deleted_at`` come from
+    # SoftDeleteMixin; nothing is ever erased, so orders and customers survive.
+    # True when the store went down with its owner's "Delete My Account", so a
+    # restored account brings back exactly those stores and never one the owner
+    # had deleted on its own earlier.
+    deleted_with_account = models.BooleanField(default=False, editable=False)
 
     class Meta:
         ordering = ("-created_at",)
@@ -360,6 +387,33 @@ class Site(BaseModel, SoftDeleteMixin):
             if business_model == cls.BusinessModel.B2B
             else cls.Theme.TEMPLATE2
         )
+
+    @classmethod
+    def theme_for_choice(cls, choice: str, business_model: str) -> str:
+        """The theme behind the owner's pick on the create-store form.
+
+        "Template 1" is the original design for the business model (see
+        :meth:`default_theme_for`); "Template 2" is the Pebble storefront
+        (``template3``), which serves D2C and B2B alike.
+        """
+        choice = str(choice or "").strip()
+        if choice == "2":
+            return cls.Theme.TEMPLATE3
+        if choice == "3":
+            return cls.Theme.TEMPLATE4
+        return cls.default_theme_for(business_model)
+
+    @property
+    def theme_choice(self) -> str:
+        """The owner-facing pick this store is on: ``"2"`` for the Pebble
+        storefront, ``"1"`` for the original design (inverse of
+        :meth:`theme_for_choice`)."""
+        return {self.Theme.TEMPLATE3: "2", self.Theme.TEMPLATE4: "3"}.get(self.template_dir, "1")
+
+    @property
+    def uses_js_theme(self) -> bool:
+        """True for the designs built from ``window.T3`` (Template 2 and 3)."""
+        return self.template_dir in self.JS_THEMES
 
     def get_custom_policy_pages(self) -> list[dict]:
         """The owner's published custom policies (Edit Content → Policies, up to

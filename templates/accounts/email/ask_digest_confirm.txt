@@ -1,0 +1,13 @@
+{% autoescape off %}Confirm your Ask OneWooz weekly digest
+
+Every Monday morning: the question of the week, the most helpful answers, and
+what still needs an answer on Ask OneWooz.
+
+Confirm here:
+
+  {{ url }}
+
+If you didn't sign up, ignore this email and you won't hear from us.
+
+{{ brand }}
+{% endautoescape %}

@@ -1,0 +1,224 @@
+{
+  "family": "onewooz-marketplace",
+  "networkMode": "bridge",
+  "requiresCompatibilities": [
+    "EC2"
+  ],
+  "executionRoleArn": "arn:aws:iam::521831014282:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::521831014282:role/onewooz-task-role",
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "marketplace",
+      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app@sha256:30b7ffd26d6c6841f2aa66a1d2dc7ced81676e7139e3abfcf883b391a245b6fc",
+      "essential": true,
+      "command": [
+        "marketplace"
+      ],
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 0,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "DJANGO_SETTINGS_MODULE",
+          "value": "onewooz.settings.prod"
+        },
+        {
+          "name": "ONEWOOZ_DB_HOST",
+          "value": "onewoozdb2.c72wgcao0a70.ap-south-1.rds.amazonaws.com"
+        },
+        {
+          "name": "ONEWOOZ_DB_NAME",
+          "value": "onewooz"
+        },
+        {
+          "name": "ONEWOOZ_DB_USER",
+          "value": "woozuser"
+        },
+        {
+          "name": "ONEWOOZ_DB_PORT",
+          "value": "3306"
+        },
+        {
+          "name": "ONEWOOZ_REDIS_URL",
+          "value": "redis://onewooz-redis.anbsbd.0001.aps1.cache.amazonaws.com:6379/1"
+        },
+        {
+          "name": "ONEWOOZ_AWS_REGION",
+          "value": "ap-south-1"
+        },
+        {
+          "name": "ONEWOOZ_MEDIA_BUCKET",
+          "value": "onewooz-media-bucket"
+        },
+        {
+          "name": "ONEWOOZ_STATIC_BUCKET",
+          "value": "onewooz-static-bucket"
+        },
+        {
+          "name": "ONEWOOZ_STATIC_CDN_DOMAIN",
+          "value": "cdn.onewooz.com"
+        },
+        {
+          "name": "ONEWOOZ_MEDIA_CDN_DOMAIN",
+          "value": "cdn.onewooz.com"
+        },
+        {
+          "name": "ONEWOOZ_CELERY_BROKER_URL",
+          "value": "sqs://"
+        },
+        {
+          "name": "ONEWOOZ_SQS_PREFIX",
+          "value": "onewooz-"
+        },
+        {
+          "name": "ONEWOOZ_CUSTOM_DOMAIN_A_RECORDS",
+          "value": "15.252.174.7"
+        },
+        {
+          "name": "ONEWOOZ_PLATFORM_CASHFREE_SANDBOX",
+          "value": "false"
+        },
+        {
+          "name": "USE_ONEWOOZ_EMAIL",
+          "value": "false"
+        },
+        {
+          "name": "ONEWOOZ_STOREFRONT_EMAIL_DOMAIN",
+          "value": "via.onewooz.website"
+        },
+        {
+          "name": "ONEWOOZ_STORE_EMAIL_BACKEND",
+          "value": "core.mail.SESEmailBackend"
+        },
+        {
+          "name": "ONEWOOZ_STORE_EMAIL_SES_REGION",
+          "value": "ap-south-1"
+        },
+        {
+          "name": "ONEWOOZ_STORE_EMAIL_SES_CONFIGURATION_SET",
+          "value": ""
+        },
+        {
+          "name": "ONEWOOZ_EMAIL_USE_SES",
+          "value": "true"
+        },
+        {
+          "name": "ONEWOOZ_FROM_NAME",
+          "value": "OneWooz"
+        },
+        {
+          "name": "ONEWOOZ_FROM_EMAIL",
+          "value": "no-reply@onewooz.com"
+        },
+        {
+          "name": "ONEWOOZ_REFERRAL_FROM_EMAIL",
+          "value": "no-reply@myugcstore.com"
+        },
+        {
+          "name": "RUN_MIGRATIONS",
+          "value": "0"
+        },
+        {
+          "name": "MARKETPLACE_GUNICORN_WORKERS",
+          "value": "2"
+        },
+        {
+          "name": "ONEWOOZ_MARKETPLACE_QUEUE",
+          "value": "marketplace"
+        },
+        {
+          "name": "ONEWOOZ_MEDIA_QUEUE",
+          "value": "media"
+        },
+        {
+          "name": "ONEWOOZ_MEDIA_CDN_DISTRIBUTION_ID",
+          "value": "ESZR5GF8XLQJF"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "ONEWOOZ_SECRET_KEY",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/SECRET_KEY"
+        },
+        {
+          "name": "ONEWOOZ_FIELD_ENCRYPTION_KEY",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/FIELD_ENCRYPTION_KEY"
+        },
+        {
+          "name": "ONEWOOZ_CADDY_ASK_SECRET",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/CADDY_ASK_SECRET"
+        },
+        {
+          "name": "ONEWOOZ_DB_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/DB_PASSWORD"
+        },
+        {
+          "name": "ONEWOOZ_EMAIL_HOST",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_HOST"
+        },
+        {
+          "name": "ONEWOOZ_EMAIL_USER",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_USER"
+        },
+        {
+          "name": "ONEWOOZ_EMAIL_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/EMAIL_PASSWORD"
+        },
+        {
+          "name": "ONEWOOZ_GMAIL_USER",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GMAIL_USER"
+        },
+        {
+          "name": "ONEWOOZ_GMAIL_APP_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GMAIL_APP_PASSWORD"
+        },
+        {
+          "name": "ONEWOOZ_SMTP_USER",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/SMTP_USER"
+        },
+        {
+          "name": "ONEWOOZ_SMTP_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/SMTP_PASSWORD"
+        },
+        {
+          "name": "ONEWOOZ_GOOGLE_OAUTH_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GOOGLE_OAUTH_CLIENT_ID"
+        },
+        {
+          "name": "ONEWOOZ_GOOGLE_OAUTH_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GOOGLE_OAUTH_CLIENT_SECRET"
+        },
+        {
+          "name": "ONEWOOZ_GOOGLE_MERCHANT_DEVELOPER_EMAIL",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/GOOGLE_MERCHANT_DEVELOPER_EMAIL"
+        },
+        {
+          "name": "ONEWOOZ_PLATFORM_CASHFREE_APP_ID",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/PLATFORM_CASHFREE_APP_ID"
+        },
+        {
+          "name": "ONEWOOZ_PLATFORM_CASHFREE_SECRET_KEY",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/PLATFORM_CASHFREE_SECRET_KEY"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:ssm:ap-south-1:521831014282:parameter/onewooz/prod/OPENAI_API_KEY"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "onewooz-ecs",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "marketplace"
+        }
+      }
+    }
+  ]
+}

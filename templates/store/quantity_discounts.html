@@ -1,0 +1,90 @@
+{% extends "store/_shell.html" %}
+{% load static %}
+{% block title %}{{ site.name }} · Quantity discounts{% endblock %}
+{% block crumb %}Quantity discounts{% endblock %}
+
+{% block main %}
+{% include "store/_disc_styles.html" %}
+<style nonce="{{ csp_nonce }}">
+  .qd-tiers { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .qd-tier { font-family: var(--pal-font-mono); font-size: 0.7rem; letter-spacing: 0.02em; padding: 0.18rem 0.45rem; border: 1px solid var(--pal-line); color: var(--pal-ink-2); white-space: nowrap; }
+  .qd-actions { display: flex; gap: 0.4rem; justify-content: flex-end; flex-wrap: wrap; }
+  .qd-actions form { margin: 0; }
+  .qd-off { border: 1px solid var(--pal-line); background: var(--pal-paper-2); padding: 0.85rem 1.1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: var(--pal-ink-2); }
+  .qd-how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; margin-top: 1rem; }
+  @media (max-width: 48rem) { .qd-how { grid-template-columns: 1fr; } }
+  .qd-how__step { border: 1px solid var(--pal-line); padding: 0.9rem 1rem; background: var(--pal-panel); }
+  .qd-how__n { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.1em; color: var(--pal-accent); }
+  .qd-how__t { margin-top: 0.35rem; font-size: 0.88rem; color: var(--pal-ink); font-weight: 500; }
+  .qd-how__d { margin-top: 0.25rem; font-size: 0.8rem; color: var(--pal-muted); line-height: 1.5; }
+</style>
+
+<div class="app-page disc">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Grow</p>
+      <h1 class="app-head__title pal-mt-4">Quantity discounts</h1>
+      <p class="app-head__lead">Lower the price per piece when shoppers buy more, the way Amazon does it. When a shopper changes the quantity on a product page, the price per piece changes to the tier price right where your design shows the price. The cart and checkout charge it on their own.</p>
+    </div>
+    <div class="app-head__actions"><a href="{{ page_url }}?rule=new" class="pal-btn">New quantity discount</a></div>
+  </div>
+
+  {% if not settings_row.app_active %}
+    <div class="qd-off" role="status">Quantity Discounts isn't active on this store right now, so shoppers see regular prices. Your discounts are kept and apply again as soon as the app is active.</div>
+  {% endif %}
+
+  {% if rows %}
+    <div class="app-block">
+      <div class="app-tablewrap">
+        <table class="app-table">
+          <thead><tr><th>Discount</th><th>Applies to</th><th>Tiers</th><th>Above the last tier</th><th>Status</th><th class="app-table__actions"></th></tr></thead>
+          <tbody>
+            {% for r in rows %}
+              <tr>
+                <td class="app-table__strong"><a href="{{ page_url }}?rule={{ r.rule.pk }}">{{ r.rule.name }}</a></td>
+                <td class="app-sub">{{ r.scope }}</td>
+                <td><div class="qd-tiers">{% for t in r.tiers %}<span class="qd-tier">{{ t }}</span>{% endfor %}</div></td>
+                <td class="app-sub">{{ r.beyond }}</td>
+                <td><span class="app-pill{% if r.status_kind %} app-pill--{{ r.status_kind }}{% endif %}">{{ r.status }}</span></td>
+                <td>
+                  <div class="qd-actions">
+                    <a class="pal-btn pal-btn--ghost pal-btn--sm" href="{{ page_url }}?rule={{ r.rule.pk }}">Edit</a>
+                    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle_rule"><input type="hidden" name="rule" value="{{ r.rule.pk }}"><button class="pal-btn pal-btn--ghost pal-btn--sm" type="submit">{% if r.rule.is_active %}Pause{% else %}Turn on{% endif %}</button></form>
+                    <form method="post" data-qd-confirm="Delete “{{ r.rule.name }}”? Shoppers will see regular prices for these products.">{% csrf_token %}<input type="hidden" name="action" value="delete_rule"><input type="hidden" name="rule" value="{{ r.rule.pk }}"><button class="pal-btn pal-btn--ghost pal-btn--sm" type="submit">Delete</button></form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="app-block">
+      <div class="app-empty">
+        <p class="app-empty__title">No quantity discounts yet</p>
+        <p class="app-empty__text">Start with something simple, like 5% off for 2 or more and 10% off for 5 or more.</p>
+        <div class="app-empty__actions"><a href="{{ page_url }}?rule=new" class="pal-btn">Create your first one</a></div>
+      </div>
+      <div class="qd-how">
+        <div class="qd-how__step"><p class="qd-how__n">01</p><p class="qd-how__t">Pick the products</p><p class="qd-how__d">Every product, some categories, or single products. The most specific discount wins.</p></div>
+        <div class="qd-how__step"><p class="qd-how__n">02</p><p class="qd-how__t">Set up to 5 tiers</p><p class="qd-how__d">Percentage off, an amount off each unit, or a fixed price per unit.</p></div>
+        <div class="qd-how__step"><p class="qd-how__n">03</p><p class="qd-how__t">Decide what happens above</p><p class="qd-how__d">Keep the discount, stop at a limit, or tell big buyers to message you on WhatsApp or read your own note.</p></div>
+      </div>
+    </div>
+  {% endif %}
+
+  <form method="post" class="app-block">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_settings">
+    <div class="disc-card">
+      <h2 class="disc-card__title">Store-wide settings</h2>
+      <div class="disc-card__body">
+        <label class="disc-opt"><input type="checkbox" name="combine_with_coupons" value="1" {% if settings_row.combine_with_coupons %}checked{% endif %}><span><span class="disc-opt__label">Let discount codes also apply to items at a quantity price</span><span class="disc-hint">Off: codes and automatic discounts only take money off items that are not already at a quantity price.</span></span></label>
+      </div>
+      <div style="padding-top:0.9rem;"><button class="pal-btn pal-btn--ghost" type="submit">Save settings</button></div>
+    </div>
+  </form>
+</div>
+<script src="{% static 'js/app/quantity-discounts.js' %}" defer></script>
+{% endblock %}

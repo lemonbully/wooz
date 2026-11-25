@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All Categories | Lumo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+<main class="container">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>Categories</span></nav>
+  <div class="page-head sec-head" style="align-items:flex-end">
+    <div><h1 class="h1">All collections</h1><p>Five categories, one app. Pick one to start exploring.</p></div>
+    <a href="shop.html" class="btn btn--black">Shop all products</a>
+  </div>
+
+  <!-- Featured pair -->
+  <div class="grid grid--2" style="gap:16px;margin-bottom:clamp(24px,3vw,40px)" data-feature></div>
+
+  <!-- All categories grid -->
+  <div class="grid grid--4" data-cats style="row-gap:34px"></div>
+
+  <!-- Trending in categories -->
+  <section class="section" style="padding-bottom:0">
+    <div class="sec-head"><div><p class="eyebrow">Trending now</p><h2 class="h2">Most loved this week</h2></div><a class="btn btn--outline btn--sm" href="shop.html">View all</a></div>
+    <div class="grid grid--4" data-trending></div>
+  </section>
+</main>
+<div class="band" aria-hidden="true" style="margin-top:var(--section)"><div class="band__track" data-band></div></div>
+<div data-footer></div>
+
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$;
+  document.querySelectorAll('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
+  const bgs = ['var(--bg2)', 'var(--bg3)'];
+  $('[data-feature]').innerHTML = [D.categories[0], D.categories[1]].map((c, i) => `<a href="category.html?c=${c.slug}" class="highlight-card reveal" style="background:${bgs[i]}">
+    <div><span class="badge badge--light" style="align-self:flex-start">${c.count} products</span><h2 class="h1">${c.name}</h2><p class="muted">${c.desc}</p><span class="btn btn--black" style="align-self:flex-start">Explore <span class="btn__dot">${I.arrow}</span></span></div>
+    <div style="padding:0;overflow:hidden"><img src="${D.U(c.img, 700, 900)}" alt="" loading="lazy"></div></a>`).join('');
+  $('[data-cats]').innerHTML = D.categories.map(c => `<a class="cat-card reveal" href="category.html?c=${c.slug}">
+    <div class="cat-card__media"><img src="${D.U(c.img, 600, 750)}" alt="${c.name}" loading="lazy"></div>
+    <div class="cat-card__name" style="font-size:18px;justify-content:space-between;align-items:center"><span>${c.name} <sup>${c.count}</sup></span><span class="circle-btn" style="width:34px;height:34px">${I.right}</span></div>
+    <p class="cat-card__desc">${c.desc}</p></a>`).join('');
+  $('[data-trending]').innerHTML = [...D.products].sort((a, b) => b.rating - a.rating).slice(0, 8).map(p => T3.card(p)).join('');
+  const band = D.categories.map(c => `<span class="band__item">${c.name} <a class="btn btn--white" href="category.html?c=${c.slug}">Shop</a></span>`).join('');
+  $('[data-band]').innerHTML = band + band;
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

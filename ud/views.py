@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import timedelta
 from decimal import Decimal
@@ -11,13 +10,16 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.timesince import timesince
 from django.views.decorators.http import require_POST, require_http_methods
 
 from accounts import emails, otp
+from billing import website_templates
 from commerce import activity as store_activity
 from commerce.context import active_site_id, resume_url
 from commerce.models import (
     AnalyticsSession,
+    Bill,
     Enquiry,
     Order,
     PaymentGatewayConfig,
@@ -118,12 +120,35 @@ def dashboard(request):
         reverse("store:enquiries", args=[enquiries_site.id]) if enquiries_site else None
     )
 
+    # Pending bill: what the owner still owes OneWooz, the same figure as the
+    # Bills page's "outstanding" (every bill not yet marked paid, including
+    # ones whose payment proof is under review), summed across their stores.
+    # Not a 30-day number: an unpaid bill stays here until it is paid.
+    pending_bill = Decimal("0")
+    if sites:
+        pending_bill = (
+            Bill.objects.for_sites(sites)
+            .exclude(status=Bill.Status.PAID)
+            .aggregate(t=Sum("total_amount"))["t"]
+            or Decimal("0")
+        )
+    pending_bill = Decimal(str(pending_bill)).quantize(Decimal("0.01"))
+    bills_url = (
+        reverse("store:bills", args=[enquiries_site.id]) if enquiries_site else None
+    )
+
     kpis = [
         {"label": "Revenue", "value": f"₹{revenue:,.0f}" if has_store else None, "caption": "Last 30 days"},
         {"label": "Orders", "value": orders if has_store else None, "caption": "Last 30 days"},
         {"label": "Enquiries", "value": enquiries if has_store else None, "caption": "Last 30 days", "url": enquiries_url},
         {"label": "Stores", "value": len(sites) if has_store else None, "caption": "Published & draft"},
         {"label": "Conversion", "value": f"{conversion:g}%" if conversion is not None else None, "caption": "Paid orders / visits"},
+        {
+            "label": "Pending bill",
+            "value": f"₹{pending_bill:,.2f}" if has_store else None,
+            "caption": "Unpaid bills, all stores" if pending_bill else "Nothing due",
+            "url": bills_url,
+        },
     ]
 
     # Getting started reflects the store the owner is on (the active one, else
@@ -140,6 +165,10 @@ def dashboard(request):
     # from the audit trail as a friendly timeline rather than a raw log.
     activity = _recent_activity(focus)
 
+    # Once setup is complete the checklist's slot shows the focused store's
+    # newest Pending orders, each with its amount and units.
+    pending_orders, pending_total = _pending_orders(focus)
+
     return render(
         request,
         "ud/dashboard.html",
@@ -153,19 +182,71 @@ def dashboard(request):
             "steps": steps,
             "current_step": current_step,
             # Every setup step finished → the "Getting started" card is replaced
-            # by the AI assistant (image + text generation).
+            # by the store's newest Pending orders, with a View all link.
             "gs_complete": bool(steps) and all(s["state"] == "done" for s in steps),
-            "ai_enabled": _ai_available(),
+            "pending_orders": pending_orders,
+            "pending_total": pending_total,
+            "orders_site": focus if focus is not None and focus.is_d2c else None,
+            # Localhost only (DEBUG + loopback host, set by HostRoutingMiddleware):
+            # show both panels with tabs to switch between them.
+            "dev_tabs": getattr(request, "dev_path_mode", False),
             "activity": activity,
         },
     )
 
 
-def _ai_available() -> bool:
-    """True when at least one AI backend is configured (keys in env)."""
-    from django.conf import settings
+# How many Pending orders the dashboard shows (newest first); the rest are one
+# click away through the card's View all button.
+DASHBOARD_PENDING_LIMIT = 5
 
-    return bool(getattr(settings, "XAI_API_KEY", "") or getattr(settings, "OPENAI_API_KEY", ""))
+
+def _pending_orders(site) -> tuple[list, int]:
+    """``(orders, total)`` for ``site``'s Pending tab, newest first.
+
+    Reuses the Orders page's own Pending definition so the two never disagree,
+    and loads rows through ``sorted_rows`` so only primary keys are sorted
+    (orders carry JSON columns). Each order gets its first line's display
+    fields (photo, SKU, product link) resolved here, since the storefront
+    origin needs the request-aware ``preview_url`` set in ``dashboard``.
+    """
+    if site is None or not site.is_d2c:
+        return [], 0
+    from commerce.cart import line_sku
+    from commerce.views.orders import _pending_count, _tab_queryset
+
+    qs = (
+        _tab_queryset(site, "pending")
+        .order_by("-created_at")
+        .prefetch_related("items__product__images")
+    )
+    rows = sorted_rows(qs, limit=DASHBOARD_PENDING_LIMIT)
+    total = _pending_count(Order.objects.for_site(site))
+    base = getattr(site, "preview_url", "") or site.storefront_url()
+    now = timezone.now()
+
+    for order in rows:
+        items = list(order.items.all())
+        first = items[0] if items else None
+        product = first.product if first else None
+        order.dash_item = first
+        order.dash_more = max(0, len(items) - 1)
+        order.dash_qty = sum(i.quantity for i in items)
+        order.dash_image = ""
+        if product is not None:
+            for img in product.images.all():
+                if img.image:
+                    order.dash_image = img.image.url
+                    break
+        order.dash_sku = line_sku(first) if first else ""
+        order.dash_url = (
+            f"{base}products/{product.slug}/" if product is not None and product.slug else ""
+        )
+        # "3 hours ago": the largest unit only, so it stays one short phrase.
+        if (now - order.created_at).total_seconds() < 60:
+            order.dash_ago = "just now"
+        else:
+            order.dash_ago = f"{timesince(order.created_at, now, depth=1)} ago"
+    return rows, total
 
 
 @login_required
@@ -191,52 +272,104 @@ def notifications_read(request):
 
 @login_required
 def notifications_unread(request):
-    """Current unread count  polled by the bell to keep its badge fresh."""
-    from accounts.models import Notification
+    """Current unread count, polled by the bell to keep its badge fresh, and
+    when the newest notification arrived (``latest``, epoch seconds), which
+    the bell compares across tabs to play the notification sound once per new
+    notification. ``Max`` rather than an ORDER BY, so MySQL never sorts rows.
 
-    count = Notification.objects.filter(user=request.user, is_read=False).count()
-    return JsonResponse({"unread": count})
+    Polled every few seconds by every open dashboard page, so the common case
+    (nothing new) is two indexed aggregates and nothing else. When the bell
+    passes ``since`` (epoch seconds of the newest notification it already
+    shows) and something newer exists, the reply also carries those new
+    notifications (``items``, newest first, at most 10) so the open page can
+    add them to the bell and pop a toast without a reload.
+    """
+    from datetime import datetime, timezone as dt_timezone
+
+    from django.db.models import Max
+    from django.utils import timezone
+    from django.utils.dateformat import format as date_format
+
+    from accounts.models import Notification
+    from core.queries import sorted_rows
+
+    from .context_processors import notification_href
+
+    # Browser push presence: a visible dashboard tab passes this browser's push
+    # subscription id, so accounts.webpush skips the system popup on a browser
+    # the owner is already looking at.
+    #
+    # BROWSER PUSH: DISABLED (commented out, not removed). Uncomment to re-enable.
+    # push_sub = (request.GET.get("push") or "").strip()
+    # if push_sub:
+    #     try:
+    #         from accounts import webpush
+    #
+    #         webpush.mark_seen(request.user.pk, uuid.UUID(push_sub))
+    #     except (ValueError, TypeError):
+    #         pass
+
+    mine = Notification.objects.filter(user=request.user)
+    count = mine.filter(is_read=False).count()
+    newest = mine.aggregate(at=Max("created_at"))["at"]
+    latest = newest.timestamp() if newest else 0
+    payload = {"unread": count, "latest": latest}
+
+    try:
+        since = float(request.GET.get("since") or 0)
+    except (TypeError, ValueError):
+        since = 0
+    if since > 0 and latest > since:
+        after = datetime.fromtimestamp(since, tz=dt_timezone.utc)
+        fresh = sorted_rows(
+            mine.filter(created_at__gt=after).order_by("-created_at"), limit=10
+        )
+        payload["items"] = [
+            {
+                "id": str(n.pk),
+                "ts": n.created_at.timestamp(),
+                "headline": n.headline,
+                "description": n.description,
+                "level": n.level,
+                "kind": n.kind,
+                "site_name": n.site_name,
+                "when": date_format(timezone.localtime(n.created_at), "d M Y, g:i A"),
+                "href": notification_href(n, request),
+                "attachment_url": n.attachment_url,
+                "unread": not n.is_read,
+            }
+            for n in fresh
+        ]
+
+    response = JsonResponse(payload)
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@login_required
+@require_http_methods(["GET"])
+def store_nav_counts(request, site_id):
+    """Fresh sidebar unread counters for one store (Orders, Requests …).
+
+    Read by ``js/app/nav-counts.js`` so a dashboard page shown again from the
+    browser's history, or a tab left open, drops the badges of pages the user
+    has since opened. Reading never marks anything seen.
+    """
+    from django.http import Http404
+
+    from commerce import nav_counts
+
+    site = get_object_or_404(Site.objects.filter(is_deleted=False), pk=site_id)
+    counts = nav_counts.sidebar_counts(request, site)
+    if counts is None:
+        raise Http404("No such store.")
+    response = JsonResponse({"counts": counts, "max": nav_counts.DISPLAY_MAX})
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 def _wants_json(request) -> bool:
     return "application/json" in (request.headers.get("Accept") or "")
-
-
-@login_required
-@require_POST
-def ai_chat(request):
-    """The dashboard AI assistant: text (Grok) or image (OpenAI) generation.
-
-    Both providers are called server-side (see :mod:`ud.ai`); the browser only
-    ever talks to this same-origin endpoint, so no key is exposed and no CSP host
-    is opened. Available to any signed-in owner (the UI only surfaces it once the
-    getting-started checklist is complete).
-    """
-    from ud import ai
-
-    identity = f"user:{request.user.pk}"
-    if not ratelimit.consume("ai.generate", identity).allowed:
-        return JsonResponse(
-            {"ok": False, "error": "You’ve reached the assistant limit for now. Try again later."},
-            status=429,
-        )
-
-    try:
-        payload = json.loads(request.body.decode("utf-8") or "{}")
-    except (ValueError, UnicodeDecodeError):
-        payload = {}
-    message = (payload.get("message") or request.POST.get("message") or "").strip()
-    mode = (payload.get("mode") or request.POST.get("mode") or "text").strip().lower()
-    if not message:
-        return JsonResponse({"ok": False, "error": "Please type a message."}, status=400)
-
-    if mode == "image":
-        result = ai.generate_image(message)
-        result.setdefault("type", "image")
-    else:
-        result = ai.generate_text(message)
-        result.setdefault("type", "text")
-    return JsonResponse(result, status=200 if result.get("ok") else 502)
 
 
 def _getting_started_steps(focus, has_store):
@@ -525,6 +658,25 @@ def business_hub(request):
             "active": value == tab,
         })
 
+    # Help tab: the built-in page guides (ud.page_guides), one per dashboard
+    # page, above any help posts. The title search filters them too, and the
+    # Help count includes them. ``?guide=<key>`` opens that guide (the "Page
+    # guide" button on every dashboard page links here).
+    from . import page_guides
+
+    guide_groups = page_guides.grouped(q)
+    guide_count = sum(len(g["guides"]) for g in guide_groups)
+    for t in tabs:
+        if t["key"] == Kind.HELP:
+            t["count"] += guide_count
+    open_guide = ""
+    if tab == Kind.HELP:
+        requested = page_guides.get(request.GET.get("guide"))
+        if requested and any(
+            g["key"] == requested["key"] for grp in guide_groups for g in grp["guides"]
+        ):
+            open_guide = requested["key"]
+
     # Page over post ids, then load just this page's posts: DISTINCT + ORDER BY
     # over full rows (rich-text bodies included) can run MySQL out of sort
     # memory (error 1038). Same posts, same order, same Page object.
@@ -580,6 +732,10 @@ def business_hub(request):
         {
             "nav_active": "business_hub",
             "tabs": tabs,
+            "guide_groups": guide_groups if tab == Kind.HELP else [],
+            "guide_count": guide_count,
+            "guide_total": len(page_guides.GUIDES),
+            "open_guide": open_guide,
             "tab": tab,
             "tab_label": dict(Kind.choices)[tab],
             "q": q,
@@ -679,6 +835,7 @@ def create_site(request):
                     "currency_choices": currency_choices,
                     "errors": errors,
                     "form": request.POST,
+                    "template_options": website_templates.creation_options(request.user),
                 },
                 status=400,
             )
@@ -688,7 +845,14 @@ def create_site(request):
             name=brand_name[:120],
             tagline=(request.POST.get("tagline") or "").strip()[:200],
             business_model=business_model,
-            theme=Site.default_theme_for(business_model),
+            # A priced design the owner hasn't bought falls back to a free one
+            # (see billing.website_templates.creation_choice).
+            theme=Site.theme_for_choice(
+                website_templates.creation_choice(
+                    request.user, request.POST.get("template_choice") or "1", business_model
+                ),
+                business_model,
+            ),
             business_category=category,
             business_subcategory=subcategory,
             currency=currency,
@@ -708,6 +872,7 @@ def create_site(request):
             "submitted": False,
             "categories": categories,
             "currency_choices": currency_choices,
+            "template_options": website_templates.creation_options(request.user),
         },
     )
 
@@ -739,11 +904,11 @@ def subcategories_json(request):
 def select_template(request, site_id):
     """Post-creation confirmation  the store is live and ready.
 
-    The storefront design is assigned **automatically** from the store's
-    business model at creation (D2C → the modern storefront ``template2``; B2B →
-    the catalogue storefront ``template1``; see ``Site.default_theme_for``), so
-    the owner is never asked to choose one. This screen just celebrates the
-    launch and sends them into the editor, where the design remains switchable.
+    The owner picks "Template 1" or "Template 2" on the create form
+    (``Site.theme_for_choice``): Template 1 is the original design for the
+    business model (D2C → ``template2``, B2B → ``template1``), Template 2 is the
+    Pebble storefront (``template3``) for either model. This screen just
+    celebrates the launch and sends them into the editor.
     """
     site = get_object_or_404(
         Site.objects.filter(is_deleted=False), pk=site_id, owner=request.user
@@ -799,6 +964,8 @@ def _delete_purpose(site) -> str:
 def delete_site_send_code(request, site_id):
     """Step 1  email the owner a one-time code to confirm deletion."""
     site = _owned_live_site(request, site_id)
+    if getattr(request, "impersonation", None):
+        return JsonResponse({"ok": False, "error": "An admin viewing this account cannot delete stores."}, status=403)
     email = (request.user.email or "").strip()
     if not email:
         return JsonResponse(
@@ -833,6 +1000,8 @@ def delete_site_send_code(request, site_id):
 def delete_site_confirm(request, site_id):
     """Step 2  verify the emailed code and soft-delete the store."""
     site = _owned_live_site(request, site_id)
+    if getattr(request, "impersonation", None):
+        return JsonResponse({"ok": False, "error": "An admin viewing this account cannot delete stores."}, status=403)
     email = (request.user.email or "").strip()
 
     if not ratelimit.consume("otp.verify", email).allowed:
@@ -858,34 +1027,17 @@ def delete_site_confirm(request, site_id):
 
     ratelimit.reset("otp.verify", email)
 
-    site_label = site.name
-    site.soft_delete()
-    audit.record(
-        "store.deleted",
-        request=request,
-        actor=request.user,
-        target=site,
-        target_kind="Site",
-        target_label=site_label,
-        site=site,
-        severity="notice",
+    # Soft delete with a recovery window: the storefront goes offline and the
+    # store leaves the dashboard, but nothing is erased (accounts.deletion).
+    from django.contrib import messages
+
+    from accounts import deletion
+
+    deletion.delete_site(site, request=request, actor=request.user)
+    messages.success(
+        request,
+        f"“{site.name}” is deleted. Its data stays with us for {deletion.retention_days()} days; "
+        "contact support within that time to get it back.",
+        fail_silently=True,
     )
-
-    # If the deleted store was the active profile, forget it so the dashboard
-    # and switcher don't try to resume a store that's gone.
-    sid = str(site.id)
-    if str(getattr(request.user, "active_site_id", "") or "") == sid:
-        try:
-            request.user.__class__.objects.filter(pk=request.user.pk).update(
-                active_site_id=None
-            )
-            request.user.active_site_id = None
-        except Exception:
-            pass
-    if request.session.get("active_site_id") == sid:
-        try:
-            del request.session["active_site_id"]
-        except KeyError:
-            pass
-
     return JsonResponse({"ok": True, "redirect": reverse("ud:dashboard")})

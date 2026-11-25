@@ -113,6 +113,8 @@ urlpatterns = [
     path("<slug:page_slug>/<slug:sub_slug>/<slug:child_slug>/", ref.core_page, name="public_core_child"),
 ]
 
+handler400 = "core.errors.handler400"
+handler403 = "core.errors.handler403"
 handler404 = "core.errors.handler404"
 handler500 = "core.errors.handler500"
 

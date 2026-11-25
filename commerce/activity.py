@@ -160,6 +160,7 @@ _PHRASES = {
     "store.payment.failed": ("payments", "An online payment couldn’t start"),
     "store.shipping.updated": ("shipping", "Updated shipping settings"),
     "store.tracking.updated": ("settings", "Updated tracking & analytics"),
+    "store.design.changed": ("settings", "Changed the storefront design"),
     "store.merchant.updated": ("settings", "Updated Google Merchant"),
     "store.coupon.created": ("coupon", "Created a coupon"),
     "store.coupon.updated": ("coupon", "Updated a coupon"),

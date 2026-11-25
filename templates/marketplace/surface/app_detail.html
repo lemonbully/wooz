@@ -1,0 +1,197 @@
+{% extends "marketplace/surface/base.html" %}
+
+{% comment %}
+App listing, app-store style: listing header + install card, sticky in-page
+tabs, then Overview, Features (install manifest), Pricing, Support, and more
+apps like this. No ratings are shown until real reviews exist.
+{% endcomment %}
+
+{% block content %}
+<section class="mk-listing">
+  <div class="pal-container">
+    <nav class="mk-crumbs" aria-label="Breadcrumb"><a href="{% url 'marketplace:home' %}">App Store</a><span aria-hidden="true">/</span><a href="{% url 'marketplace:browse' %}?c={{ app.category }}">{{ app.category_label }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ app.name }}</span></nav>
+
+    <div class="mk-listing__grid">
+      <div>
+        <div class="mk-listing__id">
+          {% include "marketplace/surface/_icon.html" with a=app size="xl" %}
+          <div>
+            <h1 class="mk-listing__name">{{ app.name }}</h1>
+            <p class="mk-card__by">by {{ app.developer }}{% if app.developer == "OneWooz" %} <span class="mk-verified" title="Built by OneWooz"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 6"/></svg></span>{% endif %} &middot; <a href="{% url 'marketplace:browse' %}?c={{ app.category }}">{{ app.category_label }}</a></p>
+            <div class="mk-card__badges">
+              {% if app.developer == "OneWooz" %}<span class="mk-state mk-state--on">Built by OneWooz</span>{% endif %}
+              {% if installed %}<span class="mk-state mk-state--ok">Installed</span>{% elif app.is_system %}<span class="mk-state mk-state--ok">Built in</span>{% endif %}
+              {% if app.featured %}<span class="mk-state">Staff pick</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        <p class="mk-listing__tagline">{{ app.tagline }}</p>
+        <dl class="mk-keyfacts">
+          <div><dt>Pricing</dt><dd>{{ app.pricing_label }}</dd>{% if app.trial_days and app.is_paid %}<dd class="mk-keyfacts__sub">{{ app.trial_days }}-day trial</dd>{% endif %}</div>
+          <div><dt>Works with</dt><dd>{% if app.fits == "both" %}D2C and B2B{% else %}{{ app.fits|upper }} stores{% endif %}</dd></div>
+          <div><dt>Adds to</dt><dd>{% if zones.dash and zones.store %}Dashboard + store{% elif zones.store %}Storefront{% elif zones.dash %}Dashboard{% else %}Your account{% endif %}</dd></div>
+          <div><dt>Launched</dt><dd>{% if launched %}{{ launched|date:"M Y" }}{% else %}New{% endif %}</dd></div>
+        </dl>
+      </div>
+
+      <aside class="mk-install" aria-label="Get {{ app.name }}">
+        <p class="mk-install__price">{{ app.pricing_label }}</p>
+        <p class="mk-install__note">{% if app.is_paid %}Plus GST{% if app.trial_days %}. Try it for {{ app.trial_days }} days first{% endif %}.{% elif app.pricing == "plan_included" %}Comes with paid OneWooz plans.{% else %}No extra charge on your store.{% endif %}</p>
+        <div class="mk-install__actions">
+          {% if app.is_system or installed %}
+            <span class="mk-state mk-state--ok mk-state--block">{% if app.is_system %}Built into every store{% else %}Installed on your account{% endif %}</span>
+            <a class="pal-btn pal-btn--ghost" href="{{ dashboard_url }}">Open in dashboard <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+            {% if installed and app.is_paid and app.pricing in "monthly yearly cycles" %}<a class="mk-seeall" href="{{ install_url }}">Renew or extend</a>{% endif %}
+          {% else %}
+            <a class="pal-btn" href="{{ install_url }}">{% if app.is_paid %}Get app{% elif app.pricing == "plan_included" %}Install with your plan{% else %}Install{% endif %} <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+            {% if trial_url %}<a class="pal-btn pal-btn--ghost" href="{{ trial_url }}">Start {{ app.trial_days }}-day trial</a>{% endif %}
+          {% endif %}
+        </div>
+        {% if not app.is_system and not installed %}<p class="mk-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> You confirm it's you in your dashboard first</p>{% endif %}
+      </aside>
+    </div>
+  </div>
+</section>
+
+<nav class="mk-tabs" aria-label="On this page" data-mk-spy>
+  <div class="pal-container mk-tabs__row">
+    <a href="#overview">Overview</a>
+    {% if adds %}<a href="#features">Features</a>{% endif %}
+    <a href="#pricing">Pricing</a>
+    <a href="#support">Support</a>
+    {% if related %}<a href="#more">More apps</a>{% endif %}
+  </div>
+</nav>
+
+<div class="pal-container mk-listing__body">
+  <div class="mk-listing__main">
+    {% if app.screenshots %}
+    <div class="mk-gallery" aria-label="Screenshots">
+      {% for s in app.screenshots %}<figure><img src="{{ s.url }}" alt="{{ s.caption|default:app.name }}" loading="lazy">{% if s.caption %}<figcaption>{{ s.caption }}</figcaption>{% endif %}</figure>{% endfor %}
+    </div>
+    {% endif %}
+
+    <section id="overview" class="mk-part">
+      <h2 class="mk-part__title">Overview</h2>
+      <ul class="mk-highlights">
+        <li><span class="pal-mono pal-mono--accent">Solves</span><p>{{ problem.problem }}</p></li>
+        <li><span class="pal-mono pal-mono--accent">How</span><p>{{ problem.fix }}</p></li>
+        <li><span class="pal-mono pal-mono--accent">Safe</span><p>Stays off until you switch it on, and pauses itself if anything goes wrong.</p></li>
+      </ul>
+      <div class="pal-prose mk-prose">{{ app.description|safe|default:app.tagline }}</div>
+    </section>
+
+    {% if adds %}
+    <section id="features" class="mk-part">
+      <h2 class="mk-part__title">Features</h2>
+      <p class="mk-part__sub">Exactly what changes when you install it, marked in the accent colour.</p>
+      <div class="mk-plug">
+        <figure class="mk-plug__fig">
+          <figcaption class="pal-viewport__caption"><span>Your dashboard</span><span>{% if zones.dash %}{{ zones.dash|length }} change{{ zones.dash|length|pluralize }}{% else %}No change{% endif %}</span></figcaption>
+          <div class="mk-dash{% for z in zones.dash %} is-{{ z }}{% endfor %}" aria-hidden="true">
+            <div class="mk-dash__side"><b></b><i></i><i></i><i class="mk-dash__app"></i><i></i><i></i></div>
+            <div class="mk-dash__main">
+              <div class="mk-dash__top"><span></span><em class="mk-dash__topapp"></em></div>
+              <div class="mk-dash__cards"><span></span><span></span><span class="mk-dash__cardapp"></span></div>
+              <div class="mk-dash__panel"></div>
+            </div>
+          </div>
+        </figure>
+        <figure class="mk-plug__fig">
+          <figcaption class="pal-viewport__caption"><span>Your storefront</span><span>{% if zones.store %}Off until you switch it on{% else %}No change{% endif %}</span></figcaption>
+          <div class="mk-shop{% for z in zones.store %} is-{{ z }}{% endfor %}" aria-hidden="true">
+            <div class="mk-shop__slot mk-shop__slot--top"></div>
+            <div class="mk-shop__head"><b></b><span></span><span></span></div>
+            <div class="mk-shop__slot mk-shop__slot--below"></div>
+            <div class="mk-shop__hero"></div>
+            <div class="mk-shop__grid"><span></span><span></span><span></span></div>
+            <div class="mk-shop__slot mk-shop__slot--inline"></div>
+            <div class="mk-shop__slot mk-shop__slot--footer"></div>
+            <div class="mk-shop__foot"></div>
+            <span class="mk-shop__float mk-shop__float--r"></span>
+            <span class="mk-shop__float mk-shop__float--l"></span>
+            <span class="mk-shop__popup"></span>
+            <span class="mk-shop__headtag">Runs in the page head</span>
+          </div>
+        </figure>
+      </div>
+      <ul class="mk-featurelist">
+        {% for r in adds %}
+        <li><span class="mk-featurelist__tag">{{ r.tag }}</span><div><h3>{{ r.label }}</h3><p>{{ r.desc }}</p></div></li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    <section id="pricing" class="mk-part">
+      <h2 class="mk-part__title">Pricing</h2>
+      <div class="mk-plans">
+        {% if app.cycles %}
+        {% for c in app.cycles %}
+        <div class="mk-plan">
+          <p class="pal-mono">{{ c.label }}{% if c.save_pct %} &middot; save {{ c.save_pct }}%{% endif %}</p>
+          <p class="mk-plan__price">&#8377;{{ c.per_month }} / month</p>
+          <ul class="mk-checks">
+            <li>Billed &#8377;{{ c.total }} every {{ c.billed }}</li>
+            <li>Everything {{ app.name }} does, on every store you own</li>
+            {% if app.trial_days and forloop.first %}<li>{{ app.trial_days }}-day trial before you pay</li>{% endif %}
+            <li>GST added at checkout; renew when it ends, never charged automatically</li>
+          </ul>
+          {% if not app.is_system and not installed %}<a class="pal-btn" href="{{ install_url }}{% if '?' in install_url %}&amp;{% else %}?{% endif %}cycle={{ c.key }}">Choose {{ c.label|lower }} <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>{% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="mk-plan">
+          <p class="pal-mono">{% if app.is_paid %}{% if app.pricing == "yearly" %}Yearly{% elif app.pricing == "monthly" %}Monthly{% else %}One-time{% endif %}{% elif app.pricing == "plan_included" %}With paid plans{% else %}Included{% endif %}</p>
+          <p class="mk-plan__price">{{ app.pricing_label }}</p>
+          <ul class="mk-checks">
+            <li>Everything {{ app.name }} does</li>
+            <li>Use it on every store you own</li>
+            {% if app.trial_days and app.is_paid %}<li>{{ app.trial_days }}-day trial before you pay</li>{% endif %}
+            {% if app.is_paid %}<li>GST added at checkout, invoice in your dashboard</li>{% else %}<li>No extra charge on your OneWooz plan</li>{% endif %}
+          </ul>
+          {% if not app.is_system and not installed %}<a class="pal-btn" href="{{ install_url }}">{% if app.is_paid %}Get app{% else %}Install{% endif %} <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section id="support" class="mk-part">
+      <h2 class="mk-part__title">Support</h2>
+      <div class="mk-support">
+        <div><span class="pal-mono">Developer</span><p><b>{{ app.developer }}</b></p><p>{% if app.developer == "OneWooz" %}Made and maintained by the team that runs your store.{% endif %}</p></div>
+        <div><span class="pal-mono">Get help</span><p>{% if app.support_url %}<a class="mk-seeall" href="{{ app.support_url }}" rel="noopener nofollow" target="_blank">App support &#8599;</a>{% else %}<a class="mk-seeall" href="{{ support_url }}">OneWooz support &#8599;</a>{% endif %}</p>{% if app.privacy_url %}<p><a class="mk-seeall" href="{{ app.privacy_url }}" rel="noopener nofollow" target="_blank">Privacy policy &#8599;</a></p>{% endif %}</div>
+        <div><span class="pal-mono">Your data</span><p>Apps never see your customers, orders or payment details. Removing an app takes it off your dashboard and store within seconds.</p></div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="mk-listing__aside">
+    <div class="mk-details">
+      <p class="mk-details__title">Details</p>
+      <ul class="mk-facts">
+        <li><span>Category</span><span><a href="{% url 'marketplace:browse' %}?c={{ app.category }}">{{ app.category_label }}</a></span></li>
+        <li><span>Price</span><span>{{ app.pricing_label }}{% if app.is_paid %} + GST{% endif %}</span></li>
+        {% if app.trial_days and app.is_paid %}<li><span>Trial</span><span>{{ app.trial_days }} days</span></li>{% endif %}
+        <li><span>Works with</span><span>{% if app.fits == "both" %}D2C and B2B{% else %}{{ app.fits|upper }}{% endif %}</span></li>
+        <li><span>Developer</span><span>{{ app.developer }}</span></li>
+        <li><span>Install</span><span>In your dashboard</span></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+{% if related %}
+<section class="mk-sec mk-sec--ruled" id="more">
+  <div class="pal-container">
+    <div class="mk-sechead">
+      <h2 class="mk-sechead__title">More apps like this</h2>
+      <a class="mk-seeall" href="{% url 'marketplace:browse' %}?c={{ app.category }}">See all {{ app.category_label|lower }} &rarr;</a>
+    </div>
+    <div class="mk-cards">
+      {% for a in related %}{% include "marketplace/surface/_app_card.html" with installed=installed_set %}{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

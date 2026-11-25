@@ -4,6 +4,13 @@
 (function () {
   "use strict";
 
+  // Results surface in the universal toast stack (js/app/toast.js): errors in
+  // red, confirmations in green. Falls back to a plain alert if it's missing.
+  function owAlert(msg, ok) {
+    if (window.OWToast) { if (ok) window.OWToast.success(msg); else window.OWToast.error(msg); }
+    else window.alert(msg);
+  }
+
   function cookie(name) {
     try {
       var m = ("; " + document.cookie).split("; " + name + "=");
@@ -194,8 +201,9 @@
     e.preventDefault();
     postForm(btn.getAttribute("data-url"), {})
       .then(function (res) {
-        if (!res.ok || !res.d.success) { alert((res.d && res.d.error) || "Unable to update Best Seller."); return; }
+        if (!res.ok || !res.d.success) { owAlert((res.d && res.d.error) || "Unable to update Best Seller."); return; }
         var on = !!res.d.is_best_seller;
+        owAlert(on ? "Marked as Best Seller." : "Removed from Best Sellers.", true);
         btn.classList.toggle("is-on", on);
         btn.title = on ? "Unmark Best Seller" : "Mark as Best Seller";
         var row = btn.closest("tr");
@@ -205,7 +213,7 @@
         if (window.OneWoozBestSellers) window.OneWoozBestSellers.sync(btn, on);
         refilter();
       })
-      .catch(function () { alert("Unable to update Best Seller."); });
+      .catch(function () { owAlert("Unable to update Best Seller."); });
   });
 
   /* ── Confirm destructive submits ─────────────────────────────────────── */
@@ -437,11 +445,12 @@
         saveBtn.disabled = true;
         postJSON(saveBtn.getAttribute("data-url"), { order: order })
           .then(function (res) {
-            if (!res.ok || !res.d.success) { alert("Couldn't save order."); return; }
+            if (!res.ok || !res.d.success) { owAlert("Couldn't save order."); return; }
             savedOrder = (res.d.order || order).slice();
             flashSaved();
+            owAlert("Best Sellers order saved.", true);
           })
-          .catch(function () { alert("Couldn't save order."); })
+          .catch(function () { owAlert("Couldn't save order."); })
           .finally(function () { saveBtn.disabled = false; setMode(false); });
       });
     }

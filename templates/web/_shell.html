@@ -32,8 +32,8 @@ admin and auth chrome (onewooz.css) are untouched.
 
 <header class="pal-nav" id="site-nav">
   <div class="pal-container pal-nav__inner">
-    <a href="{% url 'web:home' %}" class="pal-brand">
-      <img class="pal-brand__img" src="{% brand_logo_url %}" alt="" width="26" height="26">
+    <a href="{% url 'web:home' %}" class="pal-brand" aria-label="OneWooz home">
+      <img class="pal-brand__img" src="{% brand_logo_url %}" alt="OneWooz" width="26" height="26">
     </a>
 
     <nav class="pal-nav__links" aria-label="Main">
@@ -42,13 +42,18 @@ admin and auth chrome (onewooz.css) are untouched.
       <a href="{% url 'web:solutions' %}">Solutions</a>
       <a href="{% url 'web:customers' %}">Customers</a>
       <a href="{% url 'web:pricing' %}">Pricing</a>
-      <a href="{% url 'web:security' %}">Security</a>
+      <a href="{% url 'ask:ask_home' %}" class="pal-nav__ask"{% if request.resolver_match.namespace == "ask" %} aria-current="page"{% endif %} title="Ask OneWooz: questions answered by sellers and the OneWooz team"><svg class="pal-nav__askicon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6a.5.5 0 0 1-.8-.4V16h0A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.5 11.5h4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Ask</a>
     </nav>
 
     <div class="pal-nav__actions">
+      {% if ow_signed_in %}
+      {# Signed in to the dashboard (community.bridge.nav_context): straight back to it. #}
+      <a href="{% surface_url 'app' '/dashboard/' %}" class="pal-btn pal-nav__dashboard">Dashboard <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      {% else %}
       <a href="{% surface_url 'app' '/sign-in/' %}" class="pal-btn pal-btn--ghost">Sign in</a>
       <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn pal-nav__deploy">Deploy a store</a>
       <a href="{% surface_url 'app' '/sign-in/' %}" class="pal-btn pal-nav__signin">Sign in</a>
+      {% endif %}
 
       <details class="pal-menu">
         <summary aria-label="Menu">Menu</summary>
@@ -58,8 +63,8 @@ admin and auth chrome (onewooz.css) are untouched.
           <a href="{% url 'web:solutions' %}">Solutions</a>
           <a href="{% url 'web:customers' %}">Customers</a>
           <a href="{% url 'web:pricing' %}">Pricing</a>
-          <a href="{% url 'web:security' %}">Security</a>
-          <a href="{% surface_url 'app' '/sign-in/' %}">Sign in</a>
+          <a href="{% url 'ask:ask_home' %}" class="pal-nav__ask"{% if request.resolver_match.namespace == "ask" %} aria-current="page"{% endif %} title="Ask OneWooz: questions answered by sellers and the OneWooz team"><svg class="pal-nav__askicon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6a.5.5 0 0 1-.8-.4V16h0A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.5 11.5h4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Ask</a>
+          {% if ow_signed_in %}<a href="{% surface_url 'app' '/dashboard/' %}">Dashboard</a>{% else %}<a href="{% surface_url 'app' '/sign-in/' %}">Sign in</a>{% endif %}
         </div>
       </details>
     </div>
@@ -74,12 +79,13 @@ admin and auth chrome (onewooz.css) are untouched.
   <div class="pal-container">
     <div class="pal-footer__top">
       <div>
-        <a href="{% url 'web:home' %}" class="pal-brand">
-          <img class="pal-brand__img" src="{% brand_logo_url %}" alt="" width="26" height="26">
+        <a href="{% url 'web:home' %}" class="pal-brand" aria-label="OneWooz home">
+          <img class="pal-brand__img" src="{% brand_logo_url %}" alt="OneWooz" width="26" height="26">
         </a>
         <p class="pal-footer__note">
-          Commerce infrastructure for people who would rather run their business
-          than manage a website.
+          <strong>Run your business, not just your website.</strong>
+          Your own online store in India, built-in SEO AEO GEO and marketing so
+          you're not stuck paying for ads.
         </p>
         <p class="pal-footer__note">
           OneWooz is owned and operated by <strong>The Artless</strong>.
@@ -88,30 +94,31 @@ admin and auth chrome (onewooz.css) are untouched.
 
       <div class="pal-footer__cols">
         <div class="pal-footer__col">
-          <h4>Product</h4>
+          <h2>Product</h2>
           <a href="{% url 'web:platform' %}">Platform</a>
           <a href="{% url 'web:solutions' %}">Solutions</a>
           <a href="{% url 'web:pricing' %}">Pricing</a>
           <a href="{% url 'web:customers' %}">Customers</a>
         </div>
         <div class="pal-footer__col">
-          <h4>Company</h4>
+          <h2>Company</h2>
           <a href="{% url 'web:about' %}">About</a>
           <a href="{% url 'web:contact' %}">Contact</a>
           <a href="{% url 'web:support' %}">Support</a>
+          <a href="{% url 'ask:ask_home' %}">Ask OneWooz</a>
           <a href="{% url 'web:security' %}">Security</a>
         </div>
         <div class="pal-footer__col">
-          <h4>Legal</h4>
+          <h2>Legal</h2>
           {% footer_policies as legal_policies %}
           {% for policy in legal_policies %}
           <a href="{{ policy.get_absolute_url }}">{{ policy.title }}</a>
           {% endfor %}
         </div>
         <div class="pal-footer__col">
-          <h4>Resources</h4>
+          <h2>Resources</h2>
           <a href="{% url 'web:blog_list' %}">Blog</a>
-          <a href="{% url 'web:core_pages' %}">Core pages</a>
+          <a href="{% url 'web:core_pages' %}">Help & Guide</a>
         </div>
       </div>
     </div>

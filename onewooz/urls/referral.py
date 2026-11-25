@@ -35,5 +35,7 @@ urlpatterns = [
     path("customize/product-image/", views.product_image_save, name="referral_product_image_save"),
 ]
 
+handler400 = "core.errors.handler400"
+handler403 = "core.errors.handler403"
 handler404 = "core.errors.handler404"
 handler500 = "core.errors.handler500"

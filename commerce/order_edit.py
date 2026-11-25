@@ -171,6 +171,9 @@ def apply_plan(site, order, plan: EditPlan) -> None:
         if held:
             stock.release_for_order(order)
 
+        # A price the owner typed always wins over a quantity-discount re-price.
+        typed = {e.item.pk for e in plan.edits if e.unit_price != _money(e.item.unit_price)}
+
         for e in plan.edits:
             if e.remove:
                 e.item.delete()
@@ -178,7 +181,13 @@ def apply_plan(site, order, plan: EditPlan) -> None:
             e.item.quantity = e.quantity
             e.item.unit_price = e.unit_price
             e.item.line_total = (e.unit_price * e.quantity).quantize(_CENT)
-            e.item.save(update_fields=["quantity", "unit_price", "line_total"])
+            fields = ["quantity", "unit_price", "line_total"]
+            if e.item.pk in typed and (e.item.quantity_discount or e.item.regular_unit_price is not None):
+                # A hand-set price ends the quantity deal on this line for good.
+                e.item.quantity_discount = {}
+                e.item.regular_unit_price = None
+                fields += ["quantity_discount", "regular_unit_price"]
+            e.item.save(update_fields=fields)
 
         live = {
             (str(e.item.product_id), (e.item.variant_label or "").strip().lower()): e.item
@@ -207,6 +216,14 @@ def apply_plan(site, order, plan: EditPlan) -> None:
                 unit_price=price,
                 line_total=(price * add.quantity).quantize(_CENT),
             )
+
+        # Lines sold at a quantity price follow the deal frozen on them: drop
+        # below a tier and the discount goes, reach a higher one and it grows.
+        from commerce import quantity_pricing as qp
+
+        current = list(order.items.for_site(site).all())
+        for it in qp.reprice_order_items(current, keep_ids=typed):
+            it.save(update_fields=["unit_price", "line_total", "quantity_discount"])
 
         if held:
             try:

@@ -19,15 +19,15 @@
           <div class="p-6">
             {% with specs=product.specifications %}
             <div class="flex items-baseline gap-2">
-              <div id="sidebar-price" class="text-[28px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
+              <div id="sidebar-price" data-ow-price class="text-[28px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
               {% if specs and specs.mrp %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
               {% elif specs and specs.original_price %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
               {% elif product.mrp %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
               {% else %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through hidden"></div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp hidden"></div>
               {% endif %}
             </div>
             <div class="mt-3 text-[13px] text-gray-700">
@@ -56,7 +56,7 @@
             </div>
             <div class="mt-4">
               <label class="block text-[13px] text-gray-800 mb-1">Quantity:</label>
-              <input type="number" id="purch-qty" min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
+              <input type="number" id="purch-qty" data-ow-qty min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
             </div>
             <div class="mt-4 space-y-3">
               <button type="button" id="purch-enquiry" class="block w-full text-center rounded-full bg-black text-white font-medium py-2.5 text-sm hover:bg-gray-800 transition-colors cursor-pointer" onclick="openPdpEnquiryModal()">Send Enquiry</button>
@@ -79,16 +79,16 @@
           <div class="bg-white py-4 pr-4 space-y-4">
             <div class="flex flex-row gap-4 items-center">
               <div class="flex items-baseline gap-2">
-                <div id="mobile-price" class="text-[22px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
+                <div id="mobile-price" data-ow-price class="text-[22px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
                 {% with specs=product.specifications %}
                 {% if specs and specs.mrp %}
-                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
                 {% elif specs and specs.original_price %}
-                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
                 {% elif product.mrp %}
-                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
                 {% else %}
-                <div id="mobile-mrp" class="text-gray-400 line-through hidden"></div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp hidden"></div>
                 {% endif %}
                 {% endwith %}
               </div>
@@ -101,7 +101,7 @@
             </div>
             <div>
               <label class="block text-[12px] text-gray-800 mb-1">Quantity</label>
-              <input type="number" id="purch-qty-m" min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
+              <input type="number" id="purch-qty-m" data-ow-qty min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
             </div>
             <div class="space-y-3">
               <button type="button" id="purch-enquiry-m" class="block w-full text-center rounded-full bg-black text-white font-medium py-3 text-sm hover:bg-gray-800 transition-colors cursor-pointer" onclick="openPdpEnquiryModal()">Send Enquiry</button>
@@ -170,15 +170,15 @@
           <div class="p-6">
             {% with specs=product.specifications %}
             <div class="flex items-baseline gap-2">
-              <div id="sidebar-price" class="text-[28px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
+              <div id="sidebar-price" data-ow-price class="text-[28px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
               {% if specs and specs.mrp %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
               {% elif specs and specs.original_price %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
               {% elif product.mrp %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
               {% else %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through hidden"></div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp hidden"></div>
               {% endif %}
             </div>
             <div class="mt-3 text-[13px] text-gray-700">
@@ -207,7 +207,7 @@
             </div>
             <div class="mt-4">
               <label class="block text-[13px] text-gray-800 mb-1">Quantity:</label>
-              <input type="number" id="purch-qty" min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
+              <input type="number" id="purch-qty" data-ow-qty min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
             </div>
             <div class="mt-4 space-y-3">
               <button type="button" id="purch-enquiry" class="block w-full text-center rounded-full bg-black text-white font-medium py-2.5 text-sm hover:bg-gray-800 transition-colors cursor-pointer" onclick="openPdpEnquiryModal()">Send Enquiry</button>
@@ -359,10 +359,10 @@
           {% with specs=product.specifications %}
             {% if specs and specs.mrp %}
               <span class="text-2xl text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</span>
-              <span class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</span>
+              <span class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.mrp }}</span>
             {% elif specs and specs.original_price %}
               <span class="text-2xl text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</span>
-              <span class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</span>
+              <span class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.original_price }}</span>
             {% else %}
               <span class="text-2xl text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</span>
             {% endif %}
@@ -575,16 +575,16 @@
           <div class="bg-white py-4 space-y-4">
             <div class="flex flex-row gap-4 items-center">
               <div class="flex items-baseline gap-2">
-                <div id="mobile-price" class="text-[22px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
+                <div id="mobile-price" data-ow-price class="text-[22px] leading-none font-semibold text-gray-900">{{ product.currency|currency_symbol }}{{ product.price }}</div>
                 {% with specs=product.specifications %}
                 {% if specs and specs.mrp %}
-                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.mrp }}</div>
                 {% elif specs and specs.original_price %}
-                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ specs.original_price }}</div>
                 {% elif product.mrp %}
-                <div id="mobile-mrp" class="text-gray-400 line-through">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp">{{ product.currency|currency_symbol }}{{ product.mrp }}</div>
                 {% else %}
-                <div id="mobile-mrp" class="text-gray-400 line-through hidden"></div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp hidden"></div>
                 {% endif %}
                 {% endwith %}
               </div>
@@ -597,7 +597,7 @@
             </div>
             <div>
               <label class="block text-[12px] text-gray-800 mb-1">Quantity</label>
-              <input type="number" id="purch-qty-m" min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
+              <input type="number" id="purch-qty-m" data-ow-qty min="1" value="1" class="w-full h-10 rounded-md border border-gray-300 px-3 py-2 text-[13px] focus:ring-2 focus:ring-gray-900 focus:outline-none" placeholder="Enter quantity" />
             </div>
             <div class="space-y-3">
               <button type="button" id="purch-enquiry-m" class="block w-full text-center rounded-full bg-black text-white font-medium py-3 text-sm hover:bg-gray-800 transition-colors cursor-pointer" onclick="openPdpEnquiryModal()">Send Enquiry</button>
@@ -1066,7 +1066,7 @@
     <div class="w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-gray-200">
       <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <h3 class="text-base font-semibold text-gray-900">Product Enquiry</h3>
-        <button type="button" id="pdp-enquiry-close" class="text-gray-400 hover:text-gray-600" onclick="closePdpEnquiryModal()">
+        <button aria-label="Close" type="button" id="pdp-enquiry-close" class="text-gray-400 hover:text-gray-600" onclick="closePdpEnquiryModal()">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5"><path fill="currentColor" d="M6.4 5l12.6 12.6-1.4 1.4L5 6.4z"/><path fill="currentColor" d="M5 17.6L17.6 5l1.4 1.4L6.4 19z"/></svg>
         </button>
       </div>
@@ -1089,6 +1089,7 @@
             <input type="number" name="quantity" id="pdp-modal-quantity" min="1" step="1" {% if enquiry_form_mode != 'mobile_only' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter quantity" />
           </div>
         </div>
+        {% include "storefront/_recaptcha.html" %}
         <div class="mt-5 flex items-center justify-end gap-2">
           <button type="button" id="pdp-enquiry-cancel" class="inline-flex items-center justify-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50" onclick="closePdpEnquiryModal()">Cancel</button>
           <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-black text-white text-xs uppercase tracking-[0.15em] hover:bg-gray-800 shadow-sm transition-colors">Submit</button>
@@ -1652,7 +1653,9 @@
         const sourceEl = document.createElement('source');
         sourceEl.setAttribute('src', vUrl);
         const ext = (vUrl.split('?')[0] || '').split('.').pop().toLowerCase();
-        const mimeMap = { 'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg', 'mov': 'video/quicktime', 'ogv': 'video/ogg' };
+        // .mov uploads are H.264 (and re-encoded to MP4 after upload); Chrome skips
+        // a <source type="video/quicktime">, so declare them as MP4.
+        const mimeMap = { 'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg', 'mov': 'video/mp4', 'm4v': 'video/mp4', 'ogv': 'video/ogg' };
         sourceEl.setAttribute('type', mimeMap[ext] || 'video/mp4');
         videoEl.appendChild(sourceEl);
         try { videoEl.controls = false; } catch (e) {}
@@ -1910,6 +1913,7 @@
         <!-- Submit -->
         <button type="submit" class="h-12 md:h-14 px-6 md:px-8 rounded-lg md:rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-colors">Submit</button>
       </div>
+        {% include "storefront/_recaptcha.html" with center=True %}
     </form>
 
     <!-- Flash messages -->

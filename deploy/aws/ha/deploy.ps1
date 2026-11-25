@@ -27,12 +27,18 @@ param(
     [string]   $Cluster  = "onewooz-prod",
     [string]   $Account  = "521831014282",
     [string]   $Repo     = "onewooz-app",
-    [string[]] $Services = @("web", "worker", "beat"),
+    # worker-media is included by default so the video-compression worker always
+    # runs the current image; it sits at 0 tasks until a video is uploaded.
+    [string[]] $Services = @("web", "worker", "beat", "worker-media"),
     [switch]   $SkipBuild,   # reuse whatever :latest already is in ECR
     [switch]   $NoWait       # don't block waiting for services to stabilise
 )
 
 $ErrorActionPreference = "Stop"
+
+# `powershell -File deploy.ps1 -Services web,worker` passes ONE string
+# "web,worker" (not an array), so split on commas whichever way it arrives.
+$Services = @($Services | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
 # service name -> { family, taskdef json file }  (all three share one image)
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path      # deploy\aws\ha
@@ -43,6 +49,12 @@ $map = @{
     web    = @{ family = "onewooz-web";    file = (Join-Path $here "taskdef-web.json") }
     worker = @{ family = "onewooz-worker"; file = (Join-Path $here "taskdef-worker.json") }
     beat   = @{ family = "onewooz-beat";   file = (Join-Path $here "taskdef-beat.json") }
+    # OneWooz Apps (marketplace.onewooz.com) and its dedicated Celery worker.
+    # Include them with: -Services web,worker,beat,marketplace,worker-marketplace
+    marketplace          = @{ family = "onewooz-marketplace";        file = (Join-Path $here "taskdef-marketplace.json") }
+    "worker-marketplace" = @{ family = "onewooz-worker-marketplace"; file = (Join-Path $here "taskdef-worker-marketplace.json") }
+    # Video compression (ffmpeg) on the "media" queue; scales 0 <-> 2 on queue length.
+    "worker-media"       = @{ family = "onewooz-worker-media";       file = (Join-Path $here "taskdef-worker-media.json") }
 }
 
 function Invoke-Checked([string]$What, [scriptblock]$Block) {
@@ -101,6 +113,7 @@ try {
     if (-not $NoWait) {
         Write-Host "==> Waiting for services to stabilise (Ctrl+C is safe -- the roll continues)..." -ForegroundColor Cyan
         aws ecs wait services-stable --region $Region --cluster $Cluster --services $Services
+        if ($LASTEXITCODE -ne 0) { throw "services did not stabilise (check each service's Events / Logs tab)" }
         Write-Host "==> Stable." -ForegroundColor Green
     }
 

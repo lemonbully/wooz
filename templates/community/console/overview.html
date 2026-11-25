@@ -1,0 +1,76 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}Overview{% endblock %}
+{% block heading %}Overview{% endblock %}
+{% block lead %}<p>The community at a glance: what's live, what's waiting for you, and how the AI is set up.</p>{% endblock %}
+{% block actions %}
+  <a class="pal-btn" href="{% url 'ask_console:queue' %}">Moderation queue <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+  <a class="pal-btn pal-btn--ghost" href="{{ live_url }}" target="_blank" rel="noopener">View Ask OneWooz &#8599;</a>
+{% endblock %}
+
+{% block main %}
+<div class="mc-status">
+  {% if ai_ready %}
+    <span class="mc-status__txt"><span class="mc-dot"></span> Instant AI answers use the prompt “{{ ai_prompt.name }}”{% if not conf.ai_answers_enabled %}, but they're switched off in settings{% endif %}.</span>
+  {% else %}
+    <span class="mc-status__txt"><span class="mc-dot mc-dot--warn"></span> No instant AI answers: {% if not ai_prompt %}there's no active “Ask OneWooz answers” prompt{% else %}OPENAI_API_KEY isn't set on the server{% endif %}. Questions go to the team.</span>
+  {% endif %}
+  <a class="pal-btn pal-btn--ghost" href="{{ prompt_admin }}">Prompts</a>
+</div>
+
+<div class="mc-kpis">
+  {% for k in kpis %}
+  <div class="mc-kpi{% if k.warn %} mc-kpi--warn{% endif %}">
+    <div class="mc-kpi__value">{{ k.value }}</div>
+    <div class="mc-kpi__label">{{ k.label }}</div>
+    {% if k.sub %}<div class="mc-kpi__sub">{{ k.sub }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="mc-grid2">
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Waiting for review</h2><a class="mc-panel__link" href="{% url 'ask_console:queue' %}">Open the queue &rarr;</a></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <tbody>
+          {% for i in held_items %}
+          <tr>
+            <td><span class="mc-chip">{{ i.kind }}</span></td>
+            <td><a class="ac-title" href="{% url 'ask_console:thread' i.question.pk %}{{ i.anchor }}">{{ i.text|truncatechars:90 }}</a><div class="mc-muted ac-sub">{{ i.author.display_name }} · {{ i.reason|default:"held" }} · {{ i.created_at|timesince }} ago</div></td>
+          </tr>
+          {% empty %}<tr><td class="mc-empty">Nothing waiting. Every post is live or handled.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Newest questions</h2><a class="mc-panel__link" href="{% url 'ask_console:questions' %}">All questions &rarr;</a></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <tbody>
+          {% for q in recent %}
+          <tr>
+            <td><a class="ac-title" href="{% url 'ask_console:thread' q.pk %}">{{ q.title|truncatechars:80 }}</a><div class="mc-muted ac-sub">{{ q.author.display_name }}{% if q.topic %} · {{ q.topic.name }}{% endif %} · {{ q.answer_count }} answer{{ q.answer_count|pluralize }} · {{ q.created_at|timesince }} ago</div></td>
+            <td>{% include "community/console/_status.html" with s=q.status %}</td>
+          </tr>
+          {% empty %}<tr><td class="mc-empty">No questions yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<section class="mc-panel">
+  <div class="mc-panel__head"><h2 class="mc-panel__title">Recent console activity</h2><a class="mc-panel__link" href="{% url 'ask_console:activity' %}">All activity &rarr;</a></div>
+  <div class="mc-tablewrap">
+    <table class="mc-table">
+      <tbody>
+        {% for e in events %}
+        <tr><td class="mc-mono">{{ e.created_at|date:"j M, H:i" }}</td><td>{{ e.action|cut:"ask.console." }}</td><td class="mc-trunc">{{ e.target_label }}</td><td class="mc-muted">{{ e.actor_label }}</td></tr>
+        {% empty %}<tr><td class="mc-empty">Nothing yet. Every change made here is recorded.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Licences{% endblock %}
+{% block crumbs %}<span>/</span><span>Licences</span>{% endblock %}
+{% block heading %}Licences{% endblock %}
+{% block lead %}<p>Who has what, why and until when. Grant, revoke or restore with a reason; every change is kept in the licence's history.</p>{% endblock %}
+
+{% block main %}
+<div class="mc-grid2">
+  <div style="display:grid;gap:1.25rem;min-width:0;">
+    <form method="get" class="mc-toolbar">
+      <input type="search" name="q" value="{{ q }}" placeholder="Owner email or name">
+      <select name="app"><option value="">Every app</option>{% for a in apps %}<option value="{{ a.pk }}"{% if app_id == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.name }}</option>{% endfor %}</select>
+      <select name="status"><option value="">Any status</option>{% for k, l in statuses %}<option value="{{ k }}"{% if status == k %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+      <select name="source"><option value="">Any source</option>{% for k, l in sources %}<option value="{{ k }}"{% if source == k %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+      <button class="pal-btn pal-btn--ghost" type="submit">Filter</button>
+    </form>
+
+    <section class="mc-panel">
+      <div class="mc-tablewrap">
+        <table class="mc-table">
+          <thead><tr><th>Licence</th><th>Owner</th><th>Source</th><th>Status</th><th>Until</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for l in page %}
+            <tr>
+              <td><b>{{ l.name_snapshot }}</b><br><span class="mc-muted" style="font-size:.8rem;">{{ l.app.name }}{% if l.site_ref %} &middot; one store{% endif %}</span></td>
+              <td class="mc-trunc" title="{{ l.owner_email }}">{{ l.owner_email }}</td>
+              <td><span class="mc-chip">{{ l.get_source_display|truncatewords:2 }}</span></td>
+              <td><span class="mc-chip mc-chip--{{ l.status }}">{{ l.get_status_display }}</span></td>
+              <td class="mc-mono">{% if l.expires_at %}{{ l.expires_at|date:"j M Y" }}{% else %}Permanent{% endif %}</td>
+              <td>
+                {% if can_write %}
+                <form method="post" action="{% url 'mkt_console:licence_action' l.pk %}" class="mc-inline"{% if l.status == "active" %} data-confirm="Revoke {{ l.name_snapshot }} for {{ l.owner_email }}? Their stores fall back safely."{% endif %}>
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <input type="hidden" name="action" value="{% if l.status == 'active' %}revoke{% else %}restore{% endif %}">
+                  <input type="text" name="reason" placeholder="Reason" required maxlength="300">
+                  <button class="mc-linkbtn{% if l.status == 'active' %} mc-linkbtn--danger{% endif %}" type="submit">{% if l.status == "active" %}Revoke{% else %}Restore{% endif %}</button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="mc-empty">No licences match.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if page.paginator.num_pages > 1 %}
+      <div class="mc-pager">
+        <span>Page {{ page.number }} of {{ page.paginator.num_pages }} &middot; {{ page.paginator.count }} licences</span>
+        <span>{% if page.has_previous %}<a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if app_id %}app={{ app_id }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if source %}source={{ source }}&{% endif %}page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
+        {% if page.has_next %}&nbsp; <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if app_id %}app={{ app_id }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if source %}source={{ source }}&{% endif %}page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}</span>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  {% if can_write %}
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Grant a licence</h2></div>
+    <form method="post" class="mc-panel__body" style="display:grid;gap:1rem;">
+      {% csrf_token %}
+      {% if grant.non_field_errors %}<div class="mc-errors">{% for e in grant.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+      {% for field in grant %}{% include "marketplace/console/_field.html" %}{% endfor %}
+      <p class="mc-help">Leave "item" empty to grant the whole app. Leave the expiry empty for a permanent licence. A whole-app grant also installs it for the owner.</p>
+      <div class="mc-actions"><button class="pal-btn" type="submit">Grant <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button></div>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

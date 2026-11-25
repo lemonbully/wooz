@@ -91,6 +91,7 @@ urlpatterns = [
     path("categories/trusted-icons/save/", catalog.save_trusted_icons, name="trusted_icons_save"),
     path("categories/new/", catalog.category_form, name="category_new"),
     path("categories/<uuid:category_id>/highlight/", catalog.category_set_highlight, name="category_highlight"),
+    path("categories/<uuid:category_id>/feature/", catalog.category_toggle_feature, name="category_feature"),
     path("categories/<uuid:category_id>/", catalog.category_form, name="category_edit"),
     path("categories/<uuid:category_id>/delete/", catalog.category_delete, name="category_delete"),
     path("reviews/", catalog.reviews, name="reviews"),
@@ -103,6 +104,7 @@ urlpatterns = [
     path("email/", outreach.email_marketing, name="email_marketing"),
     path("email/analytics.json", outreach.email_analytics_json, name="email_analytics_json"),
     path("email/analytics/", outreach.email_analytics, name="email_analytics"),
+    path("email/export/", outreach.email_engagement_export, name="email_engagement_export"),
     path("email/campaigns/new/", outreach.email_campaign_new, name="email_campaign_new"),
     path("email/campaigns/<uuid:campaign_id>/", outreach.email_campaign_edit, name="email_campaign_edit"),
     path("email/campaigns/<uuid:campaign_id>/send/", outreach.email_campaign_send, name="email_campaign_send"),
@@ -196,9 +198,18 @@ urlpatterns = [
     path("editor/preview/", editor.preview, name="editor_preview"),
     path("editor/map-preview/", editor.map_preview, name="editor_map_preview"),
     path("editor/upload/", editor.upload_media, name="editor_upload"),
+    # Magic SEO (marketplace app): the SEO tab's pencil.
+    path("editor/magic-seo/", editor.magic_seo_start, name="editor_magic_seo_start"),
+    path("editor/magic-seo/status/", editor.magic_seo_status, name="editor_magic_seo_status"),
+    path("editor/magic-seo/undo/", editor.magic_seo_undo, name="editor_magic_seo_undo"),
+    path("editor/magic-seo/report/", editor.magic_seo_report, name="editor_magic_seo_report"),
 
     # Store settings
     path("settings/", store_settings.settings, name="settings"),
+    path("settings/design/", store_settings.theme, name="settings_theme"),
+    # Priced website templates: start the Cashfree payment, then the return.
+    path("settings/design/buy/", store_settings.template_buy, name="settings_template_buy"),
+    path("settings/design/return/", store_settings.template_return, name="settings_template_return"),
 
     # Staff & admins (owner-only team management)
     path("staff/", team.staff, name="staff"),

@@ -104,6 +104,15 @@
                 <p class="emx-help">No products yet  add products to your store to feature them here. Until then the email uses your latest products automatically.</p>
                 {% endif %}
               </div>
+
+              <div class="emx-field">
+                <span class="emx-label">Product price</span>
+                <label class="emx-check">
+                  <input type="checkbox" name="show_product_price" value="1" id="emc-show-price" {% if show_product_price %}checked{% endif %}>
+                  <span class="emx-check__label">Show product prices in the email</span>
+                </label>
+                <p class="emx-help">Untick to show only each product's picture and name; shoppers see the price when they open it on your store.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -257,7 +266,7 @@
                 </div>
 
                 <p class="emx-promo__sec">4 · Products</p>
-                <p class="emx-help emx-promo__note">The grid shows up to {{ promo_max_products }} products (three per row) with name, price and the struck-through MRP. Pick them under <a class="emx-link" href="#emc-products">Choose products</a>; leave it empty to use your newest products.</p>
+                <p class="emx-help emx-promo__note">The grid shows up to {{ promo_max_products }} products with name, price and the struck-through MRP, laid out by how many you pick: 1 fills the full width, 2 or 3 share one row, 4 show as two rows of two, 5 as two rows of two with the fifth centred, 6 as two rows of three. Pick them under <a class="emx-link" href="#emc-products">Choose products</a>; leave it empty to use your newest products.</p>
 
                 <p class="emx-promo__sec">5 · Offer</p>
                 <div class="emx-fields">
@@ -688,6 +697,8 @@
       root.querySelectorAll('input[name="product_mode"]').forEach(function (r) {
         r.addEventListener("change", function () { schedulePreview(); });
       });
+      var showPrice = document.getElementById("emc-show-price");
+      if (showPrice) showPrice.addEventListener("change", function () { schedulePreview(true); });
 
       promoCard.querySelectorAll("[data-pv-width]").forEach(function (btn) {
         btn.addEventListener("click", function () {

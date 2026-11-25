@@ -1,116 +1,184 @@
 {% extends "web/_shell.html" %}
+{% load static onewooz %}
 
 {% comment %}
-Core page display  mirrors the storefront's structure: a sticky sidebar tree
-(the core page → its subpages → their child pages) beside the current node's
-content. Server-rendered, one real URL per node. Styled with the 
-marketing system (onewooz_design.md): squared, hairline-ruled, mono metadata,
-one accent.
+One core page node (page, subpage or child page) read as a documentation
+article, in three columns from 75rem:
+
+  section tree | article | "On this page"
+
+Below 75rem the outline folds into the article; below 60rem the tree becomes
+a "Browse" disclosure above it. Server-rendered and complete without JS
+(web/core-pages.js only folds the tree on phones, follows the heading in view
+and copies the link).
+
+`body` is the node's HTML with anchor ids added to every <h2> (web.core_tree),
+matching `toc` and the TechArticle hasPart entries. The first paragraph is
+the answer-first lead (and the speakable selector in web.schema). Styles:
+css/onewooz-core-pages.css (.cpa-*).
 {% endcomment %}
 
-{% block title %}{% if seo.custom_title %}{{ seo.title }}{% else %}{{ page_title }} · OneWooz{% endif %}{% endblock %}
+{% block title %}{{ seo.title }}{% endblock %}
 
 {% block head %}{{ block.super }}
-<style nonce="{{ csp_nonce }}">
-  .cp { border-top: 1px solid var(--pal-line); }
-  .cp__grid { display: grid; grid-template-columns: 17rem 1fr; align-items: start; }
-  @media (max-width: 60rem) { .cp__grid { grid-template-columns: 1fr; } }
-
-  /* Sidebar tree */
-  .cp-side { border-right: 1px solid var(--pal-line); padding: 2rem 1.5rem 3rem; position: sticky; top: 4rem; }
-  @media (max-width: 60rem) { .cp-side { position: static; border-right: 0; border-bottom: 1px solid var(--pal-line); padding-bottom: 1.5rem; } }
-  .cp-side__label { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pal-faint); margin-bottom: 0.85rem; }
-  .cp-side__title { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.15rem; letter-spacing: -0.02em; color: var(--pal-ink); margin-bottom: 1.25rem; }
-  .cp-nav { display: flex; flex-direction: column; }
-  .cp-nav a { display: block; font-family: var(--pal-font-mono); font-size: 0.72rem; letter-spacing: 0.02em; line-height: 1.35;
-    color: var(--pal-muted); text-decoration: none; padding: 0.5rem 0.65rem; border-left: 2px solid transparent;
-    transition: color 140ms ease, background 140ms ease, border-color 140ms ease; }
-  .cp-nav a:hover { color: var(--pal-ink); background: var(--pal-paper-2); }
-  .cp-nav a.is-active { color: var(--pal-ink); border-left-color: var(--pal-accent); background: var(--pal-paper-2); }
-  .cp-nav__nested { margin: 0.15rem 0 0.35rem 0.6rem; border-left: 1px solid var(--pal-line); padding-left: 0.5rem; display: flex; flex-direction: column; }
-  .cp-nav__nested a { font-size: 0.68rem; color: var(--pal-faint); }
-  .cp-nav__nested a:hover, .cp-nav__nested a.is-active { color: var(--pal-ink); }
-  .cp-side__all { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 2rem; padding-top: 1.25rem;
-    border-top: 1px solid var(--pal-line); font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--pal-faint); text-decoration: none; }
-  .cp-side__all:hover { color: var(--pal-accent); }
-
-  /* Main content */
-  .cp-main { padding: 2.25rem 0 3.5rem; min-width: 0; }
-  @media (min-width: 60.01rem) { .cp-main { padding-left: 2.5rem; } }
-  .cp-main__crumb { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); margin-bottom: 1.25rem; }
-  .cp-main__crumb a { color: var(--pal-muted); text-decoration: none; }
-  .cp-main__crumb a:hover { color: var(--pal-ink); }
-  .cp-main__crumb .sep { opacity: 0.4; margin: 0 0.4rem; }
-  .cp-main__crumb .cur { color: var(--pal-accent); }
-  .cp-main__title { font-family: var(--pal-font-display); font-weight: 500; letter-spacing: -0.03em; line-height: 1.05;
-    font-size: clamp(2rem, 1.4rem + 2.4vw, 3rem); color: var(--pal-ink); padding-bottom: 1.5rem; margin-bottom: 1.75rem; border-bottom: 1px solid var(--pal-line); }
-
-  .cp-empty { color: var(--pal-muted); font-size: 0.98rem; }
-
-  .cp-children { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--pal-line); }
-  .cp-children__label { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pal-faint); margin-bottom: 1rem; }
-  .cp-children__grid { display: grid; gap: 1px; background: var(--pal-line); border: 1px solid var(--pal-line); }
-  .cp-children__grid a { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: var(--pal-paper);
-    padding: 1rem 1.15rem; text-decoration: none; color: var(--pal-ink); font-family: var(--pal-font-display); font-weight: 500; font-size: 1.02rem;
-    transition: background 140ms ease, color 140ms ease; }
-  .cp-children__grid a:hover { background: var(--pal-paper-2); color: var(--pal-accent); }
-  .cp-children__grid a .arw { font-family: var(--pal-font-mono); color: var(--pal-accent); }
-</style>
+<link rel="stylesheet" href="{% static 'css/onewooz-core-pages.css' %}">
+<script src="{% static 'js/website/core-pages.js' %}" defer></script>
+{% if prev_node %}<link rel="prev" href="{{ prev_node.get_absolute_url }}">{% endif %}
+{% if next_node %}<link rel="next" href="{{ next_node.get_absolute_url }}">{% endif %}
+<meta property="article:section" content="{{ section_title }}">
+<meta property="article:modified_time" content="{{ node.updated_at|date:'c' }}">
+<meta property="article:published_time" content="{{ node.created_at|date:'c' }}">
 {% endblock %}
 
 {% block main %}
-<section class="cp">
-  <div class="pal-container cp__grid">
+<div class="cpa">
+  <div class="pal-container cpa__grid">
 
-    <aside class="cp-side">
-      <p class="cp-side__label">Contents</p>
-      <p class="cp-side__title">{{ root.title }}</p>
-      <nav class="cp-nav" aria-label="Page navigation">
-        <a href="{{ root.get_absolute_url }}"{% if node == root %} class="is-active" aria-current="page"{% endif %}>Overview</a>
-        {% for sp in subpages %}
-          <a href="{{ sp.get_absolute_url }}"{% if node == sp %} class="is-active" aria-current="page"{% elif sp == active_sub %} class="is-active"{% endif %}>{{ sp.title }}</a>
-          {% if sp == active_sub and sp.children.all %}
-          <div class="cp-nav__nested">
-            {% for c in sp.children.all %}
-            <a href="{{ c.get_absolute_url }}"{% if node == c %} class="is-active" aria-current="page"{% endif %}>{{ c.title }}</a>
+    {# ------------------------------------------------ left: section tree #}
+    <aside class="cpa-nav">
+      <details class="cpa-nav__box" data-cp-nav open>
+        <summary class="cpa-nav__toggle">Browse {{ root.title }}</summary>
+        <nav class="cpa-nav__inner" aria-label="{{ root.title }} contents">
+          <p class="cpa-nav__label">Contents</p>
+          <p class="cpa-nav__title"><a href="{{ root.get_absolute_url }}">{{ root.title }}</a></p>
+          <ul class="cpa-tree">
+            <li class="cpa-tree__group">
+              <a class="cpa-tree__link" href="{{ root.get_absolute_url }}"{% if node == root %} aria-current="page"{% endif %}>Overview</a>
+            </li>
+            {% for sp in subpages %}
+            <li class="cpa-tree__group">
+              <a class="cpa-tree__link{% if sp == active_sub and node != sp %} is-open{% endif %}" href="{{ sp.get_absolute_url }}"{% if node == sp %} aria-current="page"{% endif %}>{{ sp.title }}</a>
+              {% if sp.kids %}
+              <details class="cpa-tree__fold"{% if sp == active_sub %} open{% endif %}>
+                <summary aria-label="Show articles in {{ sp.title }}"></summary>
+                <ul class="cpa-tree__kids">
+                  {% for c in sp.kids %}
+                  <li><a href="{{ c.get_absolute_url }}"{% if node == c %} aria-current="page"{% endif %}>{{ c.title }}</a></li>
+                  {% endfor %}
+                </ul>
+              </details>
+              {% endif %}
+            </li>
             {% endfor %}
-          </div>
-          {% endif %}
-        {% endfor %}
-      </nav>
-      <a class="cp-side__all" href="{% url 'web:core_pages' %}">&larr; All pages</a>
+          </ul>
+          <a class="cpa-nav__all" href="{% url 'web:core_pages' %}"><span aria-hidden="true">&larr;</span> All resources</a>
+        </nav>
+      </details>
     </aside>
 
-    <main class="cp-main">
-      <nav class="cp-main__crumb" aria-label="Breadcrumb">
-        <a href="{% url 'web:home' %}">Home</a>
-        {% for c in crumbs %}
-          <span class="sep" aria-hidden="true">/</span>
-          {% if forloop.last %}<span class="cur" aria-current="page">{{ c.title }}</span>{% else %}<a href="{{ c.url }}">{{ c.title }}</a>{% endif %}
-        {% endfor %}
+    {# ---------------------------------------------------- middle: article #}
+    <article class="cpa-main" aria-labelledby="cp-title">
+      <nav class="cpa-crumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{% url 'web:home' %}">Home</a></li>
+          {% for c in crumbs %}
+          <li>{% if forloop.last %}<span aria-current="page">{{ c.title }}</span>{% else %}<a href="{{ c.url }}">{{ c.title }}</a>{% endif %}</li>
+          {% endfor %}
+        </ol>
       </nav>
 
-      <h1 class="cp-main__title">{{ node.title }}</h1>
+      <header class="cpa-head">
+        <p class="cp-eyebrow">{% if node == root %}Resource centre{% else %}{{ section_title }}{% endif %}</p>
+        <h1 class="cp-article__title" id="cp-title">{{ node.title }}</h1>
+        <div class="cpa-meta">
+          <span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            {{ minutes }} min read
+          </span>
+          <span>Updated <time datetime="{{ node.updated_at|date:'c' }}">{{ node.updated_at|date:"j M Y" }}</time></span>
+          {% if children %}<span>{{ children|length }} {% if node == root %}topic{{ children|length|pluralize }}{% else %}article{{ children|length|pluralize }}{% endif %}</span>{% endif %}
+          <button type="button" class="cpa-copy" data-cp-copy hidden>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+            <span data-cp-copy-label>Copy link</span>
+          </button>
+        </div>
+      </header>
 
-      {% if node.content %}
-      <div class="pal-prose">{{ node.content|safe }}</div>
-      {% else %}
-      <p class="cp-empty">Choose a page from the list to start reading.</p>
+      {% if toc|length > 1 %}
+      <details class="cpa-toc-inline">
+        <summary>On this page</summary>
+        <ol>
+          {% for t in toc %}<li><a href="#{{ t.id }}">{{ t.title }}</a></li>{% endfor %}
+        </ol>
+      </details>
+      {% endif %}
+
+      {% if body %}
+      <div class="cpa-body cp-article__body">{{ body|safe }}</div>
+      {% elif not children %}
+      <p class="cpa-body">This page is being written. Choose another article from the contents.</p>
       {% endif %}
 
       {% if children %}
-      <div class="cp-children">
-        <p class="cp-children__label">In this section</p>
-        <div class="cp-children__grid">
+      <section class="cpa-children" aria-labelledby="cp-children-label">
+        <h2 class="cpa-children__label" id="cp-children-label">{% if node == root %}Topics in {{ root.title }}{% else %}Articles in this topic{% endif %}</h2>
+        <div class="cpa-children__grid">
           {% for c in children %}
-          <a href="{{ c.get_absolute_url }}"><span>{{ c.title }}</span><span class="arw" aria-hidden="true">&rarr;</span></a>
+          <a class="cpa-child" href="{{ c.get_absolute_url }}">
+            <span class="cpa-child__top"><span>{{ forloop.counter|stringformat:"02d" }}</span><span class="cp-arrow" aria-hidden="true">&rarr;</span></span>
+            <span class="cpa-child__title">{{ c.title }}</span>
+            {% if c.summary %}<span class="cpa-child__desc">{{ c.summary }}</span>{% endif %}
+          </a>
           {% endfor %}
         </div>
-      </div>
+      </section>
       {% endif %}
-    </main>
 
+      {% if prev_node or next_node %}
+      <nav class="cpa-pager" aria-label="Previous and next">
+        {% if prev_node %}
+        <a href="{{ prev_node.get_absolute_url }}" rel="prev">
+          <span class="cpa-pager__k">&larr; Previous</span>
+          <span class="cpa-pager__t">{% if prev_node == root %}{{ root.title }} overview{% else %}{{ prev_node.title }}{% endif %}</span>
+        </a>
+        {% endif %}
+        {% if next_node %}
+        <a class="cpa-pager__next" href="{{ next_node.get_absolute_url }}" rel="next">
+          <span class="cpa-pager__k">Next &rarr;</span>
+          <span class="cpa-pager__t">{{ next_node.title }}</span>
+        </a>
+        {% endif %}
+      </nav>
+      {% endif %}
+
+      <div class="cpa-support">
+        <p><strong>Still need help?</strong> Our team replies the same working day.</p>
+        <a class="cph-textlink" href="{% url 'web:contact' %}">Contact support <span class="cp-arrow" aria-hidden="true">&rarr;</span></a>
+      </div>
+    </article>
+
+    {# --------------------------------------------- right: on this page #}
+    <aside class="cpa-toc" aria-label="On this page">
+      <div class="cpa-toc__box">
+        {% if toc %}
+        <p class="cpa-toc__label">On this page</p>
+        <ol data-cp-toc>
+          {% for t in toc %}<li><a href="#{{ t.id }}">{{ t.title }}</a></li>{% endfor %}
+        </ol>
+        <a class="cpa-toc__top" href="#main"><span aria-hidden="true">&uarr;</span> Back to top</a>
+        {% endif %}
+        <dl class="cpa-toc__facts">
+          <div><dt>Section</dt><dd>{{ section_title }}</dd></div>
+          <div><dt>Reading time</dt><dd>{{ minutes }} min</dd></div>
+          <div><dt>Last updated</dt><dd><time datetime="{{ node.updated_at|date:'c' }}">{{ node.updated_at|date:"j M Y" }}</time></dd></div>
+          {% if node_total %}<div><dt>Progress</dt><dd>{% if node_number %}{{ node_number }} of {{ node_total }}{% else %}Overview{% endif %}</dd></div>{% endif %}
+        </dl>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<section class="cp-help">
+  <div class="pal-container cp-help__inner">
+    <div>
+      <h2 class="cp-help__title">Ready to put this into practice?</h2>
+      <p class="cp-help__text">Build your store and see it live in minutes. Products, checkout, payments and shipping are included.</p>
+    </div>
+    <div class="pal-btn-row">
+      <a class="pal-btn" href="{% surface_url 'app' '/sign-up/' %}">Deploy a store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      <a class="pal-btn pal-btn--ghost" href="{% url 'web:core_pages' %}">All resources</a>
+    </div>
   </div>
 </section>
 {% endblock %}

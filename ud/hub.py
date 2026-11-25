@@ -50,8 +50,9 @@ def target_users(post):
     customers (active ones only)."""
     User = get_user_model()
     if post.send_to_all:
-        return User.objects.filter(is_active=True, is_staff=False)
-    return post.recipients.filter(is_active=True)
+        # Owners who deleted their account (accounts.deletion) are left out.
+        return User.objects.filter(is_active=True, is_staff=False, account_deleted_at__isnull=True)
+    return post.recipients.filter(is_active=True, account_deleted_at__isnull=True)
 
 
 def deliver(post_id) -> int:

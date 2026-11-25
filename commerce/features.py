@@ -21,6 +21,9 @@ URLNAME_TO_FEATURE: dict[str, str | None] = {
     # Storefront
     "editor": "editor", "editor_save_section": "editor",
     "editor_preview": "editor", "editor_upload": "editor",
+    # Magic SEO pencil (Edit content > SEO): same page and plan gate as the editor.
+    "editor_magic_seo_start": "editor", "editor_magic_seo_status": "editor",
+    "editor_magic_seo_undo": "editor",
     "media": "media", "media_list": "media", "media_upload": "media",
     "media_update": "media", "media_delete": "media", "media_delete_bulk": "media",
     "domain": "domain", "domain_save": "domain", "domain_verify": "domain",
@@ -52,6 +55,7 @@ URLNAME_TO_FEATURE: dict[str, str | None] = {
     "inventory": "inventory", "product_restock": "inventory",
     "out_of_stock": "out_of_stock",
     "categories": "categories", "categories_mega_menu": "categories",
+    "category_feature": "categories",
     "trusted_icons_toggle": "categories", "trusted_icons_save": "categories",
     "category_new": "categories", "category_highlight": "categories",
     "category_edit": "categories", "category_delete": "categories",
@@ -61,6 +65,7 @@ URLNAME_TO_FEATURE: dict[str, str | None] = {
     "email_marketing": "email_marketing",
     "email_analytics_json": "email_marketing", "email_analytics": "email_marketing",
     "email_campaign_segments": "email_marketing", "email_campaign_segment_export": "email_marketing",
+    "email_engagement_export": "email_marketing",
     "email_campaign_new": "email_marketing", "email_campaign_edit": "email_marketing",
     "email_campaign_send": "email_marketing", "email_campaign_pause": "email_marketing",
     "email_campaign_resume": "email_marketing", "email_campaign_delete": "email_marketing",
@@ -98,6 +103,11 @@ URLNAME_TO_FEATURE: dict[str, str | None] = {
     "bill_pdf": "bills", "bill_export": "bills", "bill_payment_submit": "bills",
     # Store
     "settings": "settings",
+    # Storefront design switch: part of Settings, so owner-only like it.
+    "settings_theme": "settings",
+    # Buying a priced website template (design): part of Settings too.
+    "settings_template_buy": "settings",
+    "settings_template_return": "settings",
     # Team management is owner-only  intentionally unmapped (feature None), so a
     # staff member is never granted these routes by the access gate.
 }

@@ -3,6 +3,13 @@
 (function () {
   "use strict";
 
+  // Results surface in the universal toast stack (js/app/toast.js): errors in
+  // red, confirmations in green. Falls back to a plain alert if it's missing.
+  function owAlert(msg, ok) {
+    if (window.OWToast) { if (ok) window.OWToast.success(msg); else window.OWToast.error(msg); }
+    else window.alert(msg);
+  }
+
   function cookie(name) {
     try {
       var m = ("; " + document.cookie).split("; " + name + "=");
@@ -131,9 +138,9 @@
     if (!btn) return;
     e.preventDefault();
     post(btn.getAttribute("data-url")).then(function (res) {
-      if (!res.ok || !res.d.success) { alert("Couldn't generate the link."); return; }
+      if (!res.ok || !res.d.success) { owAlert("Couldn't generate the link."); return; }
       var url = res.d.contract_url;
-      var done = function () { var t = btn.textContent; btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = t; }, 1500); };
+      var done = function () { owAlert("Contract link copied.", true); var t = btn.textContent; btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = t; }, 1500); };
       if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { window.prompt("Copy this contract link:", url); });
       else window.prompt("Copy this contract link:", url);
     });
@@ -147,8 +154,8 @@
     btn.disabled = true;
     post(btn.getAttribute("data-url")).then(function (res) {
       btn.disabled = false;
-      if (!res.ok || !res.d.success) { alert("Couldn't resend the invite."); return; }
-      alert("Invite refreshed. New OTP: " + res.d.otp + "\nContract link:\n" + res.d.contract_url);
-    }).catch(function () { btn.disabled = false; alert("Couldn't resend the invite."); });
+      if (!res.ok || !res.d.success) { owAlert("Couldn't resend the invite."); return; }
+      window.alert("Invite refreshed. New OTP: " + res.d.otp + "\nContract link:\n" + res.d.contract_url);
+    }).catch(function () { btn.disabled = false; owAlert("Couldn't resend the invite."); });
   });
 })();

@@ -1,41 +1,18 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Article | velora</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
-<div data-header></div>
+{% extends "storefront/template4/_base.html" %}
+{% block main %}
 <main class="container">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><a href="blogs.html">Journal</a><span class="sep">/</span><span data-crumb></span></nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'public_website' %}">Home</a><span class="sep">/</span><a href="{% url 'public_blogs' %}">Blogs</a><span class="sep">/</span><span data-crumb>{{ blog.title }}</span></nav>
   <header style="max-width:860px;margin:10px auto 0;text-align:center">
     <span class="badge badge--popular" data-tag></span>
-    <h1 class="mega" style="margin:16px 0" data-title></h1>
-    <div class="author" style="justify-content:center"><img src="" data-author alt=""><div style="text-align:left"><b>Meera Iyer</b><div class="small muted" data-meta></div></div></div>
+    <h1 class="mega" style="margin:16px 0" data-title>{{ blog.title }}</h1>
+    <div class="author" style="justify-content:center"><img src="" data-author alt=""><div style="text-align:left"><b data-author-name></b><div class="small muted" data-meta></div></div></div>
   </header>
   <div class="article-hero"><img src="" data-hero alt=""></div>
 
   <div class="article-layout">
-    <aside class="toc"><p class="eyebrow muted" style="margin-bottom:10px">In this article</p><a href="#s1">Start with a palette</a><a href="#s2">The twelve pieces</a><a href="#s3">Mix, match, repeat</a><a href="#s4">Caring for it all</a></aside>
-    <article class="prose">
-      <p>A good routine is not about owning more products. It is about a few formulas that work so well together that looking after your skin takes five minutes, and still feels like a ritual.</p>
-      <h2 id="s1">Start with a palette</h2>
-      <p>Pick two neutrals and one accent. We like cream and indigo with a warm rust. Everything you add should sit comfortably next to at least three other pieces.</p>
-      <blockquote>“The best capsule is the one you forget you planned. It just works.”</blockquote>
-      <h2 id="s2">The twelve pieces</h2>
-      <ul><li>Three heavyweight tees: white, black, one colour</li><li>One oxford shirt and one denim shirt</li><li>Straight fit jeans and a relaxed trouser</li><li>A knit layer and a light jacket</li><li>White sneakers and one statement pair</li><li>A bag that carries a laptop</li></ul>
-      <img src="" data-inline alt="">
-      <h2 id="s3">Mix, match, repeat</h2>
-      <p>Lay everything on the bed and build outfits until you run out of ideas. Most people find twenty or more combinations. Photograph them and keep the album for busy mornings.</p>
-      <h2 id="s4">Caring for it all</h2>
-      <p>Wash cold, dry in shade and fold knits instead of hanging them. Good care doubles the life of a garment, which is the most sustainable thing you can do.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:30px"><span class="tag">Capsule</span><span class="tag">Basics</span><span class="tag">Sustainability</span></div>
-    </article>
-    <aside class="aside-r">
+    <aside class="toc" data-toc><p class="eyebrow muted" style="margin-bottom:10px">In this article</p></aside>
+    <article class="prose" data-body>{{ blog.description|safe }}</article>
+    <aside class="aside-r" data-shop-wrap>
       <div style="position:sticky;top:100px">
         <p class="eyebrow muted" style="margin-bottom:12px">Shop the article</p>
         <div style="display:grid;gap:14px" data-shop></div>
@@ -43,27 +20,35 @@
     </aside>
   </div>
 
-  <section class="section" style="padding-bottom:0">
-    <div class="sec-head"><h2 class="h2">Keep reading</h2><a href="blogs.html" class="btn btn--outline btn--sm">All articles</a></div>
+  <section class="section" style="padding-bottom:0" data-sec-more>
+    <div class="sec-head"><h2 class="h2">Keep <em class="hl">reading.</em></h2><a href="{% url 'public_blogs' %}" class="btn btn--outline btn--sm">All articles</a></div>
     <div class="grid grid--3" data-more></div>
   </section>
 </main>
-<div data-footer></div>
-<script src="assets/js/data.js"></script>
-<script>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ csp_nonce }}">
 window.T3Page = function () {
-  const D = T3, $ = T3.$;
-  const b = D.blogs.find(x => x.slug === T3.qs('b')) || D.blogs[0];
-  document.title = `${b.title} | velora`;
+  const D = T3, $ = T3.$, esc = T3.esc;
+  const b = D.page.blog;
+  if (!b) return;
   $('[data-crumb]').textContent = b.title; $('[data-tag]').textContent = b.tag; $('[data-title]').textContent = b.title;
-  $('[data-meta]').textContent = `${b.date} · ${b.read}`;
-  $('[data-author]').src = D.U(D.IMG.p5, 100, 100);
-  $('[data-hero]').src = b.img.replace('w=1200', 'w=2000').replace('h=900', 'h=860');
-  $('[data-inline]').src = D.U(D.IMG.flatlay2, 1400, 800);
-  $('[data-shop]').innerHTML = D.products.slice(0, 3).map(p => `<a class="search-hit" href="product.html?p=${p.id}"><img src="${p.img[0]}" alt=""><span><b>${p.name}</b>${T3.priceHTML(p)}</span></a>`).join('');
-  $('[data-more]').innerHTML = D.blogs.filter(x => x.slug !== b.slug).slice(0, 3).map(x => `<a class="blog-card reveal" href="blog.html?b=${x.slug}"><div class="blog-card__media"><img src="${x.img}" alt="" loading="lazy"><span class="badge badge--light">${x.tag}</span></div><div class="blog-card__meta">${x.date}<i></i>${x.read}</div><h3>${x.title}</h3><p>${x.excerpt}</p></a>`).join('');
+  $('[data-meta]').textContent = [b.date, b.read].filter(Boolean).join(' · ');
+  $('[data-author-name]').textContent = b.author || D.brand;
+  $('[data-author]').src = D.U((D.logo || {}).desktop || '@avatar4', 100, 100);
+  $('[data-hero]').src = D.U(b.img, 2000, 860); $('[data-hero]').alt = b.title;
+  /* Table of contents from the article's own headings. */
+  const heads = [...$('[data-body]').querySelectorAll('h2, h3')].slice(0, 8);
+  heads.forEach((h, i) => { if (!h.id) h.id = 's' + (i + 1); });
+  if (heads.length) $('[data-toc]').insertAdjacentHTML('beforeend', heads.map(h => `<a href="#${h.id}">${esc(h.textContent)}</a>`).join(''));
+  else $('[data-toc]').style.visibility = 'hidden';
+  const shop = D.products.slice(0, 3);
+  $('[data-shop]').innerHTML = shop.map(p => `<a class="search-hit" href="${p.url}"><img src="${p.img[0]}" alt=""><span><b>${esc(p.name)}</b>${T3.priceHTML(p)}</span></a>`).join('');
+  if (!shop.length) $('[data-shop-wrap]').style.visibility = 'hidden';
+  const more = D.blogs.filter(x => x.slug !== b.slug).slice(0, 3);
+  $('[data-more]').innerHTML = more.map(x => `<a class="blog-card reveal" href="${x.url}"><div class="blog-card__media"><img src="${D.U(x.img, 1200, 900)}" alt="" loading="lazy"><span class="badge badge--light">${esc(x.tag)}</span></div><div class="blog-card__meta">${esc(x.date)}<i></i>${esc(x.read)}</div><h3>${esc(x.title)}</h3><p>${esc(x.excerpt)}</p></a>`).join('');
+  if (!more.length) $('[data-sec-more]').hidden = true;
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

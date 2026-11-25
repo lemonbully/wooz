@@ -26,6 +26,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.http import HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect, render
+from django.templatetags.static import static
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -46,7 +47,9 @@ from billing.models import (
     SubscriptionInvite,
     SubscriptionOrder,
     SubscriptionPlan,
+    TemplatePurchase,
     UserAgreement,
+    WebsiteTemplate,
 )
 from commerce.models import (
     Bill,
@@ -62,9 +65,10 @@ from accounts.models import (
     DashboardUser,
     DjangoSuperuser,
     Notification,
+    # PushSubscription,  # BROWSER PUSH: DISABLED (see PushSubscriptionAdmin below)
     User,
 )
-from tenancy.models import BusinessCategory, BusinessSubCategory, ReservedSubdomain
+from tenancy.models import BusinessCategory, BusinessSubCategory, ReservedSubdomain, Site
 from ud.models import BusinessHubPost, BusinessHubReceipt, SupportTicket
 from web.models import (
     CustomerTestimonial,
@@ -80,7 +84,8 @@ from web.models import (
 
 from core.queries import defer_related_heavy_fields, without_heavy_fields
 
-from .widgets import TinyMCEWidget
+from . import marketing_content
+from .widgets import HtmlContentWidget, TinyMCEWidget, editor_attrs
 
 # Only the project's own apps  never Django's own tables (sessions, log, etc.).
 APP_LABELS = {
@@ -94,6 +99,7 @@ APP_LABELS = {
     "core",
     "custom_admin",
     "outreach",
+    "marketplace",
 }
 
 
@@ -260,7 +266,22 @@ class DashboardUserAdmin(_UserRoleAdmin):
 
     role_filter = {"is_staff": False}
     role_defaults = {"is_active": True, "is_staff": False, "is_superuser": False}
-    list_display = _UserRoleAdmin.list_display + ("impersonate_action",)
+    list_display = _UserRoleAdmin.list_display + ("account_state", "impersonate_action")
+    list_filter = ("is_active", ("account_deleted_at", admin.EmptyFieldListFilter))
+    readonly_fields = _UserRoleAdmin.readonly_fields + (
+        "account_deleted_at", "account_deletion_reason", "account_deletion_plan",
+        "account_deletion_sites", "account_closed_at", "account_restored_at",
+    )
+
+    @admin.display(description="Account")
+    def account_state(self, obj):
+        if obj.account_closed_at:
+            return "Closed (deleted)"
+        if obj.account_deleted_at:
+            from accounts import deletion
+
+            return f"Deleted, recoverable until {deletion.recover_until(obj.account_deleted_at):%d %b %Y}"
+        return "Active" if obj.is_active else "Disabled"
 
     def get_urls(self):
         urls = super().get_urls()
@@ -366,6 +387,81 @@ class _BaseUserHiddenAdmin(_UserRoleAdmin):
 
 
 # ---------------------------------------------------------------------------
+# Stores, with deletion status and a support "Restore" action
+# ---------------------------------------------------------------------------
+# A deleted store (owner: Store settings -> Delete this store) is only soft
+# deleted and stays recoverable for settings.ACCOUNT_DELETION_RETENTION_DAYS.
+# Support restores it from here when the owner asks (accounts.deletion). Stores
+# that went down with a deleted account come back when the owner signs in, so
+# the action refuses those.
+
+
+class _SiteDeletionFilter(admin.SimpleListFilter):
+    title = "deletion"
+    parameter_name = "deletion"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("live", "Live (not deleted)"),
+            ("deleted", "Deleted by owner"),
+            ("with_account", "Deleted with account"),
+        )
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == "live":
+            return queryset.filter(is_deleted=False)
+        if value == "deleted":
+            return queryset.filter(is_deleted=True, deleted_with_account=False)
+        if value == "with_account":
+            return queryset.filter(is_deleted=True, deleted_with_account=True)
+        return queryset
+
+
+@admin.register(Site)
+class SiteAdmin(LeanModelAdmin):
+    list_display = ("name", "slug", "owner", "status", "deletion_state", "created_at")
+    list_filter = (_SiteDeletionFilter, "status", "business_model")
+    search_fields = ("name", "slug", "owner__email", "custom_domain")
+    list_select_related = ("owner",)
+    raw_id_fields = ("owner",)
+    readonly_fields = ("is_deleted", "deleted_at", "deleted_with_account", "created_at", "updated_at")
+    actions = ("restore_deleted_stores",)
+
+    def get_queryset(self, request):
+        # Never load (or sort) the content JSON for the list (MySQL error 1038).
+        return super().get_queryset(request).defer("content")
+
+    @admin.display(description="Deletion")
+    def deletion_state(self, obj):
+        if not obj.is_deleted:
+            return "Live"
+        from accounts import deletion
+
+        until = deletion.recover_until(obj.deleted_at)
+        how = "with account" if obj.deleted_with_account else "by owner"
+        if deletion.is_lapsed(obj.deleted_at):
+            return f"Deleted {how}, window ended {until:%d %b %Y}"
+        return f"Deleted {how}, recoverable until {until:%d %b %Y}"
+
+    @admin.action(description="Restore selected deleted stores")
+    def restore_deleted_stores(self, request, queryset):
+        from accounts import deletion
+
+        done, refused = 0, []
+        for site in queryset.select_related("owner"):
+            ok, message = deletion.restore_site(site, request=request, actor=request.user)
+            if ok:
+                done += 1
+            elif site.is_deleted:
+                refused.append(f"{site.name}: {message}")
+        if done:
+            self.message_user(request, f"Restored {done} store{'s' if done != 1 else ''}.", level=messages.SUCCESS)
+        for line in refused[:10]:
+            self.message_user(request, line, level=messages.WARNING)
+
+
+# ---------------------------------------------------------------------------
 # Business taxonomy  categories + subcategories (fee-calculator style)
 # ---------------------------------------------------------------------------
 class BusinessSubCategoryInline(admin.TabularInline):
@@ -404,24 +500,51 @@ class ReservedSubdomainAdmin(LeanModelAdmin):
 
 @admin.register(DemoSiteLink)
 class DemoSiteLinkAdmin(LeanModelAdmin):
-    """Operator-curated "see a live store" links (D2C / B2B) for the pricing page."""
+    """Operator-curated "see a live store" links. Each active one is a card on
+    /demo/ (sorted by order) and turns the home hero button into "See demo"."""
 
-    list_display = ("label", "kind", "is_active", "order", "url")
-    list_editable = ("kind", "is_active", "order")
+    list_display = ("label", "order", "is_active", "kind", "url")
+    list_editable = ("order", "is_active", "kind")
     list_filter = ("kind", "is_active")
     search_fields = ("label", "url", "description")
-    ordering = ("kind", "order")
+    ordering = ("order", "created_at")
+    fieldsets = (
+        (None, {"fields": ("url", "label", "image", "order", "is_active")}),
+        (
+            "Pricing page",
+            {
+                "classes": ("collapse",),
+                "fields": ("kind", "description"),
+                "description": "Optional: how this link is grouped and described on the pricing page.",
+            },
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
-# Marketing-site CMS  core pages (page → subpage → child) + blog, TinyMCE
+# Marketing-site CMS  core pages (page → subpage → child) + blog
 # ---------------------------------------------------------------------------
+# Content is pasted HTML (written in ChatGPT, Claude or by hand), not TinyMCE:
+# the paste-HTML editor (HtmlContentWidget) previews it with the live site
+# styles and uploads images; models clean it on save (web.content_html).
+_CONTENT_HELP = (
+    "Paste HTML: headings (h2, h3), paragraphs, lists, tables, quotes, links and images. "
+    "No styling needed: inline styles, classes and scripts are removed on save and the "
+    "site's theme styles everything. Upload images below and paste their links."
+)
+
+
 def _rich_form(model_cls):
-    """Build a ModelForm whose ``content`` field uses the TinyMCE widget."""
+    """A ModelForm whose ``content`` field is the paste-HTML editor."""
     meta = type(
         "Meta",
         (),
-        {"model": model_cls, "fields": "__all__", "widgets": {"content": TinyMCEWidget()}},
+        {
+            "model": model_cls,
+            "fields": "__all__",
+            "widgets": {"content": HtmlContentWidget()},
+            "help_texts": {"content": _CONTENT_HELP},
+        },
     )
     return type(f"{model_cls.__name__}Form", (forms.ModelForm,), {"Meta": meta})
 
@@ -450,20 +573,31 @@ def _node_json(obj, **extra):
 
 
 def _serialize_tree():
-    """The entire marketing core-page tree, ordered, for the editor's hydration."""
-    pages = MarketingCorePage.objects.all().prefetch_related(
-        "subpages__children"
-    ).order_by("order", "title")
+    """The entire marketing core-page tree (drafts included), ordered, for the
+    editor's hydration.
+
+    Three flat queries sorted in Python: the rows carry long HTML bodies, so an
+    ORDER BY over them is the wide-row sort MySQL rejects (error 1038)."""
+    def ordered(rows):
+        return sorted(rows, key=lambda r: (r.order, (r.title or "").lower()))
+
+    pages = ordered(MarketingCorePage.objects.order_by())
+    subs = ordered(MarketingCoreSubpage.objects.order_by())
+    children = ordered(MarketingCoreChildPage.objects.order_by())
+    kids_of = {}
+    for child in children:
+        kids_of.setdefault(child.subpage_id, []).append(child)
+    subs_of = {}
+    for sub in subs:
+        subs_of.setdefault(sub.core_page_id, []).append(sub)
+
     out = []
     for page in pages:
-        subs = []
-        for sub in page.subpages.all().order_by("order", "title"):
-            children = [
-                _node_json(child)
-                for child in sub.children.all().order_by("order", "title")
-            ]
-            subs.append(_node_json(sub, children=children))
-        out.append(_node_json(page, subpages=subs))
+        subs_out = [
+            _node_json(sub, children=[_node_json(c) for c in kids_of.get(sub.id, [])])
+            for sub in subs_of.get(page.id, [])
+        ]
+        out.append(_node_json(page, subpages=subs_out))
     return out
 
 
@@ -550,6 +684,17 @@ class MarketingCorePageAdmin(LeanModelAdmin):
                 self.admin_site.admin_view(self.tree_save),
                 name="web_marketingcorepage_tree_save",
             ),
+            # Paste-HTML editor endpoints, shared with the blog post form.
+            path(
+                "content/preview/",
+                self.admin_site.admin_view(marketing_content.preview),
+                name="web_content_preview",
+            ),
+            path(
+                "content/upload-image/",
+                self.admin_site.admin_view(marketing_content.upload_image),
+                name="web_content_upload_image",
+            ),
         ]
         return mine + super().get_urls()
 
@@ -570,6 +715,11 @@ class MarketingCorePageAdmin(LeanModelAdmin):
             "tree_data": _serialize_tree(),
             "save_url": reverse("admin:web_marketingcorepage_tree_save"),
             "raw_changelist_url": reverse("admin:web_marketingcorepage_changelist") + "?raw=1",
+            # data-preview-url → editor.preview_url etc., for the template.
+            "editor": {
+                k.removeprefix("data-").replace("-", "_"): v
+                for k, v in editor_attrs(reverse, static).items()
+            },
         }
         return render(request, "admin/web/marketingcorepage/tree.html", context)
 
@@ -1389,34 +1539,215 @@ class UserAgreementAdmin(LeanModelAdmin):
     """The terms shown in the checkout acceptance modal. The most recently
     created active agreement is the one served; author a new one to supersede.
 
+    Publishing a new version (e.g. "2") also asks every owner who bought a plan
+    under an earlier version to accept it: the dashboard shows them an
+    un-dismissable "We have updated our user agreement" popup, and their
+    OTP-confirmed acceptance is logged in Agreement acceptances beside the
+    earlier one (see billing.agreement_update).
+
     ``content`` is edited with the same free (GPL) TinyMCE rich-text editor as
     the marketing core pages and blog  full toolbar, images embedded inline as
     data URIs, assets served same-origin so it works unchanged in production."""
 
     form = _rich_form(UserAgreement)
-    list_display = ("title", "version", "is_active", "created_at")
+    list_display = ("title", "version", "is_active", "acceptance_count", "created_at")
     list_editable = ("is_active",)
     list_filter = ("is_active",)
-    search_fields = ("title", "version", "content")
+    search_fields = ("title", "version")
     fields = ("title", "version", "content", "is_active")
+
+    def get_queryset(self, request):
+        # The body is a wide TEXT column; never sort it (MySQL error 1038).
+        return super().get_queryset(request).defer("content")
+
+    @admin.display(description="Accepted by")
+    def acceptance_count(self, obj):
+        count = AgreementAcceptance.objects.filter(agreement=obj).count()
+        url = reverse("admin:billing_agreementacceptance_changelist") + "?" + urlencode({"agreement__id__exact": obj.pk})
+        return format_html('<a href="{}">{} acceptance{}</a>', url, count, "" if count == 1 else "s")
 
 
 @admin.register(AgreementAcceptance)
 class AgreementAcceptanceAdmin(LeanModelAdmin):
-    """Append-only compliance record of who accepted which agreement. Written by
-    the checkout OTP step; never edited by hand."""
+    """Append-only compliance record of who accepted which agreement version,
+    with the date and time. A new version's acceptance is a new row; earlier
+    versions' rows are never removed, so one owner shows "v1 accepted" and
+    "v2 accepted" side by side. Written by the checkout OTP step, the renewal
+    checkout and the dashboard's updated-agreement popup; never edited by hand."""
 
-    list_display = ("email", "agreement", "ip_address", "created_at")
-    list_filter = ("agreement",)
-    search_fields = ("email", "ip_address")
+    list_display = (
+        "email", "user", "version_accepted", "accepted_date", "accepted_time",
+        "source", "otp_verified", "ip_address",
+    )
+    list_filter = ("agreement", "source", "otp_verified")
+    search_fields = ("email", "ip_address", "agreement_version", "agreement_title")
     date_hierarchy = "created_at"
+    # LeanModelAdmin defers the joined rows' heavy columns (the agreement body).
+    list_select_related = ("user", "agreement")
     readonly_fields = tuple(f.name for f in AgreementAcceptance._meta.fields)
+
+    @admin.display(description="Agreement version", ordering="agreement_version")
+    def version_accepted(self, obj):
+        version = obj.agreement_version or (obj.agreement.version_label if obj.agreement else "")
+        title = obj.agreement_title or (obj.agreement.title if obj.agreement else "")
+        if version and title:
+            return f"{title} · {version}"
+        return version or title or "Built-in default"
+
+    @admin.display(description="Date accepted", ordering="created_at")
+    def accepted_date(self, obj):
+        return timezone.localtime(obj.created_at).strftime("%d %b %Y") if obj.created_at else ""
+
+    @admin.display(description="Time accepted")
+    def accepted_time(self, obj):
+        return timezone.localtime(obj.created_at).strftime("%H:%M:%S") if obj.created_at else ""
 
     def has_add_permission(self, request):
         return False
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    def has_delete_permission(self, request, obj=None):
+        # A compliance record: keep every acceptance, old versions included.
+        return False
+
+
+class WebsiteTemplateForm(forms.ModelForm):
+    class Meta:
+        model = WebsiteTemplate
+        fields = (
+            "name", "description", "thumbnail", "template_type", "pricing", "price",
+            "license_type", "is_available", "order",
+        )
+
+    def clean(self):
+        data = super().clean()
+        if data.get("pricing") == WebsiteTemplate.Pricing.PRICED and not (data.get("price") or 0) > 0:
+            self.add_error("price", "A priced template needs a price above zero.")
+        return data
+
+
+@admin.register(WebsiteTemplate)
+class WebsiteTemplateAdmin(LeanModelAdmin):
+    """Storefront designs owners can pick (Settings → Storefront design, and the
+    create-store form). One row per design deployed in code; new designs appear
+    here automatically once deployed (billing.website_templates.REGISTRY) and
+    cannot be added or deleted by hand.
+
+    Set each design's name, thumbnail and store type, and whether it is free or
+    priced. A priced design is bought through OneWooz's own Cashfree account
+    (plus GST); its licence is either fixed (permanent, bound to the buyer's
+    email) or yearly (expires a year after purchase and must be bought again).
+    Stores already on a design keep it when you price it later."""
+
+    form = WebsiteTemplateForm
+    list_display = (
+        "thumb", "name", "key", "template_type", "pricing", "price_label",
+        "license_type", "is_available", "buyers", "order",
+    )
+    list_display_links = ("thumb", "name")
+    list_editable = ("is_available", "order")
+    list_filter = ("pricing", "license_type", "template_type", "is_available")
+    search_fields = ("name", "key")
+    readonly_fields = ("key", "thumb_large")
+    fieldsets = (
+        (None, {"fields": ("key", "name", "description", "thumbnail", "thumb_large", "template_type", "is_available", "order")}),
+        ("Pricing", {
+            "fields": ("pricing", "price", "license_type"),
+            "description": "Free designs can be used by every store. Priced designs are charged "
+                           "(plus GST) through the platform Cashfree account before they can be used.",
+        }),
+    )
+
+    def get_queryset(self, request):
+        from billing import website_templates
+
+        website_templates.sync()  # newly deployed designs appear on their own
+        return super().get_queryset(request)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Read-only since the marketplace: designs are priced and published in
+        # Marketplace -> App items (OneWooz Templates). Kept for history.
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        self.message_user(
+            request,
+            "Designs are now managed in Marketplace > App items (OneWooz Templates). This list is read-only history.",
+            level=messages.WARNING,
+        )
+        return super().changelist_view(request, extra_context)
+
+    @admin.display(description="Thumbnail")
+    def thumb(self, obj):
+        if obj.thumbnail:
+            try:
+                return format_html('<img src="{}" alt="" style="width:72px;height:54px;object-fit:cover;border:1px solid #ddd;">', obj.thumbnail.url)
+            except Exception:
+                return ""
+        return ""
+
+    @admin.display(description="Thumbnail preview")
+    def thumb_large(self, obj):
+        if obj and obj.thumbnail:
+            try:
+                return format_html('<img src="{}" alt="" style="max-width:360px;border:1px solid #ddd;">', obj.thumbnail.url)
+            except Exception:
+                return ""
+        return "No thumbnail yet."
+
+    @admin.display(description="Price")
+    def price_label(self, obj):
+        if not obj.is_priced:
+            return "Free"
+        suffix = " / year" if obj.is_yearly else " one-time"
+        return f"\u20b9{obj.price:,.2f}{suffix}"
+
+    @admin.display(description="Buyers")
+    def buyers(self, obj):
+        count = TemplatePurchase.objects.filter(
+            template_key=obj.key, status=TemplatePurchase.Status.PAID
+        ).count()
+        url = reverse("admin:billing_templatepurchase_changelist") + "?" + urlencode(
+            {"template_key": obj.key, "status__exact": TemplatePurchase.Status.PAID}
+        )
+        return format_html('<a href="{}">{}</a>', url, count)
+
+
+@admin.register(TemplatePurchase)
+class TemplatePurchaseAdmin(LeanModelAdmin):
+    """Ledger of website template purchases. Created by the store Settings
+    checkout and confirmed only by fetching Cashfree; money fields are locked.
+    A permanent licence has no expiry; a yearly one shows when it ends."""
+
+    list_display = (
+        "number", "template_name", "email", "license_type", "total_amount",
+        "status", "paid_at", "expires_at", "licence_state",
+    )
+    list_filter = ("status", "license_type", "template_key")
+    search_fields = ("number", "email", "cf_order_id", "template_name")
+    date_hierarchy = "created_at"
+    readonly_fields = tuple(
+        f.name for f in TemplatePurchase._meta.fields if f.name not in ("status", "expires_at")
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.display(description="Licence")
+    def licence_state(self, obj):
+        if not obj.is_paid:
+            return "-"
+        if obj.expires_at is None:
+            return "Permanent"
+        return "Active" if obj.is_current else "Expired"
 
 
 class SubscriptionInviteForm(forms.ModelForm):
@@ -1575,6 +1906,34 @@ class NotificationAdmin(LeanModelAdmin):
             "fields": ("is_read", "read_at", "created_at", "updated_at"),
         }),
     )
+
+
+# BROWSER PUSH: DISABLED (commented out, not removed). Uncomment this class and
+# the PushSubscription import above to list subscribed browsers again.
+#
+# @admin.register(PushSubscription)
+# class PushSubscriptionAdmin(LeanModelAdmin):
+#     """Browsers that receive an owner's notifications as system pop-ups.
+#
+#     Created only by the owner clicking "Allow" in their browser, so there is
+#     nothing to add here. Deleting a row stops pop-ups on that browser until the
+#     owner next opens the dashboard there (it re-subscribes silently while the
+#     browser still allows OneWooz).
+#     """
+#
+#     list_display = ("user", "device_label", "created_at", "last_success_at", "failure_count")
+#     search_fields = ("user__email", "device_label")
+#     readonly_fields = (
+#         "user", "device_label", "user_agent", "endpoint", "session_expires_at",
+#         "last_success_at", "last_failure_at", "failure_count", "created_at", "updated_at",
+#     )
+#     exclude = ("p256dh", "auth")
+#
+#     def has_add_permission(self, request):
+#         return False
+#
+#     def has_change_permission(self, request, obj=None):
+#         return False
 
 
 # ---------------------------------------------------------------------------
@@ -2402,4 +2761,8 @@ class MarketingSeoSettingsAdmin(LeanModelAdmin):
 
 # Everything else (models without a bespoke admin above) is auto-registered;
 # is_registered() means these explicit registrations are left untouched.
+# OneWooz Apps (marketplace): its own module, registered before the generic
+# catch-all so its curated admins win.
+from . import marketplace_admin  # noqa: E402,F401
+
 _register_all()

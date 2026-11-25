@@ -1,0 +1,14 @@
+{% autoescape off %}New answer: {{ question }}
+
+Hi {{ name }}, {% if by_team %}the OneWooz team{% else %}{{ by }}{% endif %} answered your question:
+
+{{ preview }}
+
+Read it: {{ url }}
+
+If it solved your problem, mark it as accepted so the next seller finds it faster.
+
+Stop emails about new answers: {{ off_url }}
+
+{{ brand }}
+{% endautoescape %}

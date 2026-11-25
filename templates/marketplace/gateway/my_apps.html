@@ -1,0 +1,57 @@
+{% extends "ud/_shell.html" %}
+{% block title %}Apps · OneWooz{% endblock %}
+{% block crumb %}Apps{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">OneWooz Apps</p>
+    <h1 class="app-head__title pal-mt-4">Your apps</h1>
+    <p class="app-head__lead">Every app here is also in your dashboard menu and works across all your stores. Set each one up per store.</p>
+  </div>
+  <div class="app-head__actions"><a class="pal-btn" href="{{ marketplace_home }}">Browse the marketplace</a></div>
+  </div>
+
+  <div class="mkt-apps app-block">
+    {% for row in rows %}
+    <article class="app-card mkt-app">
+      <div class="app-card__body">
+        <div class="mkt-app__top">
+          <span class="mkt-app__ico" style="--tile:{{ row.app.accent|default:'#4b2bf5' }}" aria-hidden="true">{% if row.app.icon %}<img src="{{ row.app.icon.url }}" alt="">{% else %}{% include "store/_icons.html" with icon=row.app.icon_key %}{% endif %}</span>
+          <div>
+            <div class="mkt-app__name">
+              <h2 class="app-card__title">{{ row.app.name }}</h2>
+              {% if row.app.is_system %}<span class="app-badge app-badge--accent">Default</span>{% endif %}
+            </div>
+            {% if row.app.tagline %}<p class="mkt-app__text">{{ row.app.tagline }}</p>{% endif %}
+          </div>
+        </div>
+        {% if row.paused %}<p class="mkt-note mkt-note--warn">Paused by OneWooz while we look into a problem. Your settings are safe.</p>{% endif %}
+        {% if row.licences %}
+        <ul class="mkt-lics">
+          {% for lic in row.licences %}
+            <li>{{ lic.name_snapshot }} &middot; {{ lic.get_source_display }}{% if lic.expires_at %} &middot; until {{ lic.expires_at|date:"j M Y" }}{% else %} &middot; permanent{% endif %}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      {% if row.stores or not row.app.is_system %}
+      <div class="app-card__foot mkt-app__foot">
+        {% for s in row.stores %}{% if forloop.first %}<a class="pal-btn pal-btn--sm" href="{{ s.url }}">Open</a>{% endif %}{% endfor %}
+        {# A default app is on every dashboard, so it has no Remove. #}
+        {% if not row.app.is_system %}<a class="mkt-remove" href="{% url 'mkt_gateway:uninstall' row.app.slug %}">Remove</a>{% endif %}
+        {% if row.stores|length > 1 %}
+        <p class="mkt-app__also">Other stores: {% for s in row.stores|slice:"1:" %}<a href="{{ s.url }}">{{ s.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+    </article>
+    {% empty %}
+    <div class="app-empty">
+      <h2 class="app-empty__title">No apps yet</h2>
+      <p class="app-empty__text">Browse OneWooz Apps to add designs and tools to your stores.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

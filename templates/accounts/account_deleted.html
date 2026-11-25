@@ -1,0 +1,22 @@
+{% extends "accounts/_auth_shell.html" %}
+
+{% block title %}Account deleted · OneWooz{% endblock %}
+{% block auth_title %}Your account is deleted{% endblock %}
+
+{% block auth_body %}
+  <p class="auth__subtitle mt-4">
+    You have been signed out and your websites are offline. Your account and
+    website data stay on our servers for {{ retention_days }} days{% if recover_until %}, until
+    <strong style="color:var(--text);">{{ recover_until|date:"j M Y" }}</strong>{% endif %}.
+  </p>
+  <ol class="mt-5" style="margin-bottom:0; padding-left:1.1rem; line-height:1.6; color:var(--text-muted, inherit);">
+    <li>To restore everything, just sign in again with the same email within {{ retention_days }} days.</li>
+    <li>If your plan has expired, renew it when asked; your dashboard and websites come back once the payment goes through.</li>
+    <li>After {{ retention_days }} days your account and websites can no longer be restored.</li>
+  </ol>
+  <a href="{% url 'accounts:sign_in' %}" class="btn btn--secondary btn--block mt-6">Changed your mind? Sign in to restore</a>
+{% endblock %}
+
+{% block auth_footer %}
+  <p class="auth__footer">Your orders and customer records are kept on our servers.</p>
+{% endblock %}

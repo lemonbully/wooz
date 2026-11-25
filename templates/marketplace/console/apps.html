@@ -1,0 +1,41 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Apps{% endblock %}
+{% block crumbs %}<span>/</span><span>Apps</span>{% endblock %}
+{% block heading %}Apps{% endblock %}
+{% block lead %}<p>Every app on the marketplace. Open one to set its price, where it shows in the dashboard, what it puts on stores and what owners fill in.</p>{% endblock %}
+{% block actions %}{% if can_write %}<a class="pal-btn" href="{% url 'mkt_console:app_new' %}">New app <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>{% endif %}{% endblock %}
+
+{% block main %}
+<div class="mc-toolbar">
+  <a class="mc-filter" href="?"{% if not status %} aria-current="page"{% endif %}>All</a>
+  {% for key, label in statuses %}<a class="mc-filter" href="?status={{ key }}{% if q %}&q={{ q|urlencode }}{% endif %}"{% if status == key %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+  <form method="get" style="margin-left:auto;">
+    {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+    <input type="search" name="q" value="{{ q }}" placeholder="Search name or address">
+  </form>
+</div>
+
+<section class="mc-panel">
+  <div class="mc-tablewrap">
+    <table class="mc-table">
+      <thead><tr><th>App</th><th>Status</th><th>Price</th><th>Who gets it</th><th class="num">Installs</th><th class="num">Dashboard / store</th><th>Health</th><th></th></tr></thead>
+      <tbody>
+        {% for a in rows %}
+        <tr>
+          <td><a class="mc-name" href="{% url 'mkt_console:app_edit' a.pk %}">{% include "marketplace/console/_app_icon.html" %}<span><b>{{ a.name }}</b><small>/apps/{{ a.slug }}/</small></span></a></td>
+          <td>{% if a.is_paused %}<span class="mc-chip mc-chip--paused">Paused</span>{% else %}<span class="mc-chip mc-chip--{{ a.status }}">{{ a.status_label }}</span>{% endif %}</td>
+          <td class="mc-mono">{{ a.pricing_label }}</td>
+          <td>{% if a.is_system %}<span class="mc-chip mc-chip--accent">System</span>{% elif a.is_default %}<span class="mc-chip mc-chip--accent">Pre-installed</span>{% else %}<span class="mc-muted">{{ a.get_fits_display }}</span>{% endif %}</td>
+          <td class="num">{{ a.n_installs }}</td>
+          <td class="num mc-mono">{{ a.n_dash }} / {{ a.n_store }}</td>
+          <td><span class="mc-chip mc-chip--{{ a.health_state }}">{% if a.health_state == "closed" %}Healthy{% elif a.health_state == "open" %}Tripped{% else %}Trying again{% endif %}</span></td>
+          <td><a class="mc-panel__link" href="{% url 'mkt_console:app_edit' a.pk %}">Edit &rarr;</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="mc-empty">No apps match.{% if can_write %} <a class="mc-panel__link" href="{% url 'mkt_console:app_new' %}">Create one</a>{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

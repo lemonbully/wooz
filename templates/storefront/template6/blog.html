@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Article | Lumo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+<main class="container">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><a href="blogs.html">Journal</a><span class="sep">/</span><span data-crumb></span></nav>
+  <header style="max-width:860px;margin:10px auto 0;text-align:center">
+    <span class="badge badge--popular" data-tag></span>
+    <h1 class="mega" style="margin:16px 0" data-title></h1>
+    <div class="author" style="justify-content:center"><img src="" data-author alt=""><div style="text-align:left"><b>Meera Iyer</b><div class="small muted" data-meta></div></div></div>
+  </header>
+  <div class="article-hero"><img src="" data-hero alt=""></div>
+
+  <div class="article-layout">
+    <aside class="toc"><p class="eyebrow" style="margin-bottom:10px">In this article</p><a href="#s1">Start with one room</a><a href="#s2">The five devices</a><a href="#s3">Make scenes</a><a href="#s4">Keep it simple</a></aside>
+    <article class="prose">
+      <p>A smart home is not about owning more gadgets. It is about a few devices that work so well together that you forget they are there.</p>
+      <h2 id="s1">Start with one room</h2>
+      <p>Pick the room you spend the most time in and automate one routine there, usually lighting in the evening.</p>
+      <blockquote>“The best smart home is the one you never have to think about.”</blockquote>
+      <h2 id="s2">The five devices</h2>
+      <ul><li>A tunable floor lamp for evenings</li><li>A pendant over the table or desk</li><li>Headphones for calls and focus</li><li>A diffuser on a sleep schedule</li><li>A watch that tracks your rest</li></ul>
+      <img src="" data-inline alt="">
+      <h2 id="s3">Make scenes</h2>
+      <p>Group devices into scenes like Wake, Focus and Wind down, then put them on a schedule. One tap, or none at all.</p>
+      <h2 id="s4">Keep it simple</h2>
+      <p>Live with one room for a few weeks before adding more. The routines you miss tell you what to automate next.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:30px"><span class="tag">Guide</span><span class="tag">Basics</span><span class="tag">Scenes</span></div>
+    </article>
+    <aside class="aside-r">
+      <div style="position:sticky;top:100px">
+        <p class="eyebrow" style="margin-bottom:12px">Shop the article</p>
+        <div style="display:grid;gap:14px" data-shop></div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="section" style="padding-bottom:0">
+    <div class="sec-head"><h2 class="h2">Keep reading</h2><a href="blogs.html" class="btn btn--outline btn--sm">All articles</a></div>
+    <div class="grid grid--3" data-more></div>
+  </section>
+</main>
+<div data-footer></div>
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, $ = T3.$;
+  const b = D.blogs.find(x => x.slug === T3.qs('b')) || D.blogs[0];
+  document.title = `${b.title} | Lumo`;
+  $('[data-crumb]').textContent = b.title; $('[data-tag]').textContent = b.tag; $('[data-title]').textContent = b.title;
+  $('[data-meta]').textContent = `${b.date} · ${b.read}`;
+  $('[data-author]').src = D.U(D.IMG.p5, 100, 100);
+  $('[data-hero]').src = b.img.replace('w=1200', 'w=2000').replace('h=900', 'h=860');
+  $('[data-inline]').src = D.U(D.IMG.living5, 1400, 800);
+  $('[data-shop]').innerHTML = D.products.slice(0, 3).map(p => `<a class="search-hit" href="product.html?p=${p.id}"><img src="${p.img[0]}" alt=""><span><b>${p.name}</b>${T3.priceHTML(p)}</span></a>`).join('');
+  $('[data-more]').innerHTML = D.blogs.filter(x => x.slug !== b.slug).slice(0, 3).map(x => `<a class="blog-card reveal" href="blog.html?b=${x.slug}"><div class="blog-card__media"><img src="${x.img}" alt="" loading="lazy"><span class="badge badge--light">${x.tag}</span></div><div class="blog-card__meta">${x.date}<i></i>${x.read}</div><h3>${x.title}</h3><p>${x.excerpt}</p></a>`).join('');
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

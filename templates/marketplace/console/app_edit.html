@@ -1,0 +1,146 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}{% if app %}{{ app.name }}{% else %}New app{% endif %}{% endblock %}
+{% block crumbs %}<span>/</span><a href="{% url 'mkt_console:apps' %}">Apps</a><span>/</span><span>{% if app %}{{ app.name }}{% else %}New{% endif %}</span>{% endblock %}
+{% block heading %}{% if app %}<span class="mc-apphead">{% include "marketplace/console/_app_icon.html" with a=app large=True %}<span>{{ app.name }}</span></span>{% else %}New app{% endif %}{% endblock %}
+{% block lead %}
+  {% if app %}
+  <p>
+    {% if app.is_paused %}<span class="mc-chip mc-chip--paused">Paused</span>{% else %}<span class="mc-chip mc-chip--{{ app.status }}">{{ app.status_label }}</span>{% endif %}
+    <span class="mc-chip">{{ app.pricing_label }}</span>
+    {% if app.is_system %}<span class="mc-chip mc-chip--accent">System app</span>{% endif %}
+    {% if module %}<span class="mc-chip">Module: {{ module.name }}</span>{% endif %}
+  </p>
+  {% else %}
+  <p>Give it a name and an address first. After saving you can add the owner form, dashboard placements, storefront widgets and items.</p>
+  {% endif %}
+{% endblock %}
+{% block actions %}
+  {% if app %}
+    {% if marketplace_url and app.status != "draft" %}<a class="pal-btn pal-btn--ghost" href="{{ marketplace_url }}" target="_blank" rel="noopener">View live &#8599;</a>{% endif %}
+    {% if can_write %}
+      {% if app.status != "published" %}<form method="post" action="{% url 'mkt_console:app_action' app.pk %}" class="mc-inline">{% csrf_token %}<input type="hidden" name="action" value="publish"><button class="pal-btn" type="submit">Publish</button></form>{% endif %}
+      {% if app.status == "published" %}<form method="post" action="{% url 'mkt_console:app_action' app.pk %}" class="mc-inline">{% csrf_token %}<input type="hidden" name="action" value="unlist"><button class="pal-btn pal-btn--ghost" type="submit">Unlist</button></form>{% endif %}
+      {% if not app.is_system and app.status != "retired" %}<form method="post" action="{% url 'mkt_console:app_action' app.pk %}" class="mc-inline" data-confirm="Retire {{ app.name }}? It disappears from the marketplace but keeps working for owners who have it.">{% csrf_token %}<input type="hidden" name="action" value="retire"><button class="pal-btn pal-btn--ghost" type="submit">Retire</button></form>{% endif %}
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block main %}
+{% if app %}
+<nav class="mc-tabs" aria-label="App sections">
+  {% for key, label in tabs %}
+    {% if key != "items" or module or app.items.exists %}
+    <a href="?tab={{ key }}"{% if tab == key %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endif %}
+  {% endfor %}
+</nav>
+{% endif %}
+
+<div class="mc-editor">
+  <div>
+    {% if tab == "general" %}
+    <form method="post" enctype="multipart/form-data" class="mc-form">
+      {% csrf_token %}
+      <input type="hidden" name="tab" value="general">
+      {% if form.non_field_errors %}<div class="mc-errors">{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+      {% for title, names in sections %}
+      <section class="mc-section">
+        <div class="mc-section__head"><h2 class="mc-panel__title">{{ title }}</h2></div>
+        <div class="mc-section__body">
+          {% for field in form %}{% if field.name in names %}{% include "marketplace/console/_field.html" %}{% endif %}{% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+      {% if can_write %}<div class="mc-actions"><button class="pal-btn" type="submit">{% if app %}Save changes{% else %}Create app{% endif %} <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button><span class="mc-help">Saving recompiles every store that has this app, in the background.</span></div>{% endif %}
+    </form>
+    {% else %}
+    <form method="post" enctype="multipart/form-data" class="mc-form">
+      {% csrf_token %}
+      <input type="hidden" name="tab" value="{{ tab }}">
+      {% if tab == "form" %}{% include "marketplace/console/_formset.html" with noun="field" %}
+      {% elif tab == "dashboard" %}{% include "marketplace/console/_formset.html" with noun="placement" %}
+      {% elif tab == "storefront" %}{% include "marketplace/console/_formset.html" with noun="widget" %}
+      {% elif tab == "items" %}{% include "marketplace/console/_formset.html" with noun="item" %}
+      {% elif tab == "screens" %}{% include "marketplace/console/_formset.html" with noun="screenshot" %}{% endif %}
+      {% if can_write %}<div class="mc-actions"><button class="pal-btn" type="submit">Save <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button><span class="mc-help">Fill the dashed card to add one more. Save, and another empty card appears.</span></div>{% endif %}
+    </form>
+    {% endif %}
+  </div>
+
+  <aside class="mc-aside">
+    {% if app %}
+    <section class="mc-panel">
+      <div class="mc-panel__head"><h2 class="mc-panel__title">Live state</h2></div>
+      <div class="mc-panel__body">
+        <ul class="mc-facts">
+          <li><span>Installs</span><span>{{ info.installs }}</span></li>
+          <li><span>Active licences</span><span>{{ info.licences }}</span></li>
+          <li><span>Health</span><span>{{ info.health }}</span></li>
+          <li><span>Errors ({{ app.breaker_window_minutes }} min)</span><span>{{ info.errors }} / {{ app.breaker_threshold }}</span></li>
+          <li><span>Config version</span><span>{{ app.config_version }}</span></li>
+        </ul>
+        <a class="mc-panel__link" href="{% url 'mkt_console:logs' %}?app={{ app.slug|urlencode }}">Working logs &rarr;</a>
+      </div>
+    </section>
+
+    {% if can_write %}
+    <section class="mc-panel">
+      <div class="mc-panel__head"><h2 class="mc-panel__title">Kill switch</h2></div>
+      <div class="mc-panel__body" style="display:grid;gap:.75rem;">
+        {% if app.is_paused %}
+          <p class="mc-help">Paused{% if app.paused_until %} until {{ app.paused_until|date:"j M, H:i" }}{% endif %}: {{ app.pause_reason }}</p>
+          <form method="post" action="{% url 'mkt_console:app_action' app.pk %}">{% csrf_token %}<input type="hidden" name="action" value="resume"><button class="pal-btn" type="submit">Resume now</button></form>
+        {% else %}
+          <p class="mc-help">Hides this app's dashboard pages and storefront widgets everywhere at once. Licences and settings stay.</p>
+          <form method="post" action="{% url 'mkt_console:app_action' app.pk %}" style="display:grid;gap:.6rem;" data-confirm="Pause {{ app.name }} everywhere?">
+            {% csrf_token %}<input type="hidden" name="action" value="pause">
+            <label class="mc-label" for="p-min">Minutes (0 = until resumed)</label>{{ pause_form.minutes }}
+            <label class="mc-label" for="p-reason">Reason</label><input id="p-reason" type="text" name="reason" maxlength="200" required>
+            <button class="pal-btn mc-btn-danger" type="submit">Pause app</button>
+          </form>
+        {% endif %}
+        <form method="post" action="{% url 'mkt_console:app_action' app.pk %}">{% csrf_token %}<input type="hidden" name="action" value="recompile"><button class="mc-linkbtn" type="submit">Recompile stores now</button></form>
+      </div>
+    </section>
+    {% endif %}
+    {% endif %}
+
+    <section class="mc-panel">
+      <div class="mc-panel__head"><h2 class="mc-panel__title">Reference</h2></div>
+      <div class="mc-panel__body">
+        {% if tab == "storefront" %}
+          <ul class="mc-ref">
+            {% for key, w in widget_help.items %}
+            <li><b>{{ w.label }}</b><span>{{ w.description }}</span><span>Reads: {% for f in w.fields %}<code>{{ f }}</code> {% empty %}nothing{% endfor %}{% if w.required %} &middot; needs {% for f in w.required %}<code>{{ f }}</code> {% endfor %}{% endif %}</span></li>
+            {% endfor %}
+          </ul>
+          <p class="mc-help" style="margin-top:1rem;">Owner values come from the Owner settings form fields with the same key. Put fixed values in Options as JSON, e.g. <code>{"bg_color": "#111111"}</code>.</p>
+        {% elif tab == "form" %}
+          <ul class="mc-ref">{% for f in field_types %}<li><b>{{ f.label }}</b> <code>{{ f.key }}</code>{% if f.help %}<span>{{ f.help }}</span>{% endif %}</li>{% endfor %}</ul>
+        {% elif tab == "dashboard" %}
+          <ul class="mc-ref">{% for key, label in points %}<li><code>{{ key }}</code><span>{{ label }}</span></li>{% endfor %}</ul>
+          {% if module %}<p class="mc-help" style="margin-top:1rem;">Module pages: {% for k, v in module.page_choices %}<code>{{ k }}</code> {% empty %}none{% endfor %}</p>{% endif %}
+        {% elif tab == "items" %}
+          <p class="mc-help">Items are what's sold inside the app. For OneWooz Templates these are the designs; the quickest place to price them is <a class="mc-panel__link" href="{% url 'mkt_console:designs' %}">Designs</a>.</p>
+        {% else %}
+          <ul class="mc-ref">
+            <li><b>Kind</b><span>System apps are pre-installed and can never be removed or hidden.</span></li>
+            <li><b>Price</b><span>Paid apps renew yearly or monthly by buying again; never charged automatically. GST is added at checkout.</span></li>
+            <li><b>Billing cycles</b><span>Pick pricing "Billing cycles" to let owners choose monthly, quarterly, half-yearly or yearly. Each price is per month (owner pays it x the months, up front). Use different prices, or tick "Same price for every cycle" to use Price for all four. Blank = cycle not offered.</span></li>
+            {% if app and app.pricing == "cycles" %}{% for c in app.cycle_options %}<li><b>{{ c.label }}</b><span>&#8377;{{ c.per_month }} / month &middot; billed &#8377;{{ c.total }} every {{ c.billed }}{% if c.save_pct %} &middot; save {{ c.save_pct }}%{% endif %}</span></li>{% endfor %}{% endif %}
+            <li><b>Status</b><span>Unlisted = direct link only. Retired = hidden, still works for owners who have it.</span></li>
+            <li><b>Safety</b><span>Errors over the threshold in the window auto-pause the app and alert staff.</span></li>
+          </ul>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if info.revisions %}
+    <section class="mc-panel">
+      <div class="mc-panel__head"><h2 class="mc-panel__title">Recent changes</h2><a class="mc-panel__link" href="{% url 'mkt_console:activity' %}">All &rarr;</a></div>
+      <div class="mc-panel__body"><ul class="mc-ref">{% for r in info.revisions %}<li><b>{{ r.object_kind }}</b><span>{{ r.actor_label }} &middot; {{ r.created_at|timesince }} ago</span></li>{% endfor %}</ul></div>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

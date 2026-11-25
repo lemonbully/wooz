@@ -159,7 +159,9 @@ _STATIC_HOST = AWS_STATIC_CUSTOM_DOMAIN or (
 )
 
 STORAGES = {
-    "default": {"BACKEND": "storages.backends.s3.S3Storage"},
+    # S3, plus automatic in-place compression of every uploaded video
+    # (commerce.media_storage -> commerce.tasks.optimise_video).
+    "default": {"BACKEND": "commerce.media_storage.MediaStorage"},
     "staticfiles": {
         # S3 + manifest hashing, with CSS/JS minified in place at collectstatic
         # time (see onewooz.staticfiles). Production only  dev keeps the plain,

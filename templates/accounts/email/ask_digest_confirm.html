@@ -1,0 +1,10 @@
+{% extends "email/base.html" %}
+{% block preheader %}Confirm your Ask OneWooz weekly digest. One click.{% endblock %}
+{% block kicker %}Ask OneWooz{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text="Weekly digest" %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:23px; letter-spacing:-0.02em; line-height:1.15; color:#0a0a0b; margin:0 0 16px 0;">Confirm your weekly digest</h1>
+  <p style="margin:0 0 16px 0;">Every Monday morning: the question of the week, the most helpful answers, and what still needs an answer on Ask OneWooz.</p>
+  {% include "email/_button.html" with url=url label="Confirm my subscription" %}
+  {% include "email/_note.html" with text="If you didn't sign up, ignore this email and you won't hear from us." %}
+{% endblock %}

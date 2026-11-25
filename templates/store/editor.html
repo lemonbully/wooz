@@ -1,4 +1,5 @@
 {% extends "store/_shell.html" %}
+{% load marketplace_points %}
 {% load static %}
 
 {% block title %}Edit content · {{ site.name }} · OneWooz{% endblock %}
@@ -27,6 +28,7 @@ the rules arrived and the page flashed unstyled for a second on every visit.
       <a href="{{ storefront_url }}" target="_blank" rel="noopener" class="pal-btn pal-btn--ghost">View storefront →</a>
     </div>
   </header>
+  {% app_point "editor_link" %}
 
   {# ---- Section tabs with left/right steppers (one item per click) ---- #}
   <div class="ed-tabs-wrap">
@@ -50,6 +52,7 @@ the rules arrived and the page flashed unstyled for a second on every visit.
 {{ content_data|json_script:"ed-content" }}
 {{ datasets|json_script:"ed-datasets" }}
 {{ demo_media|json_script:"ed-demo" }}
+{{ magic_seo|json_script:"ed-magic-seo" }}
 
 
 <script nonce="{{ csp_nonce }}">
@@ -586,6 +589,8 @@ the rules arrived and the page flashed unstyled for a second on every visit.
     if (t === "map") return mapInput(field, value);
     if (t === "schedule") return scheduleInput(field, value);
     var inp = el("input", "ed-input", { type: t === "number" ? "number" : "text", "data-field": field.name });
+    // A credential (e.g. the reCAPTCHA secret key): masked, never autofilled.
+    if (field.secret) { inp.type = "password"; inp.autocomplete = "new-password"; inp.spellcheck = false; }
     if (field.placeholder) inp.placeholder = field.placeholder;
     if (field.maxlength && t !== "number") inp.maxLength = field.maxlength;
     inp.value = v(value); return inp;
@@ -812,6 +817,17 @@ the rules arrived and the page flashed unstyled for a second on every visit.
     var selfLabelled = field.type === "seo_pages" || field.editor === "seo_home" || (field.type === "list" && (field.editor === "banner" || field.editor === "tabs" || field.editor === "announcement" || field.editor === "reels" || field.editor === "blogs" || field.editor === "pages" || field.editor === "certificates"));
     if (!field.hide_label && field.type !== "checkbox" && !selfLabelled) {
       var lab = el("label", "ed-field__label"); lab.textContent = field.label || field.name; wrap.appendChild(lab);
+      // "!" tooltip on fields that matter for ranking (commerce/views/editor.py
+      // _rank_hints); same .app-tip look as the product form's field tips.
+      if (field.rank_hint) {
+        var tip = el("span", "app-tip", { tabindex: "0", role: "button", "aria-label": "Why this field matters" });
+        var ico = el("span", "app-tip__ico", { "aria-hidden": "true" }); ico.textContent = "!";
+        var bub = el("span", "app-tip__bubble", { role: "tooltip" }); bub.textContent = field.rank_hint;
+        tip.appendChild(ico); tip.appendChild(bub);
+        // Keep a click on the icon from focusing the label's input.
+        tip.addEventListener("click", function (e) { e.preventDefault(); });
+        lab.appendChild(tip);
+      }
     }
     if (field.type === "object" && field.editor === "seo_home") {
       // SEO tab, "Same for every page": the brand set in the Home-page form.
@@ -2812,9 +2828,10 @@ the rules arrived and the page flashed unstyled for a second on every visit.
   // fields inside every banner row. Called on load, on style change, and after
   // a banner is added.
   function syncStyleOnly(panel) {
+    // No picker (Template 2 has a single hero layout): no style is chosen, so
+    // every style-only field stays hidden. Hidden fields still save their values.
     var ctrl = panel.querySelector("[data-field='hero_banner_style']");
-    if (!ctrl) return;
-    var val = ctrl.value;
+    var val = ctrl ? ctrl.value : null;
     Array.prototype.forEach.call(panel.querySelectorAll("[data-style-only]"), function (w) {
       // A field that is also conditional (show_if) stays hidden while its
       // condition is off, even on its own style (see wireConditionals).
@@ -2878,7 +2895,7 @@ the rules arrived and the page flashed unstyled for a second on every visit.
         var only = wrap.getAttribute("data-style-only");
         var panel = only ? wrap.closest(".ed-panel") : null;
         var styleCtrl = panel ? panel.querySelector("[data-field='hero_banner_style']") : null;
-        var styleOk = !only || !styleCtrl || styleCtrl.value === only;
+        var styleOk = !only || (!!styleCtrl && styleCtrl.value === only);
         wrap.style.display = (on && styleOk) ? "" : "none";
       }
       ctrl.addEventListener("change", apply); ctrl.addEventListener("input", apply); apply();
@@ -2959,15 +2976,23 @@ the rules arrived and the page flashed unstyled for a second on every visit.
   }
 
   var timers = {};
-  function queueSave(key) { clearTimeout(timers[key]); setStatus("saving"); timers[key] = setTimeout(function () { doSave(key); }, 650); }
+  function queueSave(key) {
+    // While Magic SEO is writing the SEO tab, the tab is read-only: a save
+    // from it would race the run's own write.
+    if (key === "seo" && magicBusy) return;
+    clearTimeout(timers[key]); setStatus("saving"); timers[key] = setTimeout(function () { doSave(key); }, 650);
+  }
   function doSave(key) {
     var section = SECTIONS.filter(function (s) { return s.key === key; })[0]; if (!section) return;
     syncRichtext();
     fetch(saveBase.replace("SECTION", key), { method:"POST", headers:{ "Content-Type":"application/json", "X-CSRFToken": csrf }, body: JSON.stringify({ values: gatherSection(section) }) })
       .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
-      .then(function () {
+      .then(function (d) {
         setStatus("saved");
-        showSavedToast();
+        // A field the server could not store (e.g. a malformed reCAPTCHA key):
+        // the rest saved, the owner is told what to fix.
+        if (d && d.warning && window.OWToast) window.OWToast.error(d.warning);
+        else showSavedToast();
       })
       .catch(function () { setStatus("error"); });
   }
@@ -3089,6 +3114,532 @@ the rules arrived and the page flashed unstyled for a second on every visit.
     return box;
   }
 
+  // ---- Magic SEO (marketplace app): the SEO tab's pencil -------------------
+  // Shown only when the server sends MAGIC (the owner has Magic SEO installed
+  // and licensed, and the SEO tab is in their plan). The pencil starts a run on
+  // the server that writes every field of every page; the tab turns read-only
+  // with a progress bar, then is redrawn from the saved content. "Options" sets
+  // the brief and fill mode; "Undo last run" puts the tab back as it was.
+  var MAGIC = JSON.parse((document.getElementById("ed-magic-seo") || {}).textContent || "null");
+  var magicRun = MAGIC ? (MAGIC.run || {}) : {};
+  var magicBusy = false, magicPollTimer = null, magicPollFails = 0, magicDlg = null, magicFetchedFor = null;
+  var MS_PENCIL = '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>';
+  var MS_CHECK = '<path d="M20 6 9 17l-5-5"/>';
+  var MS_SPARK = '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/><path d="M19 16v4M17 18h4"/>';
+
+  function magicIsActive(r) { return !!r && (r.status === "queued" || r.status === "running"); }
+  function magicPost(url, data) {
+    return fetch(url, {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf, "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify(data || {})
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) { d = d || {}; d._status = r.status; return d; });
+    });
+  }
+  function magicToast(kind, msg) {
+    if (window.OWToast && window.OWToast[kind]) window.OWToast[kind](msg);
+    else if (kind === "error") window.alert(msg);
+  }
+
+  // The block shares the "SEO scope" row (scope on the left 8 columns, Magic
+  // SEO on the right 4), built like a field: a label row (with Options and
+  // Undo), the pencil button level with the scope buttons, and a help line.
+  function buildMagicSeo(panel) {
+    var bar = el("div", "ms", { role: "region", "aria-label": "Magic SEO" });
+    bar.innerHTML =
+      '<div class="ms__head">' +
+        '<span class="ed-field__label ms__label">' + svg(MS_SPARK, 12) + '<span>Magic SEO</span><span class="ms__tag">App</span></span>' +
+        '<span class="ms__actions">' +
+          '<button type="button" class="ms__link" data-ms-options>Options</button>' +
+          '<button type="button" class="ms__link" data-ms-undo hidden>Undo</button>' +
+        '</span>' +
+      '</div>' +
+      '<button type="button" class="ms__run" data-ms-run title="Magic SEO: write the SEO for every page">' +
+        '<span class="ms__ico" aria-hidden="true">' + svg(MS_PENCIL, 15) + '</span>' +
+        '<span class="ms__runlabel" data-ms-runlabel>Write SEO for every page</span>' +
+      '</button>' +
+      '<span class="ms__progress" data-ms-progress hidden><span class="ms__track"><span class="ms__fill" data-ms-fill></span></span><span class="ms__count" data-ms-count></span></span>' +
+      '<p class="ed-field__help ms__sub" data-ms-sub></p>';
+    var scope = panel.querySelector(":scope > [data-field-wrap='seo_mode']");
+    if (scope) {
+      panel.classList.add("has-ms");
+      scope.parentNode.insertBefore(bar, scope.nextSibling);
+    } else {
+      panel.insertBefore(bar, panel.firstChild);
+    }
+    // Once a run is done the main button shows what changed instead of
+    // starting again; running again is a deliberate step (Run again).
+    bar.querySelector("[data-ms-run]").addEventListener("click", function () {
+      if ((magicRun || {}).status === "done") openMagicReport(); else magicStart(null);
+    });
+    bar.querySelector("[data-ms-options]").addEventListener("click", openMagicDialog);
+    bar.querySelector("[data-ms-undo]").addEventListener("click", magicUndo);
+    renderMagic();
+  }
+
+  function renderMagic() {
+    var panel = document.getElementById("ed-panel-seo");
+    var bar = panel ? panel.querySelector(":scope > .ms") : null;
+    if (panel) {
+      panel.classList.toggle("ms-busy", magicBusy);
+      Array.prototype.forEach.call(panel.children, function (c) {
+        if (c === bar) return;
+        if (magicBusy) c.setAttribute("inert", ""); else c.removeAttribute("inert");
+      });
+    }
+    if (!bar) return;
+    var r = magicRun || {};
+    var run = bar.querySelector("[data-ms-run]");
+    var runLabel = bar.querySelector("[data-ms-runlabel]");
+    var sub = bar.querySelector("[data-ms-sub]");
+    var prog = bar.querySelector("[data-ms-progress]");
+    var imagesOn = !r.brief || r.brief.images !== false;
+    var isDone = !magicBusy && r.status === "done";
+    run.disabled = magicBusy;
+    run.classList.toggle("is-busy", magicBusy);
+    run.classList.toggle("is-done", isDone);
+    run.querySelector(".ms__ico").innerHTML = svg(isDone ? MS_CHECK : MS_PENCIL, 15);
+    run.title = isDone ? "Magic SEO is done: see what it changed" : "Magic SEO: write the SEO for every page";
+    bar.querySelector("[data-ms-options]").textContent = isDone ? "Run again" : "Options";
+    run.setAttribute("aria-busy", magicBusy ? "true" : "false");
+    bar.querySelector("[data-ms-options]").disabled = magicBusy;
+    bar.querySelector("[data-ms-undo]").hidden = magicBusy || r.status !== "done";
+    if (magicBusy) {
+      var drawing = r.phase === "images";
+      var total = drawing ? (r.images_total || 0) : (r.total || 0);
+      var done = drawing ? (r.images_done || 0) : (r.done || 0);
+      runLabel.textContent = drawing ? "Creating share images…" : "Writing SEO…";
+      sub.textContent = !r.total ? "Reading your store…"
+        : drawing ? "Drawing share images for pages that have none. You can keep editing other tabs."
+        : "Writing the SEO for your pages. You can keep editing other tabs.";
+      prog.hidden = false;
+      bar.querySelector("[data-ms-fill]").style.width = Math.max(4, total ? Math.round(100 * done / total) : 4) + "%";
+      bar.querySelector("[data-ms-count]").textContent = total ? done + " of " + total + (drawing ? " images" : " pages") : "";
+    } else {
+      prog.hidden = true;
+      runLabel.textContent = isDone ? "Magic SEO done · See changes" : "Write SEO for every page";
+      if (isDone) {
+        var sm = r.summary || {};
+        var parts = [];
+        if (sm.fields_changed !== undefined) {
+          parts.push(sm.fields_changed + " fields changed on " + sm.pages_changed + (sm.pages_changed === 1 ? " page" : " pages"));
+          parts.push(sm.fields_kept + " kept");
+        } else {
+          parts.push(r.total + " pages filled");
+        }
+        if (r.images_made) parts.push(r.images_made + (r.images_made === 1 ? " share image" : " share images") + " created");
+        sub.textContent = "Done " + (r.finished_at || "") + ": " + parts.join(", ") + ". Your SEO is written; no need to run it again." +
+          (r.note ? " " + r.note : "");
+      } else {
+        sub.textContent = "Fills every SEO field on every page from your store's own content" +
+          (imagesOn ? ", and creates share images for pages that have none." : ".");
+      }
+    }
+  }
+
+  function magicStart(opts) {
+    if (magicBusy || !MAGIC) return;
+    var body = opts || { mode: magicRun.mode || "replace", brief: magicRun.brief || {} };
+    // Send any SEO edit still waiting to autosave first, so the run starts
+    // from exactly what the owner sees.
+    if (timers.seo) { clearTimeout(timers.seo); timers.seo = null; doSave("seo"); }
+    var before = magicRun;
+    magicBusy = true;
+    magicRun = { status: "queued", total: 0, done: 0, mode: body.mode, brief: body.brief };
+    renderMagic();
+    magicPost(MAGIC.start_url, body).then(function (d) {
+      if (!d.ok) {
+        magicBusy = false; magicRun = before; renderMagic();
+        magicToast("error", d.error || "Magic SEO couldn't start. Please try again.");
+        return;
+      }
+      magicHandle(d);
+    }).catch(function () {
+      magicBusy = false; magicRun = before; renderMagic();
+      magicToast("error", "Magic SEO couldn't start. Check your connection and try again.");
+    });
+  }
+
+  function magicHandle(d) {
+    var r = (d && d.run) || {};
+    magicRun = r;
+    if (magicIsActive(r)) { magicBusy = true; renderMagic(); magicPoll(); return; }
+    magicBusy = false;
+    if (r.status === "done") {
+      if (d.content) {
+        applyMagicState(d);
+        MAGIC.run = r;
+        var sm = r.summary || {};
+        magicToast("success", "Magic SEO is done. " +
+          (sm.fields_changed !== undefined ? sm.fields_changed + " fields changed on " + sm.pages_changed + " pages" : r.total + " pages filled") +
+          (r.images_made ? ", " + r.images_made + (r.images_made === 1 ? " share image" : " share images") + " created" : "") +
+          ". Click \u201cSee changes\u201d to review them.");
+      } else if (r.id && magicFetchedFor !== r.id) {
+        magicFetchedFor = r.id;
+        magicPoll(true);   // fetch the new SEO tab, once
+        return;
+      }
+    } else if (r.status === "failed") {
+      magicToast("error", r.error || "Magic SEO couldn't finish this time. Nothing was changed.");
+    }
+    renderMagic();
+  }
+
+  function magicPoll(now) {
+    clearTimeout(magicPollTimer);
+    magicPollTimer = setTimeout(function () {
+      var url = MAGIC.status_url + "?run=" + encodeURIComponent(magicRun.id || "");
+      fetch(url, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+        .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+        .then(function (d) { magicPollFails = 0; magicHandle(d); })
+        .catch(function () {
+          // A blip: keep trying, more slowly; the run carries on on the server.
+          magicPollFails += 1;
+          if (magicPollFails < 30) { magicPoll(); } else { magicBusy = false; renderMagic(); }
+        });
+    }, now ? 0 : Math.min(2000 + magicPollFails * 1000, 8000));
+  }
+
+  // Load the SEO tab the server now holds and redraw it if it is open.
+  function applyMagicState(d) {
+    var c = d.content || {};
+    ["seo", "seo_pages", "seo_mode"].forEach(function (k) {
+      if (c[k] === null || c[k] === undefined) delete CONTENT[k]; else CONTENT[k] = c[k];
+    });
+    if (d.datasets) {
+      if (d.datasets.seo_pages) DATASETS.seo_pages = d.datasets.seo_pages;
+      if (d.datasets.seo_home_auto) DATASETS.seo_home_auto = d.datasets.seo_home_auto;
+    }
+    clearTimeout(timers.seo); timers.seo = null;
+    var old = document.getElementById("ed-panel-seo");
+    var wasOpen = activePanelKey === "seo";
+    if (old) { destroyRichtextIn(old); old.remove(); }
+    if (wasOpen) showPanel("seo");
+  }
+
+  function magicUndo() {
+    if (magicBusy || !magicRun || magicRun.status !== "done") return;
+    if (!window.confirm("Undo Magic SEO?\n\nYour SEO tab goes back exactly to how it was before the last run, including undoing any SEO edits made since.")) return;
+    magicPost(MAGIC.undo_url, { run: magicRun.id }).then(function (d) {
+      if (!d.ok) { magicToast("error", d.error || "That run can no longer be undone."); return; }
+      magicRun = Object.assign({}, magicRun, { status: "undone" });
+      MAGIC.run = magicRun;
+      applyMagicState(d);
+      renderMagic();
+      magicToast("success", "Magic SEO undone. Your previous SEO is back.");
+    }).catch(function () { magicToast("error", "Couldn't undo right now. Please try again."); });
+  }
+
+  // The Options dialog: the owner's brief (all optional), what to write and
+  // whether to draw share images. Built on the dashboard's own modal
+  // (.app-dlg: backdrop, panel, head with x, scrolling body, pinned footer)
+  // and laid out with Edit content's field parts (.ed-field, .ed-input,
+  // .ed-select, 12-column rows), so it reads like the tab behind it. It is
+  // mounted inside the .pal wrapper: outside it, none of the theme's
+  // variables or fonts reach it.
+  var magicDlgReturn = null;
+  var MS_CLOSE = '<path d="M6 6l12 12M18 6 6 18"/>';
+  var MS_MODES = [
+    ["replace", "Every field", "Rewrites all SEO text on every page. Share images, canonical addresses and hidden pages you set yourself are kept."],
+    ["fill", "Only empty fields", "Keeps everything you have already written and fills only what is blank."]
+  ];
+
+  function openMagicDialog() {
+    if (magicBusy || !MAGIC) return;
+    if (!magicDlg) magicDlg = buildMagicDialog();
+    var brief = magicRun.brief || {};
+    var f = magicDlg.querySelector("form");
+    ["keywords", "audience", "location"].forEach(function (n) { f.elements[n].value = brief[n] || ""; });
+    f.elements.tone.value = brief.tone || "";
+    f.elements.language.value = brief.language || "en";
+    var mode = magicRun.mode === "fill" ? "fill" : "replace";
+    Array.prototype.forEach.call(f.querySelectorAll("input[name='mode']"), function (r) { r.checked = r.value === mode; });
+    f.elements.images.checked = brief.images !== false;
+    var again = magicRun.status === "done";
+    var notice = magicDlg.querySelector("[data-ms-again]");
+    notice.hidden = !again;
+    if (again) {
+      notice.querySelector("span").textContent = "Magic SEO already wrote your SEO" + (magicRun.finished_at ? " on " + magicRun.finished_at : "") +
+        ". Running it again rewrites what it wrote; use it after adding pages or products, or to try a different brief.";
+    }
+    magicDlg.querySelector(".ms-dlg__go span").textContent = again ? "Run again" : "Write SEO";
+    magicDlgReturn = document.activeElement;
+    magicDlg.hidden = false;
+    document.body.classList.add("app-popup-open");
+    magicDlg.querySelector(".app-dlg__body").scrollTop = 0;
+    f.elements.keywords.focus();
+  }
+
+  function closeMagicDialog() {
+    if (!magicDlg || magicDlg.hidden) return;
+    magicDlg.hidden = true;
+    document.body.classList.remove("app-popup-open");
+    if (magicDlgReturn && magicDlgReturn.focus) magicDlgReturn.focus();
+  }
+
+  function buildMagicDialog() {
+    var max = MAGIC.brief_max || {};
+    var dlg = el("div", "app-dlg ms-dlg", { role: "dialog", "aria-modal": "true", "aria-labelledby": "ms-dlg-title" });
+    dlg.hidden = true;
+    dlg.appendChild(el("div", "app-dlg__backdrop", { "data-ms-close": "" }));
+    var panel = el("div", "app-dlg__panel app-dlg__panel--wide ms-dlg__panel");
+    var form = el("form", "", { novalidate: "" });
+
+    var head = el("header", "app-dlg__head");
+    head.innerHTML =
+      '<div class="ms-dlg__headtxt">' +
+        '<span class="ms-dlg__eyebrow">' + svg(MS_SPARK, 12) + '<span>Magic SEO</span><span class="ms__tag">App</span></span>' +
+        '<h3 class="app-dlg__title" id="ms-dlg-title">Write the SEO for every page</h3>' +
+        '<p class="ms-dlg__lead">Meta titles, descriptions, keywords, share text and images, and canonical addresses, written from your own products, pages and policies.</p>' +
+      '</div>' +
+      '<button type="button" class="app-dlg__x" data-ms-close aria-label="Close">' + svg(MS_CLOSE, 16) + '</button>';
+    form.appendChild(head);
+
+    var body = el("div", "app-dlg__body ms-dlg__body");
+    var againBox = el("p", "ms-dlg__again", { "data-ms-again": "" });
+    againBox.hidden = true;
+    againBox.innerHTML = svg(MS_CHECK, 14) + "<span></span>";
+    body.appendChild(againBox);
+    function subhead(title, help) {
+      var s = el("div", "ed-subhead ms-dlg__subhead");
+      var t = el("span", "ed-subhead__title"); t.textContent = title; s.appendChild(t);
+      if (help) { var h = el("p", "ed-subhead__help"); h.textContent = help; s.appendChild(h); }
+      return s;
+    }
+    function field(span, name, label, control, help) {
+      var w = el("div", "ed-field");
+      w.style.gridColumn = "span " + span;
+      var l = el("label", "ed-field__label", { "for": "ms-dlg-" + name }); l.textContent = label; w.appendChild(l);
+      control.id = "ms-dlg-" + name;
+      w.appendChild(control);
+      if (help) { var p = el("p", "ed-field__help"); p.textContent = help; w.appendChild(p); }
+      return w;
+    }
+    function input(name, placeholder) {
+      return el("input", "ed-input", { type: "text", name: name, maxlength: String(max[name] || 200), placeholder: placeholder, autocomplete: "off" });
+    }
+    function select(name, options) {
+      var s = el("select", "ed-select", { name: name });
+      (options || []).forEach(function (o) { var op = el("option", "", { value: o.value }); op.textContent = o.label; s.appendChild(op); });
+      return s;
+    }
+    function option(type, name, value, title, text) {
+      var o = el("label", "ms-dlg__opt");
+      var i = el("input", "", { type: type, name: name });
+      if (value) i.value = value;
+      var t = el("span", "ms-dlg__opttxt");
+      var b = el("span", "ms-dlg__opttitle"); b.textContent = title;
+      var s = el("span", "ms-dlg__optdesc"); s.textContent = text;
+      t.appendChild(b); t.appendChild(s);
+      o.appendChild(i); o.appendChild(t);
+      return o;
+    }
+
+    body.appendChild(subhead("Your brief", "All optional. Leave it blank and Magic SEO works from your store's own content."));
+    body.appendChild(field(12, "keywords", "Focus keywords", input("keywords", "e.g. handmade soap, natural skincare"),
+      "Comma-separated. Used on the pages they describe, never forced onto others."));
+    body.appendChild(field(6, "audience", "Who you sell to", input("audience", "e.g. new parents, cafes and restaurants")));
+    body.appendChild(field(6, "location", "Where your buyers are", input("location", "e.g. Pune, all of India")));
+    body.appendChild(field(6, "tone", "Tone", select("tone", MAGIC.tones)));
+    body.appendChild(field(6, "language", "Language", select("language", MAGIC.languages)));
+
+    body.appendChild(subhead("What to write"));
+    var modes = el("div", "ms-dlg__opts", { role: "radiogroup", "aria-label": "What to write" });
+    MS_MODES.forEach(function (m) { modes.appendChild(option("radio", "mode", m[0], m[1], m[2])); });
+    body.appendChild(modes);
+
+    body.appendChild(subhead("Share images"));
+    var imgs = el("div", "ms-dlg__opts ms-dlg__opts--one");
+    imgs.appendChild(option("checkbox", "images", "", "Create share images with AI",
+      "Pages with no share image (or only your logo) get one drawn from their content, used for both the Open Graph and X card. " +
+      "Your own images and product photos are always kept; product pages are never drawn. Up to " + (MAGIC.max_images || 20) + " images per run."));
+    body.appendChild(imgs);
+    form.appendChild(body);
+
+    var foot = el("footer", "app-dlg__foot ms-dlg__foot");
+    var note = el("p", "ms-dlg__note");
+    note.textContent = "Big stores take a few minutes. You can undo the last run in one click.";
+    var cancel = el("button", "pal-btn pal-btn--ghost", { type: "button", "data-ms-close": "" }); cancel.textContent = "Cancel";
+    var go = el("button", "pal-btn ms-dlg__go", { type: "submit" }); go.innerHTML = svg(MS_PENCIL, 14) + "<span>Write SEO</span>";
+    foot.appendChild(note); foot.appendChild(cancel); foot.appendChild(go);
+    form.appendChild(foot);
+    panel.appendChild(form);
+    dlg.appendChild(panel);
+    (document.querySelector(".pal") || document.body).appendChild(dlg);
+
+    dlg.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest("[data-ms-close]")) { e.preventDefault(); closeMagicDialog(); }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !dlg.hidden) { e.preventDefault(); closeMagicDialog(); }
+    });
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var fe = form.elements;
+      var picked = form.querySelector("input[name='mode']:checked");
+      var opts = {
+        mode: picked ? picked.value : "replace",
+        brief: { keywords: fe.keywords.value.trim(), audience: fe.audience.value.trim(), location: fe.location.value.trim(),
+                 tone: fe.tone.value, language: fe.language.value, images: !!fe.images.checked }
+      };
+      closeMagicDialog();
+      magicStart(opts);
+    });
+    return dlg;
+  }
+
+  // ---- "What changed": a done run's report -------------------------------
+  // Two tabs (Changed / Not changed), one card per page, one row per field
+  // with before and after (or why it was kept). Loaded from the server the
+  // first time it opens for a run; same .app-dlg modal as Options.
+  var msReportDlg = null, msReportFor = null, msReportData = null, msReportTab = "changed", msReportReturn = null;
+  var MS_SOURCES = { ai: "Written by AI", auto: "From the page's content", page: "Page setting", ai_image: "AI image" };
+
+  function msEsc(t) {
+    return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function msIsImage(f) { return f === "og_image" || f === "twitter_image"; }
+  function msSafeUrl(u) { u = String(u || ""); return /^(https?:)?\/\//i.test(u) || u.charAt(0) === "/" ? u : ""; }
+  function msValue(f, v, cls) {
+    if (!v) return '<span class="' + cls + ' is-empty">Empty (auto)</span>';
+    if (msIsImage(f) && msSafeUrl(v)) {
+      return '<span class="' + cls + ' ms-rep__img"><img src="' + msEsc(msSafeUrl(v)) + '" alt="" loading="lazy"></span>';
+    }
+    return '<span class="' + cls + '">' + msEsc(v) + '</span>';
+  }
+
+  function openMagicReport() {
+    if (!MAGIC || !magicRun || !magicRun.id) return;
+    if (!msReportDlg) msReportDlg = buildMagicReport();
+    msReportReturn = document.activeElement;
+    msReportDlg.hidden = false;
+    document.body.classList.add("app-popup-open");
+    if (msReportFor === magicRun.id && msReportData) { renderMagicReport(); return; }
+    msReportFor = magicRun.id; msReportData = null; msReportTab = "changed";
+    var list = msReportDlg.querySelector("[data-rep-list]");
+    list.innerHTML = '<p class="ms-rep__empty">Loading what changed…</p>';
+    fetch(MAGIC.report_url + "?run=" + encodeURIComponent(magicRun.id), { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (res) { return res.json().catch(function () { return {}; }); })
+      .then(function (d) {
+        if (!d || !d.ok) { list.innerHTML = '<p class="ms-rep__empty">' + msEsc((d && d.error) || "The change report isn't available for this run.") + "</p>"; return; }
+        msReportData = d.report; renderMagicReport();
+      })
+      .catch(function () { msReportFor = null; list.innerHTML = '<p class="ms-rep__empty">Couldn’t load the changes. Check your connection and try again.</p>'; });
+    msReportDlg.querySelector(".app-dlg__x").focus();
+  }
+
+  function closeMagicReport() {
+    if (!msReportDlg || msReportDlg.hidden) return;
+    msReportDlg.hidden = true;
+    document.body.classList.remove("app-popup-open");
+    if (msReportReturn && msReportReturn.focus) msReportReturn.focus();
+  }
+
+  function buildMagicReport() {
+    var dlg = el("div", "app-dlg ms-dlg ms-rep", { role: "dialog", "aria-modal": "true", "aria-labelledby": "ms-rep-title" });
+    dlg.hidden = true;
+    dlg.innerHTML =
+      '<div class="app-dlg__backdrop" data-rep-close></div>' +
+      '<div class="app-dlg__panel app-dlg__panel--wide ms-dlg__panel ms-rep__panel">' +
+        '<header class="app-dlg__head">' +
+          '<div class="ms-dlg__headtxt">' +
+            '<span class="ms-dlg__eyebrow">' + svg(MS_SPARK, 12) + '<span>Magic SEO</span><span class="ms__tag">App</span></span>' +
+            '<h3 class="app-dlg__title" id="ms-rep-title">' + svg(MS_CHECK, 18) + '<span>Magic SEO is done</span></h3>' +
+            '<p class="ms-dlg__lead" data-rep-lead></p>' +
+          '</div>' +
+          '<button type="button" class="app-dlg__x" data-rep-close aria-label="Close">' + svg(MS_CLOSE, 16) + '</button>' +
+        '</header>' +
+        '<div class="ms-rep__bar">' +
+          '<div class="ms-rep__tabs" role="tablist" aria-label="Changes">' +
+            '<button type="button" class="ms-rep__tab" role="tab" data-rep-tab="changed" aria-controls="ms-rep-list">Changed <b data-rep-count="changed">0</b></button>' +
+            '<button type="button" class="ms-rep__tab" role="tab" data-rep-tab="kept" aria-controls="ms-rep-list">Not changed <b data-rep-count="kept">0</b></button>' +
+          '</div>' +
+          '<input type="search" class="ed-input ms-rep__search" data-rep-q placeholder="Find a page…" aria-label="Find a page">' +
+        '</div>' +
+        '<div class="app-dlg__body ms-rep__body" id="ms-rep-list" role="tabpanel" data-rep-list></div>' +
+        '<footer class="app-dlg__foot ms-dlg__foot">' +
+          '<p class="ms-dlg__note" data-rep-note></p>' +
+          '<button type="button" class="pal-btn" data-rep-close>Close</button>' +
+        '</footer>' +
+      '</div>';
+    (document.querySelector(".pal") || document.body).appendChild(dlg);
+    dlg.addEventListener("click", function (e) {
+      var t = e.target.closest ? e.target : null;
+      if (!t) return;
+      if (t.closest("[data-rep-close]")) { e.preventDefault(); closeMagicReport(); return; }
+      var tab = t.closest("[data-rep-tab]");
+      if (tab) { msReportTab = tab.getAttribute("data-rep-tab"); renderMagicReport(); }
+    });
+    dlg.querySelector("[data-rep-q]").addEventListener("input", renderMagicReport);
+    dlg.querySelector(".ms-rep__tabs").addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      msReportTab = msReportTab === "changed" ? "kept" : "changed";
+      renderMagicReport();
+      dlg.querySelector('[data-rep-tab="' + msReportTab + '"]').focus();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !dlg.hidden) { e.preventDefault(); closeMagicReport(); }
+    });
+    return dlg;
+  }
+
+  function renderMagicReport() {
+    var dlg = msReportDlg, rep = msReportData;
+    if (!dlg || !rep) return;
+    var pages = rep.pages || [], sm = rep.summary || {};
+    var nChanged = 0, nKept = 0;
+    pages.forEach(function (p) { nChanged += (p.changed || []).length; nKept += (p.kept || []).length; });
+    dlg.querySelector('[data-rep-count="changed"]').textContent = nChanged;
+    dlg.querySelector('[data-rep-count="kept"]').textContent = nKept;
+    Array.prototype.forEach.call(dlg.querySelectorAll("[data-rep-tab]"), function (b) {
+      var on = b.getAttribute("data-rep-tab") === msReportTab;
+      b.classList.toggle("is-active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;
+    });
+    dlg.querySelector("[data-rep-lead]").textContent =
+      (rep.finished_at ? "Finished " + rep.finished_at + ". " : "") +
+      nChanged + " fields changed on " + (sm.pages_changed || 0) + " of " + (sm.pages || pages.length) + " pages, " +
+      nKept + " left as they were" + (sm.images_made ? ", " + sm.images_made + " share images created" : "") + ".";
+    dlg.querySelector("[data-rep-note]").textContent = rep.status === "undone"
+      ? "This run was undone: your SEO is back to how it was before it."
+      : "Edit any page in the SEO tab, or Undo to put everything back.";
+
+    var q = (dlg.querySelector("[data-rep-q]").value || "").trim().toLowerCase();
+    var key = msReportTab === "kept" ? "kept" : "changed";
+    var html = [], shown = 0;
+    pages.forEach(function (p) {
+      var rows = p[key] || [];
+      if (!rows.length) return;
+      if (q && (p.label + " " + p.group).toLowerCase().indexOf(q) < 0) return;
+      shown += 1;
+      html.push('<details class="ms-rep__page"' + (shown <= 6 ? " open" : "") + '>' +
+        '<summary><span class="ms-rep__pname">' + msEsc(p.label) + '</span>' +
+        (p.group ? '<span class="ms-rep__group">' + msEsc(p.group) + '</span>' : "") +
+        '<span class="ms-rep__n">' + rows.length + (rows.length === 1 ? " field" : " fields") + '</span></summary>' +
+        '<ul class="ms-rep__rows">' + rows.map(function (r) {
+          if (key === "kept") {
+            return '<li class="ms-rep__row"><span class="ms-rep__field">' + msEsc(r.label) + '</span>' +
+              '<span class="ms-rep__vals">' + msValue(r.f, r.value, "ms-rep__now") + '</span>' +
+              '<span class="ms-rep__why">' + msEsc(r.reason) + '</span></li>';
+          }
+          return '<li class="ms-rep__row"><span class="ms-rep__field">' + msEsc(r.label) + '</span>' +
+            '<span class="ms-rep__vals">' + msValue(r.f, r.before, "ms-rep__before") +
+            '<span class="ms-rep__arrow" aria-label="changed to">→</span>' + msValue(r.f, r.after, "ms-rep__after") + '</span>' +
+            '<span class="ms-rep__src ms-rep__src--' + msEsc(r.source) + '">' + msEsc(MS_SOURCES[r.source] || "") + '</span></li>';
+        }).join("") + '</ul></details>');
+    });
+    dlg.querySelector("[data-rep-list]").innerHTML = html.length ? html.join("") :
+      '<p class="ms-rep__empty">' + (q ? "No page matches “" + msEsc(q) + "”." :
+        key === "kept" ? "Magic SEO changed every field it looked at." : "Nothing needed changing: your SEO was already complete.") + "</p>";
+  }
+
+  // A run still going from before this page loaded: pick it up.
+  if (MAGIC && magicIsActive(magicRun)) { magicBusy = true; magicPoll(); }
+
   // Tabs are cheap, so all of them are drawn up front. Panels are not: each is
   // built the first time its tab opens (ensurePanel), so the page only pays for
   // the tab the owner is looking at. A panel that was never opened was never
@@ -3147,8 +3698,11 @@ the rules arrived and the page flashed unstyled for a second on every visit.
       }
       wireConditionals(panel, section.fields);
       if (section.key === "newsletter") wireNewsletter(panel);
+      if (section.key === "seo" && MAGIC) buildMagicSeo(panel);
       // Wire the hero style picker to reveal only its style's fields.
       var styleCtrl = panel.querySelector("[data-field='hero_banner_style']");
+      // Template 2 has no picker: still hide the banners' style-only fields.
+      if (!styleCtrl && panel.querySelector("[data-style-only]")) syncStyleOnly(panel);
       if (styleCtrl) {
         (function (p) {
           syncStyleOnly(p);

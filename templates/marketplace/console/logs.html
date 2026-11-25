@@ -1,0 +1,61 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Logs{% endblock %}
+{% block crumbs %}<span>/</span><span>Logs</span>{% endblock %}
+{% block heading %}Logs{% endblock %}
+{% block lead %}<p>What each app did while it worked: Magic SEO runs (every batch and share image), errors counted by the circuit breaker, pauses and resumes. Newest first; lines are kept for {{ retention_days }} days.</p>{% endblock %}
+
+{% block main %}
+<div class="mc-kpis">
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ counts.error }}</div><div class="mc-kpi__label">Errors, 24 h</div><div class="mc-kpi__sub">{% if app_slug %}{{ app_label }}{% else %}every app{% endif %}</div></div>
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ counts.warning }}</div><div class="mc-kpi__label">Warnings, 24 h</div></div>
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ counts.info }}</div><div class="mc-kpi__label">Info, 24 h</div></div>
+</div>
+
+<div class="mc-toolbar">
+  <a class="mc-filter" href="?{{ keep_qs }}"{% if not level %} aria-current="page"{% endif %}>All levels</a>
+  {% for k, l in levels %}<a class="mc-filter" href="?{% if keep_qs %}{{ keep_qs }}&amp;{% endif %}level={{ k }}"{% if level == k %} aria-current="page"{% endif %}>{{ l }}</a>{% endfor %}
+  <form method="get" style="margin-left:auto;">
+    {% if level %}<input type="hidden" name="level" value="{{ level }}">{% endif %}
+    {% if run %}<input type="hidden" name="run" value="{{ run }}">{% endif %}
+    <select name="app" aria-label="App"><option value="">Every app</option>{% for slug, name in app_options %}<option value="{{ slug }}"{% if app_slug == slug %} selected{% endif %}>{{ name }}</option>{% endfor %}</select>
+    <input type="search" name="store" value="{{ store }}" placeholder="Store name" aria-label="Store name">
+    <input type="search" name="q" value="{{ q }}" placeholder="Words in the message" aria-label="Words in the message">
+    <button class="pal-btn pal-btn--ghost" type="submit">Filter</button>
+  </form>
+</div>
+
+{% if run %}
+<div class="mc-status"><span class="mc-status__txt">Showing one run: <span class="mc-mono">{{ run }}</span></span><a class="mc-panel__link" href="?{% if app_slug %}app={{ app_slug|urlencode }}{% endif %}">Show every run &rarr;</a></div>
+{% endif %}
+
+<section class="mc-panel">
+  <div class="mc-tablewrap">
+    <table class="mc-table mc-logs">
+      <thead><tr><th>When</th><th>App</th><th>Level</th><th>Event</th><th>Store</th><th>Message</th></tr></thead>
+      <tbody>
+        {% for r in page %}
+        <tr class="mc-logs__row mc-logs__row--{{ r.level }}">
+          <td class="mc-mono mc-muted" title="{{ r.created_at|date:'j M Y, H:i:s' }}">{{ r.created_at|date:"j M, H:i:s" }}</td>
+          <td><a class="mc-panel__link" href="?app={{ r.app_slug|urlencode }}">{{ r.app_name }}</a></td>
+          <td><span class="mc-chip mc-chip--{% if r.level == 'error' %}failed{% elif r.level == 'warning' %}pending{% else %}draft{% endif %}">{{ r.get_level_display }}</span></td>
+          <td class="mc-mono" style="font-size:.7rem;">{{ r.event }}</td>
+          <td class="mc-trunc" title="{{ r.site_label }}">{{ r.site_label|default:"-" }}</td>
+          <td class="mc-logs__msg">
+            {{ r.message }}
+            {% if r.run_ref and not run %}<a class="mc-logs__run" href="?run={{ r.run_ref|urlencode }}&amp;app={{ r.app_slug|urlencode }}">This run &rarr;</a>{% endif %}
+            {% if r.details %}<details class="mc-logs__ctx"><summary>Details</summary><pre>{{ r.details }}</pre></details>{% endif %}
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="6" class="mc-empty">No log lines match.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="mc-pager">
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    <span>{% if page.has_previous %}<a href="?{% if level_qs %}{{ level_qs }}&amp;{% endif %}page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
+    {% if page.has_next %}&nbsp; <a href="?{% if level_qs %}{{ level_qs }}&amp;{% endif %}page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}</span>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

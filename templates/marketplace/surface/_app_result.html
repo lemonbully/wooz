@@ -1,0 +1,20 @@
+{% comment %}
+One search result (browse page), Amazon-style: tile | details | price + action.
+{% endcomment %}
+<li class="mk-result">
+  {% include "marketplace/surface/_icon.html" with size="lg" %}
+  <div class="mk-result__body">
+    <h2 class="mk-result__name"><a href="{% url 'marketplace:app' a.slug %}">{{ a.name }}</a></h2>
+    <p class="mk-card__by">by {{ a.developer|default:"OneWooz" }}{% if a.developer == "OneWooz" or not a.developer %} <span class="mk-verified" title="Built by OneWooz"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 6"/></svg></span>{% endif %} &middot; {{ a.category_label }}</p>
+    <p class="mk-result__desc">{{ a.tagline }}</p>
+    <div class="mk-card__badges">
+      {% if a.slug in installed %}<span class="mk-state mk-state--ok">Installed</span>{% elif a.is_system %}<span class="mk-state mk-state--on">Built in</span>{% elif a.featured %}<span class="mk-state mk-state--on">Staff pick</span>{% endif %}
+      <span class="mk-chip">{% if a.fits == "both" %}D2C + B2B{% else %}{{ a.fits|upper }} stores{% endif %}</span>
+    </div>
+  </div>
+  <div class="mk-result__side">
+    <p class="mk-result__price">{{ a.pricing_label }}</p>
+    {% if a.trial_days and a.is_paid %}<p class="mk-result__note">{{ a.trial_days }}-day trial</p>{% elif not a.is_paid %}<p class="mk-result__note">No extra charge</p>{% endif %}
+    <a class="pal-btn pal-btn--ghost" href="{% url 'marketplace:app' a.slug %}">View app</a>
+  </div>
+</li>

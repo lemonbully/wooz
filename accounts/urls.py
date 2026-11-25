@@ -6,9 +6,33 @@ from django.urls import path
 
 from . import impersonation, views
 
+# BROWSER PUSH: DISABLED (commented out, not removed).
+# Re-enable by restoring ``push_views`` in the import above and uncommenting
+# the five routes below, together with the other "BROWSER PUSH: DISABLED"
+# spots (grep for that phrase).
+# from . import push_views
+
 app_name = "accounts"
 
 urlpatterns = [
+    # Browser push notifications. The service worker sits at the surface root
+    # so its scope covers the whole dashboard (/sw.js; /user/sw.js in local
+    # path-prefix mode), next to the web app manifest iOS needs for push.
+    #
+    # How it works: the dashboard page (js/app/push.js) registers sw.js, asks
+    # the browser for permission, then POSTs the browser's subscription to
+    # push/subscribe/. From then on every bell Notification is encrypted and
+    # sent to that browser by accounts.webpush; sw.js shows it as a system
+    # pop-up. push/test/ sends a test pop-up; push/unsubscribe/ forgets one.
+    #
+    # BROWSER PUSH: DISABLED. With these routes off, a browser that already
+    # registered sw.js gets a 404 on its next update check and the browser
+    # unregisters the worker by itself, so no pop-ups linger.
+    # path("sw.js", push_views.service_worker, name="service_worker"),
+    # path("manifest.webmanifest", push_views.manifest, name="web_manifest"),
+    # path("push/subscribe/", push_views.subscribe, name="push_subscribe"),
+    # path("push/unsubscribe/", push_views.unsubscribe, name="push_unsubscribe"),
+    # path("push/test/", push_views.test, name="push_test"),
     # Admin impersonation: the app-surface entry (reached via a signed hand-off
     # link minted on the admin surface) and the "stop impersonating" action the
     # dashboard banner posts to.
@@ -50,6 +74,11 @@ urlpatterns = [
     # Account
     path("profile/", views.profile, name="profile"),
     path("security/", views.security, name="security"),
+    # Delete My Account (Profile page): emailed code, then the soft delete, then
+    # a public page explaining how to restore within the recovery window.
+    path("profile/delete/send-code/", views.account_delete_send_code, name="account_delete_send_code"),
+    path("profile/delete/confirm/", views.account_delete_confirm, name="account_delete_confirm"),
+    path("account-deleted/", views.account_deleted, name="account_deleted"),
     # Live sessions: a heartbeat the dashboard polls (so a remotely-ended
     # session logs out fast), ending one session or all others, and revoking a
     # trusted browser.

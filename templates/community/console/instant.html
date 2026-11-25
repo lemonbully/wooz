@@ -1,0 +1,57 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}Instant AI{% endblock %}
+{% block crumbs %}<span>/</span><span>Instant AI</span>{% endblock %}
+{% block heading %}Instant AI questions{% endblock %}
+{% block lead %}<p>Every question asked in the ask box. Each gets a private AI answer first; the visitor may then post it to the community. Open one to write a team answer the visitor sees instead.</p>{% endblock %}
+{% block actions %}<a class="pal-btn pal-btn--ghost" href="{{ prompt_admin }}">Edit the Ask prompt</a>{% endblock %}
+
+{% block main %}
+<div class="mc-status">
+  {% if ai_ready and conf.ai_answers_enabled %}
+    <span class="mc-status__txt"><span class="mc-dot"></span> Answering with “{{ ai_prompt.name }}”.</span>
+  {% elif ai_ready %}
+    <span class="mc-status__txt"><span class="mc-dot mc-dot--warn"></span> The prompt is ready, but instant AI answers are switched off in settings.</span>
+    <a class="pal-btn pal-btn--ghost" href="{% url 'ask_console:settings' %}">Settings</a>
+  {% else %}
+    <span class="mc-status__txt"><span class="mc-dot mc-dot--warn"></span> {% if not ai_prompt %}No active “Ask OneWooz answers” prompt{% else %}OPENAI_API_KEY isn't set{% endif %}. Questions wait for the team.</span>
+  {% endif %}
+</div>
+
+<div class="mc-kpis">
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ today_count }}</div><div class="mc-kpi__label">Asked today</div></div>
+  <div class="mc-kpi{% if waiting_count %} mc-kpi--warn{% endif %}"><div class="mc-kpi__value">{{ waiting_count }}</div><div class="mc-kpi__label">Waiting for a team reply</div><div class="mc-kpi__sub">no AI answer</div></div>
+</div>
+
+<form method="get" class="mc-toolbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search questions">
+  <select name="status"><option value="">Any status</option>{% for k, l in statuses %}<option value="{{ k }}"{% if status == k %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <button class="pal-btn pal-btn--ghost" type="submit">Filter</button>
+</form>
+
+<section class="mc-panel">
+  <div class="mc-tablewrap">
+    <table class="mc-table ac-table">
+      <thead><tr><th>Question</th><th>Status</th><th>Answered by</th><th>Posted</th><th>Asked</th><th></th></tr></thead>
+      <tbody>
+        {% for a in page %}
+        <tr>
+          <td class="ac-post"><div class="ac-text">{{ a.question|truncatechars:160 }}</div>{% if a.ai_error %}<div class="ac-warn ac-sub">{{ a.ai_error|truncatechars:90 }}</div>{% endif %}</td>
+          <td>{% if a.status == "answered" %}<span class="mc-chip mc-chip--published">Answered</span>{% elif a.status == "pending" %}<span class="mc-chip mc-chip--pending">AI writing</span>{% else %}<span class="mc-chip mc-chip--revoked">Waiting</span>{% endif %}</td>
+          <td>{% if a.staff_answer %}Team{% elif a.ai_answer %}AI{% else %}–{% endif %}</td>
+          <td>{% if a.was_posted %}<span class="mc-chip mc-chip--accent">Community</span>{% else %}Private{% endif %}</td>
+          <td class="mc-mono">{{ a.created_at|date:"j M, H:i" }}</td>
+          <td><a class="mc-panel__link" href="{{ a.admin_url }}">{% if a.staff_answer %}Edit answer{% else %}Answer{% endif %} &rarr;</a></td>
+        </tr>
+        {% empty %}<tr><td colspan="6" class="mc-empty">No questions match.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="mc-pager">
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    <span>{% if page.has_previous %}<a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
+    {% if page.has_next %}&nbsp; <a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}</span>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

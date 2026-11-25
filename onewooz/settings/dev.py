@@ -30,6 +30,7 @@ CADDY_ASK_SECRET = env.get_or_create_dev_secret("ONEWOOZ_CADDY_ASK_SECRET", SECR
 MARKETING_HOST = env.get("ONEWOOZ_MARKETING_HOST", "7vg4xqqt-8000.inc1.devtunnels.ms")
 APP_HOST = env.get("ONEWOOZ_APP_HOST", "app.onewooz.localhost")
 ADMIN_HOST = env.get("ONEWOOZ_ADMIN_HOST", "arcane.onewooz.localhost")
+MARKETPLACE_HOST = env.get("ONEWOOZ_MARKETPLACE_HOST", "marketplace.onewooz.localhost")
 STOREFRONT_APEX = env.get("ONEWOOZ_STOREFRONT_APEX", "shop.localhost")
 # UGC collaboration (referral) storefront apex  dev uses a *.localhost name so
 # <sub>.myugcstore.localhost resolves to 127.0.0.1 in modern browsers.
@@ -40,13 +41,14 @@ REFERRAL_ROOT_DOMAIN = env.get("ONEWOOZ_REFERRAL_ROOT_DOMAIN", "myugcstore.local
 # through the settings for hardcoded 8000s.
 DEV_PORT = env.get("ONEWOOZ_DEV_PORT", "8000")
 
-PLATFORM_HOSTS = {MARKETING_HOST, f"www.{MARKETING_HOST}", APP_HOST, ADMIN_HOST}
+PLATFORM_HOSTS = {MARKETING_HOST, f"www.{MARKETING_HOST}", APP_HOST, ADMIN_HOST, MARKETPLACE_HOST}
 
 ALLOWED_HOSTS = [
     MARKETING_HOST,
     f"www.{MARKETING_HOST}",
     APP_HOST,
     ADMIN_HOST,
+    MARKETPLACE_HOST,
     f".{STOREFRONT_APEX}",
     f".{REFERRAL_ROOT_DOMAIN}",
     "localhost",
@@ -64,6 +66,7 @@ CSRF_TRUSTED_ORIGINS = [
         f"www.{MARKETING_HOST}",
         APP_HOST,
         ADMIN_HOST,
+        MARKETPLACE_HOST,
         STOREFRONT_APEX,
         f"*.{STOREFRONT_APEX}",
         # UGC referral apex (collaborator portal) + collaborator storefront
@@ -113,6 +116,8 @@ DEV_SURFACE_PREFIXES = {
     # ``myugcstore.localhost:8000/dashboard``; on bare 127.0.0.1 use
     # ``/referral/dashboard`` (this prefix is stripped like the others).
     "referral": "/referral",
+    # OneWooz Apps: http://127.0.0.1:8000/marketplace/ (or marketplace.onewooz.localhost:8000)
+    "marketplace": "/marketplace",
 }
 
 # --------------------------------------------------------------------------

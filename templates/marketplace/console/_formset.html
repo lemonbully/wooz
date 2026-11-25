@@ -1,0 +1,21 @@
+{% comment %}
+A formset as cards: one card per row, all visible fields in a responsive grid,
+a delete tick when deletion is allowed. `noun` names a row ("field", "widget").
+{% endcomment %}
+{{ formset.management_form }}
+{% if formset.non_form_errors %}<div class="mc-errors">{% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+<div class="mc-cards">
+  {% for f in formset.forms %}
+  <div class="mc-card{% if not f.instance.pk %} mc-card--new{% endif %}">
+    <div class="mc-card__head">
+      <span class="mc-card__title">{% if f.instance.pk %}{{ noun|capfirst }} {{ forloop.counter|stringformat:"02d" }}{% if f.instance.label %} &middot; {{ f.instance.label }}{% elif f.instance.name %} &middot; {{ f.instance.name }}{% endif %}{% else %}Add a {{ noun }}{% endif %}</span>
+      {% if f.instance.pk and formset.can_delete %}<label class="mc-card__del">{{ f.DELETE }} Remove</label>{% endif %}
+    </div>
+    {% for h in f.hidden_fields %}{{ h }}{% endfor %}
+    {% if f.non_field_errors %}<div class="mc-errors" style="margin:1rem 1.1rem 0;">{% for e in f.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+    <div class="mc-card__body">
+      {% for field in f.visible_fields %}{% if field.name != "DELETE" %}{% include "marketplace/console/_field.html" %}{% endif %}{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>

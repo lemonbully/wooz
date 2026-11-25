@@ -25,6 +25,8 @@ urlpatterns = [
 ]
 
 # Surface-aware error pages  see onewooz.urls.marketing.
+handler400 = "core.errors.handler400"
+handler403 = "core.errors.handler403"
 handler404 = "core.errors.handler404"
 handler500 = "core.errors.handler500"
 

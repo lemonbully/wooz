@@ -20,6 +20,18 @@ A page sets `nav_active` to highlight its sidebar item and may override
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/onewooz-pal.css' %}">
 <link rel="stylesheet" href="{% static 'css/onewooz-app.css' %}">
+{% comment %} Web app manifest: lets an owner add the dashboard to their Home Screen, which iPhone/iPad require before allowing push notifications. {% endcomment %}
+{% comment %}
+Browser push: the opt-in UI styles (css/onewooz-push.css) and the web app
+manifest served by accounts.push_views.manifest.
+BROWSER PUSH: DISABLED (commented out, not removed). Move these lines out of
+this comment block to re-enable (the manifest route must be re-enabled too).
+<link rel="stylesheet" href="{% static 'css/onewooz-push.css' %}">
+<link rel="manifest" href="{% url 'accounts:web_manifest' %}">
+<meta name="theme-color" content="#4b2bf5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="OneWooz">
+{% endcomment %}
 {% endblock %}
 
 {% block body %}
@@ -68,7 +80,15 @@ A page sets `nav_active` to highlight its sidebar item and may override
         {% endblock %}
       </div>
 
-      {% include "ud/_topbar_actions.html" %}
+      {% comment %} The account dashboard's sidebar key is "overview"; its guide is "dashboard". {% endcomment %}
+      {% if nav_active == "overview" %}
+        {% include "ud/_topbar_actions.html" with show_page_guide=True page_guide_key="dashboard" %}
+      {% else %}
+        {% comment %} firstof, not guide_key|default:nav_active: a missing filter
+        argument raises VariableDoesNotExist, so a page without nav_active 500'd. {% endcomment %}
+        {% firstof guide_key nav_active "" as page_guide %}
+        {% include "ud/_topbar_actions.html" with show_page_guide=True page_guide_key=page_guide %}
+      {% endif %}
     </header>
 
     <main id="main">
@@ -77,11 +97,14 @@ A page sets `nav_active` to highlight its sidebar item and may override
 
   </div>
 </div>
+{# Updated user agreement: un-dismissable re-acceptance popup (only while one is pending). #}
+{% include "billing/_agreement_update_modal.html" %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{% static 'js/app/scroll-hint.js' %}" defer></script>
+<script src="{% static 'js/app/nav-counts.js' %}" defer></script>
 <script src="{% static 'js/app/popup.js' %}" defer></script>
 <script src="{% static 'js/app/custom-select.js' %}" defer></script>
 <script nonce="{{ csp_nonce }}">

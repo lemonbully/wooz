@@ -39,7 +39,7 @@ class Command(BaseCommand):
         since = timezone.now() - timedelta(hours=options["hours"])
         actions = list(notifications.ACTION_CATEGORY)
         owners = User.objects.filter(
-            is_active=True, notification_digest=User.Digest.DAILY
+            is_active=True, notification_digest=User.Digest.DAILY, account_deleted_at__isnull=True
         )
 
         sent = 0

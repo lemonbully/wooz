@@ -1,0 +1,176 @@
+{% extends "ud/_shell.html" %}
+{% block title %}{% if item %}{{ item.name }}{% else %}{{ app.name }}{% endif %} · OneWooz Apps{% endblock %}
+{% block crumb %}OneWooz Apps{% endblock %}
+
+{% block main %}
+<div class="app-page mkt-consent">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">OneWooz Apps</p>
+    <h1 class="app-head__title pal-mt-4">
+      {% if action == "owned" %}You already have {{ item.name }}
+      {% elif action == "installed" %}{{ app.name }} is installed
+      {% elif action == "add" %}Add {{ item.name }} to your library
+      {% elif action == "buy" %}{% if item %}Get {{ item.name }}{% else %}Get {{ app.name }}{% endif %}
+      {% elif action == "renew" %}Renew {{ app.name }}
+      {% elif action == "trial" %}Start a {{ app.trial_days }}-day trial of {{ app.name }}
+      {% elif action == "upgrade" %}{{ app.name }} comes with paid plans
+      {% else %}Install {{ app.name }}{% endif %}
+    </h1>
+    <p class="app-head__lead">{% if item %}{{ item.tagline|default:item.description|striptags|truncatechars:180 }}{% else %}{{ app.tagline }}{% endif %}</p>
+  </div>
+  <div class="app-head__actions"><a class="pal-btn pal-btn--ghost" href="{{ marketplace_app_url }}">Back to the marketplace</a></div>
+  </div>
+
+  <div class="mkt-consent__grid app-block">
+    <section class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">What this {% if item %}design{% else %}app{% endif %} does</h2></div>
+      <div class="app-card__body">
+        {% if item and app.module == "storefront_designs" %}
+          <ul class="mkt-list">
+            <li>Adds <strong>{{ item.name }}</strong> to your design library. Nothing on your store changes now.</li>
+            <li>Switch any store to it from <strong>OneWooz Templates</strong> in your dashboard menu whenever you like. Products, pages, SEO and settings carry over.</li>
+            {% if item.is_yearly %}<li>Yearly licence: if it lapses, your store moves back to a design you still have. Nothing is lost.</li>{% endif %}
+          </ul>
+        {% else %}
+          <ul class="mkt-list">
+            {% for p in dashboard_points %}<li>Adds <strong>{{ p.label }}</strong> to your dashboard ({{ p.get_point_display }}).</li>{% endfor %}
+            {% for p in storefront_points %}<li>Can show <strong>{{ p.label }}</strong> on your store ({{ p.get_widget_type_display }}). It stays off until you switch it on in the app's settings.</li>{% endfor %}
+            {% if not dashboard_points and not storefront_points %}<li>Works in the background; it adds no pages or widgets.</li>{% endif %}
+            <li>It cannot see your customers, orders or payment details.</li>
+            {% if not app.is_system %}<li>You can remove it any time from <strong>Apps</strong> in your dashboard.</li>{% endif %}
+          </ul>
+        {% endif %}
+        <p class="app-field-hint" style="margin-top:1rem;">You confirmed it's you with {% if reauth_method == "passkey" %}your passkey{% elif reauth_method == "email_code" %}an emailed code{% elif reauth_method == "password+totp" %}your password and authenticator{% else %}your password{% endif %}.</p>
+      </div>
+    </section>
+
+    <section class="app-card">
+      <div class="app-card__head"><h2 class="app-card__title">{% if action == "buy" or action == "renew" %}{% if cycles %}Choose how you pay{% else %}Price{% endif %}{% else %}Confirm{% endif %}</h2></div>
+      <div class="app-card__body">
+        {% if action == "buy" or action == "renew" %}
+          {% if cycles %}
+          <fieldset class="mkt-cycles" id="mkt-cycles">
+            <legend>Billing cycle</legend>
+            {% for c in cycles %}
+            <label class="mkt-cycle{% if c.selected %} is-selected{% endif %}">
+              <input type="radio" name="cycle" value="{{ c.key }}"{% if c.selected %} checked{% endif %}
+                     data-base="{{ c.total|floatformat:2 }}" data-gst="{{ c.gst|floatformat:2 }}" data-total="{{ c.grand|floatformat:2 }}"
+                     data-note="Billed &#8377;{{ c.total|floatformat:2 }} + GST every {{ c.billed }}.">
+              <span class="mkt-cycle__name">{{ c.label }}{% if c.save_pct %} <span class="mkt-cycle__save">Save {{ c.save_pct }}%</span>{% endif %}</span>
+              <span class="mkt-cycle__price">&#8377;{{ c.per_month|floatformat:"-2" }}<small> / month</small></span>
+              <span class="mkt-cycle__billed">&#8377;{{ c.total|floatformat:"-2" }} every {{ c.billed }}</span>
+            </label>
+            {% endfor %}
+          </fieldset>
+          {% endif %}
+          <dl class="mkt-quote">
+            <div><dt>Price{% if quote.cycle_label %} (<span id="mkt-q-cycle">{{ quote.cycle_label|lower }}</span>){% endif %}</dt><dd>&#8377;<span id="mkt-q-base">{{ quote.base|floatformat:2 }}</span></dd></div>
+            {% if quote.gst %}<div><dt>GST ({{ quote.gst_rate|floatformat:0 }}%)</dt><dd>&#8377;<span id="mkt-q-gst">{{ quote.gst|floatformat:2 }}</span></dd></div>{% endif %}
+            <div class="mkt-quote__total"><dt>Total</dt><dd>&#8377;<span id="mkt-q-total">{{ quote.total|floatformat:2 }}</span></dd></div>
+          </dl>
+          <p class="app-field-hint">
+            {% if quote.cycle %}<span id="mkt-q-note">Billed &#8377;{{ quote.base|floatformat:2 }} + GST every {% for c in cycles %}{% if c.selected %}{{ c.billed }}{% endif %}{% endfor %}.</span> You renew when it ends; never charged automatically.
+            {% elif quote.period_days == 365 %}Renews yearly: you buy again when it ends, never charged automatically.
+            {% elif quote.period_days == 30 %}Monthly: you renew when it ends, never charged automatically.
+            {% else %}One-time payment. Yours for good.{% endif %}
+            {% if item_licence and item_licence.expires_at %} Your current licence runs until {{ item_licence.expires_at|date:"j M Y" }}; this adds a year after that.{% endif %}
+            {% if action == "renew" and app_licence.expires_at %} Your current licence runs until {{ app_licence.expires_at|date:"j M Y" }}; the new period starts after that, so you lose no days.{% endif %}
+          </p>
+          {% if not cashfree_ready %}
+            <p class="mkt-note mkt-note--warn">Online payment isn't available right now. Please try again later.</p>
+          {% else %}
+            <button type="button" class="pal-btn" id="mkt-pay"
+                    data-url="{% url 'mkt_gateway:install' %}" data-app="{{ app.slug }}" data-item="{{ item.key|default:'' }}"
+                    data-action="{{ action }}" data-cycle="{{ cycle }}">Pay &#8377;<span id="mkt-pay-amt">{{ quote.total|floatformat:2 }}</span></button>
+            <p class="mkt-note mkt-note--warn" id="mkt-pay-err" hidden role="alert"></p>
+          {% endif %}
+        {% elif action == "owned" or action == "installed" %}
+          <p>Nothing to do here.</p>
+          {% if item and app.module == "storefront_designs" and sites %}
+            <a class="pal-btn" href="{% url 'store_apps:open' sites.0.pk app.slug %}">Open OneWooz Templates</a>
+          {% else %}
+            <a class="pal-btn" href="{% url 'mkt_gateway:my_apps' %}">Open my apps</a>
+          {% endif %}
+        {% elif action == "upgrade" %}
+          <p>{{ app.name }} is included with every paid OneWooz plan.</p>
+          <a class="pal-btn" href="{{ upgrade_url }}">See plans</a>
+        {% else %}
+          <form method="post" action="{% url 'mkt_gateway:install' %}">
+            {% csrf_token %}
+            <input type="hidden" name="app" value="{{ app.slug }}">
+            {% if item %}<input type="hidden" name="item" value="{{ item.key }}">{% endif %}
+            <input type="hidden" name="action" value="{{ action }}">
+            <button class="pal-btn" type="submit">
+              {% if action == "add" %}Add to my library{% elif action == "trial" %}Start {{ app.trial_days }}-day trial{% else %}Install{% endif %}
+            </button>
+          </form>
+        {% endif %}
+        {% if not all_sites %}<p class="app-field-hint" style="margin-top:1rem;">You don't have a store yet. Your {% if item %}design{% else %}app{% endif %} will be ready when you create one.</p>{% endif %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+{% if needs_checkout %}
+<script nonce="{{ csp_nonce }}" src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  var btn = document.getElementById("mkt-pay");
+  if (!btn) return;
+  var err = document.getElementById("mkt-pay-err");
+  // Billing cycles: picking a card swaps the breakdown to that cycle's
+  // server-computed figures. The server prices the chosen cycle again at payment.
+  var cyclesEl = document.getElementById("mkt-cycles");
+  function setText(id, v) { var n = document.getElementById(id); if (n) n.textContent = v; }
+  if (cyclesEl) {
+    cyclesEl.addEventListener("change", function (e) {
+      var r = e.target;
+      if (!r || r.name !== "cycle") return;
+      Array.prototype.forEach.call(cyclesEl.querySelectorAll(".mkt-cycle"), function (l) {
+        l.classList.toggle("is-selected", l.contains(r));
+      });
+      btn.setAttribute("data-cycle", r.value);
+      setText("mkt-q-base", r.getAttribute("data-base"));
+      setText("mkt-q-gst", r.getAttribute("data-gst"));
+      setText("mkt-q-total", r.getAttribute("data-total"));
+      setText("mkt-pay-amt", r.getAttribute("data-total"));
+      setText("mkt-q-note", r.getAttribute("data-note"));
+      var name = r.closest(".mkt-cycle").querySelector(".mkt-cycle__name");
+      setText("mkt-q-cycle", (name ? name.firstChild.textContent : "").trim().toLowerCase());
+    });
+  }
+  btn.addEventListener("click", function () {
+    btn.disabled = true;
+    err.hidden = true;
+    var body = new URLSearchParams();
+    body.set("app", btn.getAttribute("data-app"));
+    if (btn.getAttribute("data-item")) body.set("item", btn.getAttribute("data-item"));
+    if (btn.getAttribute("data-cycle")) body.set("cycle", btn.getAttribute("data-cycle"));
+    body.set("action", btn.getAttribute("data-action") || "buy");
+    fetch(btn.getAttribute("data-url"), {
+      method: "POST",
+      headers: { "X-CSRFToken": "{{ csrf_token }}", "X-Requested-With": "XMLHttpRequest" },
+      body: body,
+      credentials: "same-origin"
+    }).then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+      .then(function (res) {
+        var d = res.d;
+        if (d.reauth) { window.location.reload(); return; }
+        if (!d.ok) throw new Error(d.error || "We couldn't start the payment.");
+        if (typeof Cashfree !== "function") throw new Error("Couldn't open the payment window. Please refresh and try again.");
+        Cashfree({ mode: d.mode }).checkout({ paymentSessionId: d.payment_session_id, redirectTarget: "_self" });
+      })
+      .catch(function (e) {
+        err.textContent = e.message;
+        err.hidden = false;
+        btn.disabled = false;
+      });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

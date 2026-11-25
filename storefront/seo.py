@@ -111,6 +111,15 @@ def robots_txt(request, site) -> str:
     lines.append("Allow: /")
     lines.append("")
     lines.append(f"Sitemap: {_abs(request, 'public_sitemap_xml')}")
+    # Point AI assistants at the store's llms.txt once it has been generated.
+    try:
+        from prompts.llms_txt import published_body
+
+        if published_body(site):
+            lines.append("")
+            lines.append(f"# Plain-text guide to this store for AI assistants: {_abs(request, 'public_llms_txt')}")
+    except Exception:
+        pass
 
     return "\n".join(lines) + "\n"
 
@@ -237,9 +246,22 @@ def sitemap_xml(request, site) -> str:
         .filter(is_active=True, is_deleted=False)
         .order_by("name")
     )
+    # Only categories with at least one live product: an empty category page is
+    # noindex (storefront.views.category_detail), so listing it would send
+    # crawlers to a page that asks not to be indexed.
+    from django.db.models import Q
+
+    stocked = Product.objects.for_site(site).filter(is_active=True, is_deleted=False)
+    stocked_ids = set(
+        stocked.exclude(category_id=None).values_list("category_id", flat=True)
+    ) | set(stocked.values_list("categories__id", flat=True))
+    stocked_ids.discard(None)
+
     for category in categories:
         slug = (category.slug or "").strip()
         if not slug or f"category:{category.id}" in hidden:
+            continue
+        if category.id not in stocked_ids:
             continue
         out.append(
             _url(
@@ -267,7 +289,11 @@ def sitemap_xml(request, site) -> str:
             )
         )
 
-    # Core pages, subpages and nested children (CMS blob).
+    # Core pages, subpages and nested children (CMS blob). The /core-pages/
+    # index is listed too when there is at least one published core page.
+    core_list = [p for p in (content.get("core_pages") or []) if isinstance(p, dict) and (p.get("slug") or "").strip("/")]
+    if core_list and "core_pages" not in hidden:
+        out.append(_url(_abs(request, "public_core_pages"), changefreq="weekly", priority="0.5"))
     for page in content.get("core_pages") or []:
         if not isinstance(page, dict):
             continue

@@ -1,0 +1,124 @@
+{% extends "accounts/_auth_shell.html" %}
+{% load static %}
+
+{% block title %}Confirm it's you · OneWooz Apps{% endblock %}
+{% block auth_title %}Confirm it's you{% endblock %}
+{% block auth_subtitle %}
+  <p class="auth__subtitle">
+    {% if app %}Before you {% if item %}get <strong>{{ item.name }}</strong>{% else %}install <strong>{{ app.name }}</strong>{% endif %}, confirm your identity again.
+    {% else %}Confirm your identity to continue.{% endif %}
+    This protects your stores if someone else is using this browser.
+  </p>
+{% endblock %}
+
+{% block auth_body %}
+  {% if has_passkey %}
+  <div id="mkt-passkey-box" class="hidden">
+    <button type="button" class="btn btn--primary btn--block" id="mkt-passkey">Use my passkey</button>
+    <p class="alert alert--error mt-3 hidden" id="mkt-passkey-err" role="alert"></p>
+    <p class="divider"><span>or</span></p>
+  </div>
+  {% endif %}
+
+  {% if has_password %}
+  <form method="post" action="{% url 'mkt_gateway:reauth_password' %}" class="auth__form">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field">
+      <span class="label">Password</span>
+      <input class="input" type="password" name="password" autocomplete="current-password" required autofocus>
+    </label>
+    {% if has_totp %}
+    <label class="field mt-4">
+      <span class="label">Authenticator code</span>
+      <input class="input" type="text" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+    </label>
+    {% endif %}
+    <button type="submit" class="btn btn--primary btn--block mt-6">Confirm</button>
+  </form>
+  <p class="divider"><span>or</span></p>
+  {% endif %}
+
+  <form method="post" action="{% url 'mkt_gateway:reauth_code_verify' %}" class="auth__form" id="mkt-code-form">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="button" class="btn btn--secondary btn--block mt-6" id="mkt-code-send"
+            data-url="{% url 'mkt_gateway:reauth_code_send' %}">Email me a code at {{ masked_email }}</button>
+    <p class="alert alert--info mt-3 hidden" id="mkt-code-status" role="status"></p>
+    <div id="mkt-code-box" class="hidden">
+      <label class="field mt-4">
+        <span class="label">6-digit code</span>
+        <input class="input" type="text" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code">
+      </label>
+      <button type="submit" class="btn btn--primary btn--block mt-4">Confirm with code</button>
+    </div>
+  </form>
+{% endblock %}
+
+{% block auth_footer %}
+  <p class="auth__footer"><a href="{% url 'mkt_gateway:my_apps' %}">Cancel</a></p>
+{% endblock %}
+
+{% block scripts %}
+{% if has_passkey %}
+<script nonce="{{ csp_nonce }}" src="{% static 'js/passkeys.js' %}"
+        data-auth-begin="{% url 'mkt_gateway:reauth_passkey_begin' %}"
+        data-auth-finish="{% url 'mkt_gateway:reauth_passkey_finish' %}"
+        data-register-begin="{% url 'accounts:passkey_register_begin' %}"
+        data-register-finish="{% url 'accounts:passkey_register_finish' %}"></script>
+{% endif %}
+{{ next|json_script:"mkt-next" }}
+<script nonce="{{ csp_nonce }}">
+(function () {
+  "use strict";
+  var nextUrl = JSON.parse(document.getElementById("mkt-next").textContent);
+  function csrf() {
+    var f = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return f ? f.value : "";
+  }
+  var box = document.getElementById("mkt-passkey-box");
+  var btn = document.getElementById("mkt-passkey");
+  if (box && btn && window.OneWoozPasskeys && window.OneWoozPasskeys.isSupported()) {
+    box.classList.remove("hidden");
+    btn.addEventListener("click", function () {
+      var err = document.getElementById("mkt-passkey-err");
+      err.classList.add("hidden");
+      btn.disabled = true;
+      window.OneWoozPasskeys.signIn().then(function () {
+        window.location.assign(nextUrl);
+      }).catch(function (e) {
+        err.textContent = (e && e.message) || "That didn't work. Try another way.";
+        err.classList.remove("hidden");
+        btn.disabled = false;
+      });
+    });
+  }
+  var send = document.getElementById("mkt-code-send");
+  if (send) {
+    send.addEventListener("click", function () {
+      var status = document.getElementById("mkt-code-status");
+      send.disabled = true;
+      fetch(send.getAttribute("data-url"), {
+        method: "POST",
+        headers: { "X-CSRFToken": csrf(), "X-Requested-With": "XMLHttpRequest" },
+        credentials: "same-origin"
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        status.classList.remove("hidden");
+        if (d.ok) {
+          status.textContent = "We sent a code to " + d.email + ". It works for 10 minutes.";
+          document.getElementById("mkt-code-box").classList.remove("hidden");
+          send.textContent = "Send a new code";
+        } else {
+          status.textContent = d.error || "We couldn't send a code right now.";
+        }
+        window.setTimeout(function () { send.disabled = false; }, 15000);
+      }).catch(function () {
+        status.classList.remove("hidden");
+        status.textContent = "We couldn't send a code right now.";
+        send.disabled = false;
+      });
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -25,7 +25,9 @@
               <span class="app-table__strong">{{ e.name|default:"Anonymous" }}{% if not e.is_read %} <span class="app-badge app-badge--invited">Unread</span>{% endif %}</span>
               <span class="app-sub">{{ e.created_at|date:"d M Y, H:i" }}</span>
             </div>
-            <p class="app-sub">{{ e.email|default:"" }}{% if e.mobile_number %} · {{ e.mobile_number }}{% endif %}</p>
+            {% if e.email or e.mobile_number %}
+              <p class="app-sub app-enquiry__contact">{% if e.email %}<a href="mailto:{{ e.email }}">{{ e.email }}</a>{% endif %}{% if e.mobile_number %}<a href="tel:{{ e.mobile_number }}">{{ e.mobile_number }}</a>{% endif %}</p>
+            {% endif %}
             {% if is_b2b %}
               <div class="app-enquiry__meta">
                 {% for p in e.products.all %}<span class="app-chip">{{ p.title }}</span>{% endfor %}
@@ -42,7 +44,7 @@
                   <button type="submit" class="pal-btn pal-btn--ghost pal-btn--sm">Mark as read</button>
                 </form>
               {% endif %}
-              <form method="post" action="{% url 'store:enquiry_delete' site.id e.id %}" onsubmit="return confirm('Delete this enquiry? This cannot be undone.');">{% csrf_token %}
+              <form method="post" action="{% url 'store:enquiry_delete' site.id e.id %}" data-confirm="Delete this enquiry? This cannot be undone.">{% csrf_token %}
                 {% if unread_only %}<input type="hidden" name="unread" value="1">{% endif %}
                 <button type="submit" class="pal-btn pal-btn--danger pal-btn--sm">Delete</button>
               </form>
@@ -71,5 +73,10 @@
   var el = document.querySelector(".app-enquiry--focus");
   if (el) setTimeout(function () { el.scrollIntoView({ block: "center" }); }, 60);
 })();
+// Delete asks first (an inline onsubmit would be blocked by the CSP).
+document.addEventListener("submit", function (e) {
+  var f = e.target;
+  if (f.matches && f.matches(".app-enquiry [data-confirm]") && !window.confirm(f.getAttribute("data-confirm"))) e.preventDefault();
+});
 </script>
 {% endblock %}

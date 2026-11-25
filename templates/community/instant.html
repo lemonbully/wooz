@@ -1,0 +1,52 @@
+{% extends "community/_base.html" %}
+
+{% comment %}
+After asking (community.views.instant). Kept deliberately simple: the
+question was posted, who will answer it, and a thank you. Nothing to fill in
+(no title, topic or details). Posts appear publicly only after the team
+approves them in Django admin. A visitor who asked without an account is
+asked to join first; coming back to this page posts the question. Private to
+whoever holds the signed link (noindex).
+{% endcomment %}
+
+{% block ask_main %}
+<section class="ask-body ask-body--thread">
+  <div class="pal-container ask-narrow">
+    <p class="ask-eyebrow"><a href="{% url 'ask:ask_home' %}">Ask OneWooz</a> / Your question</p>
+
+    {% if posted %}
+      <div class="ask-done" role="status">
+        <span class="ask-done__tick" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </span>
+        <h1 class="ask-done__title">Your question has been posted</h1>
+        <p class="ask-draftq">{{ aq.question }}</p>
+        <p class="ask-done__line">Someone from the OneWooz team or the community will answer it soon.{% if masked_email %} We'll email you at {{ masked_email }} when it's answered.{% endif %}</p>
+        <p class="ask-done__thanks">Thank you for posting!</p>
+        <a class="pal-btn" href="{% url 'ask:ask_home' %}">Back to Ask OneWooz <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      </div>
+
+    {% elif not member %}
+      {# Asked without an account: join first, then this page posts it. #}
+      <h1 class="ask-q__title ask-q__title--asked">One step to post your question</h1>
+      <p class="ask-draftq">{{ aq.question }}</p>
+      <div class="ask-joincard">
+        {% if ow_signed_in %}
+        {# Already a OneWooz user: no registering, their account is linked (community.bridge). #}
+        <p>You already have a OneWooz account. Continue and your question is posted right away.</p>
+        {% else %}
+        <p>Confirm your email and your question is posted right away. It takes a minute.</p>
+        {% endif %}
+        <a class="pal-btn" href="{% url 'ask:join' %}?next={{ request.get_full_path|urlencode }}">Continue <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      </div>
+
+    {% else %}
+      {# Signed in but the question couldn't be posted (posting paused, a limit, or someone else's link). #}
+      <h1 class="ask-q__title ask-q__title--asked">We couldn't post this question</h1>
+      <p class="ask-draftq">{{ aq.question }}</p>
+      <p class="ask-done__line">{% if blocked %}{{ blocked }}{% else %}Please ask it again from the box on Ask OneWooz.{% endif %}</p>
+      <a class="pal-btn" href="{% url 'ask:ask_home' %}">Back to Ask OneWooz <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

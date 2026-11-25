@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product | oakline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+
+<!--
+  Block order follows Template 1's product page exactly:
+  gallery | title, rating, Ask ChatGPT, price, price history, trust badges,
+  variations, Features, purchase actions, pincode, About this item, video
+  -> Description / Item Details / Origin, Manufacturer & Packer / Others
+  -> product FAQs -> reviews -> You may also like.
+-->
+<main class="container">
+  <nav class="crumbs" aria-label="Breadcrumb" data-crumbs></nav>
+  <div class="pdp">
+    <!-- Gallery -->
+    <div class="gallery">
+      <div class="gallery__stage" data-stage>
+        <img src="" alt="" data-main>
+        <div class="p-card__badges" data-pbadges style="top:16px;left:16px"></div>
+        <div class="gallery__tools">
+          <button class="circle-btn" data-share aria-label="Share"></button>
+          <button class="circle-btn" data-zoom aria-label="Zoom"></button>
+        </div>
+        <button class="circle-btn gallery__nav gallery__nav--prev" data-gprev aria-label="Previous image"></button>
+        <button class="circle-btn gallery__nav gallery__nav--next" data-gnext aria-label="Next image"></button>
+        <button class="gallery__play" data-play hidden aria-label="Play product video"></button>
+      </div>
+      <div class="gallery__thumbs" data-thumbs></div>
+    </div>
+
+    <!-- Details -->
+    <div class="pdp__info">
+      <div class="pdp__top" data-top></div>
+      <h1 class="pdp__title" data-title></h1>
+      <div class="pdp__price" data-price></div>
+      <p class="pdp__tax" data-tax></p>
+      <button class="pdp__lowest" data-open-ph></button>
+
+      <!-- Trust badges -->
+      <div class="perks perks--badges" data-perks></div>
+
+      <!-- Product variations -->
+      <div data-options></div>
+
+      <!-- Features -->
+      <div class="pdp-block" data-features-wrap hidden>
+        <h3 class="pdp-block__title">Features</h3>
+        <ul class="pdp-features" data-features></ul>
+      </div>
+
+      <!-- Purchase actions -->
+      <div class="stock"><i></i><span data-stock>In stock and ready to ship</span></div>
+      <div class="buy-row">
+        <div class="qty qty--lg"><button data-q="-1" aria-label="Decrease"></button><input value="1" data-qty-input aria-label="Quantity"><button data-q="1" aria-label="Increase"></button></div>
+        <button class="btn btn--outline" data-atc>Add to cart</button>
+        <button class="wish-btn" data-wish-main aria-label="Add to wishlist"></button>
+      </div>
+      <a class="btn btn--black btn--block" href="checkout.html" data-buy>Buy it now</a>
+
+      <!-- Pincode serviceability -->
+      <div class="info-box">
+        <span data-ico="truck"></span>
+        <div style="flex:1">
+          <b>Check delivery date</b><small data-eta>Enter your pincode for delivery date and COD availability</small>
+          <form class="pincode" data-pin><input class="input" maxlength="6" inputmode="numeric" placeholder="Enter pincode" aria-label="Pincode"><button class="btn btn--black">Check</button></form>
+          <div class="pincode-msg" data-pin-msg></div>
+        </div>
+      </div>
+
+      <!-- About this item -->
+      <div class="pdp-block" data-about-wrap hidden>
+        <h3 class="pdp-block__title">About this item</h3>
+        <ul class="pdp-about" data-about></ul>
+        <button type="button" class="link small pdp-about__more" data-about-more hidden>Read more</button>
+      </div>
+
+      <div class="share-row">
+        <div style="display:flex;align-items:center;gap:6px">Share: <div class="socials" data-socials></div></div>
+        <a href="contact.html" class="tlink"><span>Need help?</span><span>Need help?</span></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Description / Item Details / Origin, Manufacturer & Packer / Others -->
+  <section class="section pinfo" id="product-info">
+    <div class="pinfo-tabs" role="tablist" aria-label="Product information" data-info-tabs>
+      <button type="button" role="tab" class="is-active" aria-selected="true" data-info="desc">Description</button>
+      <button type="button" role="tab" aria-selected="false" data-info="item">Item Details</button>
+      <button type="button" role="tab" aria-selected="false" data-info="origin">Origin, Manufacturer &amp; Packer</button>
+      <button type="button" role="tab" aria-selected="false" data-info="others">Others</button>
+    </div>
+    <div class="pinfo-panel" role="tabpanel" data-info-panel></div>
+  </section>
+
+  <!-- Product FAQs -->
+  <section class="pfaq" data-sec-pfaq>
+    <div class="sec-head sec-head--center"><h2 class="h2">Frequently Asked Questions</h2><p>Answers to what customers ask most before buying.</p></div>
+    <div class="pfaq__list" data-acc-single data-pfaq></div>
+  </section>
+
+  <!-- Reviews (below the FAQs, as on Template 1) -->
+  <section class="section" id="reviews">
+    <div class="sec-head"><h2 class="h2">Product Reviews</h2><button class="btn btn--black btn--sm" data-open="review">Write a review</button></div>
+    <div class="rv-summary">
+      <div class="card card--soft">
+        <div class="rv-big" data-rv-score></div>
+        <div data-rv-stars style="margin:8px 0 4px"></div>
+        <p class="small muted" data-rv-count></p>
+        <ul class="rv-bars" style="margin-top:16px" data-rv-bars></ul>
+      </div>
+      <div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" class="pill-tabs" data-rv-tabs><button class="is-active" data-rf="all">All</button><button data-rf="photos">With photos</button><button data-rf="5">5 star</button></div>
+        <div class="rv-list" data-rv-list></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- You may also like -->
+  <section style="padding-bottom:0">
+    <div class="sec-head sec-head--center"><h2 class="h2">You May Also Like</h2></div>
+    <div class="slider" data-slider>
+      <div class="slider__track" data-related style="--col:calc((100% - 3*16px)/4);--col-sm:62%"></div>
+      <div class="slider__foot"><button class="circle-btn" data-prev aria-label="Previous"></button><div class="slider__bar"><i></i></div><button class="circle-btn" data-next aria-label="Next"></button></div>
+    </div>
+  </section>
+  <div style="height:var(--section)"></div>
+</main>
+
+<!-- Sticky add to cart -->
+<div class="sticky-atc" data-sticky>
+  <img src="" alt="" data-s-img>
+  <div class="t"><b data-s-title></b><span class="small muted" data-s-meta></span></div>
+  <div class="hide-sm" data-s-price></div>
+  <button class="btn btn--black" data-s-atc>Add to cart</button>
+</div>
+
+<!-- Price history drawer -->
+<aside class="drawer" id="drawer-ph" aria-label="Price history">
+  <div class="drawer__head"><h3>Price history</h3><button class="icon-btn" data-close aria-label="Close"></button></div>
+  <div class="drawer__body" data-ph></div>
+</aside>
+
+<!-- Size guide -->
+<div class="modal" id="modal-size" role="dialog" aria-label="Size guide">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__box modal__box--single">
+    <button class="modal__close" data-close aria-label="Close"></button>
+    <h3 class="h3">Size guide</h3>
+    <p class="small" style="margin:6px 0 18px">Measure your room and doorway before you order.</p>
+    <table class="spec-table">
+      <tr><td>Size</td><td>Width</td><td>Best for</td></tr>
+      <tr><td>2 seater</td><td>160 cm</td><td>Studios and reading rooms</td></tr>
+      <tr><td>3 seater</td><td>210 cm</td><td>Most living rooms</td></tr>
+      <tr><td>4 seater</td><td>250 cm</td><td>Open plan spaces</td></tr>
+      <tr><td>Doorway</td><td>80 cm min.</td><td>Package depth must fit</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- Video -->
+<div class="modal" id="modal-video" role="dialog" aria-label="Product video">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__box modal__box--single" style="padding:0;width:min(420px,100%)">
+    <button class="modal__close" data-close aria-label="Close"></button>
+    <div style="aspect-ratio:9/16;background:#000;display:grid;place-items:center;color:#fff;position:relative">
+      <img src="" alt="" data-video-poster style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.75">
+      <span style="position:relative" class="small">Product video plays here</span>
+    </div>
+  </div>
+</div>
+
+<!-- Write review -->
+<div class="modal" id="modal-review" role="dialog" aria-label="Write a review">
+  <div class="modal__backdrop" data-close></div>
+  <form class="modal__box modal__box--single" data-review-form>
+    <button type="button" class="modal__close" data-close aria-label="Close"></button>
+    <h3 class="h3">Write a review</h3>
+    <div style="display:grid;gap:14px;margin-top:18px">
+      <div class="field"><label>Your rating</label><div class="stars" style="gap:4px" data-rate></div></div>
+      <div class="field"><label for="rv-t">Title</label><input id="rv-t" class="input" placeholder="Sum it up in a line" required></div>
+      <div class="field"><label for="rv-b">Review</label><textarea id="rv-b" class="textarea" placeholder="How does it look and feel in your home?" required></textarea></div>
+      <div class="field"><label for="rv-p">Add a photo <span class="muted">(optional)</span></label><input id="rv-p" type="file" accept="image/*" class="input" style="padding-top:10px"></div>
+      <button class="btn btn--black btn--block">Submit review</button>
+    </div>
+  </form>
+</div>
+
+<div data-footer></div>
+
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$;
+  const p = T3.byId(T3.qs('p')) || D.products[0], dt = p.detail;
+  document.title = `${p.name} | ${D.brand}`;
+  $$('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
+  $$('[data-prev]').forEach(e => e.innerHTML = I.left); $$('[data-next]').forEach(e => e.innerHTML = I.right);
+  $$('.modal__close, #drawer-ph [data-close]').forEach(e => e.innerHTML = I.close);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const paras = s => s.split(/\n\n+/).map(x => `<p>${esc(x)}</p>`).join('');
+  const NAMES = { '#c8a27a': 'Natural Oak', '#6b4a33': 'Walnut', '#1f1f1f': 'Ink', '#e7e1d6': 'Linen', '#9aab8c': 'Sage', '#b5562f': 'Rust', '#b9b4ab': 'Stone', '#d0a23a': 'Mustard', '#2f5f63': 'Teal' };
+  const BL = { new: 'New', hot: 'Hot', popular: 'Popular', sale: 'Sale', best: 'Best seller' };
+
+  /* ---- gallery ---- */
+  const imgs = [...p.img, D.U(D.IMG.living4, 900, 1100), D.U(D.IMG.living5, 900, 1100)].slice(0, 5);
+  let gi = 0;
+  /* main photo at its natural shape and full resolution (the list keeps the square-ish crops for thumbnails) */
+  const big = s => s.replace(/&h=\d+/, '').replace(/w=\d+/, 'w=1600');
+  const show = i => { gi = (i + imgs.length) % imgs.length; const m = $('[data-main]'); m.style.opacity = .3; setTimeout(() => { m.src = big(imgs[gi]); m.style.opacity = 1; }, 120); $$('[data-thumbs] button').forEach((b, k) => b.classList.toggle('is-active', k === gi)); };
+  $('[data-main]').src = big(imgs[0]); $('[data-main]').alt = p.name;
+  $('[data-thumbs]').innerHTML = imgs.map((s, i) => `<button class="${i ? '' : 'is-active'}" data-g="${i}" aria-label="Image ${i + 1}"><img src="${s.replace('w=900', 'w=160').replace('h=1100', 'h=160')}" alt=""></button>`).join('');
+  $('[data-gprev]').innerHTML = I.left; $('[data-gnext]').innerHTML = I.right;
+  $('[data-share]').innerHTML = I.share; $('[data-zoom]').innerHTML = I.search;
+  $('[data-pbadges]').innerHTML = p.badges.map(b => `<span class="badge badge--${b}">${BL[b]}</span>`).join('');
+  if (dt.video) { const pl = $('[data-play]'); pl.hidden = false; pl.innerHTML = I.play; $('[data-video-poster]').src = p.img[1] || p.img[0]; pl.onclick = () => T3.openDrawer('video'); }
+  document.addEventListener('click', e => {
+    const g = e.target.closest('[data-g]'); if (g) show(+g.dataset.g);
+    if (e.target.closest('[data-gprev]')) show(gi - 1);
+    if (e.target.closest('[data-gnext]')) show(gi + 1);
+    if (e.target.closest('[data-zoom]') || e.target.matches('[data-main]')) $('[data-stage]').classList.toggle('is-zoom');
+    if (e.target.closest('[data-share]')) { navigator.clipboard?.writeText(location.href).catch(() => {}); T3.toast('Link copied to clipboard'); }
+  });
+  /* Desktop: size the main image from the screen so the whole photo and its
+     thumbnails are visible without scrolling. Measures where the image starts
+     and what sits below it (a thumbnail row), then sets --fit-h. */
+  const fitGallery = () => {
+    const st = document.querySelector('[data-stage]'); if (!st) return;
+    const g = st.closest('.gallery');
+    if (innerWidth <= 1024) { g.style.removeProperty('--fit-h'); return; }
+    g.style.removeProperty('--fit-h');
+    const top = st.getBoundingClientRect().top + scrollY;
+    const below = Math.max(0, g.getBoundingClientRect().bottom - st.getBoundingClientRect().bottom);
+    g.style.setProperty('--fit-h', Math.max(320, Math.floor(innerHeight - top - below - 20)) + 'px');
+  };
+  /* Fill the frame: when the photo's shape is close to the frame's, it
+     covers the frame edge to edge; when it is very different (a tall bottle
+     in a wide frame), the whole product is shown and the space around it is
+     filled with a soft, blurred copy of the same photo, never empty bars. */
+  const fitMode = () => {
+    const st = document.querySelector('[data-stage]'), m = document.querySelector('[data-main]');
+    if (!st || !m || !m.naturalWidth || !st.clientHeight) return;
+    const ir = m.naturalWidth / m.naturalHeight, fr = st.clientWidth / st.clientHeight;
+    st.classList.toggle('is-fit-contain', Math.max(ir / fr, fr / ir) > 1.18);
+    st.style.setProperty('--stage-bg', `url("${m.currentSrc || m.src}")`);
+  };
+  const mainImg = document.querySelector('[data-main]');
+  if (mainImg) mainImg.addEventListener('load', fitMode);
+  const fitAll = () => { fitGallery(); fitMode(); };
+  fitAll();
+  addEventListener('resize', fitAll);
+  addEventListener('load', fitAll);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
+  $('[data-stage]').addEventListener('mousemove', e => { const st = $('[data-stage]'); if (!st.classList.contains('is-zoom')) return; const r = st.getBoundingClientRect(); $('[data-main]').style.transformOrigin = `${(e.clientX - r.left) / r.width * 100}% ${(e.clientY - r.top) / r.height * 100}%`; });
+
+  /* ---- title, rating, Ask ChatGPT, price ---- */
+  $('[data-crumbs]').innerHTML = `<a href="index.html">Home</a><span class="sep">&gt;</span><a href="category.html?c=${p.cat}">${p.catName}</a><span class="sep">&gt;</span><span>${esc(p.name)}</span>`;
+  $('[data-top]').innerHTML = `<a href="#reviews" class="rating">${T3.stars(p.rating)} <b>${p.rating}</b> (${p.reviews} reviews)</a><button type="button" class="gpt-pill" data-ask-gpt>${I.chat.replace(/26/g, '14')} Ask ChatGPT</button>`;
+  const sale = p.mrp && p.mrp > p.price;
+  $('[data-price]').innerHTML = `<span class="${sale ? 'is-sale' : ''}">${T3.inr(p.price)}</span>${sale ? `<span class="price__was">MRP ${T3.inr(p.mrp)}</span><span class="badge badge--sale">Save ${Math.round((1 - p.price / p.mrp) * 100)}%</span>` : ''}`;
+  $('[data-tax]').textContent = `Inclusive of all taxes. Free shipping above ${T3.inr(D.freeShip)}.`;
+  $('[data-open-ph]').innerHTML = `${I.trend} Lowest price in 30 days: ${T3.inr(Math.round(p.price * .94 / 10) * 10)} · Price history`;
+
+  /* ---- trust badges ---- */
+  $('[data-perks]').innerHTML = dt.badges.map(b => { const inner = `<span class="perks__ico">${I[b.icon]}</span><span>${esc(b.label)}</span>`; return b.url ? `<a class="perks__badge" href="${b.url}" title="${esc(b.label)}. Read the return and refund policy.">${inner}</a>` : `<div class="perks__badge">${inner}</div>`; }).join('');
+
+  /* ---- variations ---- */
+  let ci = 0, size = p.sizes.find(s => !p.out.includes(s));
+  const renderOpts = () => {
+    $('[data-options]').innerHTML = (p.colors.length ? `<div class="option"><div class="option__label"><div>Finish: <span>${NAMES[p.colors[ci]] || 'Default'}</span></div></div><div class="opt-swatches">${p.colors.map((c, i) => `<button class="${i === ci ? 'is-active' : ''}" data-c="${i}" aria-label="${NAMES[c] || 'Finish'}"><i style="background:${c}"></i></button>`).join('')}</div></div>` : '') +
+      `<div class="option"><div class="option__label"><div>Size: <span>${size}</span></div><button class="link small" data-open="size">Size guide</button></div><div class="opt-sizes">${p.sizes.map(s => `<button class="${s === size ? 'is-active' : ''} ${p.out.includes(s) ? 'is-out' : ''}" data-s="${s}">${s}</button>`).join('')}</div></div>`;
+    $('[data-title]').textContent = p.sizes.length > 1 || p.colors.length > 1 ? `${p.name} (${[p.colors.length ? NAMES[p.colors[ci]] : '', size].filter(Boolean).join(' / ')})` : p.name;
+    $('[data-s-meta]').textContent = [p.colors.length ? NAMES[p.colors[ci]] : '', size].filter(Boolean).join(' / ');
+  };
+  renderOpts();
+  $('[data-options]').addEventListener('click', e => {
+    const c = e.target.closest('[data-c]'); if (c) { ci = +c.dataset.c; renderOpts(); show(ci % imgs.length); }
+    const s = e.target.closest('[data-s]'); if (s) { if (p.out.includes(s.dataset.s)) return T3.toast('This size is sold out'); size = s.dataset.s; renderOpts(); }
+  });
+
+  /* ---- Features + About this item ---- */
+  $('[data-features]').innerHTML = dt.features.map(f => `<li>${I.check}<span>${esc(f)}</span></li>`).join('');
+  $('[data-features-wrap]').hidden = !dt.features.length;
+  $('[data-about]').innerHTML = dt.bullets.map((b, i) => `<li${i > 2 ? ' class="is-extra"' : ''}>${esc(b)}</li>`).join('');
+  $('[data-about-wrap]').hidden = !dt.bullets.length;
+  $('[data-about-more]').hidden = dt.bullets.length <= 3;
+  $('[data-about-more]').onclick = e => { const w = $('[data-about-wrap]'); w.classList.toggle('is-open'); e.currentTarget.textContent = w.classList.contains('is-open') ? 'Read less' : 'Read more'; };
+
+  /* ---- purchase ---- */
+  const qi = $('[data-qty-input]');
+  $$('[data-q]').forEach(b => { b.innerHTML = +b.dataset.q > 0 ? I.plus : I.minus; b.onclick = () => qi.value = Math.max(1, Math.min(10, (+qi.value || 1) + +b.dataset.q)); });
+  const add = () => T3.addToCart(p.id, { size, color: ci, qty: +qi.value || 1 });
+  $('[data-atc]').onclick = add; $('[data-s-atc]').onclick = add;
+  $('[data-buy]').onclick = () => T3.addToCart(p.id, { size, color: ci, qty: +qi.value || 1, silent: true });
+  const wb = $('[data-wish-main]'); wb.innerHTML = I.heart; wb.dataset.wish = p.id; wb.classList.toggle('is-on', T3.getWish().includes(p.id));
+  $('[data-pin]').addEventListener('submit', e => { e.preventDefault(); const v = e.target.querySelector('input').value.trim(); const m = $('[data-pin-msg]');
+    if (!/^\d{6}$/.test(v)) { m.style.color = 'var(--sale)'; m.textContent = 'Please enter a valid 6 digit pincode.'; return; }
+    const d = new Date(Date.now() + 3 * 864e5).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+    m.style.color = 'var(--ok)'; m.textContent = `Delivery by ${d}. Cash on Delivery available.`; });
+  $('[data-socials]').innerHTML = [I.fb, I.pinterest, I.x, I.wa].map(s => `<a href="#">${s}</a>`).join('');
+  document.addEventListener('click', e => { if (!e.target.closest('[data-ask-gpt]')) return;
+    const q = `I am considering buying this product.\n\nProduct: ${p.name}\nPrice: ${T3.inr(p.price)}\nDescription: ${dt.desc.split(' ').slice(0, 60).join(' ')}\nLink: ${location.href}\n\nPlease summarise its pros and cons and who it suits.`;
+    window.open('https://chatgpt.com/?q=' + encodeURIComponent(q), '_blank', 'noopener'); });
+
+  /* ---- information tabs ---- */
+  const rows = (list, warn) => `<dl class="pinfo-list">${list.map(r => `<div class="pinfo-row"><dt>${esc(r.label)}</dt><dd>${esc(r.value)}</dd></div>`).join('')}${warn ? `<div class="pinfo-row pinfo-row--warn"><dt>Warning</dt><dd>${esc(warn)}</dd></div>` : ''}</dl>`;
+  const panels = { desc: `<div class="prose pinfo-prose">${paras(dt.desc)}</div>`, item: rows(dt.item, dt.warning), origin: rows(dt.origin), others: rows(dt.extras) };
+  const tab = k => { $('[data-info-panel]').innerHTML = panels[k]; $$('[data-info]').forEach(b => { b.classList.toggle('is-active', b.dataset.info === k); b.setAttribute('aria-selected', b.dataset.info === k); }); };
+  tab('desc');
+  $('[data-info-tabs]').addEventListener('click', e => { const b = e.target.closest('[data-info]'); if (b) tab(b.dataset.info); });
+
+  /* ---- product FAQs ---- */
+  $('[data-pfaq]').innerHTML = dt.faqs.map((f, i) => T3.acc(esc(f.q), `<p>${esc(f.a)}</p>`, i === 0).replace('class="acc', 'class="acc acc--box')).join('');
+
+  /* ---- reviews ---- */
+  $('[data-rv-score]').textContent = p.rating.toFixed(1);
+  $('[data-rv-stars]').innerHTML = T3.stars(p.rating);
+  $('[data-rv-count]').textContent = `Based on ${p.reviews} reviews`;
+  $('[data-rv-bars]').innerHTML = [[5, 78], [4, 15], [3, 4], [2, 2], [1, 1]].map(([s, v]) => `<li><span>${s} ★</span><i><b style="width:${v}%"></b></i><span>${v}%</span></li>`).join('');
+  const RV = D.reviews.slice(0, 4).map((r, i) => ({ ...r, rating: i === 3 ? 4 : 5, when: ['2 days ago', '1 week ago', '3 weeks ago', '1 month ago'][i], pic: i % 2 === 0 }));
+  const renderRv = f => { $('[data-rv-list]').innerHTML = RV.filter(r => f === 'all' || (f === 'photos' ? r.pic : r.rating === 5)).map(r => `<div class="rv-item"><div class="rv-item__head"><div style="display:flex;gap:10px;align-items:center"><img src="${r.avatar}" style="width:40px;height:40px;border-radius:50%;object-fit:cover" alt=""><div><b>${r.name}</b><span class="verified">${I.check} Verified buyer</span></div></div><span class="small muted">${r.when}</span></div>
+    ${T3.stars(r.rating)}<b style="display:block;margin:6px 0 4px">${r.title}</b><p>${r.text}</p>
+    ${r.pic ? `<div class="rv-item__photos">${p.img.slice(0, 2).map(s => `<img src="${s.replace('w=900', 'w=160').replace('h=1100', 'h=160')}" alt="">`).join('')}</div>` : ''}</div>`).join(''); };
+  renderRv('all');
+  $('[data-rv-tabs]').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('[data-rv-tabs] .is-active').classList.remove('is-active'); b.classList.add('is-active'); renderRv(b.dataset.rf); });
+  $('[data-rate]').innerHTML = Array.from({ length: 5 }, (_, i) => `<button type="button" data-r="${i + 1}">${I.star.replace(/14/g, '24')}</button>`).join('');
+  $('[data-rate]').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (!b) return; $$('[data-r]').forEach(x => x.style.opacity = +x.dataset.r <= +b.dataset.r ? 1 : .25); });
+  $('[data-review-form]').addEventListener('submit', e => { e.preventDefault(); T3.closeAll(); T3.toast('Thanks! Your review will appear after moderation'); e.target.reset(); });
+
+  /* ---- related ---- */
+  const others = D.products.filter(x => x.id !== p.id);
+  $('[data-related]').innerHTML = others.filter(x => x.cat === p.cat).concat(others.filter(x => x.cat !== p.cat)).slice(0, 10).map(x => T3.card(x, { reveal: false })).join('');
+
+  /* ---- sticky add to cart ---- */
+  $('[data-s-img]').src = p.img[0]; $('[data-s-title]').textContent = p.name; $('[data-s-price]').textContent = T3.inr(p.price);
+  const atc = $('[data-atc]'), st = $('[data-sticky]');
+  addEventListener('scroll', () => { const r = atc.getBoundingClientRect(); st.classList.toggle('is-show', r.bottom < 0 && scrollY < document.body.scrollHeight - innerHeight - 600); }, { passive: true });
+
+  /* ---- price history ---- */
+  $('[data-open-ph]').onclick = () => {
+    const pts = Array.from({ length: 30 }, (_, i) => Math.round(p.price * (1 + .08 * Math.sin(i / 4) + (i < 8 ? .06 : 0) - (i > 24 ? .06 : 0)) / 10) * 10); pts[29] = p.price;
+    const mn = Math.min(...pts), mx = Math.max(...pts), W = 380, H = 170;
+    const xy = pts.map((v, i) => [i / 29 * W, H - 14 - (v - mn) / (mx - mn || 1) * (H - 34)]);
+    const path = xy.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' ');
+    $('[data-ph]').innerHTML = `<div style="display:flex;gap:12px;align-items:center;margin-bottom:18px"><img src="${p.img[0]}" style="width:56px;height:56px;border-radius:8px;object-fit:cover" alt=""><div><b>${esc(p.name)}</b><div class="small muted">Last 30 days</div></div></div>
+      <div class="ph-stats"><div><small>Current</small><b>${T3.inr(p.price)}</b></div><div><small>Lowest</small><b>${T3.inr(mn)}</b></div><div><small>Highest</small><b>${T3.inr(mx)}</b></div></div>
+      <svg class="ph-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Price over the last 30 days"><path d="${path} L${W} ${H} L0 ${H}Z" fill="currentColor" opacity=".08"/><path d="${path}" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      <div style="display:flex;justify-content:space-between" class="small muted"><span>30 days ago</span><span>Today</span></div>`;
+    T3.openDrawer('ph');
+  };
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

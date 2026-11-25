@@ -12,8 +12,8 @@ ever rendered behind it.
 Two modes:
 
 * ``plan`` set (the normal case): the owner renews the plan they had, and only
-  that plan. One plan panel on the left, the renewal checkout (breakdown,
-  optional discount code, agreement, pay) inline on the right. The checkout
+  that plan. Only the plan name and the renewal summary (breakdown, optional
+  discount code, agreement, pay) are shown; the plan's details card is not. The checkout
   endpoints (billing.renewal_views) refuse any other slug server-side too.
 * ``plan`` empty but ``cards`` set: their previous plan was retired, so there
   is nothing to pin them to. The active plans are listed and selecting one
@@ -181,6 +181,9 @@ Two modes:
           {% if renewal.order.plan_name %}Your <strong>{{ renewal.order.plan_name }}</strong> plan has expired.{% else %}Your plan has expired.{% endif %}
           {% if plan %}Renew it below to unlock your dashboard again. Your stores, products and data are all safe and waiting.{% else %}Choose a plan below to unlock your dashboard again. Your stores, products and data are all safe and waiting.{% endif %}
         </p>
+        {% if account_restore_until %}
+        <p class="owr-notice">You deleted this account. Renew by <strong>{{ account_restore_until|date:"j M Y" }}</strong> and your account and stores come back automatically. After that date they can no longer be restored.</p>
+        {% endif %}
       </div>
       <form class="owr-signout" method="post" action="{% url 'accounts:sign_out' %}">
         {% csrf_token %}
@@ -188,49 +191,16 @@ Two modes:
       </form>
     </div>
 
-    {% if renewal.order %}
-    <dl class="owr-facts">
-      <div class="owr-fact"><dt>Previous plan</dt><dd>{{ renewal.order.plan_name|default:"Subscription" }}</dd></div>
-      {% if renewal.order.current_period_end %}
-      <div class="owr-fact"><dt>Ended on</dt><dd class="is-warn">{{ renewal.order.current_period_end|date:"j M Y" }}</dd></div>
-      {% endif %}
-      <div class="owr-fact"><dt>Billing</dt><dd>{% if plan %}{% if plan.is_one_time %}One-time · 1 year{% else %}{{ plan.get_duration_display }}{% endif %}{% else %}{{ renewal.order.months }} month{{ renewal.order.months|pluralize }}{% endif %}</dd></div>
-    </dl>
-    {% endif %}
+    {% comment %}
+    Plan details (price card, feature list, fees, billing facts) are deliberately
+    not shown here: the owner sees only the plan name and the renewal summary.
+    {% endcomment %}
 
     {% if plan or cards %}
-    <div class="owr-grid{% if not plan %} owr-grid--pick{% endif %}">
+    <div class="owr-grid owr-grid--pick">
 
       {% if plan %}
-      {# ---------- The one plan this owner renews ---------- #}
-      <article class="pal-plan pal-plan--featured" aria-label="{{ plan.name }} plan">
-        <div class="owr-tags">
-          <span class="owr-tag">Your plan</span>
-          {% if plan.badge %}<span class="owr-tag owr-tag--soft">{{ plan.badge }}</span>{% endif %}
-        </div>
-        <div class="pal-plan__name">{{ plan.name }}</div>
-
-        {% if plan.is_one_time %}
-          <div class="pal-plan__price">₹{{ plan.one_time_total|floatformat:'-2' }} <span>/ year, once</span></div>
-        {% else %}
-          <div class="pal-plan__price">₹{{ plan.card_per_month|floatformat:'-2' }} <span>/ month</span></div>
-          {% if plan.months > 1 %}<p class="owr-billed">Billed ₹{{ plan.card_total|floatformat:'-2' }} every {{ plan.months }} months, plus GST</p>{% else %}<p class="owr-billed">Billed monthly, plus GST</p>{% endif %}
-        {% endif %}
-
-        {% if plan.tagline %}<div class="pal-plan__desc">{{ plan.tagline }}</div>{% endif %}
-
-        {% if plan.feature_list or plan.number_of_stores or plan.number_of_collaborations %}
-        <ul class="pal-plan__list">
-          {% for f in plan.feature_list %}
-          <li{% if not f.included %} style="opacity:.5;text-decoration:line-through"{% endif %}><span>{{ f.text }}</span>{% if f.value %}<span class="pal-plan__fval">{{ f.value }}</span>{% endif %}</li>
-          {% endfor %}
-          {% if plan.number_of_stores %}<li><span>{{ plan.number_of_stores }} store{{ plan.number_of_stores|pluralize }} included</span></li>{% endif %}
-          {% if plan.number_of_collaborations %}<li><span>{{ plan.number_of_collaborations }} team collaborator{{ plan.number_of_collaborations|pluralize }}</span></li>{% endif %}
-        </ul>
-        {% endif %}
-
-        {% include "partials/_plan_fee.html" %}
-      </article>
+      {# The plan being renewed is named in the summary below; its full card is not shown. #}
 
       {% else %}
       {# ---------- Previous plan retired: pick any active plan ---------- #}

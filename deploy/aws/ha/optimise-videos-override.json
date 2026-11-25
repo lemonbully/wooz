@@ -1,0 +1,8 @@
+{
+  "containerOverrides": [
+    {
+      "name": "web",
+      "command": ["python", "manage.py", "optimise_videos", "--queue"]
+    }
+  ]
+}

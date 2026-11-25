@@ -1,0 +1,34 @@
+<article class="mk-design">
+  <a class="mk-design__frame pal-frame" href="{{ it.url }}" aria-label="{{ it.name }} details">
+    <span class="pal-corner pal-corner--tl" aria-hidden="true"></span>
+    <span class="pal-corner pal-corner--tr" aria-hidden="true"></span>
+    <span class="pal-corner pal-corner--bl" aria-hidden="true"></span>
+    <span class="pal-corner pal-corner--br" aria-hidden="true"></span>
+    {% if it.owned %}<span class="pal-tag mk-design__flag"><span class="led" aria-hidden="true"></span> {% if it.is_system_default %}On every store{% else %}In your library{% endif %}</span>{% endif %}
+    <span class="mk-design__shot">
+      {% if it.thumbnail %}<img src="{{ it.thumbnail }}" alt="{{ it.name }} preview" loading="lazy">{% else %}{% include "marketplace/surface/_design_mock.html" with look=it.key name=it.name %}{% endif %}
+    </span>
+  </a>
+  <div class="mk-design__body">
+    <div class="mk-design__row">
+      <h3 class="mk-design__name"><a href="{{ it.url }}">{{ it.name }}</a></h3>
+      <span class="mk-price">{% if it.is_priced %}{{ it.pricing_label }}{% else %}Included{% endif %}</span>
+    </div>
+    {% if it.tagline or it.description %}<p class="mk-design__desc">{{ it.tagline|default:it.description|striptags|truncatechars:140 }}</p>{% endif %}
+    <div class="mk-design__tags">
+      <span class="mk-chip">{{ it.fits_label }}</span>
+      {% if it.is_priced %}<span class="mk-chip mk-chip--accent">{% if it.is_yearly %}Yearly licence{% else %}Yours for good{% endif %}</span>{% endif %}
+      {% for t in it.tags|slice:":3" %}<span class="mk-chip">{{ t }}</span>{% endfor %}
+    </div>
+    <div class="mk-design__actions">
+      {% if it.owned %}
+        {% if it.is_yearly and not it.is_system_default %}<a class="pal-btn pal-btn--ghost" href="{{ it.install_url }}">Renew</a>{% endif %}
+        <a class="pal-btn pal-btn--ghost" href="{{ it.url }}">Details</a>
+      {% else %}
+        <a class="pal-btn" href="{{ it.install_url }}">{% if it.is_priced %}Buy &middot; {{ it.pricing_label }}{% else %}Add to library{% endif %} <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+        <a class="mk-linkmono" href="{{ it.url }}">Details</a>
+      {% endif %}
+      {% if it.preview_url %}<a class="mk-linkmono" href="{{ it.preview_url }}" target="_blank" rel="noopener">Live demo &#8599;</a>{% endif %}
+    </div>
+  </div>
+</article>

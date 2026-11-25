@@ -1,0 +1,52 @@
+{% comment %}
+Shows the "someone new" boxes (name, team label, store link) only when
+"Posted by" is set to Someone new, and adds answer cards on the new-question
+page. Works for every authoring form on the page, matched by field prefix.
+{% endcomment %}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var EXTRA = ["poster_name", "poster_team", "poster_store_url"];
+    function sync(select) {
+      var prefix = select.name.slice(0, select.name.length - "poster".length);
+      var show = select.value === "new";
+      EXTRA.forEach(function (name) {
+        var els = document.getElementsByName(prefix + name);
+        for (var i = 0; i < els.length; i++) {
+          var box = els[i].closest(".mc-field");
+          if (box) box.hidden = !show;
+        }
+      });
+    }
+    function syncAll() {
+      document.querySelectorAll("select[name$='poster']").forEach(sync);
+    }
+    document.addEventListener("change", function (e) {
+      var t = e.target;
+      if (t && t.matches && t.matches("select[name$='poster']")) sync(t);
+    });
+    syncAll();
+
+    var add = document.querySelector("[data-add-answer]");
+    var tpl = document.getElementById("answer-template");
+    var list = document.querySelector("[data-answer-list]");
+    var total = document.getElementById("id_a-TOTAL_FORMS");
+    var max = document.getElementById("id_a-MAX_NUM_FORMS");
+    if (add && tpl && list && total) {
+      add.addEventListener("click", function () {
+        var n = parseInt(total.value, 10) || 0;
+        var limit = max ? parseInt(max.value, 10) : 1000;
+        if (n >= limit) { add.disabled = true; return; }
+        var html = tpl.innerHTML.replace(/__prefix__/g, String(n)).replace(/__num__/g, String(n + 1));
+        list.insertAdjacentHTML("beforeend", html);
+        total.value = String(n + 1);
+        if (n + 1 >= limit) add.disabled = true;
+        syncAll();
+        var cards = list.querySelectorAll("[data-answer-card]");
+        var last = cards[cards.length - 1];
+        var box = last && last.querySelector("textarea");
+        if (box) box.focus();
+      });
+    }
+  })();
+</script>

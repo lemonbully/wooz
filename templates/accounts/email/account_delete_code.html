@@ -1,0 +1,11 @@
+{% extends "email/base.html" %}
+{% block preheader %}{{ code }} confirms deleting your OneWooz account.{% endblock %}
+{% block kicker %}Security{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text="Confirm deletion" %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:23px; letter-spacing:-0.02em; line-height:1.15; color:#0a0a0b; margin:0 0 16px 0;">Confirm deleting your account</h1>
+  <p style="margin:0 0 16px 0;">Use this code to confirm deleting your OneWooz account and every store on it. It expires in <strong style="color:#0a0a0b;">{{ minutes }} minutes</strong> and works once.</p>
+  {% include "email/_code.html" with code=code %}
+  {% include "email/_note.html" with text=note %}
+  <p style="margin:18px 0 0 0; font-size:13px; color:#66666b;">We will never ask you for this code by phone, chat or email. If someone does, they are not from OneWooz.</p>
+{% endblock %}

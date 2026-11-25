@@ -11,7 +11,7 @@
   "containerDefinitions": [
     {
       "name": "beat",
-      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app@sha256:9dbe9195556b37004007c502615b5b9b81932219084940b3b86044fa09eb8207",
+      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app@sha256:c02947a5efb43b01dc5505e426da03e65d06e1b0fd0ebb41681a781a17bbdec7",
       "essential": true,
       "command": [
         "beat"
@@ -68,6 +68,18 @@
         {
           "name": "ONEWOOZ_SQS_PREFIX",
           "value": "onewooz-"
+        },
+        {
+          "name": "ONEWOOZ_MARKETPLACE_QUEUE",
+          "value": "marketplace"
+        },
+        {
+          "name": "ONEWOOZ_MEDIA_QUEUE",
+          "value": "media"
+        },
+        {
+          "name": "ONEWOOZ_MEDIA_CDN_DISTRIBUTION_ID",
+          "value": "ESZR5GF8XLQJF"
         }
       ],
       "secrets": [

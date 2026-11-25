@@ -6,12 +6,14 @@ Single-page core-page tree editor. All core pages are listed as accordions
 (one open at a time); opening one reveals its fields and its nested subpages and
 child pages, each of which is itself an accordion that can be created inline.
 Everything autosaves to the three marketing models via the tree/save/ endpoint 
-mirroring the storefront owner's content editor.
+mirroring the storefront owner's content editor. Content is pasted HTML, edited
+with the paste-HTML editor (js/admin/html_editor.js): live preview in the site
+styles, image uploads with copyable links, cleaned on save.
 {% endcomment %}
 
 {% block extrahead %}{{ block.super }}
-<script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js" referrerpolicy="origin"></script>
 <link rel="stylesheet" href="{% static 'css/admin/marketing-tree.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin/html-editor.css' %}">
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -25,7 +27,10 @@ mirroring the storefront owner's content editor.
 {% block content %}
 <div id="mkt-tree"
      data-save-url="{{ save_url }}"
-     data-raw-url="{{ raw_changelist_url }}">
+     data-raw-url="{{ raw_changelist_url }}"
+     data-preview-url="{{ editor.preview_url }}"
+     data-upload-url="{{ editor.upload_url }}"
+     data-css="{{ editor.css }}">
   {% csrf_token %}
 
   <div class="mkt-top">
@@ -56,5 +61,6 @@ mirroring the storefront owner's content editor.
 </div>
 
 {{ tree_data|json_script:"mkt-data" }}
+<script src="{% static 'js/admin/html_editor.js' %}"></script>
 <script src="{% static 'js/admin/marketing_tree.js' %}"></script>
 {% endblock %}

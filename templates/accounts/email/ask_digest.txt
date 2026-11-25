@@ -1,0 +1,26 @@
+{% autoescape off %}Ask OneWooz weekly · week {{ week }}
+{{ range }} · {{ stats.questions }} questions · {{ stats.answers }} answers
+{% if top %}
+QUESTION OF THE WEEK
+{{ top.title }}
+{% if top.preview %}{{ top.preview }}
+{% endif %}{{ top.url }}
+{% endif %}{% if helpful %}
+MOST HELPFUL ANSWERS
+{% for a in helpful %}- {{ a.title }} ({{ a.by }})
+  {{ a.url }}
+{% endfor %}{% endif %}{% if busy_questions %}
+NEW THIS WEEK IN {{ busy_topic|upper }}
+{% for q in busy_questions %}- {{ q.title }}
+  {{ q.url }}
+{% endfor %}{% endif %}{% if waiting %}
+STILL WAITING FOR AN ANSWER
+{% for q in waiting %}- {{ q.title }}
+  {{ q.url }}
+{% endfor %}{% endif %}
+Open this week: {{ weekly_url }}
+
+Unsubscribe: {{ unsubscribe_url }}
+
+{{ brand }}
+{% endautoescape %}

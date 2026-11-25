@@ -1,0 +1,95 @@
+{% extends "community/_base.html" %}
+{% load static %}
+
+{% comment %}
+Join / sign in to Ask OneWooz: email + display name (+ optional photo,
+brand name and website), then a one-time code. The optional extras wait in
+the session until the code is confirmed (community.profile.hold_for_join).
+Identical response whether or not the email is already a member.
+{% endcomment %}
+
+{% block ask_main %}
+<section class="ask-body ask-body--join">
+  <div class="pal-container">
+    <div class="ask-joinhead">
+      {% if step == "code" %}
+        <h1 class="ask-joinhead__title">Check your email.</h1>
+        <p class="ask-joinhead__lead">If {{ email }} can join, a 6-digit code is on its way. It expires in 10 minutes.</p>
+      {% else %}
+        <h1 class="ask-joinhead__title">Join Ask OneWooz.</h1>
+        <p class="ask-joinhead__lead">We email you a 6-digit code, no password. Already joined? Use the same email.</p>
+      {% endif %}
+    </div>
+
+    <div class="pal-infocard ask-joinform">
+      {% if error %}<div class="pal-alert" role="alert">{{ error }}</div>{% endif %}
+      {% if step == "code" %}
+        <form method="post" action="{% url 'ask:join' %}" class="ask-joincode">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="verify">
+          <input type="hidden" name="next" value="{{ next }}">
+          {# The same one-digit boxes as OneWooz sign-in (js/otp-boxes.js); they name themselves for screen readers. #}
+          <span class="ask-jf__label" aria-hidden="true">6-digit code</span>
+          <div class="ask-joincode__row">
+            {% include "accounts/_otp_field.html" %}
+            <button type="submit" class="pal-btn">Confirm <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+          </div>
+        </form>
+        <form method="post" action="{% url 'ask:join' %}" class="ask-joinform__again">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="send">
+          <input type="hidden" name="resend" value="1">
+          <input type="hidden" name="next" value="{{ next }}">
+          <input type="hidden" name="email" value="{{ email }}">
+          <input type="hidden" name="display_name" value="{{ name }}">
+          <button type="submit" class="ask-textbtn">Send a new code</button>
+          <a class="ask-textbtn" href="{% url 'ask:join' %}?next={{ next|urlencode }}">Use a different email</a>
+        </form>
+      {% else %}
+        {% comment %}
+        Laid out like Edit content: a 12-column grid, each field spanning by
+        how much it is predicted to hold.
+          Row 1  email (5) | display name (4) | brand (3)
+          Row 2  website (5) | photo (4) | submit (3)
+        {% endcomment %}
+        <form method="post" action="{% url 'ask:join' %}" enctype="multipart/form-data" class="ask-joingrid">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="send">
+          <input type="hidden" name="next" value="{{ next }}">
+          <div class="ask-jf ask-jf--email">
+            <label class="ask-jf__label" for="join-email">Email <span class="ask-jf__req" aria-hidden="true">*</span> <span class="ask-jf__aside">never shown</span></label>
+            <input id="join-email" class="pal-input" type="email" name="email" value="{{ email }}" autocomplete="email" required autofocus placeholder="you@yourbrand.com">
+          </div>
+          <div class="ask-jf ask-jf--name">
+            <label class="ask-jf__label" for="join-name">Display name <span class="ask-jf__req" aria-hidden="true">*</span></label>
+            <input id="join-name" class="pal-input" name="display_name" value="{{ name }}" autocomplete="name" maxlength="40" required placeholder="Riya from Jaipur">
+          </div>
+          <div class="ask-jf ask-jf--brand">
+            <label class="ask-jf__label" for="join-brand">Brand <span class="ask-jf__aside">optional</span></label>
+            <input id="join-brand" class="pal-input" type="text" name="brand_name" value="{{ profile_form.brand_name.value|default:'' }}" maxlength="60" autocomplete="organization" placeholder="Jaipur Block Prints">
+          </div>
+          <div class="ask-jf ask-jf--site">
+            <label class="ask-jf__label" for="join-website">Website <span class="ask-jf__aside">optional</span></label>
+            <input id="join-website" class="pal-input" type="text" inputmode="url" spellcheck="false" autocapitalize="off" name="website" value="{{ profile_form.website.value|default:'' }}" maxlength="300" autocomplete="url" placeholder="yourbrand.com">
+          </div>
+          <div class="ask-jf ask-jf--photo">
+            <label class="ask-jf__label" for="join-avatar">Photo <span class="ask-jf__aside">optional</span></label>
+            <div class="ask-photo ask-jfphoto">
+              <span class="ask-avatar ask-avatar--empty" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4s6.1 1.8 7.5 5.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+              <label class="ask-jfphoto__pick" for="join-avatar">Choose photo</label>
+              <input id="join-avatar" class="ask-jfphoto__file" type="file" name="avatar" accept="image/png,image/jpeg,image/webp" aria-describedby="join-avatar-help" data-avatar-input>
+              <span class="ask-jfphoto__help" id="join-avatar-help">Up to 5 MB</span>
+            </div>
+          </div>
+          <button type="submit" class="pal-btn ask-jf--submit" data-busy-label="Sending">Email me a code <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+{% if step == "code" %}<script nonce="{{ csp_nonce }}" src="{% static 'js/otp-boxes.js' %}"></script>{% endif %}
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Designs{% endblock %}
+{% block crumbs %}<span>/</span><span>Designs</span>{% endblock %}
+{% block heading %}Designs{% endblock %}
+{% block lead %}<p>The storefront designs sold in OneWooz Templates. Price them, make them yearly, hide or publish them, and upload a real screenshot. Owners keep whatever they already added or bought, whatever you change here.</p>{% endblock %}
+{% block actions %}
+  {% if marketplace_url %}<a class="pal-btn pal-btn--ghost" href="{{ marketplace_url }}" target="_blank" rel="noopener">View gallery &#8599;</a>{% endif %}
+  <a class="pal-btn pal-btn--ghost" href="{% url 'mkt_console:app_edit' app.pk %}">App settings</a>
+{% endblock %}
+
+{% block main %}
+<form method="post" enctype="multipart/form-data" class="mc-form">
+  {% csrf_token %}
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}<div class="mc-errors">{% for e in formset.non_form_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+  <div class="mc-designs">
+    {% for f in formset.forms %}
+    <article class="mc-design">
+      {% for h in f.hidden_fields %}{{ h }}{% endfor %}
+      <div class="mc-design__shot">
+        {% if f.instance.pk and f.instance.is_system_default %}<span class="pal-tag mc-design__flag"><span class="led" aria-hidden="true"></span> Safe fallback</span>
+        {% elif f.instance.pk and f.instance.status == "draft" %}<span class="pal-tag mc-design__flag">Hidden</span>{% endif %}
+        {% if f.instance.thumbnail %}<img src="{{ f.instance.thumbnail.url }}" alt="">
+        {% elif f.instance.pk %}{% include "marketplace/surface/_design_mock.html" with look=f.instance.key name=f.instance.name %}
+        {% else %}<div class="mc-empty" style="display:grid;place-items:center;height:100%;">Add a design: key, name and price below</div>{% endif %}
+      </div>
+      {% if f.non_field_errors %}<div class="mc-errors" style="margin:1rem 1.1rem 0;">{% for e in f.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+      <div class="mc-design__body">
+        {% for field in f.visible_fields %}{% include "marketplace/console/_field.html" %}{% endfor %}
+      </div>
+      {% if f.instance.pk %}<div class="mc-design__meta"><span class="mc-mono mc-muted">key {{ f.instance.key }}</span><span class="mc-chip">{{ f.owners }} owner{{ f.owners|pluralize }}</span></div>{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% if can_write %}<div class="mc-actions"><button class="pal-btn" type="submit">Save designs <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button><span class="mc-help">A new design also needs its code (REGISTRY entry + theme mapping) before owners can switch to it.</span></div>{% endif %}
+</form>
+{% endblock %}

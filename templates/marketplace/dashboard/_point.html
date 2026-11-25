@@ -1,0 +1,35 @@
+{% comment %}
+Cards / links that installed OneWooz Apps placed at one dashboard point.
+Rendered by {% app_point %} (marketplace_points); prints nothing when empty.
+{% endcomment %}
+{% if point == "top_bar" %}
+  <span class="mkt-topbar">
+  {% for i in items %}
+    <a class="mkt-topbar__btn" href="{{ i.href }}" title="{{ i.p.label }}" aria-label="{{ i.p.label }}">
+      {% include "store/_icons.html" with icon=i.p.icon_key %}
+    </a>
+  {% endfor %}
+  </span>
+{% elif point == "editor_link" %}
+  <div class="mkt-links">
+    <span class="mkt-links__label">From your apps:</span>
+    {% for i in items %}<a href="{{ i.href }}">{{ i.p.label }}</a>{% endfor %}
+  </div>
+{% else %}
+  <section class="app-block mkt-point mkt-point--{{ point }}" aria-label="From your apps">
+    <div class="app-block__head"><p class="pal-mono pal-mono--accent">From your apps</p></div>
+    <div class="mkt-cards">
+      {% for i in items %}
+      <a class="mkt-card" href="{{ i.href }}">
+        <span class="mkt-card__ico" aria-hidden="true">{% include "store/_icons.html" with icon=i.p.icon_key %}</span>
+        <span class="mkt-card__body">
+          <span class="mkt-card__title">{{ i.p.label }}</span>
+          {% if i.p.summary %}<span class="mkt-card__text">{{ i.p.summary }}</span>{% endif %}
+          <span class="mkt-card__app">{{ i.p.app_name }}</span>
+        </span>
+        <span class="mkt-card__arrow" aria-hidden="true">&rarr;</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}

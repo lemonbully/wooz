@@ -1,0 +1,34 @@
+{% extends "admin/index.html" %}
+
+{% comment %}
+The Django admin home (/db/), extended rather than copied: Django resolves this
+"admin/index.html" to its own template underneath, so every upstream block is
+kept. Only the page title changes, into a header row carrying the Deleted
+users and Expiring users lists (custom_admin.views.deleted_users /
+expiring_users), the Ask OneWooz console (community.console) and the Export
+Excel button (custom_admin.views.export_excel).
+{% endcomment %}
+
+{% block content_title %}
+<div class="owa-dash-head">
+  {% if title %}<h1 class="owa-page-title">{{ title }}</h1>{% endif %}
+  <div class="owa-dash-head__btns">
+    <a href="{% url 'custom_admin:deleted_users' %}" class="owa-btn owa-btn--ghost owa-dash-head__btn">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="m16.5 8.5 4 4m0-4-4 4"/></svg>
+      Deleted users
+    </a>
+    <a href="{% url 'custom_admin:expiring_users' %}" class="owa-btn owa-btn--ghost owa-dash-head__btn">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9.5 2.5h5"/></svg>
+      Expiring users
+    </a>
+    <a href="{% url 'ask_console:overview' %}" class="owa-btn owa-btn--ghost owa-dash-head__btn">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></svg>
+      Ask OneWooz
+    </a>
+    <a href="{% url 'custom_admin:export_excel' %}" class="owa-btn owa-btn--accent owa-dash-head__btn">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1.5"/><path d="M3 9h18M9 9v12"/><path d="m13.5 13 3 4m0-4-3 4"/></svg>
+      Export Excel
+    </a>
+  </div>
+</div>
+{% endblock %}

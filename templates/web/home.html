@@ -12,7 +12,7 @@
       <div>
         <div class="pal-marker">
           <span class="pal-marker__num">01</span>
-          <span>Commerce infrastructure</span>
+          <span>Run your business, not just your website</span>
         </div>
 
         <h1 class="pal-display pal-hero__display">
@@ -21,35 +21,42 @@
         </h1>
 
         <p class="pal-lead pal-hero__lead">
-          Answer a few questions about your business. OneWooz builds and
-          publishes a working site  products, checkout, payments, shipping 
-          on your own domain. No developer. No builder. No lost weekend.
+          Answer a few questions about your business. OneWooz builds and runs
+          your own online store: products, checkout, payments and shipping, on
+          your own domain, with SEO and marketing built in. No developer. No
+          builder. No lost weekend.
         </p>
 
         <div class="pal-btn-row pal-hero__actions">
+          {% if has_demos %}
+          <a href="{% url 'web:demo' %}" class="pal-btn">
+            See demo <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          {% else %}
           <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">
             Deploy a store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span>
           </a>
+          {% endif %}
           <a href="{% url 'web:platform' %}" class="pal-btn pal-btn--ghost">Read the spec</a>
         </div>
 
         <p class="pal-note pal-mt-6" style="display:inline-flex;align-items:center;gap:0.5rem;">
           <svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 7c6 0 9-5 14-5"/><path d="M11 2l4 0 0 4"/><path d="M15 7c4 0 6 3 10 3"/></svg>
-          Free to start · no card · upgrade only when you sell
+          Live in minutes · transparent plans · small commerce fee per order
         </p>
 
         <dl class="pal-specs">
           <div class="pal-specs__item">
-            <div class="pal-specs__value">4 min</div>
-            <div class="pal-specs__label">Sign-up to live</div>
+            <dt class="pal-specs__label">Sign-up to live</dt>
+            <dd class="pal-specs__value">4 min</dd>
           </div>
           <div class="pal-specs__item">
-            <div class="pal-specs__value">0</div>
-            <div class="pal-specs__label">Lines you write</div>
+            <dt class="pal-specs__label">Lines you write</dt>
+            <dd class="pal-specs__value">0</dd>
           </div>
           <div class="pal-specs__item">
-            <div class="pal-specs__value">100%</div>
-            <div class="pal-specs__label">Revenue kept</div>
+            <dt class="pal-specs__label">Click to publish</dt>
+            <dd class="pal-specs__value">1</dd>
           </div>
         </dl>
       </div>
@@ -81,7 +88,7 @@
               <nav class="pal-store__nav" aria-hidden="true"><span>Shop</span><span>Story</span><span>Cart&nbsp;(2)</span></nav>
             </div>
             <div class="pal-store__hero">
-              <img src="{% static 'img/hero-img1.png' %}" alt="" loading="lazy" width="1000" height="560">
+              <img src="{% static 'img/hero-img1.png' %}" alt="Hero banner of an example OneWooz storefront for a clothing brand" loading="lazy" width="1000" height="560">
               <div class="pal-store__hero-copy">
                 <div class="pal-store__hero-kicker">New  Winter table</div>
                 <div class="pal-store__hero-title">Made to Wear every day.</div>
@@ -89,17 +96,17 @@
             </div>
             <div class="pal-store__grid" aria-hidden="true">
               <div class="pal-store__cell">
-                <img src="{% static 'img/orange_cap.png' %}" alt="" loading="lazy" width="500" height="500">
+                <img src="{% static 'img/orange_cap.png' %}" alt="Orange cap product photo on an example OneWooz store" loading="lazy" width="500" height="500">
                 <div class="pal-store__cell-name">Stoneware Cap</div>
                 <div class="pal-store__cell-price">₹ 640</div>
               </div>
               <div class="pal-store__cell">
-                <img src="{% static 'img/maroon_hoodie.png' %}" alt="" loading="lazy" width="500" height="500">
+                <img src="{% static 'img/maroon_hoodie.png' %}" alt="Maroon hoodie product photo on an example OneWooz store" loading="lazy" width="500" height="500">
                 <div class="pal-store__cell-name">Classic Hoodie</div>
                 <div class="pal-store__cell-price">₹ 1,200</div>
               </div>
               <div class="pal-store__cell">
-                <img src="{% static 'img/blue_shirt.png' %}" alt="" loading="lazy" width="500" height="500">
+                <img src="{% static 'img/blue_shirt.png' %}" alt="Blue loose-fit shirt product photo on an example OneWooz store" loading="lazy" width="500" height="500">
                 <div class="pal-store__cell-name">Classic Loose-Fit</div>
                 <div class="pal-store__cell-price">₹ 3,450</div>
               </div>
@@ -133,21 +140,21 @@ A terminal-style feed of shop events. The track is duplicated and translated by
 {% endcomment %}
 <div class="pal-ticker" aria-hidden="true">
   <div class="pal-ticker__track">
-    <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> ORD-4821 <span class="pal-ticker__k">PAID</span> ₹2,340 · Mumbai</span>
+    <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> ORD-1048<span class="pal-ticker__k">PAID</span> ₹2,340 · Mumbai</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> LABEL <span class="pal-ticker__k">BLR→DEL</span> 0.5kg · Bluedart</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> STOCK <span class="pal-ticker__k">Stoneware mug</span> 42 left</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> ENQUIRY <span class="pal-ticker__k">Forgeworks</span> bulk · 500u</span>
-    <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> PAYOUT <span class="pal-ticker__k">₹48,900</span> settled</span>
+    <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> PAYOUT <span class="pal-ticker__k">₹12,460</span> settled</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> DOMAIN <span class="pal-ticker__k">Brand.com</span> TLS issued</span>
-    <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> RETURN <span class="pal-ticker__k">ORD-4790</span> approved</span>
+    <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> RETURN <span class="pal-ticker__k">ORD-1047</span> approved</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> VISITORS <span class="pal-ticker__k">57 live</span> · /shop</span>
-    <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> ORD-4821 <span class="pal-ticker__k">PAID</span> ₹2,340 · Mumbai</span>
+    <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> ORD-1048<span class="pal-ticker__k">PAID</span> ₹2,340 · Mumbai</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> LABEL <span class="pal-ticker__k">BLR→DEL</span> 0.5kg · Bluedart</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> STOCK <span class="pal-ticker__k">Stoneware mug</span> 42 left</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> ENQUIRY <span class="pal-ticker__k">Forgeworks</span> bulk · 500u</span>
-    <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> PAYOUT <span class="pal-ticker__k">₹48,900</span> settled</span>
+    <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> PAYOUT <span class="pal-ticker__k">₹12,460</span> settled</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot pal-ticker__dot--ok"></span> DOMAIN <span class="pal-ticker__k">asterandco.in</span> TLS issued</span>
-    <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> RETURN <span class="pal-ticker__k">ORD-4790</span> approved</span>
+    <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> RETURN <span class="pal-ticker__k">ORD-1047</span> approved</span>
     <span class="pal-ticker__item"><span class="pal-ticker__dot"></span> VISITORS <span class="pal-ticker__k">57 live</span> · /shop</span>
   </div>
 </div>
@@ -408,15 +415,15 @@ system" side  one screen for the whole shop.
         <div class="pal-dash__top"><span>OPS · TODAY</span><span class="live">Live</span></div>
         <div class="pal-dash__kpis">
           <div class="pal-dash__kpi">
-            <div class="pal-dash__kpi-val"><span data-count="128400" data-prefix="₹">₹1,28,400</span></div>
+            <div class="pal-dash__kpi-val"><span data-count="18640" data-prefix="₹">₹18,640</span></div>
             <div class="pal-dash__kpi-label">Revenue</div>
           </div>
           <div class="pal-dash__kpi">
-            <div class="pal-dash__kpi-val"><span data-count="342">342</span></div>
+            <div class="pal-dash__kpi-val"><span data-count="23">23</span></div>
             <div class="pal-dash__kpi-label">Orders</div>
           </div>
           <div class="pal-dash__kpi">
-            <div class="pal-dash__kpi-val"><span data-count="57">57</span></div>
+            <div class="pal-dash__kpi-val"><span data-count="9">9</span></div>
             <div class="pal-dash__kpi-label">Live visitors</div>
           </div>
         </div>
@@ -530,8 +537,8 @@ four steps an owner takes (web/_email_flow.html).
       Your store could be open before dinner.
     </h2>
     <p class="pal-lead pal-mt-6" data-reveal>
-      Start free. Answer three questions, watch it go live, and pay only when you
-      are selling. We never take a cut.
+      Answer three questions, watch it go live, and start selling. You pay for
+      your plan plus a small percentage of each order as a commerce fee.
     </p>
     <div class="pal-btn-row pal-mt-8" data-reveal>
       <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">

@@ -83,13 +83,6 @@
     <h1 class="h1">Security</h1>
     <p class="lead mt-3">How you sign in, the devices you’re signed in on, and where you’ve signed in from.</p>
 
-    {% if messages %}
-      <div class="mt-5">
-        {% for message in messages %}
-          <p class="alert {% if message.tags == 'error' %}alert--error{% endif %}" role="status">{{ message }}</p>
-        {% endfor %}
-      </div>
-    {% endif %}
 
     {# ── Tabs ─────────────────────────────────────────────────────── #}
     <div class="sec-tabs" role="tablist" aria-label="Security settings">

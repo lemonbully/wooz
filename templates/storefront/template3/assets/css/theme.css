@@ -1,9 +1,3 @@
-/* =====================================================================
-   Template 3 (D2C) : raw preview build
-   Visual language: soft, story-rich D2C. Bricolage Grotesque, black on
-   white, pastel panels, pill controls, 20px media radius.
-   ===================================================================== */
-
 :root {
   --font: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
 
@@ -160,13 +154,23 @@ svg { flex-shrink: 0; }
 
 /* ---------- Announcement ---------- */
 .announce {
-  background: var(--black); color: var(--white); font-size: 13px; font-weight: 600;
+  background: var(--black); color: var(--white); font-size: 11px; font-weight: 600;
   height: 38px; overflow: hidden; position: relative; z-index: 60;
 }
-.announce__track { display: flex; gap: 64px; white-space: nowrap; height: 100%; align-items: center; animation: marquee 32s linear infinite; width: max-content; }
-.announce__track span { display: inline-flex; align-items: center; gap: 10px; }
-.announce__track span::before { content: "✦"; font-size: 10px; opacity: .7; }
+/* static: statement 1, centred and still. dynamic: every statement loops
+   left to right and pauses while hovered or focused (as Template 1). */
+.announce__static { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 var(--gutter); }
+.announce__static .announce__item { white-space: pre; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.announce__item a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.announce__item a:hover { opacity: .8; }
+.announce__track { display: flex; height: 100%; align-items: center; width: max-content; animation: t3-ann-ltr 32s linear infinite; will-change: transform; }
+.announce__group { display: flex; flex: none; align-items: center; gap: 64px; padding-right: 64px; }
+.announce__group .announce__item { white-space: pre; }
+.announce__group .announce__item::before { content: "✦"; font-size: 10px; opacity: .7; margin-right: 10px; }
+.announce--dynamic:hover .announce__track, .announce--dynamic:focus-within .announce__track { animation-play-state: paused; }
 @keyframes marquee { to { transform: translateX(-50%); } }
+@keyframes t3-ann-ltr { from { transform: translate3d(-50%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+@media (prefers-reduced-motion: reduce) { .announce__track { animation: none; } }
 
 /* ---------- Header ---------- */
 .header { position: sticky; top: 0; z-index: 50; transition: padding .35s var(--ease); }
@@ -299,6 +303,10 @@ svg { flex-shrink: 0; }
 .search-hit { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; }
 .search-hit img { border-radius: 10px; aspect-ratio: 3/4; object-fit: cover; background: var(--surface); }
 .search-hit b { display: block; font-size: 14px; line-height: 1.3; }
+.search-hit > span { min-width: 0; }
+.search-all { grid-column: 1 / -1; justify-self: start; margin-top: 6px; font-weight: 700; font-size: 14px; }
+/* Desktop keeps the panel to the screen too, scrolling when there are many hits. */
+.search-pop { max-height: 100vh; max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain; }
 
 /* Mobile menu */
 .m-menu .drawer__body a.m-link { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 17px; }
@@ -398,7 +406,8 @@ svg { flex-shrink: 0; }
 .p-card__vendor { font-size: 12.5px; color: var(--soft); font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
 .price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-weight: 700; margin-top: 3px; }
 .price--sale .price__now { color: var(--badge-sale); }
-.price__was { color: var(--soft); text-decoration: line-through; font-weight: 600; font-size: .92em; }
+/* The higher price is labelled "MRP: ..." and never struck through. */
+.price__was { color: var(--soft); text-decoration: none; font-weight: 600; font-size: .92em; }
 .price__off { font-size: 12.5px; color: var(--ok); font-weight: 700; }
 .swatches { display: flex; gap: 6px; margin-top: 8px; }
 .swatches i { width: 16px; height: 10px; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
@@ -466,6 +475,53 @@ svg { flex-shrink: 0; }
 .feature__icon { width: 54px; height: 54px; border-radius: 16px; background: var(--white); display: grid; place-items: center; margin-bottom: 26px; }
 .feature h3 { font-size: 18px; margin-bottom: 6px; }
 .feature p { color: var(--muted); font-size: 14px; }
+/* Service badges (app.js servicesHTML). Minimal: a cream panel, four
+   quiet columns split by short hairlines, each icon on a white disc with a
+   hairline ring. Entrance (app.js animateServices): discs grow in one after
+   another, each icon draws its own strokes, the text rises after it. */
+.svc {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: #f6f2ec; border-radius: 28px; padding: clamp(30px, 3.4vw, 48px) clamp(10px, 2vw, 24px);
+}
+.svc__item { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: 0 clamp(10px, 1.6vw, 24px); color: inherit; position: relative; }
+.svc__item + .svc__item::before { content: ""; position: absolute; left: 0; top: 22%; bottom: 22%; width: 1px; background: rgba(0, 0, 0, .08); }
+.svc__ico {
+  width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: var(--white); color: var(--black); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+  transition: transform .45s var(--ease), background .3s, color .3s;
+}
+.svc__ico svg { width: 25px; height: 25px; overflow: visible; }
+.svc__txt b { display: block; font-size: 15px; font-weight: 700; line-height: 1.3; letter-spacing: -.005em; }
+.svc__txt span { display: block; margin-top: 5px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.svc__item:hover .svc__ico { transform: translateY(-3px); background: var(--black); color: var(--white); }
+a.svc__item:hover .svc__txt span { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Entrance: hidden only once armed, played once on .is-in. */
+.svc.is-armed .svc__ico { opacity: 0; transform: scale(.55); }
+.svc.is-armed .svc__ico svg * { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.svc.is-armed .svc__txt { opacity: 0; transform: translateY(10px); }
+.svc.is-in .svc__ico {
+  opacity: 1; transform: none;
+  transition: opacity .5s ease calc(var(--i) * 130ms), transform .75s cubic-bezier(.34, 1.56, .64, 1) calc(var(--i) * 130ms), background .3s, color .3s;
+}
+.svc.is-in .svc__ico svg * { stroke-dashoffset: 0; transition: stroke-dashoffset 1s cubic-bezier(.65, 0, .35, 1) calc(var(--i) * 130ms + 260ms); }
+.svc.is-in .svc__txt { opacity: 1; transform: none; transition: opacity .6s ease calc(var(--i) * 130ms + 200ms), transform .6s var(--ease) calc(var(--i) * 130ms + 200ms); }
+.svc.is-in .svc__item:hover .svc__ico { transform: translateY(-3px); }
+/* After the entrance, hover is quick again (no stagger delay). */
+.svc.is-done .svc__ico { transition: transform .45s var(--ease), background .3s, color .3s; }
+
+@media (max-width: 1024px) {
+  .svc { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 30px; }
+  .svc__item:nth-child(3)::before { display: none; }
+}
+@media (max-width: 480px) {
+  .svc { padding: 26px 6px; row-gap: 26px; border-radius: 22px; }
+  .svc__item { gap: 12px; padding: 0 8px; }
+  .svc__ico { width: 50px; height: 50px; }
+  .svc__ico svg { width: 22px; height: 22px; }
+  .svc__txt b { font-size: 14px; }
+  .svc__txt span { font-size: 12.5px; }
+}
 .services { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center; }
 .service svg { margin: 0 auto 10px; }
 .service b { display: block; margin-bottom: 2px; }
@@ -531,7 +587,7 @@ svg { flex-shrink: 0; }
 .footer__form small { display: block; margin-top: 12px; font-size: 12.5px; color: rgba(255,255,255,.75); }
 .footer__form small a { text-decoration: underline; }
 .footer__cols { display: grid; grid-template-columns: repeat(3, 1fr) 2.2fr; gap: 30px; padding: 40px 0 34px; }
-.footer__cols h4 { font-size: 16px; margin-bottom: 16px; }
+.footer__cols h3, .footer__cols h4 { font-size: 16px; margin-bottom: 16px; }
 .footer__cols li a { display: inline-block; padding: 4px 0; color: rgba(255,255,255,.72); font-size: 14px; transition: color .2s; }
 .footer__cols li a:hover { color: var(--white); }
 .footer__insta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -543,6 +599,10 @@ svg { flex-shrink: 0; }
 .socials a { width: 40px; height: 40px; border-radius: 10px; background: #222; display: grid; place-items: center; transition: background .2s; }
 .socials a:hover { background: #3a3a3a; }
 .footer__legal { display: flex; gap: 24px; flex-wrap: wrap; font-size: 14px; font-weight: 600; }
+/* Platform credit, as Template 1: plain text, no link; the name comes from CSS
+   generated content so search engines don't match the store to "OneWooz". */
+.ow-credit::after { content: "OneWooz"; font-weight: 800; }
+.footer__credit { opacity: .75; }
 .footer__bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 13.5px; font-weight: 600; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.14); }
 .pay-icons { display: flex; gap: 6px; flex-wrap: wrap; }
 .pay-icons span { height: 24px; padding: 0 8px; border-radius: 4px; background: var(--white); color: var(--black); font-size: 10.5px; font-weight: 800; display: grid; place-items: center; letter-spacing: .02em; }
@@ -592,6 +652,10 @@ svg { flex-shrink: 0; }
 .page-banner::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,.5), rgba(0,0,0,0) 60%); }
 .page-banner__text { position: relative; z-index: 2; padding: clamp(24px, 4vw, 48px); }
 .page-banner__text p { opacity: .9; margin-top: 8px; max-width: 520px; }
+/* Category description: 10 words, then "Read more" reveals the rest. */
+.page-banner__desc:not(.is-open) .page-banner__rest { display: none; }
+.page-banner__desc.is-open .page-banner__dots { display: none; }
+.page-banner__more { color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; cursor: pointer; background: none; border: 0; padding: 0; }
 
 /* ---------- Collection ---------- */
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 0; flex-wrap: wrap; }
@@ -647,7 +711,7 @@ svg { flex-shrink: 0; }
 .gallery__nav--prev { left: 14px; } .gallery__nav--next { right: 14px; }
 .gallery__tools { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; gap: 8px; z-index: 2; }
 .pdp__info .crumbs { padding-top: 0; }
-.pdp__title { font-size: clamp(26px, 1.6vw + 12px, 38px); margin: 10px 0 6px; }
+.pdp__title { font-size: clamp(26px, 1.6vw + 2px, 38px); margin: 10px 0 6px; }
 .pdp__price { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; font-size: 24px; font-weight: 700; }
 .pdp__price .price__was { font-size: 17px; }
 .pdp__tax { font-size: 13px; color: var(--muted); margin-top: 2px; }
@@ -667,9 +731,23 @@ svg { flex-shrink: 0; }
 .opt-sizes button.is-out { color: var(--soft); text-decoration: line-through; background: var(--surface-3); }
 .stock { display: flex; align-items: center; gap: 8px; color: var(--ok); font-size: 14px; font-weight: 600; margin: 4px 0 16px; }
 .stock i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgba(31,138,76,.15); }
-.buy-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; margin-bottom: 10px; }
-.wish-btn { width: var(--btn-h); height: var(--btn-h); border-radius: 50%; border: 1px solid var(--line-strong); display: grid; place-items: center; }
-.wish-btn.is-on svg { fill: var(--bubble); stroke: var(--bubble); }
+/* Purchase box, laid out as Template 1's: Quantity dropdown, then Add to
+   Cart, Buy Now and an "Add to Wish List" row, each full width. */
+.buy-box { display: grid; gap: 10px; margin-bottom: 14px; }
+.buy-box__qty { display: grid; gap: 6px; }
+.buy-box__qty label { font-size: 14px; font-weight: 600; }
+.buy-box__qty .select { height: 46px; background-color: var(--white); border: 1px solid var(--line-strong); font-weight: 600; cursor: pointer; }
+.buy-box__qty .select:focus { border-color: var(--black); }
+.buy-box__wish {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; height: var(--btn-h);
+  padding: 0 22px; border-radius: var(--radius-pill); border: 1px solid var(--line-strong); font-weight: 600; font-size: 14.5px;
+  transition: border-color .2s, background .2s;
+}
+.buy-box__wish:hover { border-color: var(--black); background: var(--surface); }
+.buy-box__wish-ico { display: grid; place-items: center; }
+.buy-box__wish-saved, .buy-box__wish.is-on .buy-box__wish-add { display: none; }
+.buy-box__wish.is-on .buy-box__wish-saved { display: inline; }
+.buy-box__wish.is-on svg { fill: var(--bubble); stroke: var(--bubble); }
 .perks { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; gap: 10px; padding: 20px 0; font-size: 13.5px; font-weight: 600; }
 .perks svg { margin: 0 auto 6px; }
 .info-box { display: flex; align-items: center; gap: 14px; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-bottom: 14px; }
@@ -764,13 +842,44 @@ svg { flex-shrink: 0; }
 .pay-card b { font-size: 15px; }
 .pay-card small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
 .pay-card .badge { position: absolute; top: 12px; right: 12px; height: 20px; font-size: 10.5px; }
-.ship-opts { border: 1px solid var(--line-strong); border-radius: 18px; overflow: hidden; }
-.ship-opts label { display: flex; align-items: center; gap: 12px; padding: 16px; cursor: pointer; border-bottom: 1px solid var(--line); }
-.ship-opts label:last-child { border-bottom: 0; }
-.ship-opts label.is-active { background: var(--white); box-shadow: inset 0 0 0 1.5px var(--black); }
-.ship-opts input { accent-color: #000; width: 18px; height: 18px; }
-.ship-opts .grow { flex: 1; }
-.ship-opts small { display: block; color: var(--muted); font-size: 12.5px; }
+/* Shipping method: one card per option, styled exactly like the payment
+   cards below it (single 1.5px border, 18px radius, the theme's own round
+   radio, black outline only on the chosen option). */
+.ship-opts { display: grid; gap: 12px; }
+.ship-opt { position: relative; display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1.5px solid var(--line-strong); border-radius: 18px; background: var(--white); cursor: pointer; transition: border-color .2s, background .2s; }
+.ship-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.ship-opt .radio { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line-strong); display: grid; place-items: center; }
+.ship-opt.is-active { border-color: var(--black); }
+.ship-opt.is-active .radio { border-color: var(--black); }
+.ship-opt.is-active .radio::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--black); }
+.ship-opt input:focus-visible + .radio { outline: 2px solid var(--black); outline-offset: 2px; }
+.ship-opt .grow { flex: 1; min-width: 0; }
+.ship-opt .grow b { display: block; font-size: 15px; }
+.ship-opt small { display: block; margin-top: 2px; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.ship-opt__price { font-size: 15px; white-space: nowrap; }
+
+/* Checkout saved addresses (as Template 1): a card per address with its name,
+   a Default tag and the full address line; a dashed "New address" card. Same
+   border, radius and radio as the shipping and payment cards. */
+.addr-pick { margin-bottom: 18px; }
+.addr-pick__title { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 10px; }
+.addr-pick__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.addr-opt { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1.5px solid var(--line-strong); border-radius: 18px; background: var(--white); cursor: pointer; transition: border-color .2s; }
+.addr-opt:hover { border-color: var(--soft); }
+.addr-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.addr-opt .radio { flex: none; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; border: 2px solid var(--line-strong); display: grid; place-items: center; }
+.addr-opt.is-active { border-color: var(--black); }
+.addr-opt.is-active .radio { border-color: var(--black); }
+.addr-opt.is-active .radio::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--black); }
+.addr-opt input:focus-visible + .radio { outline: 2px solid var(--black); outline-offset: 2px; }
+.addr-opt__body { min-width: 0; }
+.addr-opt__body b { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 15px; }
+.addr-opt__body small { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.addr-opt__tag { font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border: 1.5px solid var(--black); border-radius: var(--radius-pill); }
+.addr-opt--new { border-style: dashed; }
+.addr-opt--new.is-active { border-style: solid; }
+.addr-opt__plus { display: inline-grid; place-items: center; width: 20px; height: 20px; border: 1.5px solid currentColor; border-radius: 50%; font-size: 14px; line-height: 1; }
+@media (max-width: 760px) { .addr-pick__list { grid-template-columns: 1fr; } }
 .sum-item { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; margin-bottom: 14px; }
 .sum-item__img { position: relative; border-radius: 12px; background: var(--white); border: 1px solid var(--line); aspect-ratio: 1; }
 .sum-item__img img { width: 100%; height: 100%; object-fit: cover; border-radius: 11px; }
@@ -846,8 +955,8 @@ svg { flex-shrink: 0; }
 .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border-radius: var(--radius-pill); padding: 4px; margin: 20px 0; }
 .auth-tabs button { height: 40px; border-radius: var(--radius-pill); font-weight: 700; font-size: 14px; }
 .auth-tabs button.is-active { background: var(--white); box-shadow: 0 2px 8px -2px rgba(0,0,0,.15); }
-.otp { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.otp input { height: 54px; border-radius: 14px; text-align: center; font-size: 20px; font-weight: 800; border: 1px solid var(--line-strong); }
+.otp { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; width: 100%; min-width: 0; }
+.otp input { width: 100%; min-width: 0; padding: 0; height: 54px; border-radius: 14px; text-align: center; font-size: 20px; font-weight: 800; border: 1px solid var(--line-strong); }
 
 /* ---------- Blog article ---------- */
 .article-hero { border-radius: 28px; overflow: hidden; aspect-ratio: 21/9; margin: 10px 0 40px; }
@@ -928,8 +1037,15 @@ svg { flex-shrink: 0; }
 @media (max-width: 1024px) {
   .nav { display: none; }
   .menu-toggle { display: inline-grid; }
-  .header__bar { grid-template-columns: auto 1fr auto; }
+  /* Equal side columns so the logo sits at the true centre of the bar (with
+     "auto 1fr auto" it centred in the space left over, which the three icons
+     on the right made narrower than the one on the left). */
+  /* max-content floors: if the bar is ever too tight for both sides to be
+     equal, the icons keep their room instead of running into the logo. */
+  .header__bar { grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr); }
   .header__bar .logo { justify-self: center; }
+  .header__left { justify-self: start; }
+  .header__tools { justify-self: end; }
   .grid--4, .grid--5 { grid-template-columns: repeat(3, 1fr); }
   .features, .services, .stats { grid-template-columns: repeat(2, 1fr); }
   .collection { grid-template-columns: 1fr; }
@@ -979,8 +1095,6 @@ svg { flex-shrink: 0; }
   .hero__content h1, .hero__content h2 { font-size: clamp(40px, 11vw, 56px); }
   .hero__controls { bottom: 24px; left: var(--gutter); right: auto; }
   .hero__content { bottom: 86px; }
-  .buy-row { grid-template-columns: auto 1fr; }
-  .buy-row .wish-btn { display: none; }
   .perks { font-size: 12px; }
   .review-card { min-height: 0; }
   .ph-stats { grid-template-columns: 1fr 1fr 1fr; }
@@ -1019,3 +1133,624 @@ svg { flex-shrink: 0; }
 @media (max-width: 1024px) { .features--3 { grid-template-columns: 1fr; } }
 .header__left { display: flex; align-items: center; }
 @media (max-width: 760px) { .preview-dock { left: auto; right: 10px; } }
+
+/* ---------- Live store integration ---------- */
+/* Owner logo image in place of the wordmark, and real reel videos in the same frame as the demo reel photos. */
+.logo img:not(.logo__img) { display: block; max-height: 44px; width: auto; max-width: 180px; object-fit: contain; }
+.drawer__head .logo img:not(.logo__img) { max-height: 36px; }
+.reel video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 1.2s var(--ease); }
+.reel:hover video { transform: scale(1.05); }
+.footer .logo img { filter: none; }
+.p-card__quick[disabled] { opacity: .6; cursor: not-allowed; }
+[hidden] { display: none !important; }
+.hero__slide picture, .modal__media picture { display: contents; }
+/* Tracker progress follows the order's real step (data-step 1 to 4). */
+.tracker[data-step="1"]::after { width: 0; }
+.tracker[data-step="3"]::after { width: 50%; }
+.tracker[data-step="4"]::after { width: 75%; }
+.co-err { color: var(--badge-sale); font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+.co-err:empty { display: none; }
+
+/* Checkout: balanced two-pane split on wide screens. The form sits against the
+   centre line from the left and the summary starts at it, so the page reads
+   centred instead of leaving an empty strip on the left; the grey summary
+   panel still runs to the right edge. Phones keep the stacked layout. */
+@media (min-width: 1025px) {
+  .co-layout { grid-template-columns: minmax(0, 1.15fr) minmax(420px, 1fr); }
+  .co-main { max-width: 720px; margin-left: auto; margin-right: 0; padding-left: clamp(24px, 3vw, 48px); padding-right: clamp(28px, 4vw, 64px); }
+  .co-side { padding-left: clamp(28px, 4vw, 64px); }
+  .co-side__inner { max-width: 480px; }
+}
+
+/* ---------- Product page: trust badges, product information tabs ---------- */
+.perks--badges { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); row-gap: 16px; }
+.perks--badges > * { display: flex; flex-direction: column; align-items: center; gap: 6px; color: inherit; font-size: 12.5px; line-height: 1.25; }
+.perks__ico { width: 46px; height: 46px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; }
+.perks__ico svg, .perks__ico img { width: 22px; height: 22px; margin: 0; object-fit: contain; }
+a.perks__badge:hover .perks__ico { background: var(--surface-2); }
+a.perks__badge:hover span:last-child { text-decoration: underline; text-underline-offset: 2px; }
+/* Product information: the theme's section rhythm (eyebrow + heading with the
+   pill tabs on the right), one soft rounded panel, and a two-column
+   specification list with hairline rows. */
+.pinfo { padding-bottom: var(--section); }
+.pinfo .sec-head { align-items: flex-end; }
+.pinfo-tabs { background: var(--surface-3); border-radius: var(--radius-pill); padding: 4px; gap: 2px; }
+.pinfo-tabs button { height: 38px; padding: 0 16px; color: var(--muted); }
+.pinfo-tabs button.is-active { background: var(--white); color: var(--black); box-shadow: 0 2px 8px -3px rgba(0,0,0,.18); }
+.pinfo-tabs button:hover:not(.is-active) { background: transparent; color: var(--black); }
+.pinfo-panel { background: var(--surface-3); border-radius: var(--radius-media); padding: clamp(22px, 3.2vw, 44px); min-height: 120px; }
+.pinfo-prose { max-width: 820px; color: var(--black); font-size: 15.5px; line-height: 1.75; }
+.pinfo-prose p + p { margin-top: 14px; }
+.pinfo-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(28px, 5vw, 72px); margin: 0; }
+.pinfo-row { display: grid; grid-template-columns: minmax(110px, 40%) minmax(0, 1fr); gap: 18px; padding: 15px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.pinfo-row dt { font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.pinfo-row dd { margin: 0; font-size: 14.5px; font-weight: 600; color: var(--black); white-space: pre-line; overflow-wrap: anywhere; }
+.pinfo-row--warn dt, .pinfo-row--warn dd { color: var(--badge-sale); }
+.pinfo-empty { color: var(--muted); font-size: 14.5px; margin: 0; }
+@media (max-width: 760px) {
+  .pinfo .sec-head { align-items: flex-start; }
+  /* Phones: all four tabs at once in a 2 x 2 grid, so none is ever hidden
+     off-screen (a sideways-scrolling row hid the last tab). */
+  .pinfo .sec-head > div:first-child { width: 100%; }
+  .pinfo-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 4px; border-radius: 18px; padding: 4px; }
+  .pinfo-tabs button { justify-content: center; text-align: center; height: auto; min-height: 42px; padding: 8px 10px; border-radius: 14px; line-height: 1.25; white-space: normal; }
+  .pinfo-list { grid-template-columns: 1fr; }
+  .pinfo-row { grid-template-columns: minmax(96px, 42%) minmax(0, 1fr); gap: 12px; padding: 13px 0; }
+}
+.ask-gpt { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 20px; border: 1px solid var(--line-strong); font-size: 12.5px; font-weight: 700; background: var(--white); }
+.ask-gpt:hover { background: var(--surface); }
+
+/* ---------- Product gallery: always fits the screen ----------
+   The stage never grows taller than the visible window (below the sticky
+   header), so the whole photo and the thumbnail strip on its bottom edge are
+   always in view. The main photo is shown whole (contain) on the soft panel;
+   thumbnails scroll sideways when a product has many photos. */
+.gallery__stage { max-height: calc(100vh - 150px); max-height: calc(100dvh - 150px); }
+/* Keep the stage as wide as its column (the design's layout) while capping
+   its height: 4:5 of the column width, or the screen height, whichever is
+   smaller. Older browsers keep the max-height rule above. */
+@supports (height: 1cqw) {
+  .gallery { container-type: inline-size; }
+  .gallery__stage { aspect-ratio: auto; max-height: none; height: min(125cqw, calc(100vh - 150px)); height: min(125cqw, calc(100dvh - 150px)); }
+}
+.gallery__stage > img { object-fit: contain; }
+.gallery__thumbs { max-width: calc(100% - 32px); overflow-x: auto; scrollbar-width: none; }
+.gallery__thumbs::-webkit-scrollbar { display: none; }
+.gallery__thumbs button { flex: none; }
+@media (max-width: 1024px) {
+  .gallery__stage { max-height: 72vh; max-height: 72dvh; }
+  @supports (height: 1cqw) { .gallery__stage { max-height: none; height: min(125cqw, 72vh); height: min(125cqw, 72dvh); } }
+}
+
+/* "About this item": description paragraphs followed by the bullet points. */
+.acc__inner p + p, .acc__inner p + ul { margin-top: 10px; }
+
+/* ---------- Hero: every Edit Content banner field ----------
+   Video banners (with an optional phone version), the owner's overlay colour
+   and darkness (replacing the design's left gradient so 0 really means no
+   tint), and the description line under the title. */
+.hero__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero__video--mob { display: none; }
+@media (max-width: 760px) { .hero__video--desk { display: none; } .hero__video--mob { display: block; } }
+.hero__overlay { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.hero__slide--owned::after { display: none; }
+.hero__content h1:has(+ .hero__text), .hero__content h2:has(+ .hero__text) { margin-bottom: 16px; }
+.hero__text { max-width: 560px; margin-bottom: 28px; font-size: clamp(15px, .5vw + 12px, 19px); line-height: 1.55; color: rgba(255,255,255,.92); }
+.hero__slide.is-active .hero__content > .container > *:nth-child(4) { transition-delay: .36s; }
+
+/* ---------- Home About ("Our story") ----------
+   Small label, a large two-line title, the owner's body copy, the pill
+   button, and the photo in a large circle on the right with the "Wow" and
+   "Playful" stickers. */
+.story--home {
+  /* A narrower centred block than the page: text on the left, a ~500px
+     circle on the right, both vertically centred (Pebble's "Our story"). */
+  max-width: 1170px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(32px, 5vw, 72px);
+}
+.story--home .story__text { padding-left: 0; max-width: 500px; }
+.story--home .story__text .eyebrow { font-size: 14px; letter-spacing: .02em; color: var(--black); margin: 0; max-width: none; }
+.story__title { font-size: clamp(32px, 2.2vw + 14px, 48px); line-height: 1.25; letter-spacing: -.01em; margin-top: 16px; max-width: 520px; overflow-wrap: anywhere; }
+.story--home .story__body { margin: 28px 0 32px; max-width: 470px; }
+.story--home .story__body p { color: var(--muted); font-size: 15px; line-height: 1.45; max-width: none; margin: 0; font-weight: 200;}
+.story--home .story__body p + p { margin-top: 10px; }
+.story--home .btn--arrow { height: 44px; padding: 0 8px 0 22px; font-size: 14.5px; gap: 8px; }
+.story--home .btn__dot { width: 28px; height: 28px; }
+.story--home .btn__dot svg { width: 14px; height: 14px; }
+.story--home .btn--arrow:hover .btn__dot { transform: translateX(2px); }
+.story--home .story__media { justify-self: end; width: min(440px, 100%); }
+.story--home .sticker { font-size: clamp(15px, .35vw + 11px, 18px); letter-spacing: -.01em; }
+.story--home .sticker--pill { top: 12.5%; left: 6%; padding: 10px 20px; background: #c4e8ee; transform: rotate(22deg); }
+.story--home .sticker--blob { bottom: 15%; right: -2%; width: clamp(80px, 6.4vw, 104px); height: clamp(80px, 6.4vw, 104px); background: #ffc7ca; transform: rotate(-22deg); }
+@media (max-width: 760px) {
+  .story--home { grid-template-columns: 1fr; }
+  .story--home .story__text { max-width: none; }
+  .story__title { max-width: none; }
+  /* About photo about 18% smaller on phones (was min(420px, 100%)). */
+  .story--home .story__media { justify-self: center; width: min(344px, 82%); }
+  .story--home .sticker--pill { left: 0; }
+}
+
+/* ---------- Header content width (Pebble) ----------
+   The bar stays full width, but its content sits in a ~1290px centred
+   column (wider screens get matching side space), with the search label,
+   account and cart spaced as in the reference. The floating, rounded bar
+   at the top of the homepage keeps its own inset. */
+@media (min-width: 1025px) {
+  .header__bar, .header--float.is-stuck .header__bar { padding-left: max(var(--gutter), calc((100% - 1290px) / 2)); padding-right: max(var(--gutter), calc((100% - 1330px) / 2)); }
+  .header--float:not(.is-stuck) .header__bar { padding-left: max(24px, calc((100% - 1290px) / 2)); padding-right: max(24px, calc((100% - 1330px) / 2)); }
+  .header__tools { gap: 0; }
+  .header__search { gap: 40px; padding: 0 10px 0 16px; }
+}
+
+/* PDP blocks placed as on Template 1: Features under the variations,
+   "About this item" bullets under the purchase actions. */
+.pdp-block { padding: 16px 0 4px; }
+.pdp-block__title { font-size: 16px; margin-bottom: 10px; }
+.pdp-features { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; }
+.pdp-features li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--muted); }
+.pdp-features svg { width: 14px; height: 14px; margin-top: 4px; color: var(--ok); }
+.pdp-about { list-style: disc; padding-left: 20px; display: grid; gap: 6px; font-size: 14.5px; color: #2a2a2a; line-height: 1.6; }
+.pdp-about li::marker { color: var(--soft); }
+.pdp-about__more { margin: 8px 0 0 20px; }
+@media (max-width: 760px) {
+  .pdp-features { grid-template-columns: 1fr; }
+  .pdp-block:not(.is-open) .pdp-about li.is-extra { display: none; }
+}
+@media (min-width: 761px) { .pdp-about__more { display: none; } }
+
+/* Desktop gallery fit (measured): the product page script sets --fit-h to the
+   screen height left below the image's top edge. The frame keeps the full
+   column width and only its height is capped, so the photo, with its
+   thumbnail strip along the bottom, is fully in view on load. */
+@media (min-width: 1025px) {
+  .gallery__stage { max-height: none; height: min(125cqw, var(--fit-h, calc(100dvh - 150px))); }
+  @supports not (height: 1cqw) { .gallery__stage { height: auto; max-height: var(--fit-h, calc(100dvh - 150px)); } }
+}
+
+/* Main image fills its frame (see fitMode in product.html): cover when the
+   photo's shape matches the frame, otherwise the whole photo over a soft,
+   blurred copy of itself so the frame never shows empty bars. */
+.gallery__stage::before { content: ""; position: absolute; inset: -40px; z-index: 0; background: var(--stage-bg) center / cover no-repeat; filter: blur(32px) saturate(1.1); opacity: 0; transition: opacity .4s; pointer-events: none; }
+.gallery__stage.is-fit-contain::before { opacity: .55; }
+.gallery__stage > img[data-main] { position: relative; z-index: 1; object-fit: cover; }
+.gallery__stage.is-fit-contain > img[data-main] { object-fit: contain; }
+
+/* ---------- Edit Content → Brand logos ----------
+   Widths come from the owner's "Logo sizes" (desktop / mobile / footer, any
+   editor unit) via --logo-w-*; heights are capped as Template 1 caps them
+   (80px desktop, 60px phone). The header grows with a tall logo. */
+/* Every rule names .logo img.logo__img* so it always outranks the generic
+   .logo img rules above. The owner's width is the logo's width (scaled down
+   only by the height cap and the space available). */
+.logo img.logo__img { display: block; height: auto; max-width: 100%; object-fit: contain; }
+.logo img.logo__img--d { width: var(--logo-w-d, 140px); max-height: 80px; }
+.logo img.logo__img--m { display: none; width: var(--logo-w-m, 100px); max-height: 60px; }
+.logo img.logo__img--drawer { width: var(--logo-w-m, 100px); max-height: 40px; }
+.logo img.logo__img--plain { width: var(--logo-w-d, 140px); max-height: 48px; margin: 0 auto; }
+.logo img.logo__img--f { width: var(--logo-w-f, 120px); max-height: 80px; }
+.logo { max-width: 100%; }
+.logo__txt { display: inline-flex; align-items: baseline; gap: 4px; }
+.footer__logo { display: inline-flex; margin-bottom: 18px; }
+.header__bar { height: auto; min-height: 68px; }
+@media (max-width: 1024px) {
+  .logo img.logo__img--d, .logo .logo__txt.logo__img--d { display: none; }
+  .logo img.logo__img--m { display: block; }
+  .logo .logo__txt.logo__img--m { display: inline-flex; }
+}
+@media (min-width: 1025px) { .logo .logo__txt.logo__img--m { display: none; } }
+@media (max-width: 760px) {
+  .header__bar { min-height: 60px; }
+  /* Slightly tighter icons on phones so the right side (search, account,
+     cart) fits its half of the bar and the logo stays at the true centre. */
+  .header__bar .icon-btn { width: 36px; height: 36px; }
+  .header__bar .logo { font-size: 21px; }
+}
+
+/* ---------- Home journal (Pebble's blog row) ----------
+   Centred heading; below it a strip that starts at the page column on the
+   left and runs off the right edge, scrolling sideways. Cards cycle through
+   four photo shapes (wide, large square, narrow, tall), top aligned, each with
+   a frosted tag on the photo, a bold title and a short muted description.
+   Sizes follow the reference as a share of the screen width. */
+.journal__title { text-align: center; margin-bottom: clamp(28px, 3vw, 58px); }
+.journal .journal__track {
+  display: flex; align-items: flex-start; gap: clamp(22px, 3.3vw, 64px);
+  grid-auto-columns: unset; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  padding-left: max(var(--gutter), calc((100vw - 1440px) / 2 + var(--gutter)), 17.4vw);
+  padding-right: var(--gutter); scroll-padding-left: max(var(--gutter), calc((100vw - 1440px) / 2 + var(--gutter)), 17.4vw);
+}
+.journal .journal__track::-webkit-scrollbar { display: none; }
+.journal-card { flex: none; width: var(--jw); display: block; color: inherit; scroll-snap-align: start; }
+.journal-card__media { position: relative; display: block; width: 100%; aspect-ratio: var(--jr); border-radius: var(--radius-media); overflow: hidden; background: var(--surface); }
+.journal-card__media img { width: 100%; height: 100%; object-fit: cover; transition: transform 1s var(--ease); }
+.journal-card:hover .journal-card__media img { transform: scale(1.04); }
+.journal-card__tag {
+  position: absolute; top: 16px; left: 16px; z-index: 1; display: inline-flex; align-items: center; height: 26px; padding: 0 10px;
+  border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,.75); background: rgba(255,255,255,.18);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: #fff; font-size: 12px; font-weight: 700; line-height: 1;
+  text-shadow: 0 1px 6px rgba(0,0,0,.25);
+}
+.journal-card__title { margin-top: 20px; font-size: clamp(18px, .5vw + 13px, 24px); font-weight: 600; line-height: 1.3; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.journal-card__text { margin-top: 12px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.journal-card:hover .journal-card__title { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 2px; }
+/* The four shapes, repeating. */
+.journal-card:nth-child(4n+1) { --jw: clamp(240px, 19.6vw, 400px); --jr: 376 / 273; }
+.journal-card:nth-child(4n+2) { --jw: clamp(270px, 25.5vw, 520px); --jr: 1 / 1; }
+.journal-card:nth-child(4n+3) { --jw: clamp(190px, 13.7vw, 280px); --jr: 263 / 357; }
+.journal-card:nth-child(4n+4) { --jw: clamp(220px, 18vw, 370px); --jr: 345 / 489; }
+.journal__foot { justify-content: center; }
+@media (max-width: 760px) {
+  .journal .journal__track { padding-left: var(--gutter); scroll-padding-left: var(--gutter); gap: 18px; }
+  .journal-card:nth-child(4n+1) { --jw: 74vw; }
+  .journal-card:nth-child(4n+2) { --jw: 78vw; }
+  .journal-card:nth-child(4n+3) { --jw: 56vw; }
+  .journal-card:nth-child(4n+4) { --jw: 64vw; }
+}
+
+/* Reels strip: a shorter gap below it than a full section. */
+.section[data-sec-reels] { padding-bottom: 12px; }
+/* Reels as the last homepage section: a shorter gap to the footer. */
+.home--reels-last .footer { margin-top: clamp(28px, 3vw, 44px); }
+
+/* ---------- Square main product image ----------
+   The frame is always a square: as wide as the gallery column, or as tall as
+   the screen allows (--fit-h, measured on desktop), whichever is smaller,
+   centred in the column. Overrides the earlier 4:5 / height-capped rules. */
+.gallery__stage { aspect-ratio: 1 / 1; height: auto; max-height: none; margin-inline: auto; }
+@supports (height: 1cqw) {
+  .gallery__stage { width: min(100cqw, var(--fit-h, calc(100dvh - 150px))); height: auto; max-height: none; aspect-ratio: 1 / 1; }
+}
+@supports not (height: 1cqw) {
+  .gallery__stage { width: 100%; max-width: calc(100vh - 150px); }
+}
+@media (max-width: 1024px) {
+  @supports (height: 1cqw) { .gallery__stage { width: min(100cqw, 72dvh); } }
+}
+
+/* ---------- Product gallery: thumbnails in a column on the left ----------
+   The thumbnails sit one under another beside the square main image (they
+   scroll inside the column when there are many). The square shrinks by the
+   column's width so the pair still fits the screen; a product with a single
+   photo has no column and the image takes the full width. */
+.gallery { --thumb-w: 72px; --thumb-gap: 12px; display: grid; grid-template-columns: var(--thumb-w) auto; gap: var(--thumb-gap); align-items: start; justify-content: start; }
+.gallery > .gallery__thumbs {
+  position: static; left: auto; bottom: auto; transform: none; translate: none; z-index: auto;
+  display: flex; flex-direction: column; gap: 10px; width: var(--thumb-w); max-width: none;
+  padding: 0; background: none; box-shadow: none; border-radius: 0;
+  overflow-x: hidden; overflow-y: auto; scrollbar-width: none;
+}
+.gallery > .gallery__thumbs::-webkit-scrollbar { display: none; }
+.gallery > .gallery__thumbs button { flex: none; width: 100%; height: auto; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 2px solid transparent; background: var(--surface); }
+.gallery > .gallery__thumbs button.is-active { border-color: var(--black); }
+.gallery > .gallery__thumbs button:hover:not(.is-active) { border-color: var(--line-strong); }
+.gallery > .gallery__thumbs:empty { display: none; }
+.gallery:has(> .gallery__thumbs:empty) { grid-template-columns: minmax(0, 1fr); }
+.gallery > .gallery__stage { margin-inline: 0; }
+@supports (height: 1cqw) {
+  .gallery > .gallery__stage { width: min(calc(100cqw - var(--thumb-w) - var(--thumb-gap)), var(--fit-h, calc(100dvh - 150px))); }
+  .gallery > .gallery__thumbs { max-height: min(calc(100cqw - var(--thumb-w) - var(--thumb-gap)), var(--fit-h, calc(100dvh - 150px))); }
+  .gallery:has(> .gallery__thumbs:empty) > .gallery__stage { width: min(100cqw, var(--fit-h, calc(100dvh - 150px))); }
+}
+@media (max-width: 1024px) {
+  .gallery { --thumb-w: 56px; --thumb-gap: 8px; }
+  .gallery > .gallery__thumbs { gap: 8px; }
+  .gallery > .gallery__thumbs button { border-radius: 10px; }
+  @supports (height: 1cqw) {
+    .gallery > .gallery__stage { width: min(calc(100cqw - var(--thumb-w) - var(--thumb-gap)), 72dvh); }
+    .gallery > .gallery__thumbs { max-height: min(calc(100cqw - var(--thumb-w) - var(--thumb-gap)), 72dvh); }
+    .gallery:has(> .gallery__thumbs:empty) > .gallery__stage { width: min(100cqw, 72dvh); }
+  }
+}
+
+/* Product page breadcrumb: one line, long names end in an ellipsis */
+.pdp__info { min-width: 0; }
+.pdp__info .crumbs { flex-wrap: nowrap; min-width: 0; max-width: 100%; overflow: hidden; white-space: nowrap; }
+.pdp__info .crumbs > * { flex: none; white-space: nowrap; }
+.pdp__info .crumbs > a:not(:first-child) { flex: 0 1 auto; min-width: 0; max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
+.pdp__info .crumbs > .crumbs__current { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Sign-in card: both steps stay inside the card */
+.auth-card { min-width: 0; }
+.auth-card form { grid-template-columns: minmax(0, 1fr); }
+.auth-card .otp input:focus { outline: none; border-color: var(--black); box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
+@media (max-width: 380px) { .otp { gap: 6px; } .otp input { height: 48px; border-radius: 12px; font-size: 18px; } }
+
+/* Product cards: square image, lighter title (title text is capped at 6 words in app.js) */
+.p-card__media { aspect-ratio: 1 / 1; }
+.p-card__title { font-weight: 500; }
+
+/* Product cards: hover swaps to the second image (when enabled), never zooms */
+.p-card:hover .p-card__media img, .p-card__media img { transform: none; }
+.p-card__media img { transition: opacity .5s var(--ease); }
+
+/* Home blog row: lighter titles. */
+.journal-card__title { font-weight: 500; }
+
+/* Home blog card tag: one tidy pill in the top-left corner. Long tags stay on
+   a single line and end in an ellipsis instead of wrapping out of the pill;
+   a darker frosted fill keeps the white text readable on light photos. */
+.journal-card__tag {
+  top: 14px; left: 14px; display: block; height: auto; max-width: calc(100% - 28px);
+  padding: 6px 12px; line-height: 16px; font-size: 12px; font-weight: 600; letter-spacing: .01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: rgba(17, 17, 17, .32); border: 1px solid rgba(255, 255, 255, .45);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); text-shadow: none;
+}
+
+/* ---------- Product gallery on phones and portrait tablets ----------
+   The square main image first, then the thumbnails in one row underneath
+   (scrolling sideways when there are many). Landscape tablets and desktops
+   keep the column on the left. */
+@media (max-width: 760px), (max-width: 1024px) and (orientation: portrait) {
+  .gallery { --thumb-w: 64px; --row-w: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .gallery > .gallery__stage { order: 0; width: var(--row-w); margin-inline: auto; }
+  .gallery > .gallery__thumbs {
+    order: 1; flex-direction: row; gap: 8px; width: var(--row-w); max-height: none;
+    overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; padding: 1px 0;
+  }
+  .gallery > .gallery__thumbs button { width: var(--thumb-w); height: var(--thumb-w); scroll-snap-align: start; }
+  @supports (height: 1cqw) {
+    .gallery { --row-w: min(100cqw, 72dvh); }
+    .gallery > .gallery__stage,
+    .gallery:has(> .gallery__thumbs:empty) > .gallery__stage { width: var(--row-w); }
+    .gallery > .gallery__thumbs { max-height: none; }
+  }
+}
+@media (max-width: 480px) { .gallery { --thumb-w: 56px; } }
+
+/* Floating header: a narrower bar (an extra inset on both sides on desktop,
+   about 46px on a 1533px-wide screen) and gentler corners. The stuck bar
+   (after scrolling) stays full width. */
+.header--float .header__bar { border-radius: 12px; }
+@media (min-width: 1025px) {
+  .header--float:not(.is-stuck) { padding-left: calc(var(--gutter) + clamp(0px, 3vw, 56px)); padding-right: calc(var(--gutter) + clamp(0px, 3vw, 56px)); }
+}
+@media (max-width: 760px) { .header--float .header__bar { border-radius: 10px; } }
+
+/* Navbar dropdowns (Shop mega menu, Collections, Pages): square top corners
+   so the panel reads as hanging from the bar; rounded bottom corners only. */
+.mega-menu { border-radius: 0 0 20px 20px; }
+.dropdown { border-radius: 0 0 16px 16px; }
+
+/* ---------- Home page: sections on the navbar's left edge ----------
+   On desktop every home section (hero text and arrows, categories, best
+   sellers, blog strip, why, testimonials, FAQ, reels, enquiry form) starts
+   where the floating navbar's "Shop" menu text starts, computed with the
+   navbar's own inset formula, and keeps the SAME inset on the right so the
+   content is centred with equal side spacing. The About block keeps its own
+   centred 1170px layout. (The % resolves against each element's full-width
+   containing block, the same width the fixed navbar measures from.) Phones
+   and tablets keep the normal gutter; the footer is outside <main>. */
+@media (min-width: 1025px) {
+  main[data-home] {
+    --hp: calc(var(--gutter) + clamp(0px, 3vw, 56px));
+    --nav-l: calc(var(--hp) + max(24px, (100% - 2 * var(--hp) - 1290px) / 2) + 12px);
+  }
+  main[data-home] .container:not(.story--home) { max-width: none; padding-left: var(--nav-l); padding-right: var(--nav-l); }
+  main[data-home] .journal .journal__track { padding-left: var(--nav-l); padding-right: var(--nav-l); scroll-padding-left: var(--nav-l); }
+  main[data-home] .hero__controls { right: var(--nav-l); }
+  /* Testimonials is a rounded panel inset by --rv-m on each side, so its
+     padding is measured from a narrower box: add the margin back into the
+     width and take it off the result. */
+  main[data-home] .reviews-sec { --rv-m: clamp(8px, 1.4vw, 20px); margin-left: var(--rv-m); margin-right: var(--rv-m); }
+  main[data-home] .reviews-sec > .container {
+    --rv-in: calc(var(--hp) + max(24px, (100% + 2 * var(--rv-m) - 2 * var(--hp) - 1290px) / 2) + 12px - var(--rv-m));
+    padding-left: var(--rv-in); padding-right: var(--rv-in);
+  }
+}
+
+/* Home page: never wider than the screen. Decorative pieces (the About
+   stickers, hover lifts) are clipped at the page edge instead of adding a
+   sideways scroll; clip (not hidden) keeps the sticky navbar working. */
+html, body { max-width: 100%; }
+main[data-home] { overflow-x: clip; }
+
+/* Shop mega menu: the "Featured" chip on the two featured category cards. */
+.mega-card em {
+  position: absolute; left: 12px; top: 12px; background: var(--white); border-radius: var(--radius-pill);
+  padding: 4px 10px; font-size: 11px; font-weight: 700; font-style: normal; text-transform: uppercase; letter-spacing: .04em;
+}
+
+/* ---------- About page ----------
+   Edit Content → About page in Template 1's order: editorial intro + banner,
+   feature block with metrics, brand story with a two-photo collage. */
+.ab-intro { padding-top: clamp(8px, 2vw, 24px); }
+.ab-intro__head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(24px, 5vw, 80px); align-items: start; }
+.ab-intro__head--solo { grid-template-columns: 1fr; }
+.ab-intro__title { max-width: 12ch; overflow-wrap: anywhere; }
+.ab-intro__copy { display: grid; gap: 18px; padding-top: clamp(4px, 1vw, 14px); }
+.ab-intro__lead p { font-size: clamp(17px, .4vw + 15px, 21px); line-height: 1.5; font-weight: 500; }
+.ab-intro__more p { color: var(--muted); line-height: 1.65; }
+.ab-intro__copy p + p { margin-top: 12px; }
+.ab-banner { margin: clamp(28px, 4vw, 56px) 0 0; border-radius: 28px; overflow: hidden; aspect-ratio: 12 / 5; background: var(--surface); }
+.ab-banner img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+
+.ab-feature { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-radius: 28px; overflow: hidden; background: var(--lilac); }
+.ab-feature--text { grid-template-columns: 1fr; }
+.ab-feature__media { min-height: 420px; position: relative; }
+.ab-feature__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ab-feature__body { padding: clamp(28px, 4.5vw, 64px); display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+.ab-feature--text .ab-feature__body { max-width: 860px; }
+.ab-feature__title { overflow-wrap: anywhere; }
+.ab-feature__text p { color: var(--muted); line-height: 1.65; }
+.ab-feature__text p + p { margin-top: 10px; }
+.ab-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
+.ab-metrics--1 { grid-template-columns: minmax(0, 200px); }
+.ab-metrics--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ab-metric { background: var(--white); border-radius: 18px; padding: 18px 16px; min-width: 0; }
+/* Wrap only between words; a single word longer than the card is the only
+   thing ever split (break-word), never "Categor-ies". */
+.ab-metric b { display: block; font-size: clamp(26px, 1.6vw + 14px, 40px); font-weight: 800; line-height: 1.1; letter-spacing: -.02em; overflow-wrap: break-word; word-break: normal; hyphens: manual; }
+.ab-metric span { display: block; margin-top: 8px; color: var(--muted); font-size: 12.5px; font-weight: 600; line-height: 1.4; text-transform: uppercase; letter-spacing: .04em; overflow-wrap: break-word; }
+/* Word values ("Ostomy Care", "6 Categories"): a heading size, not a number size. */
+.ab-metrics--text .ab-metric b { font-size: clamp(19px, .7vw + 12px, 24px); line-height: 1.2; letter-spacing: -.01em; }
+
+.ab-brand-sec { padding-top: 0; }
+.ab-brand { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 100px); align-items: center; }
+.ab-brand--text { grid-template-columns: 1fr; max-width: 760px; }
+.ab-brand__label { color: var(--muted); }
+.ab-brand__title { margin-top: 12px; overflow-wrap: anywhere; }
+.ab-brand__body { margin-top: 18px; }
+.ab-brand__body p { color: var(--muted); line-height: 1.65; }
+.ab-brand__body p + p { margin-top: 10px; }
+.ab-collage { position: relative; }
+.ab-collage__main, .ab-collage__second { border-radius: 24px; overflow: hidden; background: var(--surface); }
+.ab-collage img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ab-collage__main { aspect-ratio: 4 / 5; }
+.ab-collage__second { aspect-ratio: 1; }
+.ab-collage--pair { padding-bottom: 8%; }
+.ab-collage--pair .ab-collage__main { width: 78%; margin-left: auto; }
+.ab-collage--pair .ab-collage__second {
+  position: absolute; left: 0; bottom: 0; width: 46%;
+  border: 8px solid var(--white); box-shadow: var(--shadow-soft);
+}
+
+@media (max-width: 1024px) {
+  .ab-intro__head { grid-template-columns: 1fr; }
+  .ab-intro__title { max-width: none; }
+  .ab-feature { grid-template-columns: 1fr; }
+  .ab-feature__media { min-height: 0; aspect-ratio: 16 / 10; }
+}
+@media (max-width: 760px) {
+  .ab-banner { aspect-ratio: 16 / 9; border-radius: 20px; }
+  .ab-feature { border-radius: 22px; }
+  .ab-metrics { gap: 8px; }
+  .ab-metric { padding: 12px 10px; border-radius: 14px; }
+  .ab-metric b { font-size: 22px; }
+  .ab-metric span { font-size: 11px; }
+  /* Word values need the width: one per row on phones. */
+  .ab-metrics--text { grid-template-columns: 1fr; }
+  .ab-metrics--text .ab-metric b { font-size: 19px; }
+  .ab-brand { grid-template-columns: 1fr; }
+  .ab-collage { max-width: 460px; width: 100%; justify-self: center; }
+  .ab-collage--pair .ab-collage__second { border-width: 6px; }
+}
+
+/* Contact page founder: the owner's photo, or their initials in its place. */
+.author__pic { position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; }
+.author__pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.author__initials { font-weight: 800; font-size: 15px; letter-spacing: .02em; color: var(--ink); }
+.author__pic img:not([hidden]) + .author__initials { display: none; }
+
+/* ---------- PDP product video pop-up ----------
+   The black play button in the gallery tools opens #modal-video (this
+   theme's own .modal), as Template 1 does. 16:9 by default, 9:16 for
+   portrait videos; the box never grows past the visible screen. */
+.circle-btn--play { background: var(--black); color: var(--white); border-color: var(--black); }
+.circle-btn--play:hover { background: var(--white); color: var(--black); border-color: var(--line); }
+.circle-btn--play svg { margin-left: 2px; }
+.modal--video .modal__backdrop { background: rgba(0, 0, 0, .8); }
+.modal__box--video {
+  display: block; padding: 0; background: var(--ink); border-radius: var(--radius-media);
+  width: min(960px, 100%, calc((100vh - 32px) * 16 / 9));
+  width: min(960px, 100%, calc((100svh - 32px) * 16 / 9));
+}
+.modal__box--video.is-portrait {
+  width: min(100%, calc(min(85vh, 760px) * 9 / 16));
+  width: min(100%, calc(min(85svh, 760px) * 9 / 16));
+}
+.video-pop__frame { position: relative; aspect-ratio: 16 / 9; background: var(--ink); }
+.modal__box--video.is-portrait .video-pop__frame { aspect-ratio: 9 / 16; }
+.video-pop__frame video,
+.video-pop__frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; object-fit: contain; background: var(--ink); }
+@media (max-width: 640px) {
+  .modal__box--video { border-radius: var(--radius-sm); }
+}
+
+/* ---------- Phones: shorter home banner ----------
+   The hero filled the whole phone screen (100svh, at least 560px). On
+   phones it now takes about 82% of the visible height, so the next section
+   peeks in below it. Landscape phones, where even 560px was taller than
+   the screen, get a banner that fits with a smaller heading. */
+@media (max-width: 760px) {
+  .hero { height: 82vh; height: min(82svh, 700px); min-height: 460px; }
+  .hero__content { bottom: 78px; }
+}
+/* Short phones (iPhone SE class): a slightly smaller heading so a two-line
+   title, text and button still clear the floating header. */
+@media (max-width: 760px) and (max-height: 680px) {
+  .hero__content h1, .hero__content h2 { font-size: clamp(34px, 9.5vw, 44px); margin-bottom: 18px; }
+  .hero__text { margin-bottom: 18px; }
+}
+@media (max-width: 1024px) and (max-height: 520px) and (orientation: landscape) {
+  .hero { height: 88vh; height: 88svh; min-height: 300px; }
+  .hero__content { bottom: 54px; }
+  .hero__content h1, .hero__content h2 { font-size: clamp(28px, 7vh + 4px, 42px); margin-bottom: 12px; max-width: 18ch; }
+  .hero__text { margin-bottom: 12px; }
+  .hero__controls { bottom: 54px; }
+}
+
+/* ---------- Phones: search panel ----------
+   Full-height sheet that scrolls (the page behind is locked), the search
+   field stays pinned at the top, and results are one product per row with
+   the full name and price instead of two cramped columns. */
+@media (max-width: 760px) {
+  .search-pop { border-radius: 0 0 18px 18px; padding: 0 0 20px; }
+  .search-pop [data-search-form] {
+    position: sticky; top: 0; z-index: 2; background: var(--white);
+    padding: 12px 0 10px; margin: 0 calc(-1 * var(--gutter)); padding-inline: var(--gutter);
+  }
+  .search-field { height: 48px; padding: 0 6px 0 16px; }
+  .search-field input { min-width: 0; font-size: 16px; }
+  .search-pop__grid { gap: 14px; margin-top: 8px; }
+  .search-pop__trend { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter) 2px; }
+  .search-pop__trend::-webkit-scrollbar { display: none; }
+  .search-pop__trend p { display: none; }
+  .search-pop__trend a { margin: 0; flex: none; white-space: nowrap; }
+  .search-results { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .search-hit { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .search-hit img { width: 56px; }
+  .search-hit b { font-size: 14.5px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+  .search-hit .price { font-size: 14px; gap: 6px; }
+  .search-all { margin-top: 14px; }
+}
+
+/* ---------- Theme contract: OneWooz app tokens ----------
+   Every app block (static/css/ow-apps.css) styles itself only through these,
+   so apps look native here without knowing this theme. */
+:root {
+  --ow-font-body: var(--font);
+  --ow-font-heading: var(--font);
+  --ow-text: var(--ink);
+  --ow-muted: var(--muted);
+  --ow-line: var(--line);
+  --ow-surface: var(--white);
+  --ow-surface-alt: var(--surface-3);
+  --ow-accent: var(--black);
+  --ow-on-accent: var(--white);
+  --ow-sale: var(--badge-sale);
+  --ow-success: var(--ok);
+  --ow-radius-card: var(--radius-sm);
+  --ow-radius-control: var(--radius-pill);
+  --ow-choice-radius: 6px;
+  --ow-choice-bg: var(--white);
+  --ow-choice-border: var(--line-strong);
+  --ow-choice-active-bg: var(--black);
+  --ow-choice-active-fg: var(--white);
+  --ow-choice-active-border: var(--black);
+  --ow-label-weight: 700;
+  --ow-block-gap: 18px;
+}
+
+/* ---------- Product gallery: square uploads never cropped ----------
+   The main frame is a square at every width (rules above), and the photo is
+   always shown whole (contain): a square upload fills the square exactly,
+   with nothing cut from any side. Only a photo of a different shape shows the
+   soft blurred copy around it (fitMode in product.html toggles it). */
+.gallery__stage > img[data-main],
+.gallery__stage.is-fit-contain > img[data-main] { object-fit: contain; }
+/* Phones / portrait tablets: the thumbnail row is centred under the image
+   (auto margins, so a row that scrolls never clips its first thumbnail). */
+@media (max-width: 760px), (max-width: 1024px) and (orientation: portrait) {
+  .gallery > .gallery__thumbs { justify-content: flex-start; }
+  .gallery > .gallery__thumbs > button:first-child { margin-left: auto; }
+  .gallery > .gallery__thumbs > button:last-child { margin-right: auto; }
+}
+
+/* Contact form: privacy consent box above the captcha + Send button. The
+   button stays disabled (dimmed) until the box is ticked. */
+.contact-consent { margin-top: 16px; align-items: flex-start; line-height: 1.5; }
+.contact-consent input { flex: none; margin-top: 2px; }
+.contact-consent a { text-decoration: underline; text-underline-offset: 2px; }
+[data-contact] .btn:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }

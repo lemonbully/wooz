@@ -1,0 +1,18 @@
+Confirm deleting your OneWooz account
+
+{{ code }}
+
+Use this code to confirm deleting your OneWooz account and every store on it.
+It expires in {{ minutes }} minutes and works once.
+
+Your account and store data stay on our servers for {{ retention_days }} days.
+Sign in again within that time to restore everything (renew your plan first if
+it has expired).
+
+If you didn't ask to delete your account, do NOT share this code. Ignore this
+email and nothing changes.
+
+We will never ask you for this code by phone, chat or email. If someone does,
+they are not from OneWooz.
+
+{{ brand }}

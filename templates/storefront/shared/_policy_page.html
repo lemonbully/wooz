@@ -183,6 +183,7 @@ tab beside the four built-in ones.
         {% else %}
           <p>This policy will be published here soon. If you have any questions in the meantime, please get in touch with us.</p>
         {% endif %}
+        {% if policy_key == "refund" and return_terms %}{% include "storefront/shared/_return_terms.html" %}{% endif %}
       </div>
     </article>
   </div>

@@ -1,0 +1,248 @@
+{% extends "custom_admin/_shell.html" %}
+
+{% comment %}
+Export Excel (custom_admin.views.export_excel). Pick a report from the dropdown,
+a payment-date range for sales reports, then download a styled .xlsx built by
+custom_admin.exports + custom_admin.export_workbook. The form POSTs and the
+response is the file itself, so the page stays put; a short-lived cookie set on
+the response (ow_export_done) tells the script below the download has started.
+{% endcomment %}
+
+{% block crumbs %} &rsaquo; Export Excel{% endblock %}
+
+{% block content %}
+<div class="owa-head">
+  <div>
+    <p class="owa-kicker">Reports</p>
+    <h1 class="owa-page-title">Export Excel</h1>
+    <p class="owa-head__lead">Download sales and renewal reports as a formatted Excel workbook: one row per record with the buyer's tax details, the GST split by place of supply and exact totals, plus a summary sheet.</p>
+  </div>
+  <a href="{% url 'custom_admin:overview' %}" class="owa-btn owa-btn--ghost">Back to home</a>
+</div>
+
+<div class="owa-split">
+  <form method="post" action="{% url 'custom_admin:export_excel' %}" class="owa-panel owa-export" id="ow-export-form" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="download_token" id="ow-export-token" value="">
+    <div class="owa-panel__head"><span>New export</span><span class="owa-mono">.xlsx</span></div>
+
+    <div class="owa-export__body">
+      {% if error %}<div class="owa-alert owa-alert--error owa-export__alert" role="alert">{{ error }}</div>{% endif %}
+
+      <section class="owa-export__step">
+        <p class="owa-marker owa-export__marker"><span class="owa-marker__n">01</span> Report</p>
+        <label class="owa-field">
+          <span class="owa-field__label">Report type</span>
+          <select name="report" id="ow-export-report" class="owa-input owa-export__select" required>
+            <optgroup label="Sales">
+              {% for r in sales_reports %}
+                <option value="{{ r.key }}" data-group="sales" data-commerce="{% if r.is_commerce %}1{% else %}0{% endif %}" data-desc="{{ r.description }}"{% if values.report == r.key %} selected{% endif %}>{{ r.label }}</option>
+              {% endfor %}
+            </optgroup>
+            <optgroup label="Renewals">
+              {% for r in renewal_reports %}
+                <option value="{{ r.key }}" data-group="renewals" data-commerce="0" data-desc="{{ r.description }}" data-window="{{ r.window }}"{% if values.report == r.key %} selected{% endif %}>{{ r.label }}</option>
+              {% endfor %}
+            </optgroup>
+          </select>
+        </label>
+        <p class="owa-export__desc" id="ow-export-desc" aria-live="polite"></p>
+      </section>
+
+      <section class="owa-export__step" id="ow-export-dates">
+        <p class="owa-marker owa-export__marker"><span class="owa-marker__n">02</span> Payment date</p>
+        <div class="owa-export__chips" role="group" aria-label="Quick ranges">
+          <button type="button" class="owa-export__chip" data-range="this_month">This month</button>
+          <button type="button" class="owa-export__chip" data-range="last_month">Last month</button>
+          <button type="button" class="owa-export__chip" data-range="last_30">Last 30 days</button>
+          <button type="button" class="owa-export__chip" data-range="this_fy">This financial year</button>
+          <button type="button" class="owa-export__chip" data-range="last_fy">Last financial year</button>
+          <button type="button" class="owa-export__chip" data-range="all">All time</button>
+        </div>
+        <div class="owa-export__dates">
+          <label class="owa-field">
+            <span class="owa-field__label">From</span>
+            <input type="date" name="date_from" id="ow-export-from" class="owa-input" value="{{ values.date_from|default:'' }}" max="{{ today|date:'Y-m-d' }}">
+          </label>
+          <label class="owa-field">
+            <span class="owa-field__label">To</span>
+            <input type="date" name="date_to" id="ow-export-to" class="owa-input" value="{{ values.date_to|default:'' }}" max="{{ today|date:'Y-m-d' }}">
+          </label>
+        </div>
+        <p class="owa-export__hint">Leave both empty for all time. Both dates are included.</p>
+      </section>
+
+      <section class="owa-export__step" id="ow-export-window" hidden>
+        <p class="owa-marker owa-export__marker"><span class="owa-marker__n">02</span> Window</p>
+        <div class="owa-export__window">
+          <span class="owa-export__window-k">Covers</span>
+          <span class="owa-export__window-v" id="ow-export-window-text"></span>
+        </div>
+        <p class="owa-export__hint">Worked out from today ({{ today|date:"d M Y" }}). Only paid and one-time plans are listed; a free plan never lapses into a renewal. Data deletion date = plan end + {{ retention_days }} day{{ retention_days|pluralize }}.</p>
+      </section>
+
+      <section class="owa-export__step" id="ow-export-options">
+        <p class="owa-marker owa-export__marker"><span class="owa-marker__n">03</span> Options</p>
+        <label class="owa-export__check" id="ow-export-zero">
+          <input type="checkbox" name="include_zero" value="1"{% if values.include_zero %} checked{% endif %}>
+          <span><strong>Include ₹0 orders</strong><small>Free plans, 100% discount codes and ₹0 invites. Off by default so the report lists money received.</small></span>
+        </label>
+        <label class="owa-export__check" id="ow-export-review" hidden>
+          <input type="checkbox" name="include_review" value="1"{% if values.include_review %} checked{% endif %}>
+          <span><strong>Include bills awaiting payment review</strong><small>Owners uploaded a screenshot but the payment is not yet marked paid. Shown with their status.</small></span>
+        </label>
+      </section>
+    </div>
+
+    <div class="owa-export__foot">
+      <p class="owa-export__privacy">The file contains customer contact and tax details. Each export is recorded in the audit trail.</p>
+      <button type="submit" class="owa-btn owa-btn--accent owa-export__submit" id="ow-export-submit">
+        <svg class="owa-export__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span class="owa-export__label">Download Excel</span>
+      </button>
+    </div>
+  </form>
+
+  <aside>
+    <div class="owa-panel">
+      <div class="owa-panel__head"><span>Columns</span><span class="owa-mono">Report sheet</span></div>
+      <ol class="owa-export__cols">
+        <li>Name of the user</li>
+        <li>Email of the user</li>
+        <li>Mobile of the user</li>
+        <li>GST</li>
+        <li>Company</li>
+        <li>Websites</li>
+        <li>Product / service type</li>
+        <li>Discount code / Product / Service name</li>
+        <li>Paid amount <small>taxable value</small></li>
+        <li>CGST, SGST or IGST <small>by the user's state</small></li>
+        <li>Others</li>
+        <li>City</li>
+        <li>Purchase duration</li>
+        <li>Total amount paid</li>
+      </ol>
+      <div class="owa-export__extra" data-for="commerce">
+        <p class="owa-export__extra-h">Commerce fee sales also</p>
+        <ul><li>Photos <small>link to the payment screenshot</small></li><li>Attachment <small>link to the bill's invoice PDF</small></li><li>Reference number</li><li>Payment status</li></ul>
+      </div>
+      <div class="owa-export__extra" data-for="renewals">
+        <p class="owa-export__extra-h">Renewal reports also</p>
+        <ul><li>Plan ends on</li><li>Days left</li><li>Data deletion on</li><li>Status</li></ul>
+      </div>
+    </div>
+    <div class="owa-panel owa-export__rules">
+      <div class="owa-panel__head"><span>How totals add up</span></div>
+      <p>Every row: <strong>paid amount + CGST + SGST + IGST + others = total amount paid</strong>. CGST + SGST when the user's state matches OneWooz's billing state, IGST otherwise. Subscriptions follow the owner's bill; commerce fee bills use the GST printed on each bill. A Summary sheet totals everything by product and by state.</p>
+    </div>
+  </aside>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var form = document.getElementById('ow-export-form');
+  if (!form) return;
+  var select = document.getElementById('ow-export-report');
+  var desc = document.getElementById('ow-export-desc');
+  var dates = document.getElementById('ow-export-dates');
+  var win = document.getElementById('ow-export-window');
+  var winText = document.getElementById('ow-export-window-text');
+  var zero = document.getElementById('ow-export-zero');
+  var review = document.getElementById('ow-export-review');
+  var options = document.getElementById('ow-export-options');
+  var from = document.getElementById('ow-export-from');
+  var to = document.getElementById('ow-export-to');
+  var submit = document.getElementById('ow-export-submit');
+  var label = submit.querySelector('.owa-export__label');
+  var extras = document.querySelectorAll('.owa-export__extra');
+  var chips = document.querySelectorAll('.owa-export__chip');
+
+  function sync() {
+    var opt = select.options[select.selectedIndex];
+    var group = opt.getAttribute('data-group');
+    var commerce = opt.getAttribute('data-commerce') === '1';
+    desc.textContent = opt.getAttribute('data-desc') || '';
+    var sales = group === 'sales';
+    dates.hidden = !sales;
+    win.hidden = sales;
+    winText.textContent = opt.getAttribute('data-window') || '';
+    options.hidden = !sales;
+    zero.hidden = !sales || commerce;
+    review.hidden = !commerce;
+    from.disabled = to.disabled = !sales;
+    extras.forEach(function (el) {
+      var key = el.getAttribute('data-for');
+      el.classList.toggle('is-on', (key === 'commerce' && commerce) || (key === 'renewals' && !sales));
+    });
+  }
+
+  function iso(d) {
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+  function range(kind) {
+    var now = new Date();
+    var y = now.getFullYear(), m = now.getMonth();
+    var fyStart = m >= 3 ? y : y - 1; /* Indian financial year: 1 April to 31 March */
+    switch (kind) {
+      case 'this_month': return [new Date(y, m, 1), now];
+      case 'last_month': return [new Date(y, m - 1, 1), new Date(y, m, 0)];
+      case 'last_30': return [new Date(y, m, now.getDate() - 29), now];
+      case 'this_fy': return [new Date(fyStart, 3, 1), now];
+      case 'last_fy': return [new Date(fyStart - 1, 3, 1), new Date(fyStart, 2, 31)];
+      default: return [null, null];
+    }
+  }
+  function markChip(active) {
+    chips.forEach(function (c) { c.classList.toggle('is-active', c === active); });
+  }
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var r = range(chip.getAttribute('data-range'));
+      from.value = r[0] ? iso(r[0]) : '';
+      to.value = r[1] ? iso(r[1]) : '';
+      markChip(chip);
+    });
+  });
+  [from, to].forEach(function (el) { el.addEventListener('input', function () { markChip(null); }); });
+
+  select.addEventListener('change', sync);
+  sync();
+
+  /* Busy state until the file arrives: the server answers with the file and a
+     short-lived cookie carrying this token. */
+  var timer = null;
+  function readCookie(name) {
+    var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function done() {
+    clearInterval(timer);
+    submit.disabled = false;
+    submit.classList.remove('is-busy');
+    label.textContent = 'Download Excel';
+    document.cookie = 'ow_export_done=; Max-Age=0; path=/';
+  }
+  form.addEventListener('submit', function (e) {
+    if (!dates.hidden && from.value && to.value && from.value > to.value) {
+      e.preventDefault();
+      to.setCustomValidity('The end date must be on or after the start date.');
+      to.reportValidity();
+      to.addEventListener('input', function clear() { to.setCustomValidity(''); to.removeEventListener('input', clear); });
+      return;
+    }
+    var token = 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    document.getElementById('ow-export-token').value = token;
+    submit.disabled = true;
+    submit.classList.add('is-busy');
+    label.textContent = 'Preparing your file…';
+    var started = Date.now();
+    clearInterval(timer);
+    timer = setInterval(function () {
+      if (readCookie('ow_export_done') === token || Date.now() - started > 180000) done();
+    }, 400);
+  });
+})();
+</script>
+{% endblock %}

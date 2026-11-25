@@ -236,6 +236,9 @@ def verify_otp(request):
     AgreementAcceptance.objects.create(
         agreement=agreement,
         email=email,
+        user=request.user if getattr(getattr(request, "user", None), "is_authenticated", False) else None,
+        source=AgreementAcceptance.Source.CHECKOUT,
+        otp_verified=True,
         ip_address=request.META.get("REMOTE_ADDR") or None,
         user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:400],
     )
@@ -518,6 +521,24 @@ def webhook(request):
         cashfree.confirm_by_fetch(order)
     if order is not None and order.is_paid:
         _complete_linked_invite(order)
+    if order is None:
+        # A website-template purchase (OWT-...): same nudge, confirm by fetch.
+        from . import website_templates
+
+        purchase = website_templates.purchase_for_cf_id(cf_order_id)
+        if purchase is not None and not purchase.is_paid:
+            website_templates.confirm_purchase(purchase)
+        if purchase is None:
+            # A OneWooz Apps (marketplace) order (OWM-...): same nudge, the
+            # status is only ever learned by fetching it from Cashfree.
+            try:
+                from marketplace import orders as mkt_orders
+
+                mkt_order = mkt_orders.for_cf_id(cf_order_id)
+                if mkt_order is not None and not mkt_order.is_paid:
+                    mkt_orders.confirm(mkt_order)
+            except Exception:
+                pass
 
     # Always 200 so Cashfree stops retrying a webhook we've handled or ignored.
     return HttpResponse(status=200)

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About Us | velora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+<main>
+  <section class="container" style="text-align:center;padding-top:clamp(36px,6vw,80px);position:relative">
+    <span class="sticker sticker--star" style="top:20%;left:6%">Soft</span>
+    <span class="sticker sticker--pill" style="top:30%;right:8%">Since 2019</span>
+    <p class="eyebrow">About us</p>
+    <h1 class="mega" style="max-width:18ch;margin:14px auto 18px">Skincare that feels good, made by people who <em class="hl">care.</em></h1>
+    <p class="muted" style="max-width:600px;margin:0 auto">Velora began in a small Kerala lab with a simple brief: make skincare that is gentle enough for every day and effective enough to notice. Seven years and 2 lakh customers later, the brief has not changed.</p>
+  </section>
+
+  <section class="container section--tight" style="padding-top:clamp(30px,4vw,56px)">
+    <div class="mosaic" data-mosaic></div>
+  </section>
+
+  <section class="container section--tight">
+    <div class="stat-row reveal">
+      <div><b>2L+</b><span>Happy customers</span></div>
+      <div><b>82%</b><span>Naturally derived ingredients</span></div>
+      <div><b>140</b><span>Artisans in our studios</span></div>
+      <div><b>4.8★</b><span>Average rating</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container story">
+      <div class="story__media reveal">
+        <span class="sticker sticker--sun" style="top:6%;right:4%">Hi!</span>
+        <div class="story__circle"><img src="" data-src-id="stones" alt="Inside our studio"></div>
+      </div>
+      <div class="story__text reveal">
+        <p class="eyebrow">Our studio</p>
+        <h2 class="h1" style="margin-top:12px">Grown, blended and tested in <em class="hl">Kerala.</em></h2>
+        <p>Every formula is developed in our Kochi lab with botanicals from partner farms an hour away. We run on 60% solar power, use recyclable glass and refill pouches, and never test on animals.</p>
+        <a href="shop.html" class="btn btn--black">Shop the collection</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="band" aria-hidden="true"><div class="band__track" data-band></div></div>
+
+  <section class="section">
+    <div class="container">
+      <div class="sec-head sec-head--center"><p class="eyebrow">What we believe</p><h2 class="h2">Three promises <em class="hl">we keep.</em></h2></div>
+      <div class="features features--3" data-values></div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="sec-head"><div><p class="eyebrow">The people</p><h2 class="h2">Meet the <em class="hl">team.</em></h2></div></div>
+      <div class="grid grid--4" data-team></div>
+    </div>
+  </section>
+
+  <section class="section reviews-sec">
+    <div class="container center">
+      <p class="eyebrow">From our community</p>
+      <h2 class="h1" style="max-width:20ch;margin:12px auto 26px">“The only routine my sensitive skin has ever thanked me for.”</h2>
+      <div class="author" style="justify-content:center"><img src="" data-src-id="p1" alt=""><div style="text-align:left"><b>Riya Sharma</b><div class="small muted">Customer since 2021</div></div></div>
+    </div>
+  </section>
+</main>
+<div data-footer></div>
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$;
+  document.querySelectorAll('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
+  document.querySelectorAll('[data-src-id]').forEach(e => e.src = D.U(D.IMG[e.dataset.srcId], 900, 900));
+  $('[data-mosaic]').innerHTML = ['stones', 'flatlay1', 'whiteRow', 'handsSerum', 'pastelRow'].map(k => `<div class="reveal"><img src="${D.U(D.IMG[k], 900, 700)}" alt="" loading="lazy"></div>`).join('');
+  const band = ['Organic Cotton', 'Fair Wages', 'Solar Powered', 'Plastic Free Packaging', 'Made in India'].map(t => `<span class="band__item">${I.leaf} ${t}</span>`).join('');
+  $('[data-band]').innerHTML = band + band;
+  $('[data-values]').innerHTML = [['leaf', 'Better ingredients', 'Kerala grown botanicals and proven actives in every formula, nothing you cannot pronounce.'], ['heart', 'Fair work', 'Fair pay and long term contracts for the farmers and makers behind every bottle.'], ['return', 'Skin match promise', 'Not right for your skin? One free exchange, even if the product has been opened.']].map(([i, t, s]) => `<div class="feature reveal"><div class="feature__icon">${I[i]}</div><h3>${t}</h3><p>${s}</p></div>`).join('');
+  $('[data-team]').innerHTML = [['p4', 'Kabir Rao', 'Co-founder, Formulation'], ['p3', 'Neha Kapoor', 'Co-founder, Operations'], ['p2', 'Arjun Menon', 'Head of Lab'], ['p5', 'Meera Iyer', 'Community &amp; Journal']].map(([k, n, r]) => `<div class="team-card reveal"><img src="${D.U(D.IMG[k], 600, 750)}" alt="" loading="lazy"><b>${n}</b><span>${r}</span></div>`).join('');
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

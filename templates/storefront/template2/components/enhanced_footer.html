@@ -63,10 +63,10 @@
                 <h3 class="text-xl font-semibold mb-4">Quick Links</h3>
                 <ul class="space-y-2">
                     <li><a href="/" class="text-gray-300 hover:text-white transition-colors">Home</a></li>
-                    <li><a href="/about-us" class="text-gray-300 hover:text-white transition-colors">About Us</a></li>
+                    <li><a href="{% url 'public_about' %}" class="text-gray-300 hover:text-white transition-colors">About Us</a></li>
                     <li><a href="/shop" class="text-gray-300 hover:text-white transition-colors">Shop</a></li>
                     <li><a href="/blog" class="text-gray-300 hover:text-white transition-colors">Blog</a></li>
-                    <li><a href="/enquiry" class="text-gray-300 hover:text-white transition-colors">Contact</a></li>
+                    <li><a href="{% url 'public_enquiry' %}" class="text-gray-300 hover:text-white transition-colors">Contact</a></li>
                 </ul>
             </div>
             

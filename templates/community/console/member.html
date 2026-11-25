@@ -1,0 +1,93 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}{{ person.display_name }}{% endblock %}
+{% block crumbs %}<span>/</span><a href="{% url 'ask_console:members' %}">Members</a><span>/</span><span>{{ person.display_name }}</span>{% endblock %}
+{% block heading %}{{ person.display_name }}{% endblock %}
+{% block lead %}<p>@{{ person.handle }} · {% if person.is_persona %}a team-written name (no email, can't sign in){% else %}{{ person.email }}{% endif %} · joined {{ person.created_at|date:"j M Y" }}{% if person.last_seen_at %} · last signed in {{ person.last_seen_at|timesince }} ago{% endif %}</p>{% endblock %}
+{% block actions %}<a class="pal-btn pal-btn--ghost" href="{{ profile_url }}" target="_blank" rel="noopener">Public profile &#8599;</a>{% endblock %}
+
+{% block main %}
+{% if person.is_banned %}
+<div class="mc-status mc-status--off">
+  <span class="mc-status__txt"><span class="mc-dot mc-dot--off"></span> Banned {% if person.banned_at %}{{ person.banned_at|date:"j M Y" }}{% endif %}{% if person.ban_reason %}: “{{ person.ban_reason }}”{% endif %}. They can read but not ask, answer, reply, vote or report.</span>
+  {% if can_write %}<form method="post" action="{% url 'ask_console:member_action' person.pk %}">{% csrf_token %}<input type="hidden" name="action" value="unban"><button class="pal-btn" type="submit">Unban</button></form>{% endif %}
+</div>
+{% endif %}
+
+<div class="mc-kpis">
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ person.reputation }}</div><div class="mc-kpi__label">Reputation</div><div class="mc-kpi__sub">{{ person.level }}</div></div>
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ person.question_count }}</div><div class="mc-kpi__label">Questions</div><div class="mc-kpi__sub">live</div></div>
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ person.answer_count }}</div><div class="mc-kpi__label">Answers</div><div class="mc-kpi__sub">{{ person.accepted_count }} accepted</div></div>
+  <div class="mc-kpi{% if reports_against %} mc-kpi--warn{% endif %}"><div class="mc-kpi__value">{{ reports_against }}</div><div class="mc-kpi__label">Reports against</div><div class="mc-kpi__sub">all time</div></div>
+</div>
+
+<div class="mc-grid2">
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Everything they posted</h2><span class="mc-muted ac-sub">{{ items|length }} shown, newest first</span></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table ac-table">
+        <tbody>
+          {% for i in items %}
+          <tr>
+            <td class="ac-post">
+              <span class="mc-chip">{{ i.kind }}</span> {% include "community/console/_status.html" with s=i.status %}
+              <div class="ac-text">{{ i.text }}</div>
+              <div class="mc-muted ac-sub">{% if i.kind != "question" %}In: {% endif %}<a href="{% url 'ask_console:thread' i.question.pk %}{{ i.anchor }}">{{ i.question.title|truncatechars:60 }}</a> · {{ i.created_at|date:"j M Y" }}{% if i.reports %} · <b class="ac-warn">{{ i.reports }} report{{ i.reports|pluralize }}</b>{% endif %}</div>
+              {% include "community/console/_actions.html" with kind=i.kind obj=i.obj reports=i.reports accept=False %}
+            </td>
+          </tr>
+          {% empty %}<tr><td class="mc-empty">Nothing posted yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if can_write %}
+  <div class="ac-side">
+    {% if not person.is_banned %}
+    <section class="mc-panel">
+      <div class="mc-panel__head"><h2 class="mc-panel__title">Ban from posting</h2></div>
+      <form method="post" action="{% url 'ask_console:member_action' person.pk %}" class="mc-panel__body mc-form" data-confirm="Ban {{ person.display_name }}? They can still read Ask OneWooz but can't ask, answer, reply, vote or report.">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="ban">
+        <label class="mc-label" for="ban-reason">Reason (kept in the record)</label>
+        <input id="ban-reason" type="text" name="reason" maxlength="300" placeholder="Spam, abuse, repeated self-promotion…">
+        <label class="mc-check"><input type="checkbox" name="hide_all" value="1"> <span>Also hide everything they posted</span></label>
+        <div class="mc-actions"><button class="pal-btn mc-btn-danger" type="submit">Ban member</button></div>
+      </form>
+    </section>
+    {% endif %}
+
+    <section class="mc-panel">
+      <div class="mc-panel__head"><h2 class="mc-panel__title">Member</h2></div>
+      <form method="post" action="{% url 'ask_console:member_action' person.pk %}" class="mc-panel__body mc-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="rename">
+        <label class="mc-label" for="m-name">Display name</label>
+        <input id="m-name" type="text" name="display_name" value="{{ person.display_name }}" maxlength="40" required>
+        <label class="mc-label" for="m-bio">Bio</label>
+        <input id="m-bio" type="text" name="bio" value="{{ person.bio }}" maxlength="160">
+        <div class="mc-actions"><button class="pal-btn pal-btn--ghost" type="submit">Save</button></div>
+      </form>
+      <div class="mc-panel__body ac-buttons">
+        <form method="post" action="{% url 'ask_console:member_action' person.pk %}">{% csrf_token %}
+          {% if person.is_team %}<input type="hidden" name="action" value="team_off"><button class="pal-btn pal-btn--ghost" type="submit">Remove team label</button>
+          {% else %}<input type="hidden" name="action" value="team_on"><button class="pal-btn pal-btn--ghost" type="submit">Give OneWooz team label</button>{% endif %}
+        </form>
+        <form method="post" action="{% url 'ask_console:member_action' person.pk %}" data-confirm="Hide every question, answer and reply by {{ person.display_name }}? You can restore them later.">{% csrf_token %}
+          <input type="hidden" name="action" value="hide_all"><button class="pal-btn pal-btn--ghost" type="submit">Hide everything they posted</button>
+        </form>
+        {% if hidden_count %}
+        <form method="post" action="{% url 'ask_console:member_action' person.pk %}">{% csrf_token %}
+          <input type="hidden" name="action" value="publish_all"><button class="pal-btn pal-btn--ghost" type="submit">Restore their hidden posts</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{% url 'ask_console:member_action' person.pk %}" data-confirm="Delete {{ person.display_name }} and everything they posted, for good? Their questions take other people's answers with them. This can't be undone.">{% csrf_token %}
+          <input type="hidden" name="action" value="delete"><button class="pal-btn mc-btn-danger" type="submit">Delete member and posts</button>
+        </form>
+      </div>
+      {% if person.store_url %}<p class="mc-help ac-pad">Runs <a href="{{ person.store_url }}" target="_blank" rel="noopener">{{ person.store_name|default:"a store" }}</a> on OneWooz.</p>{% endif %}
+    </section>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

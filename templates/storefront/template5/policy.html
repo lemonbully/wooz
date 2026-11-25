@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Policies | oakline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+<main class="container">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>Policies</span><span class="sep">/</span><span data-crumb></span></nav>
+  <div class="page-head"><h1 class="h1" data-title></h1><p class="small" data-updated>Last updated on November 01, 2026</p></div>
+  <div class="policy-layout">
+    <nav class="policy-nav" data-nav aria-label="Policies"></nav>
+    <article class="prose" data-body style="max-width:760px"></article>
+  </div>
+</main>
+<div data-footer></div>
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const $ = T3.$;
+  const P = {
+    refund: ['Refund & Return Policy', `<p>We want you to love what you ordered. If something is not right, you can return or exchange it within <b>15 days of delivery</b>.</p><h2>Eligibility</h2><ul><li>Items must be unworn, unwashed and have original tags attached.</li><li>Innerwear, socks and items marked final sale cannot be returned.</li><li>Delivered orders can be replaced for a different size at no cost.</li></ul><h2>How to raise a return</h2><p>Go to <b>My Account → Orders</b>, choose the item and select Return or Replace. A pickup is scheduled within 48 hours.</p><h2>Refund timelines</h2><p>Prepaid orders are refunded to the original payment method within 5 to 7 working days of the pickup. COD orders are refunded as store credit instantly, or to a bank account within 7 working days.</p>`],
+    shipping: ['Shipping Policy', `<p>We ship across India from our Bengaluru and Jodhpur warehouses.</p><h2>Delivery times</h2><ul><li>Metro cities: 2 to 4 working days</li><li>Rest of India: 4 to 7 working days</li><li>Express: next day in Mumbai, Delhi NCR, Bengaluru and Pune</li></ul><h2>Charges</h2><p>Standard shipping is free on orders above ₹2,999. Below that, a flat ₹99 applies. Cash on Delivery carries a ₹49 handling fee.</p><h2>Tracking</h2><p>You receive a tracking link on email and WhatsApp as soon as your parcel leaves our warehouse.</p>`],
+    privacy: ['Privacy Policy', `<p>Your privacy matters to us. This policy explains what we collect and why.</p><h2>What we collect</h2><ul><li>Contact details you share at checkout</li><li>Order history and saved addresses</li><li>Anonymous browsing analytics to improve the store</li></ul><h2>How we use it</h2><p>Only to process orders, provide support and, with your consent, send offers. We never sell your data.</p><h2>Your rights</h2><p>You can download or delete your data at any time from your account, or by writing to our grievance officer.</p>`],
+    terms: ['Terms & Conditions', `<p>By using this website you agree to these terms.</p><h2>Pricing</h2><p>All prices are in Indian Rupees and inclusive of GST. We reserve the right to correct pricing errors before dispatch.</p><h2>Orders</h2><p>An order is confirmed once you receive a confirmation email. We may cancel orders that appear fraudulent, with a full refund.</p><h2>Governing law</h2><p>These terms are governed by the laws of India, with courts in Mumbai having exclusive jurisdiction.</p>`],
+    care: ['Care Guide', `<p>Look after your furniture and it will look after you.</p><h2>Wood</h2><p>Dust with a dry cloth and re-oil once a year. Use coasters for hot cups.</p><h2>Fabric</h2><p>Vacuum weekly and blot spills immediately. Rotate cushions every month.</p><h2>Leather</h2><p>Condition every six months and keep away from direct sunlight.</p>`],
+  };
+  const k = P[T3.qs('type')] ? T3.qs('type') : 'refund';
+  document.title = `${P[k][0]} | oakline`;
+  $('[data-crumb]').textContent = P[k][0]; $('[data-title]').textContent = P[k][0];
+  $('[data-body]').innerHTML = P[k][1] + `<blockquote>Questions? Write to hello@oakline.example or call +91 22 4000 1200.</blockquote>`;
+  $('[data-nav]').innerHTML = Object.entries(P).map(([key, v]) => `<a href="policy.html?type=${key}" class="${key === k ? 'is-active' : ''}">${v[0]}</a>`).join('');
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

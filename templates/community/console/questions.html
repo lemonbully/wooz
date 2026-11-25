@@ -1,0 +1,45 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}Questions{% endblock %}
+{% block crumbs %}<span>/</span><span>Questions</span>{% endblock %}
+{% block heading %}Questions{% endblock %}
+{% block lead %}<p>Every question, whatever its status. Open one to moderate the whole thread: each answer and reply has its own controls.</p>{% endblock %}
+{% block actions %}{% if can_write %}<a class="pal-btn" href="{% url 'ask_console:question_new' %}">Write a question <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>{% endif %}{% endblock %}
+
+{% block main %}
+<form method="get" class="mc-toolbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Title, details or author">
+  <select name="status"><option value="">Any status</option>{% for k, l in statuses %}<option value="{{ k }}"{% if status == k %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="topic"><option value="">Every room</option><option value="none"{% if topic == "none" %} selected{% endif %}>No room</option>{% for t in topics %}<option value="{{ t.slug }}"{% if topic == t.slug %} selected{% endif %}>{{ t.name }}</option>{% endfor %}</select>
+  <select name="flag"><option value="">Everything</option><option value="reported"{% if flag == "reported" %} selected{% endif %}>Reported</option><option value="unanswered"{% if flag == "unanswered" %} selected{% endif %}>Unanswered</option></select>
+  <button class="pal-btn pal-btn--ghost" type="submit">Filter</button>
+</form>
+
+<section class="mc-panel">
+  <div class="mc-tablewrap">
+    <table class="mc-table ac-table">
+      <thead><tr><th>Question</th><th>Room</th><th>By</th><th>Status</th><th class="num">Answers</th><th class="num">Votes</th><th class="num">Reports</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for q in page %}
+        <tr>
+          <td class="ac-post"><a class="ac-title" href="{% url 'ask_console:thread' q.pk %}">{{ q.title }}</a><div class="mc-muted ac-sub">{{ q.created_at|date:"j M Y, H:i" }}{% if q.hold_reason %} · {{ q.hold_reason }}{% endif %}</div></td>
+          <td>{{ q.topic.name|default:"–" }}</td>
+          <td><a href="{% url 'ask_console:member' q.author.pk %}">{{ q.author.display_name }}</a>{% if q.author.is_banned %} <span class="mc-chip mc-chip--revoked">Banned</span>{% endif %}</td>
+          <td>{% include "community/console/_status.html" with s=q.status %}</td>
+          <td class="num">{{ q.answer_count }}</td>
+          <td class="num">{{ q.score }}</td>
+          <td class="num">{% if q.report_count %}<b class="ac-warn">{{ q.report_count }}</b>{% else %}0{% endif %}</td>
+          <td>{% include "community/console/_actions.html" with kind="question" obj=q reports=q.report_count accept=False %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="8" class="mc-empty">No questions match.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="mc-pager">
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }} &middot; {{ page.paginator.count }} questions</span>
+    <span>{% if page.has_previous %}<a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
+    {% if page.has_next %}&nbsp; <a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}</span>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

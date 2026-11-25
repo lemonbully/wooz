@@ -16,8 +16,9 @@ to assemble them:
 from __future__ import annotations
 
 from commerce import staff as staff_mod
-from commerce.context import active_site_id, visible_groups
+from commerce.context import active_site_id, merge_app_nav, visible_groups
 from commerce.features import allowed_features_for_owner
+from core.hosts import Surface
 
 
 def bell_href(url: str, request) -> str:
@@ -61,6 +62,44 @@ def bell_href(url: str, request) -> str:
     if fragment:
         href += "#" + fragment
     return href
+
+
+def notification_href(n, request) -> str:
+    """Where one bell notification's "Open" goes on the live request ("" if
+    nowhere). Shared by the page render and the live poll, so a notification
+    that arrives while the page is open links exactly like one rendered."""
+    url = n.action_url
+    if not url and n.site_id_ref:
+        # Older store-activity notifications were saved without a link:
+        # work it out from the event they describe.
+        try:
+            from commerce.bell_links import url_for_headline
+
+            url = url_for_headline(n.headline, n.site_id_ref)
+        except Exception:
+            url = ""
+    return bell_href(url, request)
+
+
+def _push_context(request) -> dict:
+    """Browser push for the top bar: the VAPID public key and whether this
+    login session already has a subscription. Off while an admin impersonates
+    an owner (their browser must never subscribe to the owner's alerts), and
+    off rather than broken if anything fails (e.g. before the migration)."""
+    if getattr(request, "impersonation", None):
+        return {"enabled": False}
+    try:
+        from accounts import webpush
+
+        if not webpush.enabled():
+            return {"enabled": False}
+        return {
+            "enabled": True,
+            "key": webpush.public_key(),
+            "bound": webpush.bound_here(request),
+        }
+    except Exception:
+        return {"enabled": False}
 
 
 def dashboard_nav(request):
@@ -123,6 +162,10 @@ def dashboard_nav(request):
             access = staff_mod.access_for(request, primary)
             staff_pages = access.allowed_pages() if access is not None else set()
         primary_nav_groups = visible_groups(primary, allowed, staff_pages)
+        # Installed apps too, the owner's own only. App surface only: their
+        # links do not resolve anywhere else.
+        if primary_owned and getattr(request, "surface", None) is Surface.APP:
+            merge_app_nav(request, user, primary, primary_nav_groups)
         # The same unread counters as the store sidebar (Orders, Requests …).
         try:
             from commerce import nav_counts
@@ -154,17 +197,7 @@ def dashboard_nav(request):
             Notification.objects.filter(user=user).order_by("-created_at")[:15]
         )
         for n in notif_items:
-            url = n.action_url
-            if not url and n.site_id_ref:
-                # Older store-activity notifications were saved without a link:
-                # work it out from the event they describe.
-                try:
-                    from commerce.bell_links import url_for_headline
-
-                    url = url_for_headline(n.headline, n.site_id_ref)
-                except Exception:
-                    url = ""
-            n.open_href = bell_href(url, request)
+            n.open_href = notification_href(n, request)
             # "Open" goes straight to where the notification happened (a ticket
             # reply opens the Business Hub with that ticket's popup). Only a
             # notification with nowhere to go opens a detail popup instead.
@@ -174,6 +207,16 @@ def dashboard_nav(request):
         pass
 
     return {
+        # Browser push opt-in (templates/accounts/push/_prompt.html).
+        # How it works: gives every dashboard page the VAPID public key the
+        # browser subscribes with, and whether this login is already
+        # subscribed (so push.js only re-registers when needed).
+        #
+        # BROWSER PUSH: DISABLED (commented out, not removed). Without it
+        # ``push.enabled`` is falsy in every template, so no pill, popup, bell
+        # strip or Profile card renders. Uncomment to re-enable.
+        # "push": _push_context(request),
+        "push": {"enabled": False},
         "is_owner_authenticated": True,
         # Profile switcher + identity, available on every authenticated page.
         "profile_sites": sites,

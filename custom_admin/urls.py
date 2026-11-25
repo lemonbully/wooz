@@ -29,6 +29,13 @@ urlpatterns = [
     path("sign-in/reset/", views.reset, name="reset"),
     path("sign-out/", account_views.sign_out, name="sign_out"),
     path("", views.overview, name="overview"),
+    # Excel reports: sales (subscriptions, templates, plugins, commerce fee) and
+    # renewals (expiring, expired, data deletion). Linked from the admin home.
+    path("exports/", views.export_excel, name="export_excel"),
+    # Owner lifecycle lists (buttons on the admin home): accounts deleted by
+    # their owners, and paid plans about to end. Both with duration filters.
+    path("deleted-users/", views.deleted_users, name="deleted_users"),
+    path("expiring-users/", views.expiring_users, name="expiring_users"),
     # Email template builder (admin-authored, ChatGPT-assisted).
     path("email-templates/", views.email_templates, name="email_templates"),
     path("email-templates/new/", views.email_template_new, name="email_template_new"),

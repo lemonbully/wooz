@@ -10,6 +10,7 @@ every credential-stuffing campaign.
 from __future__ import annotations
 
 import hashlib
+import uuid
 from typing import NamedTuple
 
 from django.conf import settings
@@ -978,6 +979,7 @@ def security(request):
         request,
         "accounts/security.html",
         {
+            "nav_active": "security",
             "passkeys": request.user.passkeys.all(),
             "totp_devices": request.user.totp_devices.filter(confirmed_at__isnull=False),
             "trusted_devices": request.user.trusted_devices.filter(
@@ -1265,6 +1267,12 @@ def profile(request):
             _save_profile(request, user)
         elif intent == "notifications":
             _save_notifications(request, user)
+        # Browser push: save the per-type pop-up switches / remove one browser.
+        # BROWSER PUSH: DISABLED (commented out, not removed). Uncomment to re-enable.
+        # elif intent == "push_prefs":
+        #     _save_push_prefs(request, user)
+        # elif intent == "push_remove":
+        #     _remove_push_device(request, user)
         elif intent == "password":
             _change_password(request, user)
         elif intent == "test_notification":
@@ -1281,8 +1289,202 @@ def profile(request):
         "timezones": _TIMEZONES,
         "digest_choices": User.Digest.choices,
         **_subscription_overview(user),
+        # Browser push: the Profile "Browser notifications" card's switches
+        # and the list of browsers receiving pop-ups.
+        # BROWSER PUSH: DISABLED (commented out, not removed). Uncomment to re-enable.
+        # **_push_overview(user),
+        "deletion": _deletion_overview(user),
     }
     return render(request, "accounts/profile.html", context)
+
+
+# --------------------------------------------------------------------------
+# Delete My Account (Profile page, bottom)
+# --------------------------------------------------------------------------
+#
+# Same shape as deleting a store (ud.views.delete_site_*): the owner ticks the
+# acknowledgement, we email a one-time code bound to this account, and only a
+# correct code performs the delete. Nothing is erased: accounts.deletion marks
+# the account deleted, soft-deletes its stores and ends every session. Signing
+# in again within the recovery window restores it (after renewing a lapsed paid
+# plan); see accounts.deletion for the full lifecycle.
+
+
+def _deletion_overview(user) -> dict:
+    from tenancy.models import Site
+
+    from . import deletion
+
+    return {
+        "retention_days": deletion.retention_days(),
+        "pending": bool(user.account_deleted_at),
+        "recover_until": deletion.recover_until(user.account_deleted_at),
+        "store_count": Site.objects.filter(owner=user, is_deleted=False).count(),
+    }
+
+
+def _account_delete_purpose(user) -> str:
+    # Salted with the account id so a code minted for one account can never be
+    # replayed against another.
+    return f"account_delete:{user.pk}"
+
+
+def _account_delete_refusal(request):
+    """A JSON refusal when this request may not delete the account, else None."""
+    if getattr(request, "impersonation", None):
+        return JsonResponse(
+            {"ok": False, "error": "An admin viewing this account cannot delete it."}, status=403
+        )
+    if request.user.is_staff or request.user.is_superuser:
+        return JsonResponse(
+            {"ok": False, "error": "Staff accounts cannot be deleted from here."}, status=403
+        )
+    if request.user.account_deleted_at:
+        return JsonResponse(
+            {"ok": False, "error": "This account is already scheduled for deletion."}, status=400
+        )
+    return None
+
+
+@require_POST
+@login_required
+def account_delete_send_code(request):
+    """Step 1: email the owner a one-time code to confirm deleting the account."""
+    refusal = _account_delete_refusal(request)
+    if refusal is not None:
+        return refusal
+    if request.POST.get("acknowledge") != "1":
+        return JsonResponse(
+            {"ok": False, "error": "Tick the box to confirm you understand what happens."},
+            status=400,
+        )
+    email = (request.user.email or "").strip()
+    if not email:
+        return JsonResponse({"ok": False, "error": "Your account has no email to send a code to."}, status=400)
+
+    ip = ratelimit.client_identity(request)
+    if not (
+        ratelimit.consume("account.delete", str(request.user.pk)).allowed
+        and ratelimit.consume("otp.send.email", email).allowed
+        and ratelimit.consume("otp.send.ip", ip).allowed
+    ):
+        return JsonResponse(
+            {"ok": False, "error": "Too many requests. Please wait a few minutes and try again."},
+            status=429,
+        )
+
+    from . import deletion
+
+    code = otp.issue(_account_delete_purpose(request.user), email)
+    if not emails.send_account_delete_code(
+        email, code, minutes=otp.TTL_SECONDS // 60, retention_days=deletion.retention_days()
+    ):
+        return JsonResponse(
+            {"ok": False, "error": "We couldn't send the code right now. Please try again."},
+            status=502,
+        )
+    local, _, domain = email.partition("@")
+    return JsonResponse(
+        {"ok": True, "email": f"{local[:1]}•••@{domain}", "expires_in": otp.TTL_SECONDS}
+    )
+
+
+@require_POST
+@login_required
+def account_delete_confirm(request):
+    """Step 2: verify the emailed code, delete the account, sign out."""
+    refusal = _account_delete_refusal(request)
+    if refusal is not None:
+        return refusal
+    user = request.user
+    email = (user.email or "").strip()
+
+    if not ratelimit.consume("otp.verify", email).allowed:
+        return JsonResponse({"ok": False, "error": "Too many attempts. Please wait and try again."}, status=429)
+
+    code = (request.POST.get("code") or "").strip()
+    if not code:
+        return JsonResponse({"ok": False, "error": "Enter the code we emailed you."}, status=400)
+
+    result = otp.verify(_account_delete_purpose(user), email, code)
+    if not result.ok:
+        message = {
+            "expired": "That code has expired. Send a new one.",
+            "too_many_attempts": "Too many incorrect attempts. Send a new code.",
+            "incorrect": "That code isn't right. Check the email and try again.",
+        }.get(result.reason, "That code isn't right. Please try again.")
+        return JsonResponse({"ok": False, "error": message}, status=400)
+    ratelimit.reset("otp.verify", email)
+
+    from . import deletion
+
+    deletion.delete_account(user, request=request, reason=request.POST.get("reason", ""))
+    until = deletion.recover_until(user.account_deleted_at)
+    services.sign_out(request)
+    # The goodbye page reads the date from a signed value, never a raw one.
+    token = tokens.sign("account.deleted", {"until": until.date().isoformat() if until else ""})
+    return JsonResponse({"ok": True, "redirect": f"{reverse('accounts:account_deleted')}?t={token}"})
+
+
+@require_GET
+def account_deleted(request):
+    """Shown right after an account is deleted: what happens and how to restore it."""
+    from . import deletion
+
+    until = ""
+    try:
+        until = tokens.unsign("account.deleted", request.GET.get("t", "")).get("until") or ""
+    except tokens.TokenError:
+        until = ""
+    try:
+        until_date = timezone.datetime.fromisoformat(until).date() if until else None
+    except ValueError:
+        until_date = None
+    return render(
+        request,
+        "accounts/account_deleted.html",
+        {"recover_until": until_date, "retention_days": deletion.retention_days()},
+    )
+
+
+def _push_overview(user) -> dict:
+    """Browser push: the per-kind switches and the account's subscribed browsers."""
+    from . import webpush
+    from .models import PushSubscription
+
+    muted = user.push_muted
+    kinds = [
+        {"key": key, "label": label, "help": help_text, "on": key not in muted}
+        for key, label, help_text in webpush.PUSH_KINDS
+    ]
+    devices = list(
+        PushSubscription.objects.filter(user=user)
+        .only("id", "device_label", "created_at", "last_success_at")
+        .order_by("-created_at")[: webpush.MAX_PER_USER]
+    )
+    return {"push_kinds": kinds, "push_devices": devices}
+
+
+def _save_push_prefs(request, user):
+    from . import webpush
+
+    valid = [k for k, _label, _help in webpush.PUSH_KINDS]
+    muted = [k for k in valid if not request.POST.get(f"push_{k}")]
+    user.push_muted_kinds = ",".join(muted)
+    user.save(update_fields=["push_muted_kinds", "updated_at"])
+    messages.success(request, "Browser notification preferences saved.")
+
+
+def _remove_push_device(request, user):
+    from .models import PushSubscription
+
+    try:
+        device_id = uuid.UUID(str(request.POST.get("device_id") or ""))
+    except ValueError:
+        return
+    removed, _ = PushSubscription.objects.filter(user=user, pk=device_id).delete()
+    if removed:
+        messages.success(request, "That browser will no longer get notifications.")
 
 
 # --------------------------------------------------------------------------

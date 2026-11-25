@@ -16,6 +16,10 @@ search engines ignore the attribute. "<" is escaped to < in the payload, so
 <meta name="robots" content="{{ seo.robots }}">
 {% if seo.keywords %}<meta name="keywords" content="{{ seo.keywords }}">{% endif %}
 
+{# Site name: Google shows the bare domain until these agree with WebSite.name #}
+<meta name="application-name" content="{{ seo.site_name }}">
+<meta name="apple-mobile-web-app-title" content="{{ seo.site_name }}">
+
 {# Open Graph  link previews on social + a signal answer engines read #}
 <meta property="og:site_name" content="{{ seo.site_name }}">
 <meta property="og:type" content="{{ seo.og_type }}">

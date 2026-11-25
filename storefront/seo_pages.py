@@ -140,6 +140,35 @@ def _titled(name, site_name) -> str:
     return f"{name} | {site_name}"
 
 
+TITLE_LIMIT = 60
+_TITLE_BREAKS = (" | ", " – ", " - ", ": ", ", ")
+
+
+def fit_title(title: str, site_name: str = "", limit: int = TITLE_LIMIT) -> str:
+    """A search title within ``limit`` characters, cut at a clean break.
+
+    Long titles (an owner's 150-character SEO title, a product name with every
+    spec in it) are truncated by search engines mid-word and flagged by audits.
+    In order: drop a trailing `` | <store name>``; cut at the last separator
+    (``|``, dash, colon, comma) that fits; else at the last whole word. Never
+    adds an ellipsis, so the title still reads as a complete phrase.
+    """
+    title = " ".join(str(title or "").split())
+    if len(title) <= limit:
+        return title
+    suffix = f" | {site_name}" if site_name else ""
+    if suffix and title.endswith(suffix):
+        title = title[: -len(suffix)].rstrip()
+        if len(title) <= limit:
+            return title
+    head = title[:limit]
+    best = max((head.rfind(b) for b in _TITLE_BREAKS), default=-1)
+    if best >= limit // 2:
+        return head[:best].rstrip(" |–-:,")
+    cut = head.rsplit(" ", 1)[0] if " " in head else head
+    return cut.rstrip(" |–-:,")
+
+
 def _walk_core(pages):
     """Yield (key, label, node) for every core page, subpage and child."""
     for page in pages if isinstance(pages, list) else []:
@@ -356,7 +385,7 @@ def auto_seo(site, content, key, *, node=None, image=None) -> dict:
         out["meta_title"] = _titled("Contact us", name)
         out["meta_description"] = f"Get in touch with {name}. We usually reply within one business day."
     elif key == "core_pages":
-        out["meta_title"] = _titled("Pages", name)
+        out["meta_title"] = _titled("Guides and resources", name)
         out["meta_description"] = f"More about {name}: guides, information and resources."
     elif key == "certificates":
         from .certificates import public_certificates
@@ -481,7 +510,22 @@ def resolve(site, content, request) -> dict:
                 result[k] = request.build_absolute_uri(v)
             except Exception:
                 pass
+    # A site-relative canonical ("/products/x/", as Magic SEO writes it) is made
+    # absolute on the domain this page is served from, so it follows the store
+    # to a custom domain. The script prefix keeps dev's /s/<slug>/ path.
+    canonical = str(result.get("canonical_url") or "").strip()
+    if canonical.startswith("/") and not canonical.startswith("//"):
+        try:
+            from django.urls import get_script_prefix
+
+            result["canonical_url"] = request.build_absolute_uri(get_script_prefix().rstrip("/") + canonical)
+        except Exception:
+            pass
     result["noindex"] = bool(result.get("noindex"))
+    # The search title must fit the ~60 characters a results page shows; the
+    # social titles above keep the full text (cards have more room).
+    if result.get("meta_title"):
+        result["meta_title"] = fit_title(result["meta_title"], _site_name(content))
     if result.get("meta_title"):
         result["page_meta_title"] = result["meta_title"]
     result["page_key"] = key or ""

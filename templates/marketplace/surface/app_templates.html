@@ -1,0 +1,73 @@
+{% extends "marketplace/surface/base.html" %}
+
+{% comment %}
+OneWooz Templates: the storefront design gallery, theme-store style: a short
+header, a filter sidebar and a grid of large previews.
+{% endcomment %}
+
+{% block content %}
+<section class="mk-browsehead">
+  <div class="pal-container mk-themehead">
+    <div>
+      <nav class="mk-crumbs" aria-label="Breadcrumb"><a href="{% url 'marketplace:home' %}">App Store</a><span aria-hidden="true">/</span><span aria-current="page">Store designs</span></nav>
+      <h1 class="mk-browsehead__title">Store designs</h1>
+      <p class="mk-browsehead__sub">Change your storefront's look without redoing anything. Add a design to your library, then switch any store to it from Store Settings. Products, pages, SEO and settings carry over, and you can switch back any time.</p>
+    </div>
+    <dl class="mk-keyfacts mk-keyfacts--3">
+      <div><dt>Designs</dt><dd>{{ design_total }}</dd></div>
+      <div><dt>Store types</dt><dd>D2C + B2B</dd></div>
+      <div><dt>Content lost</dt><dd>None</dd></div>
+    </dl>
+  </div>
+</section>
+
+<div class="pal-container mk-browse" id="designs">
+  <aside class="mk-filters" aria-label="Filters">
+    <details class="mk-filters__wrap" open>
+      <summary class="mk-filters__toggle">Filters</summary>
+      <div class="mk-fgroup">
+        <p class="mk-fgroup__title">Store type</p>
+        <ul>
+          <li><a class="mk-fopt{% if not fit %} is-on{% endif %}" href="?{% if price %}price={{ price }}{% endif %}#designs"><span>All stores</span></a></li>
+          <li><a class="mk-fopt{% if fit == 'd2c' %} is-on{% endif %}" href="?fit=d2c{% if price %}&price={{ price }}{% endif %}#designs"><span>D2C</span></a></li>
+          <li><a class="mk-fopt{% if fit == 'b2b' %} is-on{% endif %}" href="?fit=b2b{% if price %}&price={{ price }}{% endif %}#designs"><span>B2B</span></a></li>
+        </ul>
+      </div>
+      <div class="mk-fgroup">
+        <p class="mk-fgroup__title">Price</p>
+        <ul>
+          <li><a class="mk-fopt{% if not price %} is-on{% endif %}" href="?{% if fit %}fit={{ fit }}{% endif %}#designs"><span>Any price</span></a></li>
+          <li><a class="mk-fopt{% if price == 'included' %} is-on{% endif %}" href="?price=included{% if fit %}&fit={{ fit }}{% endif %}#designs"><span>Included</span></a></li>
+          <li><a class="mk-fopt{% if price == 'paid' %} is-on{% endif %}" href="?price=paid{% if fit %}&fit={{ fit }}{% endif %}#designs"><span>Premium</span></a></li>
+        </ul>
+      </div>
+      <div class="mk-fgroup mk-fgroup--note">
+        <p class="mk-fgroup__title">How switching works</p>
+        <ol class="mk-steps-mini">
+          <li>Add a design to your library</li>
+          <li>Preview it with your own products</li>
+          <li>Use it from Store Settings</li>
+          <li>Switch back whenever you like</li>
+        </ol>
+        {% if mkt_owner %}<a class="mk-seeall" href="{{ dashboard_url }}">Open your dashboard &rarr;</a>{% else %}<a class="mk-seeall" href="{{ connect_url }}">Sign in to see your library &rarr;</a>{% endif %}
+      </div>
+    </details>
+  </aside>
+
+  <div class="mk-results">
+    <div class="mk-resultsbar">
+      <p class="mk-resultsbar__count"><b>{{ items|length }}</b> of {{ design_total }} design{{ design_total|pluralize }}</p>
+    </div>
+    {% if items %}
+    <div class="mk-designs">
+      {% for it in items %}{% include "marketplace/surface/_design_card.html" %}{% endfor %}
+    </div>
+    {% else %}
+    <div class="mk-noresults">
+      <p class="mk-noresults__title">No designs match these filters.</p>
+      <a class="pal-btn pal-btn--ghost" href="?#designs">Show all designs</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

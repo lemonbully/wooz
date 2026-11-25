@@ -1,24 +1,21 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Category | Mellow Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Caveat:wght@700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
-<div data-header></div>
+{% extends "storefront/template3/_base.html" %}
+{% load static %}
+{% block main %}
 <main class="container">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><a href="categories.html">Categories</a><span class="sep">/</span><span data-crumb></span></nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'public_website' %}">Home</a><span class="sep">/</span><a href="{% url 'public_categories' %}">Categories</a><span class="sep">/</span><span data-crumb>{{ category.name }}</span></nav>
 
   <section class="page-banner" data-banner>
     <img src="" alt="" data-banner-img>
     <div class="page-banner__text">
       <span class="badge badge--glass" data-banner-count></span>
-      <h1 class="mega" style="margin-top:12px" data-banner-title></h1>
-      <p data-banner-desc></p>
+      <h1 class="mega" style="margin-top:12px" data-banner-title>{{ category.name }}</h1>
+      {% with C=t3_data.page.category %}
+      {% if C.descLead %}
+      <p class="page-banner__desc" data-banner-desc>{{ C.descLead }}{% if C.descRest %}<span class="page-banner__dots" aria-hidden="true">…</span> <span class="page-banner__rest">{{ C.descRest }}</span> <button type="button" class="page-banner__more" data-desc-more aria-expanded="false">Read more</button>{% endif %}</p>
+      {% elif not C and category.description %}
+      <p class="page-banner__desc">{{ category.description|striptags|truncatewords:10 }}</p>
+      {% endif %}
+      {% endwith %}
     </div>
   </section>
 
@@ -28,7 +25,7 @@
 
   <div data-collection></div>
 
-  <section class="section" style="padding-bottom:0">
+  <section class="section" style="padding-bottom:0" data-sec-related>
     <div class="sec-head"><h2 class="h2">You may also like</h2></div>
     <div class="slider" data-slider>
       <div class="slider__track" data-related style="--col:calc((100% - 4*16px)/5);--col-sm:62%"></div>
@@ -36,30 +33,65 @@
     </div>
   </section>
 </main>
-<div data-footer></div>
+{% endblock %}
 
-<script src="assets/js/data.js"></script>
-<script src="assets/js/collection.js"></script>
-<script>
+{% block page_scripts %}
+<script src="{% static 'storefront-t3/js/collection.js' %}"></script>
+<script nonce="{{ csp_nonce }}">
 window.T3Page = function () {
-  const D = T3, I = T3.I, $ = T3.$;
-  const c = D.categories.find(x => x.slug === T3.qs('c')) || D.categories[3];
-  document.title = `${c.name} | Mellow Studio`;
-  $('[data-crumb]').textContent = c.name;
+  const D = T3, I = T3.I, $ = T3.$, esc = T3.esc;
+  const c = D.page.category || { name: D.page.title, img: '@cat0', desc: '', slug: '' };
+  const list = D.page.products || [];
   $('[data-banner-img]').src = D.U(c.img, 1800, 700);
-  $('[data-banner-title]').textContent = c.name;
-  $('[data-banner-desc]').textContent = c.desc + '. Designed in-house, made in small batches and finished by hand.';
-  $('[data-banner-count]').textContent = `${c.count} products`;
-  $('[data-other-cats]').innerHTML = D.categories.map(x => `<a href="category.html?c=${x.slug}" class="${x.slug === c.slug ? 'is-active' : ''}">${x.name}</a>`).join('');
-  let list = D.products.filter(p => p.cat === c.slug);
-  const fill = D.products.filter(p => p.cat !== c.slug);
-  list = list.concat(fill.slice(0, Math.max(0, 9 - list.length))); // fuller preview grid
+  $('[data-banner-img]').alt = c.name;
+  /* Description: 10 words, the rest (already in the HTML) on "Read more". */
+  const more = $('[data-desc-more]');
+  if (more) more.addEventListener('click', () => {
+    const open = $('[data-banner-desc]').classList.toggle('is-open');
+    more.setAttribute('aria-expanded', open ? 'true' : 'false');
+    more.textContent = open ? 'Show less' : 'Read more';
+  });
+  $('[data-banner-count]').textContent = `${list.length} product${list.length === 1 ? '' : 's'}`;
+  $('[data-other-cats]').innerHTML = D.categories.map(x => `<a href="${x.url}" class="${x.slug === c.slug ? 'is-active' : ''}">${esc(x.name)}</a>`).join('');
+  /* Switching category from these tabs keeps the shopper where they were:
+     remember the scroll on click, restore it once the next page renders. */
+  const SCROLL_KEY = 't3_cat_scroll';
+  $('[data-other-cats]').addEventListener('click', e => {
+    if (!e.target.closest('a') || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    try { sessionStorage.setItem(SCROLL_KEY, JSON.stringify({ y: Math.round(scrollY), t: Date.now() })); } catch (_) {}
+  });
   T3Collection({ root: '[data-collection]', products: list, showCats: false });
-  $('[data-related]').innerHTML = fill.slice(8, 18).map(p => T3.card(p, { reveal: false })).join('');
+  const ids = new Set(list.map(p => p.id));
+  const rel = D.products.filter(p => !ids.has(p.id)).slice(0, 10);
+  $('[data-related]').innerHTML = rel.map(p => T3.card(p, { reveal: false })).join('');
+  if (!rel.length) $('[data-sec-related]').hidden = true;
   document.querySelectorAll('[data-prev]').forEach(e => e.innerHTML = I.left);
   document.querySelectorAll('[data-next]').forEach(e => e.innerHTML = I.right);
+  /* Centre the current tab in the row (phones scroll it sideways). */
+  const act = $('[data-other-cats] .is-active');
+  if (act) { const row = act.parentElement; row.scrollLeft = act.offsetLeft - row.offsetLeft - (row.clientWidth - act.offsetWidth) / 2; }
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem(SCROLL_KEY) || 'null'); sessionStorage.removeItem(SCROLL_KEY); } catch (_) {}
+  if (saved && Date.now() - saved.t < 20000 && saved.y > 0) {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    /* Jump, don't glide: the theme sets smooth scrolling on <html>. The
+       products are already rendered above, so jump now; then once more when
+       images have loaded (they can shift the layout), unless the shopper has
+       started scrolling in the meantime. */
+    const jump = () => {
+      const h = document.documentElement, was = h.style.scrollBehavior;
+      h.style.scrollBehavior = 'auto';
+      window.scrollTo(0, saved.y);
+      h.style.scrollBehavior = was;
+    };
+    let touched = false;
+    const mark = () => { touched = true; };
+    ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(ev => addEventListener(ev, mark, { once: true, passive: true }));
+    jump();
+    const again = () => { if (!touched && Math.abs(scrollY - saved.y) > 2) jump(); };
+    if (document.readyState === 'complete') setTimeout(again, 0);
+    else addEventListener('load', again, { once: true });
+  }
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

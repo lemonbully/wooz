@@ -1,0 +1,67 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ app.name }} · {{ site.name }}{% endblock %}
+{% block crumb %}{{ app.name }}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">OneWooz Apps</p>
+    <h1 class="app-head__title pal-mt-4">{{ placement.label|default:app.name }}</h1>
+    {% if app.tagline %}<p class="app-head__lead">{{ app.tagline }}</p>{% endif %}
+  </div>
+  <div class="app-head__actions">
+    {% if storefront_url and has_storefront %}<a class="pal-btn pal-btn--ghost" href="{{ storefront_url }}" target="_blank" rel="noopener">View storefront &#8599;</a>{% endif %}
+    <a class="pal-btn pal-btn--ghost" href="{% url 'mkt_gateway:my_apps' %}">All apps</a>
+  </div></div>
+
+  {% if preview_errors %}
+  <div class="mkt-note mkt-note--warn" role="status">
+    <strong>Not showing on your store yet.</strong>
+    <span>{% if "missing required" in preview_errors %}Fill in the required fields below and save.{% else %}This app couldn't build its widget with these settings. Check the values and save again.{% endif %}</span>
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="app-form app-card app-block" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="mkt-note mkt-note--warn">{% for e in form.non_field_errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+
+    {% if has_storefront %}
+      {% include "store/_field.html" with field=form.enabled cls="app-f--full" %}
+    {% endif %}
+
+    {% for group, fields in groups.items %}
+      {% if group %}<h2 class="mkt-group">{{ group }}</h2>{% endif %}
+      <div class="app-formgrid">
+        {% for field in fields %}
+          {% if field.field.current_url is not None and field.field.current_url != "" %}
+            <div class="pal-field app-f--half">
+              <span class="pal-field__label">{{ field.label }}</span>
+              <img class="mkt-thumb" src="{{ field.field.current_url }}" alt="">
+              {{ field }}
+              <label class="mkt-clear"><input type="checkbox" name="clear_{{ field.name }}" value="1"> Remove this image</label>
+              {% if field.help_text %}<span class="app-field-hint">{{ field.help_text }}</span>{% endif %}
+              {% for error in field.errors %}<span class="app-field-err">{{ error }}</span>{% endfor %}
+            </div>
+          {% else %}
+            {% include "store/_field.html" with field=field cls="app-f--half" %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% empty %}
+      {% if not has_storefront %}<p class="app-head__lead">This app has nothing to set up. It is ready to use.</p>{% endif %}
+    {% endfor %}
+
+    {% if slot_fields %}
+      <h2 class="mkt-group">Where it shows on your store</h2>
+      <div class="app-formgrid">
+        {% for field in slot_fields %}{% include "store/_field.html" with field=field cls="app-f--half" %}{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="set-foot" style="margin-top:1.5rem;display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+      <button class="pal-btn" type="submit">Save</button>
+      {% if has_storefront %}<span class="app-field-hint" style="margin:0;">Saving updates your live store within seconds. Turn the switch off to hide it again.</span>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

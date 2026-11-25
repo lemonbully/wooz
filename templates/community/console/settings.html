@@ -1,0 +1,185 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}Settings{% endblock %}
+{% block crumbs %}<span>/</span><span>Settings</span>{% endblock %}
+{% block heading %}Settings{% endblock %}
+{% block lead %}<p>Switches for the whole community. Changes apply on the next page load and are recorded in Activity.</p>{% endblock %}
+
+{% block main %}
+<section class="mc-panel ac-narrow">
+  <form method="post" class="mc-panel__body mc-form">
+    {% csrf_token %}
+    <p class="ac-group">Posting</p>
+    {% include "marketplace/console/_field.html" with field=form.posting_open %}
+    {% include "marketplace/console/_field.html" with field=form.approve_all %}
+    {% include "marketplace/console/_field.html" with field=form.hold_links %}
+    {% include "marketplace/console/_field.html" with field=form.report_threshold %}
+    {% with field=form.blocked_phrases %}
+    <div class="mc-field ac-chipfield{% if field.errors %} mc-field--err{% endif %}" data-chip-field>
+      <label class="mc-label" for="{% if can_write %}chip-entry{% else %}{{ field.id_for_label }}{% endif %}">{{ field.label }}</label>
+      <div class="ac-chipbox" data-chip-box>
+        <ul class="ac-chips" data-chip-list aria-label="Blocked keywords and phrases">
+          {% for c in chips %}
+            <li class="ac-chip ac-chip--{{ c.kind }}" data-term="{{ c.text }}">
+              <span class="ac-chip__kind">{{ c.kind|capfirst }}</span>
+              <span class="ac-chip__text">{{ c.text }}</span>
+              {% if can_write %}<button type="button" class="ac-chip__x" aria-label="Remove {{ c.text }}">&times;</button>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+        {% if can_write %}
+          <input id="chip-entry" type="text" class="ac-chipbox__input" data-chip-entry hidden autocomplete="off" maxlength="2000"
+                 placeholder="{% if chips %}Add more, separated by commas{% else %}Type a keyword or a phrase, then a comma{% endif %}">
+        {% endif %}
+      </div>
+      <p class="ac-chipcount" data-chip-count aria-live="polite">{{ keyword_count }} keyword{{ keyword_count|pluralize }} · {{ phrase_count }} phrase{{ phrase_count|pluralize }}</p>
+      {% if field.help_text %}<p class="mc-help">{{ field.help_text }}</p>{% endif %}
+      {% for e in field.errors %}<p class="mc-err">{{ e }}</p>{% endfor %}
+      {% comment %}
+      The real field. Without JavaScript it stays visible and takes commas or one
+      entry per line; with it, the chips write into it and it is hidden.
+      {% endcomment %}
+      <div class="ac-chipsource" data-chip-source-wrap>{{ field }}</div>
+    </div>
+    {% endwith %}
+
+    <p class="ac-group">AI and email</p>
+    {% include "marketplace/console/_field.html" with field=form.ai_answers_enabled %}
+    {% include "marketplace/console/_field.html" with field=form.digest_enabled %}
+
+    <p class="ac-group">Site notice</p>
+    {% include "marketplace/console/_field.html" with field=form.notice %}
+
+    {% if can_write %}<div class="mc-actions"><button class="pal-btn" type="submit">Save settings <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button></div>
+    {% else %}<p class="mc-help">Your account can view these settings but not change them.</p>{% endif %}
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var field = document.querySelector("[data-chip-field]");
+    var entry = field && field.querySelector("[data-chip-entry]");
+    if (!entry) return;  // view-only accounts: chips are shown, nothing to edit
+
+    var box = field.querySelector("[data-chip-box]");
+    var list = field.querySelector("[data-chip-list]");
+    var count = field.querySelector("[data-chip-count]");
+    var source = field.querySelector("textarea[data-chip-source]");
+    var MAX_TERM = 120, MAX_TERMS = 500;
+
+    // Chips take over: hide the plain textarea, show the entry box.
+    field.querySelector("[data-chip-source-wrap]").hidden = true;
+    entry.hidden = false;
+
+    var clean = function (s) { return s.replace(/\s+/g, " ").trim().slice(0, MAX_TERM).trim(); };
+    var kindOf = function (s) { return s.split(" ").length > 1 ? "phrase" : "keyword"; };
+    var terms = function () {
+      return Array.prototype.map.call(list.querySelectorAll(".ac-chip"), function (li) { return li.dataset.term; });
+    };
+
+    var sync = function () {
+      var all = terms();
+      source.value = all.join("\n");
+      var k = all.filter(function (t) { return kindOf(t) === "keyword"; }).length;
+      var p = all.length - k;
+      count.textContent = k + (k === 1 ? " keyword" : " keywords") + " · " + p + (p === 1 ? " phrase" : " phrases");
+      entry.placeholder = all.length ? "Add more, separated by commas" : "Type a keyword or a phrase, then a comma";
+    };
+
+    var flash = function (li) {
+      li.classList.remove("is-flash");
+      void li.offsetWidth;
+      li.classList.add("is-flash");
+    };
+
+    var makeChip = function (text) {
+      var kind = kindOf(text);
+      var li = document.createElement("li");
+      li.className = "ac-chip ac-chip--" + kind;
+      li.dataset.term = text;
+      var k = document.createElement("span");
+      k.className = "ac-chip__kind";
+      k.textContent = kind === "phrase" ? "Phrase" : "Keyword";
+      var t = document.createElement("span");
+      t.className = "ac-chip__text";
+      t.textContent = text;
+      var x = document.createElement("button");
+      x.type = "button";
+      x.className = "ac-chip__x";
+      x.setAttribute("aria-label", "Remove " + text);
+      x.textContent = "×";
+      li.appendChild(k); li.appendChild(t); li.appendChild(x);
+      return li;
+    };
+
+    // Add every comma- or line-separated entry in `raw`. Repeats (any case)
+    // are not added twice; the existing chip blinks instead.
+    var add = function (raw) {
+      raw.split(/[,\n]/).forEach(function (part) {
+        var text = clean(part);
+        if (!text) return;
+        var existing = Array.prototype.find.call(list.querySelectorAll(".ac-chip"), function (li) {
+          return li.dataset.term.toLowerCase() === text.toLowerCase();
+        });
+        if (existing) { flash(existing); return; }
+        if (terms().length >= MAX_TERMS) return;
+        list.appendChild(makeChip(text));
+      });
+      sync();
+    };
+
+    entry.addEventListener("keydown", function (e) {
+      if (e.key === "," || (e.key === "Enter" && !e.isComposing)) {
+        e.preventDefault();
+        add(entry.value);
+        entry.value = "";
+      } else if (e.key === "Backspace" && !entry.value) {
+        var last = list.lastElementChild;
+        if (last) { entry.value = last.dataset.term; last.remove(); sync(); e.preventDefault(); }
+      }
+    });
+
+    // Typing or pasting "a, b, c": everything before the last comma becomes chips.
+    entry.addEventListener("input", function () {
+      if (!/[,\n]/.test(entry.value)) return;
+      var parts = entry.value.split(/[,\n]/);
+      entry.value = parts.pop().replace(/^\s+/, "");
+      add(parts.join(","));
+    });
+
+    entry.addEventListener("blur", function () {
+      if (entry.value.trim()) { add(entry.value); entry.value = ""; }
+    });
+
+    list.addEventListener("click", function (e) {
+      var li = e.target.closest(".ac-chip");
+      if (!li) return;
+      if (e.target.closest(".ac-chip__x")) {
+        li.remove();
+        sync();
+        entry.focus();
+        return;
+      }
+      // Click a chip to edit it: it goes back into the box.
+      if (entry.value.trim()) add(entry.value);
+      entry.value = li.dataset.term;
+      li.remove();
+      sync();
+      entry.focus();
+    });
+
+    box.addEventListener("click", function (e) { if (e.target === box || e.target === list) entry.focus(); });
+
+    // Whatever is still being typed counts when the form is saved.
+    entry.form.addEventListener("submit", function () {
+      if (entry.value.trim()) { add(entry.value); entry.value = ""; }
+      sync();
+    });
+
+    sync();
+  })();
+</script>
+{% endblock %}

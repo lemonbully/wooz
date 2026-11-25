@@ -10,8 +10,9 @@ orders and their revenue, cancelled orders and RTO orders (revenue negative),
 replacements and the value re-sent, store credit given and used.
 
 Then one row per order line: order id and date, product name, variation, SKU,
-quantity, MRP, selling price, line total (quantity x selling price, a live
-formula), then the order-level shipping, discount, store credit and order total
+quantity, MRP, selling price, amount payable (quantity x selling price, a
+live formula), then the order-level shipping, discount, store credit and amount
+received
 (on the order's first line only, so columns add up without double counting),
 GST (rate + amount, split CGST/SGST within the seller's state, IGST otherwise),
 billing city and state, payment method and the order status. A TOTAL row under
@@ -55,11 +56,11 @@ _COLUMNS = [
     ("Quantity", 10),
     ("MRP (INR)", 13),
     ("Selling price (INR)", 15),
-    ("Line total (INR)", 15),
+    ("Amount Payable (INR)", 17),
     ("Shipping amount (INR)", 15),
     ("Discount (INR)", 13),
     ("Store credit used (INR)", 15),
-    ("Order total (INR)", 16),
+    ("Amount Received (INR)", 18),
     ("GST (%)", 9),
     ("GST amount (INR)", 14),
     ("CGST (INR)", 12),
@@ -87,11 +88,11 @@ C_ORDER, C_DATE, C_TYPE, C_PRODUCT, C_VARIATION, C_SKU = range(6)
 C_QTY = _LABELS.index("Quantity")
 C_MRP = _LABELS.index("MRP (INR)")
 C_PRICE = _LABELS.index("Selling price (INR)")
-C_LINE_TOTAL = _LABELS.index("Line total (INR)")
+C_LINE_TOTAL = _LABELS.index("Amount Payable (INR)")
 C_SHIPPING = _LABELS.index("Shipping amount (INR)")
 C_DISCOUNT = _LABELS.index("Discount (INR)")
 C_CREDIT = _LABELS.index("Store credit used (INR)")
-C_ORDER_TOTAL = _LABELS.index("Order total (INR)")
+C_ORDER_TOTAL = _LABELS.index("Amount Received (INR)")
 C_GST_RATE = _LABELS.index("GST (%)")
 C_GST = _LABELS.index("GST amount (INR)")
 C_CGST = _LABELS.index("CGST (INR)")
@@ -461,9 +462,9 @@ def render_month_xlsx(site, first: date, state: str = "") -> bytes:
     ws.set_row_height(0, _TITLE_H)
     ws.write(
         1, 0,
-        "One row per product line. Line total = Quantity x Selling price. Order-level amounts (shipping, discount, "
-        "store credit, order total) appear once, on the order's first line, so every column adds up without double counting. "
-        "Order total = line totals - discount - store credit + GST added on GST-exclusive prices + shipping. "
+        "One row per product line. Amount Payable = Quantity x Selling price. Order-level amounts (shipping, discount, "
+        "store credit, amount received) appear once, on the order's first line, so every column adds up without double counting. "
+        "Amount Received = amounts payable - discount - store credit + GST added on GST-exclusive prices + shipping. "
         "A replacement shows the original order's lines, then the replacement's, under the same order ID. "
         "Use the filter on the Billing state header to show one state's orders; the key figures and the TOTAL row follow it.",
         xlsx.STYLE_SUBTITLE,
@@ -502,7 +503,7 @@ def render_month_xlsx(site, first: date, state: str = "") -> bytes:
     ws.write(
         row, 0,
         f"Counts orders placed in {first:%B %Y}" + (f" shipped to {state}" if state else "")
-        + ". The figures follow the Billing state filter below. Revenue is the order total; "
+        + ". The figures follow the Billing state filter below. Revenue is the amount received; "
         "cancelled and RTO revenue is shown negative. Store credits given are for the whole store.",
         xlsx.STYLE_SUBTITLE,
     )

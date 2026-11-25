@@ -1,0 +1,13 @@
+{% comment %}
+The fields of one community.authoring form, in two groups: the post's own
+text, then "what the site shows" (posted by, date, votes, views, status).
+Context: f (a QuestionForm or AnswerForm).
+{% endcomment %}
+{% for e in f.non_field_errors %}<p class="mc-err ac-pad">{{ e }}</p>{% endfor %}
+<div class="mc-card__body">
+  {% for field in f.content_fields %}{% if field.name == "title" %}{% include "marketplace/console/_field.html" with wide=True %}{% else %}{% include "marketplace/console/_field.html" %}{% endif %}{% endfor %}
+</div>
+<div class="mc-card__body ac-shown">
+  <p class="ac-shown__label">What the site shows</p>
+  {% for field in f.shown_fields %}{% include "marketplace/console/_field.html" %}{% endfor %}
+</div>

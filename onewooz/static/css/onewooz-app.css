@@ -309,6 +309,18 @@
 .app-acct__links form { margin: 0; }
 .app-acct__sep { height: 1px; background: var(--pal-line); margin: 0.4rem 0; }
 
+/* --- Page guide button (top navbar): opens this page's guide in the
+   Business Hub Help tab. Icon-only on narrow screens. --- */
+.app-guide {
+  display: inline-flex; align-items: center; gap: 0.45rem; height: 2.35rem; padding: 0 0.7rem;
+  border: 1px solid var(--pal-line); color: var(--pal-ink-2); text-decoration: none;
+  font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase;
+  transition: border-color 140ms ease, color 140ms ease;
+}
+.app-guide:hover, .app-guide:focus-visible { border-color: var(--pal-accent); color: var(--pal-accent); }
+.app-guide svg { width: 1.05rem; height: 1.05rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 48rem) { .app-guide { width: 2.35rem; padding: 0; justify-content: center; } .app-guide__label { display: none; } }
+
 /* --- Notification bell (top navbar) --- */
 .app-bell { position: relative; }
 .app-bell > summary {
@@ -1155,6 +1167,30 @@ button.app-tab { appearance: none; background: none; border: 0; border-bottom: 2
 .app-formgrid > .app-f--third { flex: 1 1 12rem; }
 .app-formgrid > .app-f--quarter { flex: 1 1 8rem; }
 .app-formgrid__full { flex-basis: 100%; }
+/* Predicted-length sizing. Each field's basis is the width its typical value
+   needs, and its grow factor is the same number, so the space left in a row
+   is shared in proportion to predicted length: every field in a row ends up
+   at (predicted width x the row's scale). A row that cannot hold a field's
+   basis wraps it, and the wrapped line re-shares its own space the same way.
+     xs  1-4 chars    sort order, %, days, quantity
+     s   5-16 chars   codes, a pick from a short list
+     m   17-35 chars  names, emails, a pick of names
+     l   36+ chars    titles, URLs, prose, compound blocks */
+.app-formgrid > .app-len--xs { flex: 5 1 5rem; }
+.app-formgrid > .app-len--s  { flex: 11 1 11rem; }
+.app-formgrid > .app-len--m  { flex: 16 1 16rem; }
+.app-formgrid > .app-len--l  { flex: 24 1 24rem; }
+/* The grid gap is the only spacing: drop .pal-field's marketing top margin so
+   every item in a row (labelled input, media block, toggle group) starts level. */
+.app-formgrid > :is(.app-len--xs, .app-len--s, .app-len--m, .app-len--l) { min-width: 0; margin-top: 0; }
+/* A field whose control should fill the row's height (a textarea beside a
+   taller block), and a column that stacks several blocks as one row item. */
+.app-formgrid > .app-len--fill { display: flex; flex-direction: column; }
+.app-len--fill > textarea { flex: 1 1 auto; }
+.app-formcol { display: flex; flex-direction: column; gap: 1.35rem; }
+.app-formcol .app-medfield { gap: 0.45rem; }
+/* A labelled row of toggles, sized to sit level with a single-line input. */
+.app-checkrow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; min-height: 2.15rem; }
 .pal-field { display: block; }
 .pal-field .pal-field__label { display: block; margin-bottom: 0.45rem; }
 .app-form input:not([type="checkbox"]):not([type="radio"]),
@@ -1304,6 +1340,25 @@ button.app-tab { appearance: none; background: none; border: 0; border-bottom: 2
 .app-enquiry__body { margin-top: 0.35rem; font-size: 0.92rem; color: var(--pal-ink-2); line-height: 1.55; }
 .app-enquiry__actions { margin-top: 0.85rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .app-enquiry__actions form { margin: 0; }
+/* Enquiries on small screens: nothing may widen the page. The list is a
+   one-column grid whose track can shrink (minmax(0, 1fr)); long emails,
+   phone numbers, product names and unbroken words in a message wrap inside
+   the card; chips wrap their text instead of running off the edge. */
+.app-enquiries { grid-template-columns: minmax(0, 1fr); }
+.app-enquiry { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.app-enquiry__head > * { min-width: 0; }
+.app-enquiry__contact { display: flex; flex-wrap: wrap; gap: 0.15rem 0.75rem; }
+.app-enquiry__contact a { color: inherit; text-decoration: none; }
+.app-enquiry__contact a:hover { color: var(--pal-ink); text-decoration: underline; }
+.app-enquiry__meta { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.app-enquiry__meta .app-chip { margin: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.app-enquiry__body { white-space: pre-line; }
+@media (max-width: 40rem) {
+  .app-enquiry { padding: 0.95rem 0.9rem; }
+  .app-enquiry__head { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+  .app-enquiry__actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
+  .app-enquiry__actions .pal-btn { width: 100%; justify-content: center; }
+}
 
 /* Simple status distribution bars. */
 .app-bars { display: grid; gap: 0.5rem; }
@@ -2629,6 +2684,21 @@ body.ow-managing .app-medmanage { display: none; }
 .cat-star { background: none; border: 1px solid var(--pal-line); border-radius: 0; width: 1.9rem; height: 1.9rem; cursor: pointer; color: var(--pal-faint); font-size: 0.95rem; line-height: 1; }
 .cat-star:hover { color: #d9a400; border-color: #d9a400; }
 .cat-star.is-on { color: #eab308; border-color: #eab308; }
+/* Template 2: feature two categories at the top of the storefront Categories
+   page. A status strip in the trusted-icons banner's style, a feature button
+   beside the star on each card, and a numbered accent card once featured. */
+.cat-feature-strip { margin-top: -0.4rem; }
+.cat-feature-strip > span:first-child { flex: 1 1 24rem; }
+.cat-feature-strip__tag { font-family: var(--pal-font-mono); font-size: 0.6rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-accent); margin-right: 0.35rem; }
+.cat-feature-strip svg { display: inline-block; width: 0.85rem; height: 0.85rem; margin: 0 0.1rem; vertical-align: -0.12rem; fill: none; stroke: var(--pal-accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cat-feature.is-on { background: var(--pal-accent); border-color: var(--pal-accent); color: #fff; }
+.cat-feature.is-on:hover { color: #fff; opacity: 0.88; }
+.cat-feature:disabled { opacity: 0.4; cursor: not-allowed; }
+.cat-feature:disabled:hover { color: var(--pal-muted); border-color: var(--pal-line); }
+.cat-feature[aria-busy="true"] { opacity: 0.6; }
+.cat-card.is-featured { border-color: var(--pal-accent); box-shadow: inset 2px 0 0 var(--pal-accent); }
+.cat-card__pos { display: inline-grid; place-items: center; width: 1.1rem; height: 1.1rem; margin-right: 0.45rem; border-radius: 50%; background: var(--pal-accent); color: #fff; font-family: var(--pal-font-mono); font-size: 0.62rem; font-weight: 700; vertical-align: 0.08rem; }
+.cat-card__pos[hidden] { display: none; }
 .cat-iconrows { display: grid; gap: 0.5rem; }
 .cat-iconrow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.4rem; align-items: center; }
 
@@ -2790,6 +2860,9 @@ body.ow-managing .app-medmanage { display: none; }
 .ow-cs.is-open .ow-cs__panel { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .ow-cs--up .ow-cs__panel { top: auto; bottom: calc(100% - 1px); transform: translateY(4px); }
 .ow-cs--up.is-open .ow-cs__panel { transform: translateY(0); }
+/* Inside a scrolling/clipping container (modal body, scrolling list) the panel
+   floats above it; custom-select.js sets left/top/width/max-height. */
+.ow-cs--float .ow-cs__panel { position: fixed; z-index: 200; min-width: 0; }
 
 /* option  hairline-separated rows, accent tick square when selected */
 .ow-cs__opt {
@@ -3337,3 +3410,116 @@ form.is-editing .elock__ico-editing { display: block; }
 .elock-fs:disabled label, .elock-fs:disabled button { cursor: not-allowed; }
 .elock-fs:disabled .ow-cs__caret { opacity: 0.4; }
 [data-edit-lock-foot][hidden] { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   OneWooz Apps (marketplace) inside the dashboard: placement cards, top-bar
+   icons, app settings pages, My apps, consent.
+   -------------------------------------------------------------------------- */
+.mkt-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: 0.75rem; }
+.mkt-card { display: flex; align-items: flex-start; gap: 0.8rem; padding: 1rem; background: var(--pal-panel);
+  border: 1px solid var(--pal-line); color: var(--pal-ink); text-decoration: none; transition: border-color 160ms; }
+.mkt-card:hover { border-color: var(--pal-accent); }
+.mkt-app__ico img { width: 100%; height: 100%; object-fit: cover; }
+.mkt-card__ico, .mkt-app__ico { flex: none; width: 2.25rem; height: 2.25rem; display: grid; place-items: center;
+  background: var(--tile, var(--pal-accent)); color: #fff; }
+.mkt-card__ico svg, .mkt-app__ico svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.mkt-card__body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; flex: 1; }
+.mkt-card__title { font-weight: 600; }
+.mkt-card__text { font-size: 0.86rem; color: var(--pal-muted); line-height: 1.45; }
+.mkt-card__app { font-family: var(--pal-font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pal-faint); }
+.mkt-card__arrow { color: var(--pal-faint); }
+.mkt-topbar { display: inline-flex; gap: 0.35rem; margin-right: 0.5rem; }
+.mkt-topbar__btn { display: inline-grid; place-items: center; width: 2.1rem; height: 2.1rem; border: 1px solid var(--pal-line); color: var(--pal-ink); }
+.mkt-topbar__btn:hover { border-color: var(--pal-accent); color: var(--pal-accent); }
+.mkt-topbar__btn svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.mkt-links { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: center; margin: 0.75rem 0; font-size: 0.86rem; }
+.mkt-links__label { color: var(--pal-faint); }
+.mkt-links a { color: var(--pal-accent); text-decoration: underline; text-underline-offset: 2px; }
+.mkt-note { display: flex; flex-direction: column; gap: 0.25rem; margin: 1rem 0 0; padding: 0.8rem 1rem; border: 1px solid var(--pal-line);
+  background: var(--pal-panel); font-size: 0.9rem; }
+.mkt-note[hidden] { display: none; }
+.mkt-note--warn { border-color: #f4b740; background: #fffaeb; color: #7a4d00; }
+.mkt-group { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.05rem; margin: 1.6rem 0 0.9rem; }
+.mkt-thumb { display: block; max-width: 220px; max-height: 140px; object-fit: contain; border: 1px solid var(--pal-line); margin: 0.35rem 0 0.5rem; background: var(--pal-paper-2); }
+.mkt-clear { display: flex; gap: 0.4rem; align-items: center; font-size: 0.82rem; color: var(--pal-muted); margin-top: 0.35rem; }
+.mkt-embed { width: 100%; min-height: 70vh; border: 1px solid var(--pal-line); background: #fff; }
+.mkt-prose { line-height: 1.7; }
+.mkt-apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 1rem; }
+.mkt-app { display: flex; flex-direction: column; }
+.mkt-app .app-card__body { flex: 1; }
+.mkt-app { transition: border-color 160ms ease; }
+.mkt-app:hover { border-color: var(--pal-ink); }
+.mkt-app__top { display: flex; gap: 0.9rem; align-items: flex-start; }
+.mkt-app__top > div { flex: 1; min-width: 0; }
+.mkt-app .mkt-app__ico { width: 2.75rem; height: 2.75rem; overflow: hidden; }
+.mkt-app__name { min-height: 1.7rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
+.mkt-app__text { margin: 0.35rem 0 0; font-size: 0.86rem; line-height: 1.5; color: var(--pal-muted); }
+.mkt-app__also { flex-basis: 100%; margin: 0; font-size: 0.8rem; color: var(--pal-muted); }
+.mkt-app__also a { color: var(--pal-accent); text-decoration: underline; text-underline-offset: 2px; }
+.mkt-app__foot { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.mkt-remove { margin-left: auto; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: #a5271b; }
+.mkt-remove:hover { text-decoration: underline; text-underline-offset: 3px; }
+.mkt-lics { list-style: none; padding: 0; margin: 0.75rem 0 0; display: grid; gap: 0.3rem; font-size: 0.84rem; color: var(--pal-muted); }
+.mkt-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; margin-top: 1.25rem; }
+.mkt-consent__grid { display: grid; gap: 1rem; }
+@media (min-width: 960px) { .mkt-consent__grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } }
+.mkt-list { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.55rem; line-height: 1.55; }
+.mkt-quote { margin: 0 0 0.75rem; display: grid; gap: 0.4rem; }
+.mkt-quote div { display: flex; justify-content: space-between; gap: 1rem; }
+.mkt-quote dt { color: var(--pal-muted); }
+.mkt-quote dd { margin: 0; font-variant-numeric: tabular-nums; }
+.mkt-quote__total { border-top: 1px solid var(--pal-line); padding-top: 0.5rem; font-weight: 600; }
+.mkt-quote__total dt { color: var(--pal-ink); }
+/* Billing-cycle picker on the consent page (apps sold monthly / quarterly / ...). */
+.mkt-cycles { border: 0; padding: 0; margin: 0 0 1rem; display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); }
+.mkt-cycles legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mkt-cycle { position: relative; display: grid; gap: 0.15rem; padding: 0.75rem 0.85rem; border: 1px solid var(--pal-line); border-radius: 10px; background: var(--pal-panel, #fff); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.mkt-cycle:hover { border-color: var(--pal-ink); }
+.mkt-cycle input { position: absolute; opacity: 0; pointer-events: none; }
+.mkt-cycle.is-selected, .mkt-cycle:has(input:checked) { border-color: var(--pal-accent); box-shadow: 0 0 0 1px var(--pal-accent); }
+.mkt-cycle:has(input:focus-visible) { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
+.mkt-cycle__name { font-weight: 600; font-size: 0.9rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.mkt-cycle__save { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: #1f7a3a; background: rgb(47 158 68 / 0.12); padding: 0.1rem 0.35rem; border-radius: 4px; }
+.mkt-cycle__price { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.mkt-cycle__price small { font-size: 0.75rem; color: var(--pal-muted); }
+.mkt-cycle__billed { font-size: 0.75rem; color: var(--pal-muted); }
+
+/* --------------------------------------------------------------------------
+   Storefront design cards (store/_design_cards.html): the OneWooz Templates
+   page and Settings > Storefront design. Ruled panels, the preview framed on
+   paper; the live design wears the accent corner brackets.
+   -------------------------------------------------------------------------- */
+.dz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 1.25rem; }
+.dz-card { position: relative; display: flex; flex-direction: column; min-width: 0; background: var(--pal-panel);
+  border: 1px solid var(--pal-line); transition: border-color 160ms ease; }
+.dz-card:hover { border-color: var(--pal-ink); }
+.dz-card > .pal-corner { position: absolute; width: 18px; height: 18px; border: 2px solid var(--pal-accent); z-index: 3; pointer-events: none; }
+.dz-card > .pal-corner--tl { border-right: 0; border-bottom: 0; }
+.dz-card > .pal-corner--tr { border-left: 0; border-bottom: 0; }
+.dz-card > .pal-corner--bl { border-right: 0; border-top: 0; }
+.dz-card > .pal-corner--br { border-left: 0; border-top: 0; }
+.dz-card__stage { position: relative; display: block; padding: 1.1rem 1.1rem 0; background: var(--pal-paper-2); border-bottom: 1px solid var(--pal-line); overflow: hidden; }
+.dz-card__shot { display: block; aspect-ratio: 4 / 3; overflow: hidden; background: var(--pal-panel); border: 1px solid var(--pal-line); border-bottom: 0;
+  transition: transform 260ms ease; }
+.dz-card__shot > img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.dz-card__stage:hover .dz-card__shot { transform: translateY(-4px); }
+.dz-card__live { position: absolute; left: 0; bottom: 0; z-index: 2; display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.35rem 0.6rem; background: var(--pal-accent); color: #fff; font-family: var(--pal-font-mono);
+  font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.dz-card__live::before { content: ""; width: 6px; height: 6px; background: #fff; }
+.dz-card__body { flex: 1; padding: 1.1rem 1.25rem 1.2rem; }
+.dz-card__row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; flex-wrap: wrap; }
+.dz-card__name { margin: 0; font-family: var(--pal-font-display); font-weight: 500; font-size: 1.15rem; letter-spacing: -0.015em; color: var(--pal-ink); overflow-wrap: anywhere; }
+.dz-card__price { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); white-space: nowrap; }
+.dz-card__price b { font-weight: 600; color: var(--pal-ink); font-size: 0.78rem; letter-spacing: 0; }
+.dz-card__text { margin: 0.5rem 0 0; font-size: 0.86rem; line-height: 1.55; color: var(--pal-muted); }
+.dz-card__note { margin: 0.6rem 0 0; font-size: 0.78rem; line-height: 1.5; color: var(--pal-ink-2); }
+.dz-card__note--warn { color: #b42318; }
+.dz-card__foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem 1rem; min-height: 3.6rem; padding: 0.75rem 1.25rem; border-top: 1px solid var(--pal-line); }
+.dz-card__foot form { margin: 0; }
+.dz-card__acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.dz-card__link { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-ink-2); border-bottom: 1px solid var(--pal-line); padding-bottom: 0.15rem; }
+.dz-card__link:hover { color: var(--pal-accent); border-bottom-color: var(--pal-accent); }
+.dz-card__using { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-accent); }
+.dz-card__foot .pal-btn[disabled] { opacity: 0.55; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .dz-card__shot { transition: none; } .dz-card__stage:hover .dz-card__shot { transform: none; } }

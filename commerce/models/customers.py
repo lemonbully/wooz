@@ -185,6 +185,67 @@ class WishlistItem(TenantScopedModel):
         super().save(*args, **kwargs)
 
 
+class AbandonedCart(TenantScopedModel):
+    """A signed-in shopper's cart, mirrored from their session so a reminder
+    sequence can run while they are away (see :mod:`commerce.abandoned_cart`).
+
+    One row per shopper per store. Every change the shopper makes to their cart
+    (add, quantity, remove, signing in with items) refreshes ``items`` and
+    restarts the sequence from ``last_activity_at``: reminders go out 1, 6, 24,
+    48 and 72 hours after it, and none after the fifth. Clicking a reminder (or
+    its "stop" link) ends the sequence; only a later change to the cart starts a
+    new one. A paid order, or an emptied cart, ends it too.
+    """
+
+    class Status(models.TextChoices):
+        #: Sequence running: ``next_reminder_at`` is when the next one goes out.
+        ACTIVE = "active", "Active"
+        #: The shopper clicked a reminder: no more until the cart changes again.
+        RESPONDED = "responded", "Responded"
+        #: The shopper asked to stop reminders for this cart.
+        STOPPED = "stopped", "Stopped"
+        #: They placed an order after their last cart change.
+        CONVERTED = "converted", "Converted"
+        #: All five reminders were sent (the 72-hour limit).
+        EXHAUSTED = "exhausted", "Exhausted"
+        #: Nothing left to remind about (cart emptied, products gone).
+        EMPTY = "empty", "Empty"
+
+    site = models.ForeignKey(
+        "tenancy.Site", on_delete=models.CASCADE, related_name="abandoned_carts"
+    )
+    customer_email = models.EmailField()
+    #: The session cart as of the last change: ``{line_key: {pid, vk, qty, attrs?}}``.
+    items = models.JSONField(default=dict, blank=True)
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.ACTIVE
+    )
+    last_activity_at = models.DateTimeField()
+    #: How many reminders of the current sequence have gone out (0-5).
+    reminders_sent = models.PositiveSmallIntegerField(default=0)
+    last_reminder_at = models.DateTimeField(null=True, blank=True)
+    #: When the next reminder is due; null once the sequence has ended.
+    next_reminder_at = models.DateTimeField(null=True, blank=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("site", "customer_email"), name="uniq_abandoned_cart_per_shopper"
+            )
+        ]
+        # The scheduler's query: active rows whose next reminder is due.
+        indexes = [models.Index(fields=("status", "next_reminder_at"))]
+
+    def __str__(self) -> str:
+        return f"{self.customer_email} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        if self.customer_email:
+            self.customer_email = self.customer_email.strip().lower()
+        super().save(*args, **kwargs)
+
+
 class NewsletterSubscriber(TenantScopedModel):
     """Someone who subscribed to a store's newsletter (storefront footer form).
 

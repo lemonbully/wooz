@@ -1,0 +1,108 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}{{ q.title|truncatechars:40 }}{% endblock %}
+{% block crumbs %}<span>/</span><a href="{% url 'ask_console:questions' %}">Questions</a><span>/</span><span>Thread</span>{% endblock %}
+{% block heading %}Thread{% endblock %}
+{% block lead %}<p>Everything in this discussion, including held and hidden posts. Approve, hide, delete or ban from any post, right where it sits.</p>{% endblock %}
+{% block actions %}
+  {% if q.status == "published" %}<a class="pal-btn pal-btn--ghost" href="{{ site_url }}" target="_blank" rel="noopener">View on site &#8599;</a>{% endif %}
+{% endblock %}
+
+{% block main %}
+{% if open_reports %}
+<div class="mc-status"><span class="mc-status__txt"><span class="mc-dot mc-dot--warn"></span> {{ open_reports }} open report{{ open_reports|pluralize }} in this thread.</span></div>
+{% endif %}
+
+<section class="mc-panel ac-post-card" id="question">
+  <div class="mc-panel__head">
+    <h2 class="mc-panel__title">Question {% include "community/console/_status.html" with s=q.status %}</h2>
+    <span class="mc-muted ac-sub">by <a href="{% url 'ask_console:member' q.author.pk %}">{{ q.author.display_name }}</a>{% if q.author.is_persona %} <span class="mc-chip ac-persona" title="A name the team writes under from this console">Team-written</span>{% endif %}{% if q.author.is_banned %} <span class="mc-chip mc-chip--revoked">Banned</span>{% endif %} · {{ q.created_at|date:"j M Y, H:i" }} · ↑ {{ q.score }} · {{ q.view_count }} views{% if q.report_count %} · <b class="ac-warn">{{ q.report_count }} report{{ q.report_count|pluralize }}</b>{% endif %}</span>
+  </div>
+  <div class="mc-panel__body">
+    <h3 class="ac-qtitle">{{ q.title }}</h3>
+    {% if q.hold_reason %}<p class="ac-reasonline">Status note: {{ q.hold_reason }}</p>{% endif %}
+    {% if q_html %}<div class="ac-body">{{ q_html }}</div>{% endif %}
+    {% if ai_html %}
+    <details class="ac-ai"><summary>Instant AI answer the asker saw</summary><div class="ac-body">{{ ai_html }}</div>{% if instant_admin %}<a class="mc-panel__link" href="{{ instant_admin }}">Open the private question &rarr;</a>{% endif %}</details>
+    {% endif %}
+    {% include "community/console/_actions.html" with kind="question" obj=q reports=q.report_count accept=False %}
+
+    {% if can_write %}
+    <details class="ac-edit"{% if edit_open %} open{% endif %}>
+      <summary class="mc-linkbtn">Edit question and what the site shows (name, date, votes, views)</summary>
+      <form method="post" class="ac-editform mc-card">
+        {% csrf_token %}
+        {% include "community/console/_post_fields.html" with f=form %}
+        <div class="mc-actions ac-pad"><button class="pal-btn" type="submit">Save question</button></div>
+      </form>
+    </details>
+    {% endif %}
+  </div>
+</section>
+
+<h2 class="ac-h2">{{ answers|length }} answer{{ answers|length|pluralize }}</h2>
+
+{% for a in answers %}
+<section class="mc-panel ac-post-card{% if a.is_accepted %} ac-accepted{% endif %}{% if a.status != 'published' %} ac-dim{% endif %}" id="a-{{ a.pk }}">
+  <div class="mc-panel__head">
+    <h3 class="mc-panel__title">
+      <a href="{% url 'ask_console:member' a.author.pk %}">{{ a.author.display_name }}</a>
+      {% include "community/console/_status.html" with s=a.status %}
+      {% if a.is_accepted %}<span class="mc-chip mc-chip--accent">Accepted</span>{% endif %}
+      {% if a.author.is_team %}<span class="mc-chip mc-chip--accent">Team</span>{% endif %}
+      {% if a.author.is_persona %}<span class="mc-chip ac-persona" title="A name the team writes under from this console">Team-written</span>{% endif %}
+      {% if a.author.is_banned %}<span class="mc-chip mc-chip--revoked">Banned</span>{% endif %}
+    </h3>
+    <span class="mc-muted ac-sub">{{ a.created_at|date:"j M Y, H:i" }} · ↑ {{ a.score }}{% if a.report_count %} · <b class="ac-warn">{{ a.report_count }} report{{ a.report_count|pluralize }}</b>{% endif %}</span>
+  </div>
+  <div class="mc-panel__body">
+    {% if a.hold_reason %}<p class="ac-reasonline">Status note: {{ a.hold_reason }}</p>{% endif %}
+    <div class="ac-body">{{ a.html }}</div>
+    {% include "community/console/_actions.html" with kind="answer" obj=a reports=a.report_count accept=True %}
+
+    {% if can_write and a.edit_form %}
+    <details class="ac-edit"{% if a.edit_open %} open{% endif %}>
+      <summary class="mc-linkbtn">Edit answer and what the site shows (name, date, votes)</summary>
+      <form method="post" action="{% url 'ask_console:answer_edit' a.pk %}" class="ac-editform mc-card">
+        {% csrf_token %}
+        {% include "community/console/_post_fields.html" with f=a.edit_form %}
+        <div class="mc-actions ac-pad"><button class="pal-btn" type="submit">Save answer</button></div>
+      </form>
+    </details>
+    {% endif %}
+
+    {% if a.reply_list %}
+    <ul class="ac-replies">
+      {% for r in a.reply_list %}
+      <li id="r-{{ r.pk }}" class="{% if r.status != 'published' %}ac-dim{% endif %}">
+        <div class="ac-replyhead">
+          <a href="{% url 'ask_console:member' r.author.pk %}">{{ r.author.display_name }}</a>
+          {% include "community/console/_status.html" with s=r.status %}
+          {% if r.author.is_banned %}<span class="mc-chip mc-chip--revoked">Banned</span>{% endif %}
+          <span class="mc-muted ac-sub">{{ r.created_at|date:"j M, H:i" }}{% if r.report_count %} · <b class="ac-warn">{{ r.report_count }} report{{ r.report_count|pluralize }}</b>{% endif %}{% if r.hold_reason %} · {{ r.hold_reason }}{% endif %}</span>
+        </div>
+        <p class="ac-replytext">{{ r.body }}</p>
+        {% include "community/console/_actions.html" with kind="reply" obj=r reports=r.report_count accept=False %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</section>
+{% empty %}
+<p class="mc-empty">No answers yet.</p>
+{% endfor %}
+
+{% if can_write %}
+<section class="mc-panel" id="team-answer">
+  <div class="mc-panel__head"><h2 class="mc-panel__title">Add an answer</h2><span class="mc-muted ac-sub">As yourself with the OneWooz team label, or under any name.</span></div>
+  <form method="post" action="{% url 'ask_console:thread_answer' q.pk %}#team-answer" class="mc-card">
+    {% csrf_token %}
+    {% include "community/console/_post_fields.html" with f=new_answer_form %}
+    <p class="mc-help ac-pad">If it is published, the asker is emailed when they have answer emails on (team-written names never are).</p>
+    <div class="mc-actions ac-pad"><button class="pal-btn" type="submit">Post answer <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button></div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}{{ block.super }}{% if can_write %}{% include "community/console/_author_js.html" %}{% endif %}{% endblock %}

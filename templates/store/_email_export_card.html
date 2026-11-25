@@ -1,0 +1,49 @@
+{% comment %}
+  Export recipients by engagement (Email analytics and Audiences pages).
+  A plain GET form to store:email_engagement_export: pick one campaign or all
+  campaigns, pick who (never opened, did not click the CTA, ...), download an
+  .xlsx. Context: export_campaigns, export_segments (commerce.views.outreach
+  ._export_card_context).
+{% endcomment %}
+<div class="emx-card emx-export">
+  {# Kept inside the card so ".emx-card + .emx-card" spacing still applies. #}
+  <style nonce="{{ csp_nonce }}">
+    .emx-export__go { align-self: end; }
+    .emx-export__go .pal-btn { width: 100%; justify-content: center; }
+  </style>
+  <div class="emx-card__head">
+    <div class="emx-card__titles">
+      <h2 class="emx-card__title">Export recipients</h2>
+      <p class="emx-card__hint">Download the people who did not open an email, did not click its button, and more, for one campaign or for all of them, to follow up or re-target.</p>
+    </div>
+  </div>
+  <div class="emx-card__body">
+    {% if export_campaigns %}
+    <form method="get" action="{% url 'store:email_engagement_export' site.id %}" class="emx-fields">
+      <div class="emx-field emx-field--5">
+        <label class="emx-label" for="exp-campaign">Campaign</label>
+        <select class="emx-select" id="exp-campaign" name="campaign">
+          <option value="all">All campaigns</option>
+          {% for c in export_campaigns %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="emx-field emx-field--4">
+        <label class="emx-label" for="exp-segment">Who</label>
+        <select class="emx-select" id="exp-segment" name="segment">
+          {% for s in export_segments %}
+          <option value="{{ s.key }}">{{ s.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="emx-field emx-field--3 emx-export__go">
+        <button class="pal-btn" type="submit">Export to Excel <span class="pal-btn__arrow" aria-hidden="true">↓</span></button>
+      </div>
+      <p class="emx-help emx-field">With "All campaigns" each row names its campaign, so someone who skipped two campaigns appears once for each.</p>
+    </form>
+    {% else %}
+    <p class="emx-help">Nothing to export yet. Once a campaign has been sent, its recipients can be downloaded here.</p>
+    {% endif %}
+  </div>
+</div>

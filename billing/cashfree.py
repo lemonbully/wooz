@@ -261,3 +261,83 @@ def verify_webhook_signature(raw_body: bytes, timestamp: str, signature: str) ->
     mac = hmac.new(secret.encode(), (timestamp + raw_body.decode("utf-8", "replace")).encode(), hashlib.sha256)
     expected = b64encode(mac.digest()).decode()
     return hmac.compare_digest(expected, signature)
+
+
+# --------------------------------------------------------------------------
+# Generic order helpers (website template purchases and any future one-off
+# platform charge). Same account, same trust model: create, then confirm only
+# by fetching the order's real status.
+# --------------------------------------------------------------------------
+def create_payment_order(
+    *,
+    cf_order_id: str,
+    amount,
+    currency: str,
+    customer_id: str,
+    customer_name: str,
+    customer_email: str,
+    customer_phone: str,
+    return_url: str,
+    notify_url: str,
+    note: str,
+    tags: dict | None = None,
+) -> dict:
+    """Create a Cashfree order and return ``{payment_session_id, mode, data}``.
+
+    Raises :class:`CashfreeError` on any failure (credentials missing, network,
+    gateway rejection). The caller records the order id before handing the
+    session to the Cashfree JS SDK.
+    """
+    import requests
+
+    if not is_configured():
+        raise CashfreeError("platform Cashfree credentials are not configured")
+
+    body = {
+        "order_id": cf_order_id,
+        "order_amount": float(Decimal(amount)),
+        "order_currency": currency or "INR",
+        "customer_details": {
+            "customer_id": customer_id,
+            "customer_name": customer_name or "OneWooz customer",
+            "customer_email": customer_email,
+            "customer_phone": customer_phone or "9999999999",
+        },
+        "order_meta": {"return_url": return_url, "notify_url": notify_url},
+        "order_note": (note or "")[:200],
+        "order_tags": tags or {},
+    }
+    try:
+        resp = requests.post(f"{_base()}/orders", json=body, headers=_headers(), timeout=20)
+        data = resp.json()
+    except Exception as exc:
+        raise CashfreeError(f"cashfree create failed: {exc}") from exc
+
+    if resp.status_code >= 300 or not data.get("payment_session_id"):
+        logger.warning("cashfree create rejected order=%s: %s", cf_order_id, data)
+        raise CashfreeError("cashfree rejected the order")
+
+    return {
+        "payment_session_id": data["payment_session_id"],
+        "mode": "sandbox" if _sandbox() else "production",
+        "data": data,
+    }
+
+
+def fetch_order_status(cf_order_id: str) -> "tuple[str, dict]":
+    """``(ORDER_STATUS, payload)`` from Cashfree's authenticated API.
+
+    Returns ``("", {})`` when the call fails or credentials are missing, so a
+    caller simply treats the order as not (yet) paid.
+    """
+    import requests
+
+    if not cf_order_id or not is_configured():
+        return "", {}
+    try:
+        resp = requests.get(f"{_base()}/orders/{cf_order_id}", headers=_headers(), timeout=20)
+        data = resp.json()
+    except Exception as exc:
+        logger.warning("cashfree fetch failed order=%s: %s", cf_order_id, exc)
+        return "", {}
+    return str(data.get("order_status") or "").upper(), data

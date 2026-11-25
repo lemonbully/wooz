@@ -1,0 +1,1 @@
+{% autoescape on %}<span class="ow-badge"{% if w.bg_color or w.text_color %} style="{% if w.bg_color %}--ow-bg:{{ w.bg_color }};{% endif %}{% if w.text_color %}--ow-fg:{{ w.text_color }};{% endif %}"{% endif %}>{{ w.text }}</span>{% endautoescape %}

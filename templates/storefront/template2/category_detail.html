@@ -25,15 +25,6 @@
 }
 @media (max-width: 768px){
   .best-seller-d2c-actions{ grid-template-columns:minmax(0,3fr) minmax(0,1fr); }
-  .best-seller-d2c-content{
-    width: 34vw;
-    max-width: 34vw;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 0;
-    padding-right: 0;
-    overflow: hidden;
-  }
 }
 </style>
 <section class="bg-white">
@@ -80,7 +71,7 @@
         <div class="container mx-auto px-4">
             {% if products %}
             {% include "storefront/template2/components/product_card_styles.html" %}
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 mx-auto sm:max-w-[90%] gap-6 sm:gap-4 md:gap-8">
+            <div class="ow-pgrid ow-pgrid--3up ow-pgrid--inset">
                 {% for product in products %}
                 {% include "storefront/template2/components/product_card.html" with product=product wish_class="js-listing-wishlist" %}
                 {% endfor %}

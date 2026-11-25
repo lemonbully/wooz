@@ -41,6 +41,7 @@ css/admin/onewooz-admin.css. Dark mode is switched off: one consistent theme.
   <a href="{% url 'custom_admin:overview' %}"{% if owa_nav == 'overview' %} class="is-active"{% endif %}>Overview</a>
   <a href="{% url 'admin:index' %}"{% if not owa_nav %} class="is-active"{% endif %}>Database</a>
   <a href="{% url 'custom_admin:email_templates' %}"{% if owa_nav == 'email' %} class="is-active"{% endif %}>Email templates</a>
+  <a href="{% url 'custom_admin:export_excel' %}"{% if owa_nav == 'exports' %} class="is-active"{% endif %}>Reports</a>
   <a href="{% surface_url 'marketing' '/' %}" target="_blank" rel="noopener">View site ↗</a>
   <form method="post" action="{% url 'custom_admin:sign_out' %}" class="owa-signout-form">
     {% csrf_token %}

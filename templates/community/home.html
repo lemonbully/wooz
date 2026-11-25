@@ -1,0 +1,57 @@
+{% extends "community/_base.html" %}
+{% load ask_tags %}
+
+{% comment %}
+Ask OneWooz home. Top: the live ask box (AI first) with matching questions
+appearing as you type and a ticker of the newest questions. Below: the ledger
+feed (tabs, vote-ranked rows) with topics on the right.
+{% endcomment %}
+
+{% block ask_main %}
+<section class="ask-hero">
+  <div class="pal-container">
+    <p class="ask-eyebrow">The community for online sellers · {{ stats.total|compact }} question{{ stats.total|pluralize }} answered by sellers and the OneWooz team</p>
+    <h1 class="ask-hero__title">What's stopping you?</h1>
+
+    <form method="post" action="{% url 'ask:ask_new' %}" class="ask-askbox" id="ask-form" novalidate>
+      {% csrf_token %}
+      {% if ask_error %}<div class="pal-alert ask-askbox__error" role="alert">{{ ask_error }}</div>{% endif %}
+      <label class="sr-only" for="ask-q">Your question</label>
+      <div class="ask-askbox__field">
+        <textarea name="question" id="ask-q" rows="1" maxlength="{{ max_length }}" required
+                  data-autosize data-suggest="{% url 'ask:search_json' %}"
+                  placeholder="Ask anything, like: can I offer COD only on orders under ₹2,000?">{{ ask_draft }}</textarea>
+        <button type="submit" class="pal-btn ask-askbox__btn" data-busy-label="Asking">Ask <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+      </div>
+      <div class="ask-suggest" data-suggest-list hidden>
+        <p class="ask-suggest__label">Already asked</p>
+        <ul></ul>
+      </div>
+      <p class="ask-askbox__hint">You get an instant answer first, then you can post it for the community. Never share passwords or card details.</p>
+      <div class="ask-hp" aria-hidden="true">
+        <label for="ask-website">Website</label>
+        <input type="text" name="website" id="ask-website" tabindex="-1" autocomplete="off">
+      </div>
+    </form>
+
+    {% if ticker %}
+    <ul class="ask-ticker" aria-label="Just asked">
+      {% for t in ticker %}
+        <li>{% if forloop.first %}<span class="ask-live" aria-hidden="true"></span>{% endif %}<span class="ask-ticker__k">{{ t.created_at|ago }}</span> <a href="{{ t.get_absolute_url }}">{{ t.title }}</a></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</section>
+
+<section class="ask-body">
+  <div class="pal-container ask-layout">
+    <div class="ask-main">
+      <h2 class="sr-only">Questions</h2>
+      {% url 'ask:ask_home' as base_url %}
+      {% include "community/_feed.html" %}
+    </div>
+    {% include "community/_sidebar.html" %}
+  </div>
+</section>
+{% endblock %}

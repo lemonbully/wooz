@@ -257,7 +257,7 @@ showSlide(0);
                     <div class="flex justify-between items-center mt-2">
                         <span class="font-bold">₹{{ product.price|default:"99.99" }}</span>
                         {% if product.original_price %}
-                        <span class="text-gray-500 line-through">₹{{ product.original_price }}</span>
+                        <span class="text-gray-500 ow-mrp">₹{{ product.original_price }}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -295,7 +295,7 @@ showSlide(0);
                     </h2>
                     <div class="flex justify-between items-center mt-2">
                         <span class="font-bold">₹89.99</span>
-                        <span class="text-gray-500 line-through">₹120.00</span>
+                        <span class="text-gray-500 ow-mrp">₹120.00</span>
                     </div>
                 </div>
                 <!-- Structured Data for Product 1 -->
@@ -396,7 +396,7 @@ showSlide(0);
                     </h2>
                     <div class="flex justify-between items-center mt-2">
                         <span class="font-bold">₹99.99</span>
-                        <span class="text-gray-500 line-through">₹129.99</span>
+                        <span class="text-gray-500 ow-mrp">₹129.99</span>
                     </div>
                 </div>
                 <!-- Structured Data for Product 4 -->
@@ -457,7 +457,7 @@ showSlide(0);
                     <div class="flex justify-between items-center mt-2">
                         <span class="font-bold">₹{{ product.price|default:"79.99" }}</span>
                         {% if product.original_price %}
-                        <span class="text-gray-500 line-through">₹{{ product.original_price }}</span>
+                        <span class="text-gray-500 ow-mrp">₹{{ product.original_price }}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -754,7 +754,7 @@ showSlide(0);
                 </div>
                 
                 <div class="mt-8">
-                    <a href="/about-us" class="btn-primary">
+                    <a href="{% url 'public_about' %}" class="btn-primary">
                         Learn More About Us
                     </a>
                 </div>

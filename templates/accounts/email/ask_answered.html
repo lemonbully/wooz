@@ -1,0 +1,12 @@
+{% extends "email/base.html" %}
+{% block preheader %}{{ by }} answered: {{ question }}{% endblock %}
+{% block kicker %}Ask OneWooz{% endblock %}
+{% block content %}
+  {% include "email/_marker.html" with text="New answer" %}
+  <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-weight:600; font-size:22px; letter-spacing:-0.02em; line-height:1.2; color:#0a0a0b; margin:0 0 14px 0;">{{ question }}</h1>
+  <p style="margin:0 0 8px 0; font-size:13px; color:#66666b;">Hi {{ name }}, {% if by_team %}the OneWooz team{% else %}{{ by }}{% endif %} answered your question:</p>
+  <p style="margin:0 0 18px 0; color:#3a3a3f; border-left:2px solid #4b2bf5; padding-left:12px;">{{ preview }}</p>
+  {% include "email/_button.html" with url=url label="Read the answer" %}
+  {% include "email/_note.html" with text="If it solved your problem, mark it as accepted so the next seller finds it faster." %}
+{% endblock %}
+{% block footer_links %}<div><a class="em-link" href="{{ off_url }}" style="color:#9a9aa0; text-decoration:underline;">Stop emails about new answers</a></div>{% endblock %}

@@ -187,7 +187,7 @@ def _first_name(name: str) -> str:
     return parts[0] if parts else ""
 
 
-def live_context(site, *, recipient_name: str, cta_url: str, unsubscribe_url: str, tracking_pixel: str, product_ids: list | None = None, product_limit: int = 4) -> dict:
+def live_context(site, *, recipient_name: str, cta_url: str, unsubscribe_url: str, tracking_pixel: str, product_ids: list | None = None, product_limit: int = 4, show_price: bool = True) -> dict:
     """Real values for one store's send.
 
     ``product_ids`` optionally pins the {{products}} grid to a campaign's chosen
@@ -197,6 +197,9 @@ def live_context(site, *, recipient_name: str, cta_url: str, unsubscribe_url: st
     from tenancy.email import store_from_address
 
     products = _live_products(site, limit=product_limit, ids=product_ids)
+    if not show_price:
+        # The campaign hides prices: cards keep title + picture only.
+        products = [{**p, "price": ""} for p in products]
     return {
         "store_name": getattr(site, "name", "") or "",
         "store_logo": _store_logo_url(site),

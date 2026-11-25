@@ -5,11 +5,33 @@ surfaces): a store-profile switcher and the account menu. Driven by the
 always shows which account this is, which store profile is current, and lets the
 owner switch profiles or sign out from anywhere.
 {% endcomment %}
-{% if request.user.is_authenticated %}
+{% load static %}{% if request.user.is_authenticated %}
 <div class="app-top__actions">
 
+  {% comment %} Page guide: opens this page's step-by-step guide in the Business Hub
+     Help tab (ud.page_guides). The shells pass page_guide_key (the page's
+     sidebar key); an unknown key simply opens the Help tab. {% endcomment %}
+  {% if show_page_guide %}
+  <a class="app-guide" href="{% url 'ud:business_hub' %}?tab=help{% if page_guide_key %}&amp;guide={{ page_guide_key }}#guide-{{ page_guide_key }}{% endif %}" title="How to use this page" aria-label="Page guide: how to use this page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7"/><path d="M12 17.2h.01"/></svg>
+    <span class="app-guide__label">Page guide</span>
+  </a>
+  {% endif %}
+
+  {% comment %} Browser push: the pulsing "Turn on alerts" pill + its popups (only until this browser is subscribed). {% endcomment %}
+  {% comment %}
+  How it works: _prompt.html renders the pill, the explainer popup (with a
+  replica of the browser's Allow box), the arrow overlay that points at the
+  real box, and the blocked / iPhone guides, then loads js/app/push.js, which
+  asks permission only from a click and registers the browser with the server.
+
+  BROWSER PUSH: DISABLED (commented out, not removed). Move the include below
+  out of this comment block to re-enable.
+  {% include "accounts/push/_prompt.html" %}
+  {% endcomment %}
+
   {# ---- Notifications bell ---- #}
-  <details class="app-acct app-bell" data-bell data-csrf="{{ csrf_token }}">
+  <details class="app-acct app-bell" data-bell data-csrf="{{ csrf_token }}" data-user="{{ request.user.pk }}" data-sound="{% static 'sounds/notification.mp3' %}" data-latest="{% if notif_items %}{{ notif_items.0.created_at|date:'U.u' }}{% else %}0{% endif %}">
     <summary aria-label="Notifications{% if notif_unread %}  {{ notif_unread }} unread{% endif %}">
       <span class="app-bell__ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -24,10 +46,23 @@ owner switch profiles or sign out from anywhere.
           <button type="submit" class="app-bell__readall">Mark all read</button>
         </form>
       </div>
+      {% comment %}
+      Browser push: a strip at the top of the bell panel ("Get these alerts on
+      your desktop" / "Notifications are blocked") until this browser is set up.
+      BROWSER PUSH: DISABLED (commented out, not removed). Remove this comment
+      wrapper to re-enable.
+      {% if push.enabled %}
+      <div class="ow-push-strip" data-push-strip hidden>
+        <span class="ow-push-strip__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+        <span class="ow-push-strip__txt" data-push-strip-text>Get these alerts on your desktop, even when OneWooz is closed.</span>
+        <button type="button" class="ow-push-strip__btn" data-push-strip-btn>Turn on</button>
+      </div>
+      {% endif %}
+      {% endcomment %}
       {% if notif_items %}
       <div class="app-bell__list">
         {% for n in notif_items %}
-        <div class="app-bell__item{% if not n.is_read %} is-unread{% endif %} app-bell__item--{{ n.level }}">
+        <div class="app-bell__item{% if not n.is_read %} is-unread{% endif %} app-bell__item--{{ n.level }}" data-notif-id="{{ n.pk }}">
           <p class="app-bell__t">{{ n.headline }}</p>
           {% if n.description %}<p class="app-bell__d">{{ n.description|linebreaksbr }}</p>{% endif %}
           <p class="app-bell__meta">{{ n.created_at|date:"d M Y, g:i A" }}{% if n.site_name %} &middot; {{ n.site_name }}{% endif %}</p>
@@ -43,7 +78,7 @@ owner switch profiles or sign out from anywhere.
         {% endfor %}
       </div>
       {% else %}
-      <div class="app-bell__empty">You’re all caught up  no notifications yet.</div>
+      <div class="app-bell__empty" data-bell-empty>You’re all caught up  no notifications yet.</div>
       {% endif %}
     </div>
   </details>
@@ -171,9 +206,18 @@ owner switch profiles or sign out from anywhere.
 </div>
 
 <script nonce="{{ csp_nonce }}">
-  // Notification bell: clear the unread badge when the owner opens it, and keep
-  // the badge fresh with a light poll so a notification created while the page
-  // is open (an order, a shipment update, an admin message) still shows up.
+  // Notification bell, live: the page never needs a refresh to learn about a
+  // new order, payment, customer request or shipment update. Every 5 seconds
+  // (10 while the tab is in the background) the bell asks the server what is
+  // new; anything that arrived since the page loaded is added to the top of
+  // the bell list, raises the unread badge, pops a toast in a visible tab
+  // (click it to open the order) and plays the notification sound.
+  //
+  // Many tabs, one sound: every open dashboard tab of this browser shares one
+  // poll result through localStorage, so roughly one tab asks the server per
+  // interval and the rest follow via the "storage" event. A new notification
+  // is "heard" once per browser: the tab that plays it records it, under a
+  // Web Lock where supported, so two tabs never both ding for the same one.
   (function () {
     "use strict";
     var bell = document.querySelector("[data-bell]");
@@ -183,12 +227,206 @@ owner switch profiles or sign out from anywhere.
     var csrf = bell.getAttribute("data-csrf") || "";
     var readUrl = "{% url 'ud:notifications_read' %}";
     var unreadUrl = "{% url 'ud:notifications_unread' %}";
+    var uid = bell.getAttribute("data-user") || "me";
+    var STATE = "ow_notif_state:" + uid;   // last poll {unread, latest, at}
+    var HEARD = "ow_notif_heard:" + uid;   // newest notification already chimed
+    var TRIED = "ow_notif_tried:" + uid;   // {latest, at} first chime attempt
+    // Intervals come from settings (BELL_POLL_*_MS): every open dashboard tab
+    // polls, so they set most of the dashboard's request load.
+    var POLL_VISIBLE = {{ bell_poll_visible_ms|default:15000 }}, POLL_HIDDEN = {{ bell_poll_hidden_ms|default:60000 }};
+    // Newest notification this page already shows (epoch seconds). Anything
+    // newer that a poll reports is added to the list live.
+    var shown = parseFloat(bell.getAttribute("data-latest")) || 0;
+
+    function get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+    function put(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
     function setBadge(n) {
       if (!badge) return;
       if (n > 0) { badge.textContent = n; badge.hidden = false; if (readAll) readAll.hidden = false; }
       else { badge.hidden = true; if (readAll) readAll.hidden = true; }
     }
+
+    /* ---- the sound ---- */
+    var audio = null;
+    function sound() {
+      if (!audio) { audio = new Audio(bell.getAttribute("data-sound")); audio.preload = "auto"; audio.volume = 0.8; }
+      return audio;
+    }
+    // Browsers only let a page play sound after the user has interacted with
+    // it, so prime the player on this tab's first click / key / tap.
+    function unlock() {
+      var a = sound();
+      a.muted = true;
+      var p = a.play();
+      if (p && p.then) p.then(function () { a.pause(); a.currentTime = 0; a.muted = false; }).catch(function () { a.muted = false; });
+      else a.muted = false;
+      ["pointerdown", "keydown", "touchstart"].forEach(function (ev) { removeEventListener(ev, unlock, true); });
+    }
+    ["pointerdown", "keydown", "touchstart"].forEach(function (ev) { addEventListener(ev, unlock, { capture: true, passive: true }); });
+
+    function play() {
+      var a = sound();
+      a.muted = false;
+      try { a.currentTime = 0; } catch (e) {}
+      var p = a.play();
+      return p && p.then ? p.then(function () { return true; }, function () { return false; }) : Promise.resolve(true);
+    }
+
+    function withLock(fn) {
+      if (navigator.locks && navigator.locks.request) return navigator.locks.request("ow-notif-sound:" + uid, fn);
+      return Promise.resolve().then(fn);
+    }
+
+    // Chime for `latest` (epoch seconds of the newest notification) unless
+    // this browser already has. The first time a browser ever sees the
+    // account it only records the baseline, so opening the dashboard never
+    // rings for old notifications.
+    function chime(latest) {
+      if (!latest) return;
+      var heard = get(HEARD);
+      if (heard === null) { put(HEARD, latest); return; }
+      if (latest <= heard) return;
+      withLock(function () {
+        if (latest <= (get(HEARD) || 0)) return;          // another tab played it
+        var tried = get(TRIED);
+        if (!tried || tried.latest !== latest) { tried = { latest: latest, at: Date.now() }; put(TRIED, tried); }
+        return play().then(function (ok) {
+          // Played, or blocked by the browser for over 20 seconds in every
+          // tab (no tab has been clicked yet): stop retrying either way, so
+          // a late chime never sounds long after the notification arrived.
+          if (ok || Date.now() - tried.at > 20000) put(HEARD, latest);
+        });
+      });
+    }
+
+    /* ---- live list + toast for notifications that arrive while open ---- */
+    var MAX_ITEMS = 15;
+    function el(tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    }
+    function safeHref(u) {
+      // Only same-site paths or http(s) links ever become an href.
+      u = String(u || "");
+      return /^(\/(?!\/)|https?:\/\/)/i.test(u) ? u : "";
+    }
+    function buildItem(it) {
+      var row = el("div", "app-bell__item app-bell__item--" + (it.level || "info") + (it.unread ? " is-unread" : ""));
+      row.setAttribute("data-notif-id", it.id);
+      row.appendChild(el("p", "app-bell__t", it.headline || "Notification"));
+      if (it.description) {
+        var d = el("p", "app-bell__d");
+        String(it.description).split(/\r?\n/).forEach(function (line, i) {
+          if (i) d.appendChild(document.createElement("br"));
+          d.appendChild(document.createTextNode(line));
+        });
+        row.appendChild(d);
+      }
+      row.appendChild(el("p", "app-bell__meta", (it.when || "") + (it.site_name ? " · " + it.site_name : "")));
+      var href = safeHref(it.href), att = safeHref(it.attachment_url);
+      if (href || att) {
+        var acts = el("div", "app-bell__actions");
+        if (href) { var a = el("a", "app-bell__link", "Open"); a.href = href; acts.appendChild(a); }
+        if (att) {
+          var b = el("a", "app-bell__link app-bell__link--attach", "View attachment ↗");
+          b.href = att; b.target = "_blank"; b.rel = "noopener noreferrer"; acts.appendChild(b);
+        }
+        row.appendChild(acts);
+      }
+      return row;
+    }
+    function listEl() {
+      var list = bell.querySelector(".app-bell__list");
+      if (list) return list;
+      var empty = bell.querySelector("[data-bell-empty]");
+      list = el("div", "app-bell__list");
+      if (empty) empty.parentNode.replaceChild(list, empty);
+      else bell.querySelector(".app-bell__panel").appendChild(list);
+      return list;
+    }
+    function toast(it) {
+      if (document.visibilityState !== "visible" || !window.OWToast) return;
+      var msg = it.headline || "New notification";
+      if (it.description) msg += ": " + String(it.description).replace(/\s+/g, " ").slice(0, 140);
+      var kind = it.level === "success" ? "success" : it.level === "warning" ? "warning" : "info";
+      var t = window.OWToast.show(msg, kind);
+      var href = safeHref(it.href);
+      if (t && href && !t.__owNotif) {
+        t.__owNotif = true;
+        t.style.cursor = "pointer";
+        t.title = "Open";
+        t.addEventListener("click", function (e) {
+          if (e.target.closest && e.target.closest(".ow-toast__close")) return;
+          location.href = href;
+        });
+      }
+    }
+    function addItems(items) {
+      if (!items || !items.length) return;
+      // Oldest first, so the newest ends up on top of the list.
+      var fresh = items.filter(function (it) {
+        return it && it.id && +it.ts > shown && !bell.querySelector('[data-notif-id="' + String(it.id).replace(/"/g, "") + '"]');
+      }).sort(function (a, b) { return a.ts - b.ts; });
+      if (!fresh.length) return;
+      var list = listEl();
+      fresh.forEach(function (it) {
+        list.insertBefore(buildItem(it), list.firstChild);
+        if (+it.ts > shown) shown = +it.ts;
+      });
+      var rows = list.querySelectorAll(".app-bell__item");
+      for (var i = MAX_ITEMS; i < rows.length; i++) rows[i].parentNode.removeChild(rows[i]);
+      // At most three toasts per burst; the bell holds the rest.
+      fresh.slice(-3).reverse().forEach(toast);
+    }
+
+    function apply(st) {
+      if (!st) return;
+      if (!bell.open && typeof st.unread === "number") setBadge(st.unread);
+      if (st.items) addItems(st.items);
+      chime(st.latest);
+    }
+
+    /* ---- polling, shared across tabs ---- */
+    var busy = false;
+    function poll(force) {
+      var st = get(STATE);
+      var every = document.visibilityState === "visible" ? POLL_VISIBLE : POLL_HIDDEN;
+      // Another tab polled moments ago: use its answer instead of asking again,
+      // unless it knows of something newer than its own list carries for us.
+      if (!force && st && Date.now() - st.at < every * 0.75 && !(st.latest > shown && !(st.since <= shown))) { apply(st); return; }
+      if (busy) return;
+      busy = true;
+      var url = unreadUrl + "?since=" + encodeURIComponent(shown > 0 ? shown : 0);
+      // Browser push: a visible tab tells the server "I'm looking at the
+      // dashboard in this browser", so it skips the system popup here (the
+      // bell, toast and sound below announce it instead).
+      // BROWSER PUSH: DISABLED (commented out, not removed). Uncomment to re-enable.
+      /*
+      if (document.visibilityState === "visible") {
+        var pushSub = null;
+        try { pushSub = localStorage.getItem("ow_push_sub:" + uid); } catch (e) {}
+        if (pushSub) url += "&push=" + encodeURIComponent(pushSub);
+      }
+      */
+      var asked = shown;
+      fetch(url, { headers: { "Accept": "application/json" }, credentials: "same-origin", cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || typeof d.unread !== "number") return;
+          var next = { unread: d.unread, latest: +d.latest || 0, at: Date.now(), since: asked, items: d.items || null };
+          put(STATE, next);
+          apply(next);
+        })
+        .catch(function () {})
+        .then(function () { busy = false; });
+    }
+    // Other tabs' results (and "mark all read") arrive here.
+    addEventListener("storage", function (e) {
+      if (e.key === STATE && e.newValue) { try { apply(JSON.parse(e.newValue)); } catch (err) {} }
+    });
 
     function markAllRead() {
       fetch(readUrl, {
@@ -199,6 +437,8 @@ owner switch profiles or sign out from anywhere.
         setBadge(0);
         Array.prototype.forEach.call(bell.querySelectorAll(".app-bell__item.is-unread"),
           function (el) { el.classList.remove("is-unread"); });
+        var st = get(STATE) || { latest: 0 };
+        put(STATE, { unread: 0, latest: st.latest || 0, at: Date.now() });  // clear the other tabs' badges too
       }).catch(function () {});
     }
 
@@ -206,15 +446,9 @@ owner switch profiles or sign out from anywhere.
       if (bell.open && badge && !badge.hidden) markAllRead();
     });
 
-    // Poll only while the bell is closed, so a freshly-cleared badge isn't
-    // repopulated the instant the owner reads it.
-    setInterval(function () {
-      if (bell.open) return;
-      fetch(unreadUrl, { headers: { "Accept": "application/json" }, credentials: "same-origin" })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) { if (d && typeof d.unread === "number") setBadge(d.unread); })
-        .catch(function () {});
-    }, 60000);
+    poll(true);                                   // baseline + catch anything that arrived while loading
+    setInterval(function () { poll(false); }, POLL_VISIBLE);
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") poll(false); });
   })();
 </script>
 {% endif %}

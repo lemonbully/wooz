@@ -122,38 +122,12 @@
     <h2 class="pal-h2 pal-mt-6" style="max-width:18ch;" data-reveal>Answers to what people usually ask.</h2>
 
     <div class="pal-faq pal-mt-12" data-reveal>
+      {% for f in page_faq %}
       <details>
-        <summary>How quickly will I hear back? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">Within one working day, every time  usually much sooner. Security reports are acknowledged within one working day too.</div>
+        <summary>{{ f.q }} <span class="pal-faq__sign" aria-hidden="true"></span></summary>
+        <div class="pal-faq__a">{{ f.a_html }}</div>
       </details>
-      <details>
-        <summary>Can I talk to someone before I sign up? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">Yes. Email <a href="mailto:hello@onewooz.com">hello@onewooz.com</a> or use the enquiry form above and pick “Sales”. We'll tell you honestly whether OneWooz fits what you sell.</div>
-      </details>
-      <details>
-        <summary>I already sell somewhere else  can I move my store over? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">Usually, yes. Send an enquiry with “Migrating an existing store” and tell us where you're selling now and roughly how many products you have. We'll walk you through moving your catalogue, domain and customers.</div>
-      </details>
-      <details>
-        <summary>Do you take a percentage of my sales? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">No. Your revenue is yours and settles to your own account through your payment provider. We charge for the platform, never a cut of what you sell.</div>
-      </details>
-      <details>
-        <summary>My live store has a problem right now  where do I go? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">Raise a ticket on the <a href="{% url 'web:support' %}">support desk</a>. Tell us what's broken and, if you can, an order or store reference  it reaches us faster than email.</div>
-      </details>
-      <details>
-        <summary>Do you sell to businesses (B2B), not just shoppers? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">Yes. OneWooz builds both a shop that takes money (D2C) and a catalogue that captures enquiries and quotes (B2B). See <a href="{% url 'web:solutions' %}">Solutions</a> for both paths.</div>
-      </details>
-      <details>
-        <summary>Which currencies and payment methods do you support? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">India first  rupee pricing with cards, UPI and cash on delivery, plus part-payment. More regions are on the way; ask if you need one that isn't listed.</div>
-      </details>
-      <details>
-        <summary>How do I report a security issue? <span class="pal-faq__sign" aria-hidden="true"></span></summary>
-        <div class="pal-faq__a">Email <a href="mailto:security@onewooz.com">security@onewooz.com</a>. We won't pursue anyone who reports in good faith and doesn't access other people's data. More on our <a href="{% url 'web:security' %}">security page</a>.</div>
-      </details>
+      {% endfor %}
     </div>
   </div>
 </section>

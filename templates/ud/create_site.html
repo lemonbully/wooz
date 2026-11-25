@@ -38,6 +38,35 @@
             </label>
           </div>
         </div>
+
+        <h2 class="cw__title" style="font-size:1.05rem;margin-top:1.75rem">Which template do you want?</h2>
+        <p class="cw__hint">The design your storefront is built with.</p>
+        {% comment %}
+        Designs come from the admin-managed website template catalogue
+        (billing.WebsiteTemplate). A priced design this owner hasn't bought is
+        shown locked: buy it from Settings → Storefront design after creating
+        the store. The server enforces the same rule (website_templates.creation_choice).
+        {% endcomment %}
+        <div class="app-optset app-optset--2 cw__opts">
+          {% for t in template_options %}
+          <div class="app-opt">
+            <input type="radio" name="template_choice" id="tpl-{{ t.key }}" value="{{ t.key }}"
+                   {% if t.locked %}disabled{% elif form.template_choice == t.key or not form.template_choice and forloop.first %}checked{% endif %}>
+            <label for="tpl-{{ t.key }}">
+              {% if t.template.thumbnail %}<img src="{{ t.template.thumbnail.url }}" alt="" loading="lazy" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover;object-position:top;border:1px solid var(--pal-line);margin-bottom:0.6rem;">{% endif %}
+              <span class="app-opt__k cw__opt-k">{{ t.name }}</span>
+              {% if t.locked %}<span class="app-opt__d">Paid design · ₹{{ t.price|floatformat:'-2' }} + GST{% if t.is_yearly %} per year{% endif %}. Buy it from Settings after creating your store.</span>
+              {% elif t.template.is_priced %}<span class="app-opt__d">Bought · yours to use</span>
+              {% else %}<span class="app-opt__d">Free</span>{% endif %}
+            </label>
+          </div>
+          {% empty %}
+          <div class="app-opt">
+            <input type="radio" name="template_choice" id="tpl-1" value="1" checked>
+            <label for="tpl-1"><span class="app-opt__k cw__opt-k">Template 1</span></label>
+          </div>
+          {% endfor %}
+        </div>
         <div class="cw__nav">
           <span></span>
           <button type="button" class="pal-btn" data-next>Continue <span class="pal-btn__arrow" aria-hidden="true">→</span></button>

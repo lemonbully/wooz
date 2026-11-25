@@ -1,0 +1,23 @@
+{% extends "ud/_shell.html" %}
+{% block title %}Done · OneWooz Apps{% endblock %}
+{% block crumb %}OneWooz Apps{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-empty app-block">
+    <div class="app-empty__ico" aria-hidden="true">{% include "store/_icons.html" with icon="check" %}</div>
+    <h1 class="app-empty__title">{{ message }}</h1>
+    <p class="app-empty__text">
+      {% if design_url %}Switch your store to it from OneWooz Templates whenever you like. Your content carries over.
+      {% elif first_page %}It is in your dashboard menu now, so you can open it any time.
+      {% else %}You'll find it under Apps in your dashboard.{% endif %}
+    </p>
+    <p class="mkt-actions">
+      {% if design_url %}<a class="pal-btn" href="{{ design_url }}">Open OneWooz Templates</a>
+      {% elif first_page %}<a class="pal-btn" href="{{ first_page }}">Open {{ app.name }}</a>
+      {% else %}<a class="pal-btn" href="{% url 'mkt_gateway:my_apps' %}">Open my apps</a>{% endif %}
+      <a class="pal-btn pal-btn--ghost" href="{{ marketplace_back }}">Back to the marketplace</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

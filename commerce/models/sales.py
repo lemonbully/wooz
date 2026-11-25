@@ -572,6 +572,12 @@ class OrderItem(TenantScopedModel):
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     line_total = models.DecimalField(max_digits=12, decimal_places=2)
+    #: The unit price before a quantity discount (null when none applied).
+    regular_unit_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    #: The quantity-discount rule frozen at purchase (commerce.quantity_pricing.
+    #: snapshot): tiers, type, the tier that applied. Lets an owner's later
+    #: quantity edit re-price from the deal the shopper actually got.
+    quantity_discount = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ("created_at",)

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static onewooz %}
+
+{% comment %}
+OneWooz Apps shell (marketplace.onewooz.com). Layout follows the big app
+stores (Shopify App Store, Amazon, Atlassian/Google marketplaces): a header
+built around one wide search box with live suggestions, a category strip under
+it, and a plain footer. Visual style stays the onewooz.com design system
+(onewooz-pal.css): paper, ink, hairlines, square corners, one accent.
+marketplace.css holds the mk-* pieces; design-mock.css draws design previews.
+
+js/marketplace/mk.js adds search suggestions (Ctrl/Cmd+K or / focuses the
+box), the "common needs" tabs and the in-page tabs on app pages. Every page
+works without it: the search box is a normal GET form to /browse/.
+{% endcomment %}
+
+{% block title %}{% if page_title and page_title != "OneWooz Apps" %}{{ page_title }} · {% endif %}OneWooz Apps{% endblock %}
+{% block description %}{{ page_description|default:"OneWooz Apps: the app store for OneWooz stores. Find apps for marketing, sales, support, trust and design, built by OneWooz and switched on per store." }}{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/onewooz-pal.css' %}">
+<link rel="stylesheet" href="{% static 'css/design-mock.css' %}">
+<link rel="stylesheet" href="{% static 'css/marketplace.css' %}">
+{% endblock %}
+
+{% block body %}
+<div class="pal mk">
+  <a href="#main" class="mk-skip">Skip to content</a>
+  {% if mkt_settings.announcement %}<div class="mk-ann">{{ mkt_settings.announcement }}</div>{% endif %}
+
+  <header class="mk-header">
+    <div class="pal-container mk-header__row">
+      <a href="{% url 'marketplace:home' %}" class="mk-brand" aria-label="OneWooz Apps home">
+        <img class="pal-brand__img" src="{% brand_logo_url %}" alt="OneWooz" width="26" height="26">
+        <span class="mk-brand__sep" aria-hidden="true"></span>
+        <span class="mk-brand__label">App Store</span>
+      </a>
+
+      <form class="mk-hsearch" action="{% url 'marketplace:browse' %}" method="get" role="search" data-mk-suggest>
+        <label class="mk-sr" for="mk-hq">Search apps</label>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="mk-hq" type="search" name="q" value="{{ q|default:'' }}" maxlength="80" autocomplete="off" spellcheck="false"
+               placeholder="Search apps, or describe a problem" role="combobox" aria-expanded="false" aria-controls="mk-suggest" aria-autocomplete="list">
+        <kbd data-mk-mod aria-hidden="true">Ctrl K</kbd>
+        <button type="submit" class="mk-hsearch__go">Search</button>
+        <ul class="mk-suggest" id="mk-suggest" role="listbox" hidden></ul>
+      </form>
+
+      <div class="mk-header__actions">
+        {% if mkt_owner %}
+          <a href="{% url 'marketplace:library' %}" class="mk-hlink{% if nav == 'library' %} is-on{% endif %}"><small>Signed in</small>My apps</a>
+          <form method="post" action="{% url 'marketplace:sign_out' %}" class="mk-nav__form">{% csrf_token %}<button type="submit" class="mk-linkbtn">Sign out</button></form>
+          <a href="{{ dashboard_url }}" class="pal-btn">Dashboard <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+        {% else %}
+          <a href="{{ connect_url }}" class="mk-hlink"><small>Have a store?</small>Sign in</a>
+          <a href="{{ signup_url }}" class="pal-btn">Deploy a store</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <nav class="mk-strip" aria-label="Categories">
+      <div class="pal-container mk-strip__row">
+        <a href="{% url 'marketplace:browse' %}"{% if nav == "browse" and not cat %} aria-current="page"{% endif %}>All apps</a>
+        {% for c in nav_categories %}<a href="{% url 'marketplace:browse' %}?c={{ c.key }}"{% if cat == c.key %} aria-current="page"{% endif %}>{{ c.label }}</a>{% endfor %}
+        <a href="{% url 'marketplace:app' 'templates' %}"{% if nav == "designs" %} aria-current="page"{% endif %}>Store designs</a>
+        <a href="{% url 'marketplace:home' %}#bundles">Bundles</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <section class="mk-assure" aria-label="Why OneWooz Apps">
+    <div class="pal-container mk-assure__row">
+      <div><span class="pal-mono pal-mono--accent">Built by OneWooz</span><p>Every app is made and maintained by the team that runs your store.</p></div>
+      <div><span class="pal-mono pal-mono--accent">Confirmed installs</span><p>Installing asks for your password, passkey or an emailed code first.</p></div>
+      <div><span class="pal-mono pal-mono--accent">Off until you say so</span><p>Nothing shows on your storefront until you switch it on.</p></div>
+      <div><span class="pal-mono pal-mono--accent">Pauses on faults</span><p>A misbehaving app switches itself off. Your store keeps selling.</p></div>
+    </div>
+  </section>
+
+  <footer class="pal-footer">
+    <div class="pal-container">
+      <div class="pal-footer__top">
+        <div>
+          <a href="{% url 'marketplace:home' %}" class="mk-brand" aria-label="OneWooz Apps home">
+            <img class="pal-brand__img" src="{% brand_logo_url %}" alt="OneWooz" width="26" height="26">
+            <span class="mk-brand__sep" aria-hidden="true"></span>
+            <span class="mk-brand__label">App Store</span>
+          </a>
+          <p class="pal-footer__note">Run your business, not just your website. Apps that plug straight into your OneWooz dashboard and store.</p>
+        </div>
+        <div class="pal-footer__cols">
+          <nav class="pal-footer__col" aria-label="Browse">
+            <h2>Browse</h2>
+            <a href="{% url 'marketplace:browse' %}">All apps</a>
+            <a href="{% url 'marketplace:browse' %}?sort=newest">Recently added</a>
+            <a href="{% url 'marketplace:browse' %}?price=included">Included apps</a>
+            <a href="{% url 'marketplace:app' 'templates' %}">Store designs</a>
+            {% if mkt_owner %}<a href="{% url 'marketplace:library' %}">My apps</a>{% endif %}
+          </nav>
+          {% if nav_categories %}
+          <nav class="pal-footer__col" aria-label="Categories">
+            <h2>Categories</h2>
+            {% for c in nav_categories %}<a href="{% url 'marketplace:browse' %}?c={{ c.key }}">{{ c.label }}</a>{% endfor %}
+          </nav>
+          {% endif %}
+          <nav class="pal-footer__col" aria-label="OneWooz">
+            <h2>OneWooz</h2>
+            <a href="{{ onewooz_home }}">OneWooz.com</a>
+            <a href="{{ dashboard_url }}">Dashboard</a>
+            <a href="{{ security_url }}">Security</a>
+            <a href="{{ support_url }}">Support</a>
+          </nav>
+        </div>
+      </div>
+      <div class="pal-footer__base">
+        <span>&copy; {% now "Y" %} OneWooz, a product of The Artless</span>
+        <span>Installs happen in your dashboard, after you confirm it's you</span>
+      </div>
+    </div>
+  </footer>
+  {{ palette|json_script:"mk-palette-data" }}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/marketplace/mk.js' %}" defer nonce="{{ csp_nonce }}"></script>
+{% endblock %}

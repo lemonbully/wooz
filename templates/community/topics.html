@@ -1,0 +1,36 @@
+{% extends "community/_base.html" %}
+{% load ask_tags %}
+
+{% block ask_main %}
+<section class="ask-pagehead">
+  <div class="pal-container">
+    <p class="ask-eyebrow">Ask OneWooz / Topics</p>
+    <h1 class="ask-pagehead__title">Pick a room. Ask anything.</h1>
+    <p class="ask-pagehead__lead">Every topic has its own feed, answered by sellers who've been there and by the OneWooz team.</p>
+  </div>
+</section>
+
+<section class="ask-body">
+  <div class="pal-container">
+    <div class="ask-rooms">
+      {% for room in rooms %}
+      <a class="ask-room" href="{{ room.topic.get_absolute_url }}">
+        <div class="ask-room__top">
+          <span class="ask-room__mark" aria-hidden="true"></span>
+          <span class="ask-room__n">{{ room.topic.n }} question{{ room.topic.n|pluralize }}</span>
+        </div>
+        <h2 class="ask-room__name">{{ room.topic.name }}</h2>
+        {% if room.topic.description %}<p class="ask-room__desc">{{ room.topic.description }}</p>{% endif %}
+        <p class="ask-room__newest">
+          {% if room.newest %}<span>Newest:</span> {{ room.newest.title|truncatechars:70 }}{% else %}No questions yet. Be the first.{% endif %}
+        </p>
+        <div class="ask-room__foot">
+          <span class="ask-stack" aria-hidden="true">{% for p in room.people %}{% include "community/_avatar.html" with m=p size="xs" tag="" %}{% endfor %}</span>
+          <span>{% if room.topic.week %}{{ room.topic.week }} this week{% else %}Quiet this week{% endif %}</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

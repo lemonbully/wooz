@@ -1,0 +1,12 @@
+{% load ask_tags %}
+{% comment %}Author line. Context: m (Member), when (datetime), extra (optional text).{% endcomment %}
+<div class="ask-author">
+  {% include "community/_avatar.html" with m=m tag="a" size="" %}
+  <div class="ask-author__text">
+    <a href="{{ m.get_absolute_url }}" class="ask-author__name">{{ m.display_name }}</a>
+    <span class="ask-level{% if m.is_team %} ask-level--team{% endif %}">{{ m.level }}</span>
+    {% if not m.is_banned %}{% if m.safe_website %}<a class="ask-site" href="{{ m.safe_website }}" rel="nofollow ugc noopener noreferrer" target="_blank" title="{{ m.website_label }}">{{ m.site_label }}</a>{% elif m.brand_name %}<span class="ask-site ask-site--plain">{{ m.brand_name }}</span>{% endif %}{% endif %}
+    {% if m.store_url and not m.is_team %}<a class="ask-store" href="{{ m.store_url }}" rel="nofollow noopener" target="_blank">Runs a store on OneWooz</a>{% endif %}
+    <span class="ask-author__when">{{ when|ago }}{% if extra %} · {{ extra }}{% endif %}</span>
+  </div>
+</div>

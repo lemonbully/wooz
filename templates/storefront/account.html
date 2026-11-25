@@ -546,7 +546,7 @@ data-view-order / order-detail-<id> / order-modal, data-orq-*
             <a class="acc-btn" href="?#orders">Show all orders</a>
           {% else %}
             <h3>No orders yet</h3><p>When you place an order, you can track it right here.</p>
-            <a class="acc-btn acc-btn--primary" href="{{ website_base }}products/">Start shopping</a>
+            <a class="acc-btn acc-btn--primary" href="{{ website_base }}shop/">Start shopping</a>
           {% endif %}
         </div>
         {% endif %}
@@ -573,7 +573,7 @@ data-view-order / order-detail-<id> / order-modal, data-orq-*
         <div class="acc-empty" data-acc-wish-empty{% if wishlist %} hidden{% endif %}>
           <div class="acc-empty__icon"><svg class="acc-i" aria-hidden="true"><use href="#acc-i-heart"/></svg></div>
           <h3>Your wishlist is empty</h3><p>Tap the heart on any product to save it here.</p>
-          <a class="acc-btn acc-btn--primary" href="{{ website_base }}products/">Explore products</a>
+          <a class="acc-btn acc-btn--primary" href="{{ website_base }}shop/">Explore products</a>
         </div>
       </section>
 

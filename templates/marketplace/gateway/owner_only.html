@@ -1,0 +1,13 @@
+{% extends "ud/_shell.html" %}
+{% block title %}OneWooz Apps{% endblock %}
+{% block crumb %}OneWooz Apps{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-empty app-block">
+    <h1 class="app-empty__title">Only the store owner can add apps</h1>
+    <p class="app-empty__text">Ask the owner of the store you work on to add {{ app.name }} from OneWooz Apps.</p>
+    <p class="mkt-actions"><a class="pal-btn pal-btn--ghost" href="{% url 'ud:dashboard' %}">Back to dashboard</a></p>
+  </div>
+</div>
+{% endblock %}

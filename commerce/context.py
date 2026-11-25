@@ -280,6 +280,29 @@ def feature_label(key: str) -> str:
     return (key or "").replace("_", " ").title()
 
 
+def merge_app_nav(request, owner, site, groups: list) -> None:
+    """Add the owner's installed apps to ``groups`` (store and account sidebars)."""
+    try:
+        from marketplace import api as mkt_api
+
+        extra = mkt_api.sidebar_groups(request, owner, site)
+    except Exception:
+        return
+    if not extra:
+        return
+    for g in groups:
+        adds = extra.pop(g["label"], None)
+        if adds:
+            g["items"].extend(sorted(adds, key=lambda i: (i.get("order", 100), i["label"])))
+    leftover = [
+        {"label": label, "items": sorted(items, key=lambda i: (i.get("order", 100), i["label"]))}
+        for label, items in extra.items() if items
+    ]
+    if leftover:
+        # Own groups ("Apps") come last, right above the sidebar's own Apps link.
+        groups.extend(leftover)
+
+
 def store_context(request, site, active: str) -> dict:
     """Common template context for every store page."""
     from django.urls import reverse
@@ -296,6 +319,11 @@ def store_context(request, site, active: str) -> dict:
     access = getattr(request, "store_access", None) or staff_mod.access_for(request, site)
     staff_pages = access.allowed_pages() if access is not None else None
     groups = visible_groups(site, allowed, staff_pages)
+    # OneWooz Apps placed in the sidebar by installed apps (owner only). Read
+    # through the marketplace's fail-soft facade: any marketplace failure just
+    # leaves the sidebar as it was.
+    if access is None or access.is_owner:
+        merge_app_nav(request, owner, site, groups)
     # Unread counters (Orders, Requests, Reviews …): opening a counted page
     # clears its own counter first, then every visible one is counted.
     from . import nav_counts

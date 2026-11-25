@@ -1,0 +1,40 @@
+{% comment %}
+Per-product return terms, appended to the store's Returns & Refunds page.
+
+Built from the same product fields that drive each product page's return badge
+and its MerchantReturnPolicy markup (Product.effective_return_type / _days), so
+the policy page, the badge and the structured data can never disagree. Shown
+only when at least one product has its own return terms. Lives inside
+.pp-prose, so its <h2> joins the page's "On this page" outline.
+
+Expects: return_terms = {"non_returnable": [...], "replacement": [...],
+"returnable": [...]}, each item {title, slug, days}; website_base.
+{% endcomment %}
+<h2 id="return-terms-by-product">Return terms by product</h2>
+<p>Return terms are set for each product and are shown on its product page. Where they differ from the general policy above, the terms listed here apply.</p>
+{% if return_terms.non_returnable %}
+<h3>Not returnable</h3>
+<p>These items cannot be returned or refunded once delivered{% if return_terms.has_replacement_window %}, except where a replacement window is shown{% endif %}.</p>
+<ul>
+  {% for p in return_terms.non_returnable %}
+  <li><a href="{{ website_base }}products/{{ p.slug }}/">{{ p.title }}</a>{% if p.days %}: replacement within {{ p.days }} day{{ p.days|pluralize }} for a damaged or wrong item{% endif %}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% if return_terms.replacement %}
+<h3>Replacement only</h3>
+<p>These items can be replaced within the window shown, but not returned for a refund.</p>
+<ul>
+  {% for p in return_terms.replacement %}
+  <li><a href="{{ website_base }}products/{{ p.slug }}/">{{ p.title }}</a>{% if p.days %}: replacement within {{ p.days }} day{{ p.days|pluralize }}{% endif %}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% if return_terms.returnable %}
+<h3>Returnable</h3>
+<ul>
+  {% for p in return_terms.returnable %}
+  <li><a href="{{ website_base }}products/{{ p.slug }}/">{{ p.title }}</a>{% if p.days %}: return within {{ p.days }} day{{ p.days|pluralize }} of delivery{% endif %}</li>
+  {% endfor %}
+</ul>
+{% endif %}

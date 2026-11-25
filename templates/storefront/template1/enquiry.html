@@ -18,9 +18,19 @@
     #contactForm button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
     #contactForm button[type="submit"]:disabled:hover { background-color: #4f46e5; }
 
-    /* Our office (left half) + map (right half). Stacks below 1024px. */
-    .ow-office { margin-top: 2.5rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.25rem; align-items: start; }
-    @media (min-width: 1024px) { .ow-office { margin-top: 3rem; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; } }
+    /* Our office + map, on the same grid as the form block above it so every
+       edge lines up: that block is lg:grid-cols-12 split 7/5 with p-6 sm:p-10
+       lg:p-12 inside each column. Here the office details take the form's 7
+       columns and the map the aside's 5, with the same inner padding, so the
+       text starts under the form, the map starts under the aside's content and
+       both right edges match. Stacks below 1024px, keeping the form's padding. */
+    .ow-office { margin-top: 2.5rem; display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 2.25rem; column-gap: 0; align-items: start; }
+    .ow-office__info, .ow-office__map { min-width: 0; padding-inline: 1.5rem; }
+    @media (min-width: 640px) { .ow-office__info, .ow-office__map { padding-inline: 2.5rem; } }
+    @media (min-width: 1024px) {
+        .ow-office { margin-top: 3rem; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+        .ow-office__info, .ow-office__map { padding-inline: 3rem; }
+    }
     .ow-office--solo { grid-template-columns: minmax(0, 1fr) !important; }
     .ow-office__title { font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.25rem); line-height: 1.15; font-weight: 600; letter-spacing: -0.01em; text-transform: uppercase; color: #111827; }
     .ow-office__lead { margin-top: 0.6rem; max-width: 34rem; font-size: 0.95rem; line-height: 1.6; color: #4b5563; }
@@ -28,7 +38,8 @@
     @media (min-width: 520px) { .ow-office__list { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
     .ow-office__item { border-left: 2px solid #2f302f; padding-left: 1rem; min-width: 0; }
     .ow-office__label { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #111827; }
-    .ow-office__value { margin-top: 0.4rem; font-size: 0.9rem; line-height: 1.55; color: #4b5563; overflow-wrap: anywhere; }
+    .ow-office__value { margin-top: 0.4rem; font-size: 1rem; line-height: 1.55; color: #4b5563; overflow-wrap: anywhere; }
+    .ow-office__value--hours { font-size: 1rem; }
     .ow-office__value a { color: #4f46e5; }
     .ow-office__value a:hover { color: #4338ca; }
     .ow-office__maphead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.5rem 1rem; }
@@ -36,7 +47,7 @@
     .ow-office__mapsub { margin-top: 0.3rem; font-size: 0.875rem; color: #4b5563; }
     .ow-office__maplink { font-size: 0.85rem; font-weight: 500; color: #111827; text-decoration: underline; text-underline-offset: 4px; white-space: nowrap; }
     .ow-office__maplink:hover { color: #4b5563; }
-    .ow-office__frame { margin-top: 1rem; height: clamp(15rem, 40vw, 20rem); border: 1px solid #e5e7eb; border-radius: 1.25rem; overflow: hidden; background: #f9fafb; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+    .ow-office__frame { margin-top: 1rem; height: clamp(15rem, 40vw, 17rem); border: 1px solid #e5e7eb; border-radius: 1.25rem; overflow: hidden; background: #f9fafb; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
     .ow-office__frame iframe { display: block; width: 100%; height: 100%; }
 </style>
 <div class="bg-white font-sans leading-normal tracking-normal min-h-screen antialiased overflow-x-hidden">
@@ -116,6 +127,8 @@
                           <span>I agree to the <a href="{% url 'privacy_policy_page' %}" target="_blank" rel="noopener">privacy policy</a>.</span>
                       </label>
 
+                      {% include "storefront/_recaptcha.html" %}
+
                       <div class="pt-2">
                           <button type="submit" class="w-full sm:w-auto inline-flex justify-center rounded-xl bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-indigo-700 active:scale-[.98] transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Let's talk</button>
                       </div>
@@ -178,7 +191,7 @@
                     </div>
                     <div class="ow-office__item">
                         <h3 class="ow-office__label">Office hours</h3>
-                        <p class="ow-office__value">
+                        <p class="ow-office__value ow-office__value--hours">
                         {% with start_day=website.content.contact_info.office_start_day|default:'Monday' %}
                         {% with end_day=website.content.contact_info.office_end_day|default:'Friday' %}
                         {% with start_time=website.content.contact_info.office_start_time|default:'09:30' %}

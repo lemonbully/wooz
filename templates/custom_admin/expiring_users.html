@@ -1,0 +1,90 @@
+{% extends "custom_admin/_shell.html" %}
+
+{% comment %}
+Expiring users (custom_admin.views.expiring_users). Owners whose paid or
+one-time plan is still active but ends inside the chosen window. Expired plans
+are not listed; the Export Excel "Expired" report covers those.
+{% endcomment %}
+
+{% block crumbs %} &rsaquo; Expiring users{% endblock %}
+
+{% block content %}
+<div class="owa-head">
+  <div>
+    <p class="owa-kicker">Users</p>
+    <h1 class="owa-page-title">Expiring users</h1>
+    <p class="owa-head__lead">Store owners whose subscription is about to end (not yet expired), soonest first. Only paid and one-time plans are listed; a free plan never lapses into a renewal.</p>
+  </div>
+  <a href="{% url 'custom_admin:overview' %}" class="owa-btn owa-btn--ghost">Back to home</a>
+</div>
+
+{% url 'custom_admin:expiring_users' as action %}
+{% include "custom_admin/_lifecycle_filter.html" with action=action past=False %}
+
+<div class="owa-kpis owa-life__kpis">
+  <div class="owa-kpi"><div class="owa-kpi__label">Expiring users</div><div class="owa-kpi__value">{{ counts.total }}</div><div class="owa-kpi__sub">{{ window.label }}</div></div>
+  <div class="owa-kpi"><div class="owa-kpi__label">Ending today</div><div class="owa-kpi__value">{{ counts.today }}</div><div class="owa-kpi__sub">{{ today|date:"d M Y" }}</div></div>
+  <div class="owa-kpi"><div class="owa-kpi__label">Within 7 days</div><div class="owa-kpi__value">{{ counts.week }}</div><div class="owa-kpi__sub">Of those listed</div></div>
+  <div class="owa-kpi"><div class="owa-kpi__label">Up for renewal</div><div class="owa-kpi__value">₹{{ counts.value|floatformat:"-2" }}</div><div class="owa-kpi__sub">Last amount paid, total</div></div>
+</div>
+
+<div class="owa-panel">
+  {% if page.object_list %}
+  <div class="owa-tablewrap">
+    <table class="owa-table owa-life__table">
+      <thead>
+        <tr><th>User</th><th>Plan</th><th>Ends on</th><th>Websites</th></tr>
+      </thead>
+      <tbody>
+        {% for r in page.object_list %}
+        <tr>
+          <td>
+            {% if r.user %}<a href="{% url 'admin:accounts_dashboarduser_change' r.user.pk %}" class="owa-strong">{{ r.name|default:r.email }}</a>{% else %}<span class="owa-strong">{{ r.name|default:r.email }}</span>{% endif %}
+            <div class="owa-sub">{{ r.email }}</div>
+            {% if r.phone %}<div class="owa-sub">{{ r.phone }}</div>{% endif %}
+            {% if r.company %}<div class="owa-sub">{{ r.company }}</div>{% endif %}
+            {% if r.account_deleted %}<span class="owa-badge owa-life__badge--danger">Account deleted</span>{% elif not r.user %}<span class="owa-badge">No account yet</span>{% endif %}
+          </td>
+          <td>
+            <span class="owa-strong">{{ r.plan }}</span>
+            <div class="owa-sub">{{ r.cycle }} · {{ r.currency }} {{ r.amount }}</div>
+            <div class="owa-sub"><a class="owa-link" href="{% url 'admin:billing_subscriptionorder_change' r.order.pk %}">{{ r.order.number }}</a>{% if r.period_start %} · since {{ r.period_start|date:"d M Y" }}{% endif %}</div>
+          </td>
+          <td class="owa-mono">
+            {{ r.period_end|date:"d M Y" }}
+            <div>
+              {% if r.days_left == 0 %}<span class="owa-badge owa-life__badge--danger">Ends today</span>
+              {% elif r.days_left <= 7 %}<span class="owa-badge owa-life__badge--warn">{{ r.days_left }} day{{ r.days_left|pluralize }} left</span>
+              {% else %}<span class="owa-badge">{{ r.days_left }} days left</span>{% endif %}
+            </div>
+          </td>
+          <td>
+            {% if r.sites %}
+            <ul class="owa-life__sites">
+              {% for s in r.sites %}<li><span class="owa-strong">{{ s.name }}</span><div class="owa-sub">{{ s.address }}</div></li>{% endfor %}
+            </ul>
+            {% else %}<span class="owa-sub">No websites</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.has_other_pages %}
+  <div class="owa-life__pager">
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }} · {{ page.paginator.count }} users</span>
+    <span>
+      {% if page.has_previous %}<a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.previous_page_number }}">Previous</a>{% endif %}
+      {% if page.has_next %}{% if page.has_previous %} · {% endif %}<a href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.next_page_number }}">Next</a>{% endif %}
+    </span>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="owa-empty">
+    <p class="owa-empty__title">No expiring users</p>
+    <p class="owa-empty__text">{% if q %}No expiring user matches “{{ q }}” in this period.{% else %}No paid plan ends in this period. Try a longer duration.{% endif %}</p>
+    {% if window.key != "30d" %}<a href="{% url 'custom_admin:expiring_users' %}?range=30d" class="owa-btn owa-btn--ghost">Next 30 days</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

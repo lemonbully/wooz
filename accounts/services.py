@@ -293,6 +293,19 @@ def complete_login(request, user, *, method: str):
     including one an attacker planted  is discarded and replaced.
     """
     clear_pending_login(request)
+
+    # A deleted account (Profile -> Delete My Account) comes back by signing in
+    # within its recovery window; past the window it is closed and the sign-in
+    # stops here. Callers redirect to the dashboard, whose login_required sends
+    # the visitor back to sign-in, which then answers like any unknown account.
+    from . import deletion
+
+    if deletion.on_sign_in(request, user) == deletion.CLOSED:
+        record_attempt(
+            request, method=method, outcome=LoginActivity.Outcome.INACTIVE, user=user
+        )
+        return None
+
     django_login(request, user, backend="accounts.backends.EmailPasswordBackend")
 
     # Record which device this (freshly-keyed) session belongs to, so the owner

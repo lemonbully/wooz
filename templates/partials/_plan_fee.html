@@ -26,7 +26,7 @@ line instead, so the buyer knows there is no order quota to meet.
   <div class="pal-plan__fee-body">
     {% for b in plan.fee_band_list %}
     <div class="pal-plan__fee-row">
-      <span>Selling price{% inr_range b.min_price b.max_price %}</span>
+      <span>{% inr_range b.min_price b.max_price %} Selling price</span>
       <span>{{ b.fee|inr }} / unit</span>
     </div>
     {% endfor %}

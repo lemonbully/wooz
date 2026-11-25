@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Account | velora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body>
+<div data-header></div>
+<main class="container" style="padding-top:clamp(24px,4vw,44px)">
+  <div class="sec-head"><div><p class="eyebrow">My account</p><h1 class="h1">Hello, <em class="hl">Aarav.</em></h1></div><a href="login.html" class="btn btn--outline btn--sm">Sign out</a></div>
+  <div class="acct">
+    <nav class="acct-nav" data-tabs aria-label="Account">
+      <div class="acct-user"><span class="av">AM</span><div><b>Aarav Mehta</b><small>aarav.mehta@example.com</small></div></div>
+      <button data-t="overview" class="is-active">Overview</button>
+      <button data-t="orders">Orders <em>4</em></button>
+      <button data-t="wishlist">Wishlist <em data-wish-count></em></button>
+      <button data-t="addresses">Addresses</button>
+      <button data-t="credits">Store credit</button>
+      <button data-t="details">Account details</button>
+    </nav>
+
+    <div>
+      <section class="acct-pane is-active" data-p="overview">
+        <div class="stats">
+          <div class="stat"><small>Total orders</small><b>12</b></div>
+          <div class="stat"><small>Wishlist</small><b data-wish-count></b></div>
+          <div class="stat"><small>Store credit</small><b>₹250</b></div>
+          <div class="stat"><small>Member since</small><b>2024</b></div>
+        </div>
+        <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Recent orders</h2><button class="link small" data-go="orders">View all</button></div>
+        <div data-orders-recent></div>
+        <div class="highlight-card" style="background:var(--lime);min-height:220px;margin-top:20px">
+          <div><p class="eyebrow">Refer a friend</p><h3 class="h3">Give ₹300, get ₹300</h3><p class="muted small">Share your code AARAV300. When a friend places their first order you both get store credit.</p><button class="btn btn--black btn--sm" style="align-self:flex-start" onclick="T3.toast('Referral link copied')">Copy invite link</button></div>
+          <div style="padding:0;overflow:hidden"><img src="" data-ref-img alt=""></div>
+        </div>
+      </section>
+
+      <section class="acct-pane" data-p="orders">
+        <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Your orders</h2><div class="pill-tabs"><button class="is-active">All</button><button>Processing</button><button>Shipped</button><button>Delivered</button></div></div>
+        <div data-orders></div>
+      </section>
+
+      <section class="acct-pane" data-p="wishlist">
+        <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Wishlist</h2><span class="small">Saved items stay here across devices.</span></div>
+        <div class="grid grid--3" data-wishlist></div>
+      </section>
+
+      <section class="acct-pane" data-p="addresses">
+        <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Saved addresses</h2></div>
+        <div class="addr-grid">
+          <div class="addr is-default"><span class="badge badge--new" style="position:absolute;top:18px;right:18px">Default</span><b>Home</b><p>Aarav Mehta<br>B-1204, Lodha Splendora, Andheri West<br>Mumbai, Maharashtra 400053<br>+91 98765 43210</p><div class="addr__actions"><a href="#">Edit</a><a href="#">Remove</a></div></div>
+          <div class="addr"><b>Work</b><p>Aarav Mehta<br>7th Floor, One BKC, Bandra Kurla Complex<br>Mumbai, Maharashtra 400051<br>+91 98765 43210</p><div class="addr__actions"><a href="#">Edit</a><a href="#">Remove</a><a href="#">Set as default</a></div></div>
+          <div class="addr"><b>Parents</b><p>Rakesh Mehta<br>21, Shanti Kunj, Navrangpura<br>Ahmedabad, Gujarat 380009<br>+91 98250 11223</p><div class="addr__actions"><a href="#">Edit</a><a href="#">Remove</a><a href="#">Set as default</a></div></div>
+          <button class="addr addr--new"><span><span style="font-size:28px;display:block">+</span>Add a new address</span></button>
+        </div>
+      </section>
+
+      <section class="acct-pane" data-p="credits">
+        <div class="card" style="background:var(--lilac);border:0;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+          <div><p class="eyebrow">Available balance</p><b style="font-size:44px;font-weight:800">₹250</b><p class="small muted">Applied automatically at checkout once you verify your phone.</p></div>
+          <a href="shop.html" class="btn btn--black">Shop now</a>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <table class="spec-table">
+            <tr><td>Date</td><td>Description</td><td style="text-align:right">Amount</td></tr>
+            <tr><td>Nov 02, 2026</td><td style="font-weight:500">Birthday credit</td><td style="text-align:right;color:var(--ok);font-weight:700">+ ₹200</td></tr>
+            <tr><td>Oct 18, 2026</td><td style="font-weight:500">Used on order #VLR-24390</td><td style="text-align:right;font-weight:700">- ₹150</td></tr>
+            <tr><td>Sep 05, 2026</td><td style="font-weight:500">Referral: Riya joined</td><td style="text-align:right;color:var(--ok);font-weight:700">+ ₹200</td></tr>
+          </table>
+        </div>
+      </section>
+
+      <section class="acct-pane" data-p="details">
+        <form class="card" data-details>
+          <h2 class="h3" style="margin-bottom:18px">Account details</h2>
+          <div class="form-grid">
+            <div class="field"><label>First name</label><input class="input" value="Aarav"></div>
+            <div class="field"><label>Last name</label><input class="input" value="Mehta"></div>
+            <div class="field"><label>Email <span class="verified">✓ Verified</span></label><input class="input" value="aarav.mehta@example.com"></div>
+            <div class="field"><label>Mobile <span class="verified">✓ Verified</span></label><input class="input" value="+91 98765 43210"></div>
+            <div class="field"><label>Birthday</label><input class="input" type="date" value="1995-11-20"></div>
+            <div class="field"><label>Gender</label><select class="select"><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
+          </div>
+          <label class="check" style="margin:18px 0"><input type="checkbox" checked> Send me offers and new drops on WhatsApp</label>
+          <button class="btn btn--black">Save changes</button>
+        </form>
+        <div class="card" style="margin-top:16px;border-color:#f3c7c0">
+          <h3 class="h4">Delete my account</h3>
+          <p class="small muted" style="margin:6px 0 14px">Your order history is kept for invoices and warranty, everything else is removed.</p>
+          <button class="btn btn--outline btn--sm" style="border-color:var(--badge-sale);color:var(--badge-sale)" onclick="T3.toast('Preview only: nothing was deleted')">Delete account</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<div data-footer></div>
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$;
+  $('[data-ref-img]').src = D.U(D.IMG.flatlay2, 700, 500);
+  const orders = [
+    { no: 'VLR-24816', date: 'Nov 12, 2026', status: 'processing', items: ['argan-milk-serum', 'barrier-repair-cream', 'rose-quartz-roller'], total: 10096 },
+    { no: 'VLR-24602', date: 'Nov 03, 2026', status: 'shipped', items: ['sunset-spf-fluid'], total: 3499, track: 'Out for delivery today' },
+    { no: 'VLR-24390', date: 'Oct 18, 2026', status: 'delivered', items: ['vitamin-c-glow-drops', 'oat-milk-soap-bar'], total: 6248 },
+    { no: 'VLR-23911', date: 'Sep 22, 2026', status: 'cancelled', items: ['velvet-matte-lip'], total: 1899 },
+  ];
+  const label = { processing: 'Processing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' };
+  const oc = o => `<div class="order-card"><div class="order-card__head"><div><b>#${o.no}</b><small>Placed on ${o.date}</small></div><span class="status status--${o.status}">${label[o.status]}</span></div>
+    <div class="order-card__items">${o.items.map(id => `<img src="${T3.byId(id).img[0]}" alt="">`).join('')}<div style="margin-left:6px"><b>${T3.byId(o.items[0]).name}</b>${o.items.length > 1 ? `<div class="small muted">+ ${o.items.length - 1} more item${o.items.length > 2 ? 's' : ''}</div>` : ''}${o.track ? `<div class="small" style="color:var(--ok);font-weight:700">${o.track}</div>` : ''}</div></div>
+    <div class="order-card__foot"><b>${T3.inr(o.total)}</b><div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${o.status === 'delivered' ? '<button class="btn btn--grey btn--sm">Return / Replace</button><button class="btn btn--grey btn--sm">Invoice</button>' : ''}
+      ${o.status === 'processing' ? '<button class="btn btn--grey btn--sm">Edit order</button><button class="btn btn--grey btn--sm">Cancel</button>' : ''}
+      ${o.status !== 'cancelled' ? '<a class="btn btn--black btn--sm" href="order-confirmation.html">Track order</a>' : '<a class="btn btn--grey btn--sm" href="shop.html">Buy again</a>'}
+    </div></div></div>`;
+  $('[data-orders]').innerHTML = orders.map(oc).join('');
+  $('[data-orders-recent]').innerHTML = orders.slice(0, 2).map(oc).join('');
+
+  const renderWish = () => {
+    const list = T3.getWish().map(T3.byId).filter(Boolean);
+    $('[data-wishlist]').innerHTML = list.length ? list.map(p => T3.card(p, { reveal: false })).join('') : `<div class="empty-state" style="grid-column:1/-1">${I.heart.replace(/18/g, '44')}<h3 class="h4">Nothing saved yet</h3><p class="muted small" style="margin:6px 0 16px">Tap the heart on any product to save it here.</p><a href="shop.html" class="btn btn--black">Browse products</a></div>`;
+    $$('[data-wish-count]').forEach(e => e.textContent = list.length);
+  };
+  renderWish(); document.addEventListener('t3:wish', renderWish);
+
+  const go = t => { $$('[data-t]').forEach(b => b.classList.toggle('is-active', b.dataset.t === t)); $$('[data-p]').forEach(p => p.classList.toggle('is-active', p.dataset.p === t)); history.replaceState(null, '', '#' + t); };
+  $('[data-tabs]').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) go(b.dataset.t); });
+  document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
+  $('[data-details]').addEventListener('submit', e => { e.preventDefault(); T3.toast('Details saved'); });
+  const h = location.hash.slice(1); if (h && $(`[data-p="${h}"]`)) go(h);
+  addEventListener('hashchange', () => { const k = location.hash.slice(1); if ($(`[data-p="${k}"]`)) go(k); });
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

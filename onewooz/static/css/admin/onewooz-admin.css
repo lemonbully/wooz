@@ -545,3 +545,86 @@ body.owa-auth { margin: 0; min-height: 100dvh; background: var(--owa-paper); fon
   .owa-auth__specs, .owa-auth__lead { display: none; }
   .owa-auth__title-lg { font-size: 1.6rem; }
 }
+
+/* 15. Export Excel (custom_admin/export_excel.html) + admin home button ===== */
+
+.dashboard #content > .owa-dash-head { grid-column: 1 / -1; }
+.owa-dash-head { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin: 0 0 18px; }
+.owa-dash-head .owa-page-title { margin: 0; }
+.owa-dash-head__btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+.owa-export { display: flex; flex-direction: column; }
+.owa-export__body { padding: 4px 20px 8px; }
+.owa-export__alert { margin: 16px 0 0; }
+.owa-export__step[hidden], .owa-export__check[hidden] { display: none; }
+.owa-export__marker { margin: 22px 0 12px; }
+.owa-export__select { appearance: none; -webkit-appearance: none; padding-right: 40px; cursor: pointer; font-weight: 500;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; }
+.owa-export__desc { margin: 10px 0 0; color: var(--owa-muted); font-size: 0.84rem; line-height: 1.55; max-width: 64ch; }
+.owa-export__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.owa-export__chip { padding: 6px 11px; border: 1px solid var(--owa-line); border-radius: 999px; background: var(--owa-panel); color: var(--owa-ink-2); font: inherit; font-size: 0.76rem; cursor: pointer; transition: border-color 140ms ease, color 140ms ease, background 140ms ease; }
+.owa-export__chip:hover { border-color: var(--owa-ink); color: var(--owa-ink); }
+.owa-export__chip.is-active { border-color: var(--owa-accent); background: var(--owa-accent-soft); color: var(--owa-accent); }
+.owa-export__dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.owa-export__dates .owa-field { margin-top: 0; }
+.owa-export__hint { margin: 8px 0 0; font-size: 0.76rem; color: var(--owa-faint); line-height: 1.5; }
+.owa-export__window { display: flex; align-items: baseline; gap: 12px; padding: 12px 14px; border: 1px solid var(--owa-accent-line); border-radius: var(--owa-r1); background: var(--owa-accent-soft); }
+.owa-export__window-k { font-family: var(--owa-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--owa-accent); }
+.owa-export__window-v { font-family: var(--owa-display); font-size: 1rem; font-weight: 500; color: var(--owa-ink); }
+.owa-export__check { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--owa-line); border-radius: var(--owa-r1); cursor: pointer; transition: border-color 140ms ease; }
+.owa-export__check + .owa-export__check { margin-top: 8px; }
+.owa-export__check:hover { border-color: var(--owa-ink); }
+.owa-export__check input { margin: 2px 0 0; accent-color: var(--owa-accent); width: 16px; height: 16px; flex: none; }
+.owa-export__check strong { display: block; color: var(--owa-ink); font-size: 0.86rem; font-weight: 600; }
+.owa-export__check small { display: block; margin-top: 3px; color: var(--owa-muted); font-size: 0.76rem; line-height: 1.5; }
+.owa-export__foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-top: 18px; padding: 14px 20px; border-top: 1px solid var(--owa-line); background: var(--owa-paper); }
+.owa-export__privacy { margin: 0; max-width: 46ch; font-size: 0.74rem; color: var(--owa-muted); line-height: 1.5; }
+.owa-export__submit { padding: 11px 18px; font-size: 0.86rem; }
+.owa-export__submit:disabled { opacity: 0.75; cursor: progress; }
+.owa-export__ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.owa-export__submit.is-busy .owa-export__ico { animation: owa-export-bob 900ms ease-in-out infinite; }
+@keyframes owa-export-bob { 0%, 100% { transform: translateY(-1px); } 50% { transform: translateY(2px); } }
+@media (prefers-reduced-motion: reduce) { .owa-export__submit.is-busy .owa-export__ico { animation: none; } }
+.owa-export__cols { margin: 0; padding: 12px 16px 12px 36px; font-size: 0.82rem; color: var(--owa-ink-2); line-height: 1.5; }
+.owa-export__cols li { padding: 3px 0; }
+.owa-export__cols li::marker { font-family: var(--owa-mono); font-size: 0.66rem; color: var(--owa-faint); }
+.owa-export__cols small, .owa-export__extra small { color: var(--owa-faint); font-size: 0.72rem; margin-left: 4px; }
+.owa-export__extra { display: none; margin: 0 16px 14px; padding: 10px 12px; border: 1px dashed var(--owa-accent-line); border-radius: var(--owa-r1); background: var(--owa-accent-soft); }
+.owa-export__extra.is-on { display: block; }
+.owa-export__extra-h { margin: 0 0 4px; font-family: var(--owa-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--owa-accent); }
+.owa-export__extra ul { margin: 0; padding-left: 18px; font-size: 0.8rem; color: var(--owa-ink-2); line-height: 1.6; }
+.owa-export__rules { margin-top: 16px; }
+.owa-export__rules p { margin: 0; padding: 14px 16px; font-size: 0.8rem; color: var(--owa-muted); line-height: 1.6; }
+.owa-export__rules strong { color: var(--owa-ink); font-weight: 600; }
+@media (max-width: 640px) {
+  .owa-export__body { padding: 4px 14px 8px; }
+  .owa-export__dates { grid-template-columns: 1fr; }
+  .owa-export__foot { padding: 14px; }
+  .owa-export__submit { width: 100%; justify-content: center; }
+}
+
+/* ── Admin home: header buttons (Deleted users / Expiring users / Export Excel) ── */
+.owa-dash-head__btns { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ── Deleted users / Expiring users (custom_admin/lifecycle) ── */
+.owa-life__filter { padding: 16px 18px; margin-bottom: 16px; }
+.owa-life__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.owa-life__chips a.owa-export__chip { text-decoration: none; }
+.owa-life__row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 14px; }
+.owa-life__dates { display: flex; flex-wrap: wrap; gap: 12px; }
+.owa-life__dates[hidden] { display: none; }
+.owa-life__search { flex: 1 1 240px; min-width: 0; }
+.owa-life__alert { margin: 12px 0 0; }
+.owa-life__window { margin: 0 0 12px; font-size: 0.84rem; color: var(--owa-muted); }
+.owa-life__window strong { color: var(--owa-ink); }
+.owa-life__kpis { margin-bottom: 16px; }
+.owa-life__table td { font-size: 0.84rem; line-height: 1.45; }
+.owa-life__table td, .owa-life__table th { padding: 12px 14px; border-bottom: 1px solid var(--owa-line); }
+.owa-life__sites { list-style: none; margin: 0; padding: 0; }
+.owa-life__sites li + li { margin-top: 4px; }
+.owa-life__badge--warn { color: #b26a00; border-color: rgb(178 106 0 / 0.35); background: rgb(178 106 0 / 0.06); }
+.owa-life__badge--danger { color: var(--owa-danger); border-color: rgb(180 35 24 / 0.3); background: rgb(180 35 24 / 0.06); }
+.owa-life__pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; font-size: 0.8rem; color: var(--owa-muted); }
+.owa-life__pager a { color: var(--owa-accent); }
+.owa-life__reason { margin-top: 4px; font-size: 0.76rem; color: var(--owa-muted); font-style: italic; }

@@ -17,7 +17,10 @@ __all__ = [
     "send_password_reset",
     "send_new_device_notice",
     "send_site_delete_code",
+    "send_account_delete_code",
     "send_business_hub_post",
+    "send_ask_answer",
+    "send_ask_code",
 ]
 
 logger = logging.getLogger(__name__)
@@ -118,9 +121,9 @@ def send_login_code(email: str, code: str, *, minutes: int) -> bool:
 
 
 def send_site_delete_code(email: str, code: str, *, site_name: str, minutes: int) -> bool:
-    """Email the one-time code that confirms permanently deleting a store.
+    """Email the one-time code that confirms deleting a store.
 
-    Deleting a store is destructive and irreversible from the owner's side, so it
+    Deleting a store is destructive and, past the recovery window, final, so it
     is gated behind an emailed code exactly like a sign-in. In local development
     the code is echoed to the console (same branch as sign-in codes) so the flow
     is testable without SMTP.
@@ -132,7 +135,39 @@ def send_site_delete_code(email: str, code: str, *, site_name: str, minutes: int
         email,
         f"{code} is your OneWooz store-deletion code",
         "site_delete_code",
-        {"code": code, "minutes": minutes, "email": email, "site_name": site_name},
+        {
+            "code": code, "minutes": minutes, "email": email, "site_name": site_name,
+            "retention_days": getattr(settings, "ACCOUNT_DELETION_RETENTION_DAYS", 60),
+            "note": (
+                "Deleting a store takes it off your dashboard and its storefront offline. "
+                "Its data stays on our servers for "
+                f"{getattr(settings, 'ACCOUNT_DELETION_RETENTION_DAYS', 60)} days; to get it "
+                "back within that time, contact OneWooz support. If you didn't ask to delete "
+                "this store, do NOT share this code. Ignore this email and the store stays "
+                "exactly as it is."
+            ),
+        },
+    )
+
+
+def send_account_delete_code(email: str, code: str, *, minutes: int, retention_days: int) -> bool:
+    """Email the one-time code that confirms deleting the whole OneWooz account."""
+    if getattr(settings, "OTP_CONSOLE_ECHO", False):
+        _echo_otp_to_console(email, code, minutes)
+        return True
+    return _send(
+        email,
+        f"{code} is your OneWooz account-deletion code",
+        "account_delete_code",
+        {
+            "code": code, "minutes": minutes, "email": email, "retention_days": retention_days,
+            "note": (
+                f"Your account and store data stay on our servers for {retention_days} days. "
+                "Sign in again within that time to restore everything (renew your plan first "
+                "if it has expired). If you didn't ask to delete your account, do NOT share "
+                "this code. Ignore this email and nothing changes."
+            ),
+        },
     )
 
 
@@ -169,4 +204,27 @@ def send_business_hub_post(
             "name": name,
             "has_video": has_video,
         },
+    )
+
+
+def send_ask_code(email: str, code: str, *, minutes: int) -> bool:
+    """One-time code that confirms an email to join the Ask OneWooz community."""
+    if getattr(settings, "OTP_CONSOLE_ECHO", False):
+        _echo_otp_to_console(email, code, minutes)
+        return True
+    return _send(
+        email,
+        f"{code} is your Ask OneWooz code",
+        "ask_code",
+        {"code": code, "minutes": minutes, "email": email},
+    )
+
+
+def send_ask_answer(email: str, *, question: str, preview: str, url: str) -> bool:
+    """The OneWooz team answered a question this visitor asked on /ask."""
+    return _send(
+        email,
+        "We answered your question on OneWooz",
+        "ask_answer",
+        {"question": question, "preview": preview, "url": url},
     )

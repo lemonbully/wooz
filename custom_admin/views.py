@@ -164,6 +164,11 @@ def _admin_context(request, nav: str, **extra) -> dict:
 # Quick links on the overview: (admin changelist url name, title, description, icon).
 _OVERVIEW_TOOLS = (
     ("admin:index", "Database", "Every model and table, with search, filters and bulk actions.", "db"),
+    ("custom_admin:expiring_users", "Expiring users", "Owners whose paid plan ends soon, by duration.", "receipt"),
+    ("custom_admin:deleted_users", "Deleted users", "Owners who deleted their account, with plan, stores and recovery date.", "users"),
+    ("custom_admin:export_excel", "Export Excel", "Sales, renewal and deletion reports as formatted Excel workbooks.", "file"),
+    ("mkt_console:overview", "Marketplace", "OneWooz Apps: build apps, price designs, licences, orders, health and alerts.", "tag"),
+    ("ask_console:overview", "Ask OneWooz", "The community: moderation queue, bans, threads, topic rooms, AI answers and the weekly digest.", "chat"),
     ("custom_admin:email_templates", "Email templates", "Build and publish the email templates stores send.", "mail"),
     ("admin:ud_businesshubpost_changelist", "Business hub", "News, help and important posts for owners' dashboards.", "megaphone"),
     ("admin:accounts_dashboarduser_changelist", "Store owners", "Owner accounts: status, contact details, access.", "users"),
@@ -207,7 +212,7 @@ def _overview_kpis():
             value = None
         kpis.append({"label": label, "value": "–" if value is None else value, "sub": sub})
 
-    add("Store owners", lambda: f"{User.objects.filter(is_staff=False, is_active=True).count():,}", "Active accounts")
+    add("Store owners", lambda: f"{User.objects.filter(is_staff=False, is_active=True, account_deleted_at__isnull=True).count():,}", "Active accounts")
 
     def _stores():
         from tenancy.models import Site
@@ -559,3 +564,239 @@ def reset(request):
     audit.record("admin.password.reset", request=request, actor=user, actor_kind="user")
     logger.warning("admin password reset completed: email=%s ip=%s", user.email, request.META.get("REMOTE_ADDR"))
     return redirect(reverse("custom_admin:sign_in") + "?reset=1")
+
+
+# --------------------------------------------------------------------------
+# Excel reports (Export Excel on the admin home)
+# --------------------------------------------------------------------------
+# One page to pick a report (sales or renewals), an optional payment-date range
+# and a couple of filters; the download is a styled .xlsx built by
+# custom_admin.exports (data) and custom_admin.export_workbook (layout). The
+# export carries customer PII, so it is a POST, rate limited and audit logged.
+
+
+def _export_page(request, *, error="", values=None, status=200):
+    from . import exports
+
+    today = timezone.localdate()
+    renewal_reports = [
+        {"key": r.key, "label": r.label, "description": r.description,
+         "window": exports.renewal_window(r.key, today)[2]}
+        for r in exports.REPORTS if not r.uses_date_range
+    ]
+    return render(
+        request,
+        "custom_admin/export_excel.html",
+        _admin_context(
+            request,
+            "exports",
+            title="Export Excel",
+            sales_reports=[r for r in exports.REPORTS if r.uses_date_range],
+            renewal_reports=renewal_reports,
+            retention_days=exports.retention_days(),
+            today=today,
+            error=error,
+            values=values or {"report": "subscription_sales"},
+        ),
+        status=status,
+    )
+
+
+def _parse_date(raw: str):
+    import datetime as _dt
+
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        return _dt.date.fromisoformat(raw)
+    except ValueError:
+        raise ValueError(f"“{raw}” is not a valid date.") from None
+
+
+@require_http_methods(["GET", "POST"])
+def export_excel(request):
+    from django.http import HttpResponse
+
+    from core import audit
+
+    from . import export_workbook, exports
+
+    if request.method == "GET":
+        return _export_page(request)
+
+    values = {
+        "report": (request.POST.get("report") or "").strip(),
+        "date_from": (request.POST.get("date_from") or "").strip(),
+        "date_to": (request.POST.get("date_to") or "").strip(),
+        "include_zero": request.POST.get("include_zero") == "1",
+        "include_review": request.POST.get("include_review") == "1",
+    }
+    spec = exports.REPORTS_BY_KEY.get(values["report"])
+    if spec is None:
+        return _export_page(request, error="Choose a report to export.", values=values, status=400)
+    try:
+        date_from = _parse_date(values["date_from"]) if spec.uses_date_range else None
+        date_to = _parse_date(values["date_to"]) if spec.uses_date_range else None
+    except ValueError as exc:
+        return _export_page(request, error=str(exc), values=values, status=400)
+    if date_from and date_to and date_from > date_to:
+        return _export_page(
+            request, error="The start date is after the end date.", values=values, status=400
+        )
+
+    if not ratelimit.consume("admin.export", str(request.user.pk)).allowed:
+        return _export_page(
+            request,
+            error="Too many exports in a short time. Please wait a few minutes and try again.",
+            values=values,
+            status=429,
+        )
+
+    report = exports.build(
+        spec.key,
+        date_from=date_from,
+        date_to=date_to,
+        include_zero=values["include_zero"],
+        include_review=values["include_review"],
+        request=request,
+    )
+    data = export_workbook.to_xlsx(report)
+    name = export_workbook.filename(report, date_from, date_to)
+
+    audit.record(
+        "admin.report.exported",
+        request=request,
+        actor_kind="admin",
+        target_kind="ExcelReport",
+        target_label=spec.label,
+        context={
+            "report": spec.key,
+            "period": report.period_label,
+            "filters": report.filters,
+            "records": len(report.rows),
+            "file": name,
+        },
+    )
+
+    response = HttpResponse(
+        data, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{name}"'
+    response["Cache-Control"] = "no-store"
+    # Lets the page's script know the file is ready (see export_excel.html).
+    token = (request.POST.get("download_token") or "")[:40]
+    if token.replace("-", "").isalnum():
+        response.set_cookie("ow_export_done", token, max_age=60, secure=request.is_secure(),
+                            samesite="Strict", path="/")
+    return response
+
+
+# --------------------------------------------------------------------------
+# Deleted users / Expiring users (buttons on the admin home)
+# --------------------------------------------------------------------------
+# Read-only lists built by custom_admin.lifecycle, each with a duration filter
+# (quick ranges plus a custom date range), search and paging. Both show owner
+# contact details, so they need the "view user" permission.
+
+
+def _require_user_view(request) -> None:
+    from django.core.exceptions import PermissionDenied
+
+    if not (request.user.has_perm("accounts.view_user") or request.user.has_perm("accounts.change_user")):
+        raise PermissionDenied
+
+
+def _search(rows, q: str):
+    q = (q or "").strip().lower()
+    if not q:
+        return rows
+    def hit(r):
+        hay = " ".join([r.name or "", r.email or "", r.phone or "", r.company or ""]
+                       + [s["name"] + " " + s["address"] for s in r.sites])
+        return q in hay.lower()
+    return [r for r in rows if hit(r)]
+
+
+def _paged(request, rows, per_page=50):
+    from django.core.paginator import Paginator
+
+    return Paginator(rows, per_page).get_page(request.GET.get("page") or 1)
+
+
+def _query_without_page(request) -> str:
+    params = request.GET.copy()
+    params.pop("page", None)
+    return params.urlencode()
+
+
+@require_http_methods(["GET"])
+def deleted_users(request):
+    from accounts import deletion
+
+    from . import lifecycle
+
+    _require_user_view(request)
+    window = lifecycle.deleted_window(request.GET)
+    rows = lifecycle.deleted_users(window)
+    q = (request.GET.get("q") or "").strip()
+    rows = _search(rows, q)
+    counts = {
+        "total": len(rows),
+        "recoverable": sum(1 for r in rows if r.state == "recoverable"),
+        "awaiting_renewal": sum(1 for r in rows if r.state == "awaiting_renewal"),
+        "closed": sum(1 for r in rows if r.state == "closed"),
+        "stores": sum(len(r.sites) for r in rows),
+    }
+    return render(
+        request,
+        "custom_admin/deleted_users.html",
+        _admin_context(
+            request,
+            "deleted_users",
+            title="Deleted users",
+            window=window,
+            ranges=lifecycle.DELETED_RANGES,
+            page=_paged(request, rows),
+            counts=counts,
+            q=q,
+            qs=_query_without_page(request),
+            retention_days=deletion.retention_days(),
+            today=timezone.localdate(),
+        ),
+    )
+
+
+@require_http_methods(["GET"])
+def expiring_users(request):
+    from . import lifecycle
+
+    _require_user_view(request)
+    window = lifecycle.expiring_window(request.GET)
+    rows = lifecycle.expiring_users(window)
+    q = (request.GET.get("q") or "").strip()
+    rows = _search(rows, q)
+    from decimal import Decimal
+
+    counts = {
+        "total": len(rows),
+        "today": sum(1 for r in rows if r.days_left == 0),
+        "week": sum(1 for r in rows if r.days_left <= 7),
+        "value": sum((r.amount or Decimal("0")) for r in rows),
+    }
+    return render(
+        request,
+        "custom_admin/expiring_users.html",
+        _admin_context(
+            request,
+            "expiring_users",
+            title="Expiring users",
+            window=window,
+            ranges=lifecycle.EXPIRING_RANGES,
+            page=_paged(request, rows),
+            counts=counts,
+            q=q,
+            qs=_query_without_page(request),
+            today=timezone.localdate(),
+        ),
+    )

@@ -1,0 +1,40 @@
+{% comment %}
+  Template 3 <head> metadata: the same tracking, SEO, Open Graph, canonical and
+  JSON-LD every storefront theme prints (mirrors storefront/theme_base.html),
+  without that base's Tailwind and Font Awesome, which Template 3 does not use.
+{% endcomment %}
+{% load website_filters %}{% include "storefront/_tracking_head.html" %}
+{% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
+{% firstof website.content.site_name website.content.websiteName website.name "Store" as site_name %}
+{% if seo.page_meta_title %}<title>{{ seo.page_meta_title }}</title>{% elif page_title %}<title>{{ page_title }} | {{ site_name }}</title>{% else %}<title>{{ site_name }}</title>{% endif %}
+{% comment %} Edit Content → Brand favicon: a stored media path or URL, any image type (PNG, ICO, SVG), so no fixed type is declared and the browser sniffs it. {% endcomment %}
+{% if website.content.favicon %}{% with fav=website.content.favicon|absolute_media_url %}<link rel="icon" href="{{ fav }}"><link rel="apple-touch-icon" href="{{ fav }}">{% endwith %}{% endif %}
+{% firstof seo.meta_description page.content.meta_description website.content.seo.meta_description website.content.meta_description website.content.description as desc %}
+{% if desc %}<meta name="description" content="{{ desc }}">{% endif %}
+{% firstof seo.keywords website.content.seo.keywords website.content.seo.meta_keywords page.content.meta_keywords website.content.meta_keywords as kws %}
+{% if kws %}<meta name="keywords" content="{{ kws }}">{% endif %}
+{% if website.content.seo.custom_meta_tags %}{% for tag in website.content.seo.custom_meta_tags %}{% if tag.kind == 'property' and tag.key and tag.content %}<meta property="{{ tag.key|escape }}" content="{{ tag.content|escape }}">{% elif tag.kind == 'http_equiv' and tag.key and tag.content %}<meta http-equiv="{{ tag.key|escape }}" content="{{ tag.content|escape }}">{% elif tag.key and tag.content %}<meta name="{{ tag.key|escape }}" content="{{ tag.content|escape }}">{% endif %}{% endfor %}{% endif %}
+{% if noindex or seo.noindex %}<meta name="robots" content="noindex, nofollow">{% else %}<meta name="robots" content="index, follow">{% endif %}
+{% firstof seo.og_title website.content.seo.og_title seo.meta_title website.content.seo.meta_title page.title website.content.site_name website.content.websiteName as ogt %}
+{% if ogt %}<meta property="og:title" content="{{ ogt }}">{% endif %}
+{% firstof seo.og_description website.content.seo.og_description seo.meta_description website.content.seo.meta_description page.content.meta_description website.content.meta_description website.content.description as ogd %}
+{% if ogd %}<meta property="og:description" content="{{ ogd }}">{% endif %}
+{% firstof seo.og_site_name website.content.site_name website.content.websiteName as ogsn %}
+{% if ogsn %}<meta property="og:site_name" content="{{ ogsn }}"><meta name="application-name" content="{{ ogsn }}">{% endif %}
+{% firstof seo.canonical_url canonical_url as page_canonical %}
+{% firstof seo.og_url page_canonical as ogu %}
+{% if ogu %}<meta property="og:url" content="{{ ogu }}">{% endif %}
+{% firstof seo.og_image website.content.seo.og_image as ogi %}
+{% if ogi %}<meta property="og:image" content="{{ ogi }}">{% endif %}
+<meta property="og:type" content="{{ seo.og_type|default:'website' }}">
+{% firstof seo.twitter_image as twi %}
+<meta name="twitter:card" content="{% if twi %}summary_large_image{% else %}summary{% endif %}">
+{% firstof seo.twitter_title seo.meta_title as twt %}{% if twt %}<meta name="twitter:title" content="{{ twt }}">{% endif %}
+{% firstof seo.twitter_description seo.meta_description as twd %}{% if twd %}<meta name="twitter:description" content="{{ twd }}">{% endif %}
+{% if twi %}<meta name="twitter:image" content="{{ twi }}">{% endif %}
+{% firstof seo.twitter_url page_canonical as twu %}{% if twu %}<meta name="twitter:url" content="{{ twu }}">{% endif %}
+{% firstof seo.twitter_brand_name as twsite %}{% if twsite %}<meta name="twitter:site" content="{{ twsite }}">{% endif %}
+{% if page_canonical %}<link rel="canonical" href="{{ page_canonical }}">{% endif %}
+{% if page_schema_json %}<script type="application/ld+json">{{ page_schema_json|safe }}</script>{% endif %}
+{% if website.content.seo.raw_schema_json %}<script type="application/ld+json">{{ website.content.seo.raw_schema_json|safe }}</script>{% endif %}
+{% if website.content.head_scripts %}{{ website.content.head_scripts|safe }}{% endif %}

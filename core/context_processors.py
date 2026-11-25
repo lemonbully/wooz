@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from django.conf import settings
+
 from . import links
 from .hosts import Surface
 
@@ -25,4 +27,8 @@ def security(request):
         "marketing_origin": links.surface_origin(Surface.MARKETING, request),
         "app_origin": links.surface_origin(Surface.APP, request),
         "admin_origin": links.surface_origin(Surface.ADMIN, request),
+        "marketplace_origin": links.surface_origin(Surface.MARKETPLACE, request),
+        # Dashboard notification bell polling intervals (ms); see settings.
+        "bell_poll_visible_ms": getattr(settings, "BELL_POLL_VISIBLE_MS", 15000),
+        "bell_poll_hidden_ms": getattr(settings, "BELL_POLL_HIDDEN_MS", 60000),
     }

@@ -1,86 +1,91 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Order Confirmed | Mellow Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Caveat:wght@700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
-<div data-header></div>
+{% extends "storefront/template3/_base.html" %}
+{% load website_filters %}
+{% comment %}
+  Template 3 order confirmation for a placed order (order_confirmation view):
+  its number, items, totals, how it was paid, the delivery address and where
+  it is on Ordered → Confirmed → Shipped → Delivered.
+{% endcomment %}
+{% block main %}
+{% with sym=website.currency|currency_symbol %}
 <main class="container container--narrow" style="max-width:980px">
   <div class="confirm-hero">
     <div class="confirm-check" data-check></div>
-    <p class="eyebrow muted">Order #MLW-24816</p>
-    <h1 class="h1" style="margin:8px 0">Thank you, Aarav!</h1>
-    <p class="muted">Your order is confirmed. We have sent a confirmation to <b style="color:#000">aarav.mehta@example.com</b> and on WhatsApp.</p>
+    <p class="eyebrow muted">Order #{{ order.display_number }}</p>
+    <h1 class="h1" style="margin:8px 0">Thank you{% if confirm_first_name %}, {{ confirm_first_name }}{% endif %}!</h1>
+    <p class="muted">{% if order.status == 'cancelled' %}This order was cancelled.{% else %}Your order is confirmed.{% endif %}{% if order.customer_email %} We have sent a confirmation to <b style="color:#000">{{ order.customer_email }}</b>.{% endif %}</p>
   </div>
 
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <div><b>Estimated delivery</b><div class="muted small" data-eta></div></div>
-      <span class="status status--processing">Processing</span>
+      <div><b>Delivery</b><div class="muted small">{% if order.status == 'delivered' %}Delivered{% if order.delivered_at %} on {{ order.delivered_at|date:"D, j M" }}{% endif %}{% elif order.status == 'shipped' %}On its way{% if order.shipped_at %} since {{ order.shipped_at|date:"D, j M" }}{% endif %}{% else %}We will email you tracking details as soon as it ships.{% endif %}</div></div>
+      {% if order.status == 'delivered' %}<span class="status status--delivered">Delivered</span>
+      {% elif order.status == 'shipped' %}<span class="status status--shipped">Shipped</span>
+      {% elif order.status == 'cancelled' %}<span class="status status--cancelled">Cancelled</span>
+      {% else %}<span class="status status--processing">{% if order.status == 'created' %}Placed{% else %}{{ order.get_status_display }}{% endif %}</span>{% endif %}
     </div>
-    <div class="tracker">
-      <div class="done"><i data-tick></i>Order placed</div>
-      <div class="done"><i>2</i>Packed</div>
-      <div><i>3</i>Shipped</div>
-      <div><i>4</i>Delivered</div>
+    <div class="tracker" data-step="{% for s in confirm_steps %}{% if s.current %}{{ forloop.counter }}{% endif %}{% endfor %}">
+      {% for s in confirm_steps %}<div class="{% if s.done %}done{% endif %}"><i>{% if s.done %}<span data-tick></span>{% else %}{{ forloop.counter }}{% endif %}</i>{{ s.label }}{% if s.at and s.done %}<div class="small muted" style="font-weight:500">{{ s.at|date:"j M" }}</div>{% endif %}</div>{% endfor %}
     </div>
-    <p class="small muted center">You can edit or cancel this order until it is packed, usually within 6 hours.</p>
+    <p class="small muted center">{% if order.status == 'created' or order.status == 'confirmed' or order.status == 'paid' %}Need to change something? You can request a cancellation from your account until the order ships.{% else %}Questions about this order? We are happy to help.{% endif %}</p>
   </div>
 
   <div class="cart-layout cart-layout--narrow" style="margin-top:22px">
     <div class="card">
       <h2 class="h4" style="margin-bottom:14px">Order items</h2>
-      <div data-items></div>
+      {% for it in order_items %}
+      <div class="sum-item" style="grid-template-columns:72px 1fr auto"><div class="sum-item__img" style="aspect-ratio:3/4">{% if it.thumb %}<img src="{{ it.thumb.url }}" alt="">{% else %}<img src="" data-fallback alt="">{% endif %}<span>{{ it.quantity }}</span></div><div><b>{{ it.title }}</b>{% if it.variant_label %}<small>{{ it.variant_label }}</small>{% endif %}</div><b>{{ sym }}{{ it.line_total }}</b></div>
+      {% endfor %}
     </div>
     <div class="card card--soft">
       <h2 class="h4" style="margin-bottom:10px">Payment summary</h2>
-      <div class="sum-rows" data-rows></div>
+      <div class="sum-rows">
+        <div><span class="muted">Subtotal</span><span>{{ sym }}{{ order.subtotal }}</span></div>
+        {% if order.discount_amount %}<div style="color:var(--ok)"><span>Discount</span><span>- {{ sym }}{{ order.discount_amount }}</span></div>{% endif %}
+        {% if order.credit_discount_amount %}<div style="color:var(--ok)"><span>Store credit</span><span>- {{ sym }}{{ order.credit_discount_amount }}</span></div>{% endif %}
+        {% if order.tax_amount %}<div><span class="muted">Tax</span><span>{{ sym }}{{ order.tax_amount }}</span></div>{% endif %}
+        <div><span class="muted">Shipping</span><span>{% if order.shipping_amount %}{{ sym }}{{ order.shipping_amount }}{% else %}Free{% endif %}</span></div>
+        <div class="total"><span>Total</span><span>{{ sym }}{{ order.total }}</span></div>
+        {% if confirm_payment.paid and confirm_payment.due %}
+        <div><span class="muted">Paid now</span><span>{{ sym }}{{ confirm_payment.paid }}</span></div>
+        <div><span class="muted">Due on delivery</span><span>{{ sym }}{{ confirm_payment.due }}</span></div>
+        {% elif confirm_payment.due %}<div><span class="muted">Due on delivery</span><span>{{ sym }}{{ confirm_payment.due }}</span></div>{% endif %}
+      </div>
     </div>
   </div>
 
   <div class="card" style="margin-top:22px">
     <div class="info-grid">
-      <div><h4>Shipping address</h4><p>Aarav Mehta<br>B-1204, Lodha Splendora<br>Andheri West, near Infiniti Mall<br>Mumbai, Maharashtra 400053<br>+91 98765 43210</p></div>
-      <div><h4>Payment method</h4><p data-pay>UPI · Paid</p><h4 style="margin-top:18px">Shipping method</h4><p>Standard delivery · Free</p></div>
+      <div><h4>Shipping address</h4><p>{{ order.customer_name }}{% if order.shipping_address %}<br>{{ order.shipping_address }}{% endif %}{% if order.shipping_city %}<br>{{ order.shipping_city }}{% if order.shipping_state %}, {{ order.shipping_state }}{% endif %} {{ order.shipping_pincode }}{% endif %}{% if order.customer_phone %}<br>{{ order.customer_phone }}{% endif %}</p></div>
+      <div><h4>Payment method</h4><p>{{ confirm_payment.label|default:"Not recorded" }}</p><h4 style="margin-top:18px">Shipping method</h4><p>Standard delivery · {% if order.shipping_amount %}{{ sym }}{{ order.shipping_amount }}{% else %}Free{% endif %}</p></div>
     </div>
   </div>
 
   <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:28px">
-    <a class="btn btn--black btn--arrow" href="account.html#orders">Track Order <span class="btn__dot" data-ico="arrow"></span></a>
-    <a class="btn btn--grey" href="order-invoice.html" onclick="T3.toast('Invoice downloads once the order ships');return false;">Download Invoice</a>
-    <a class="btn btn--outline" href="shop.html">Continue Shopping</a>
+    <a class="btn btn--black btn--arrow" href="{% url 'public_user_account' %}#orders">Track Order <span class="btn__dot" data-ico="arrow"></span></a>
+    {% if order.status == 'delivered' and customer_email %}<a class="btn btn--grey" href="{% url 'public_order_invoice' order.id %}" target="_blank" rel="noopener">Download Invoice</a>{% else %}<a class="btn btn--grey" href="#" data-invoice-later>Download Invoice</a>{% endif %}
+    <a class="btn btn--outline" href="{% url 'public_all_products' %}">Continue Shopping</a>
   </div>
 
-  <section class="section" style="padding-bottom:0">
+  <section class="section" style="padding-bottom:0" data-sec-more>
     <div class="sec-head"><h2 class="h2">Complete the look</h2></div>
     <div class="grid grid--4" data-more></div>
   </section>
 </main>
-<div data-footer></div>
-<script src="assets/js/data.js"></script>
-<script>
+{% endwith %}
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ csp_nonce }}">
 window.T3Page = function () {
   const D = T3, I = T3.I, $ = T3.$;
   $('[data-check]').innerHTML = I.check.replace(/14/g, '34');
-  $('[data-tick]').innerHTML = I.check;
+  document.querySelectorAll('[data-tick]').forEach(e => e.outerHTML = I.check);
   document.querySelectorAll('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
-  const last = T3.store.get('t3_last_order', null);
-  const items = (last && last.items && last.items.length) ? last.items : T3.getCart();
-  const d1 = new Date(Date.now() + 3 * 864e5), d2 = new Date(Date.now() + 5 * 864e5), f = d => d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
-  $('[data-eta]').textContent = `${f(d1)} to ${f(d2)}`;
-  let sub = 0;
-  $('[data-items]').innerHTML = items.map(l => { const p = T3.byId(l.id); sub += p.price * l.qty; return `<div class="sum-item" style="grid-template-columns:72px 1fr auto"><div class="sum-item__img" style="aspect-ratio:3/4"><img src="${p.img[0]}" alt=""><span>${l.qty}</span></div><div><b>${p.name}</b><small>${p.catName} · ${l.size}</small></div><b>${T3.inr(p.price * l.qty)}</b></div>`; }).join('');
-  const pre = Math.round(sub * .05);
-  $('[data-rows]').innerHTML = `<div><span class="muted">Subtotal</span><span>${T3.inr(sub)}</span></div><div style="color:var(--ok)"><span>Prepaid discount</span><span>- ${T3.inr(pre)}</span></div><div><span class="muted">Shipping</span><span>Free</span></div><div class="total"><span>Paid</span><span>${T3.inr(sub - pre)}</span></div>`;
-  if (last && last.pay) $('[data-pay]').textContent = { online: 'UPI · Paid', cod: 'Cash on Delivery', partial: 'Partial COD · ₹299 paid' }[last.pay];
-  $('[data-more]').innerHTML = D.products.slice(16, 20).map(p => T3.card(p)).join('');
+  document.querySelectorAll('[data-fallback]').forEach((e, i) => e.src = D.U('@cat' + i, 300, 400));
+  $('[data-invoice-later]')?.addEventListener('click', e => { e.preventDefault(); T3.toast(D.signedIn ? 'Your invoice is available once the order is delivered' : 'Sign in with your order email to download the invoice once it is delivered'); });
+  const more = D.products.filter(p => p.inStock).slice(0, 4);
+  $('[data-more]').innerHTML = more.map(p => T3.card(p)).join('');
+  if (!more.length) $('[data-sec-more]').hidden = true;
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

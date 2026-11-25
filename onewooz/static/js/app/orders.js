@@ -6,6 +6,13 @@
 (function () {
   "use strict";
 
+  // Results surface in the universal toast stack (js/app/toast.js): errors in
+  // red, confirmations in green. Falls back to a plain alert if it's missing.
+  function owAlert(msg, ok) {
+    if (window.OWToast) { if (ok) window.OWToast.success(msg); else window.OWToast.error(msg); }
+    else window.alert(msg);
+  }
+
   function cookie(name) {
     try {
       var m = ("; " + document.cookie).split("; " + name + "=");
@@ -107,12 +114,12 @@
         if (d && d.success) {
           // Reload only when the status moved, so the order lands in its new tab.
           if (d.changed) { window.location.reload(); return; }
-          alert(d.message || "Already up to date.");
+          owAlert(d.message || "Already up to date.", true);
         } else {
-          alert("Sync failed: " + ((d && d.error) || "Unknown error"));
+          owAlert("Sync failed: " + ((d && d.error) || "Unknown error"));
         }
       })
-      .catch(function () { alert("Sync request failed. Check your connection."); })
+      .catch(function () { owAlert("Sync request failed. Check your connection."); })
       .finally(function () { btn.disabled = false; btn.classList.remove("is-busy"); btn.innerHTML = orig; });
   });
 
@@ -515,11 +522,11 @@
         var provider = openBtn.getAttribute("data-provider") || "";
         var ids = selectedIds();
         if (!ids.length) {
-          alert("Select the orders to ship, then click Generate & Request Pickup.");
+          owAlert("Select the orders to ship, then click Generate & Request Pickup.");
           return;
         }
         if (provider === "delhivery" && new Date().getHours() >= 11) {
-          alert("Delhivery pickups can be requested only between 12:00 AM and 11:00 AM.");
+          owAlert("Delhivery pickups can be requested only between 12:00 AM and 11:00 AM.");
           return;
         }
         var box = el("ordShipSelected");
@@ -627,7 +634,7 @@
         var single = openBtn.getAttribute("data-order-id");
         var ids = single ? [single] : selectedIds();
         if (!ids.length) {
-          alert("Select at least one order to generate labels.");
+          owAlert("Select at least one order to generate labels.");
           return;
         }
         var box = el("ordLabelSelected");
@@ -666,10 +673,10 @@
               return r.blob().then(function (b) { downloadBlob(b, m ? m[1] : "labels.pdf"); });
             }
             return r.json()
-              .then(function (d) { alert((d && d.error) || "Label generation failed."); })
-              .catch(function () { alert("Label generation failed."); });
+              .then(function (d) { owAlert((d && d.error) || "Label generation failed."); })
+              .catch(function () { owAlert("Label generation failed."); });
           })
-          .catch(function () { alert("Label generation failed. Check your connection."); })
+          .catch(function () { owAlert("Label generation failed. Check your connection."); })
           .finally(function () {
             if (btn) { btn.disabled = false; btn.innerHTML = orig; }
             closeModal();

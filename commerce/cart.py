@@ -19,7 +19,9 @@ from commerce.models import Product
 
 CART_SESSION_KEY = "ow_cart"
 COUPON_SESSION_KEY = "ow_coupon"
-MAX_QTY_PER_LINE = 99
+#: Most units of one line, matching the product pages' quantity boxes (1-100)
+#: and the Quantity Discounts ceiling (commerce.quantity_pricing.MAX_TIER_QTY).
+MAX_QTY_PER_LINE = 100
 
 _TWO = Decimal("0.01")
 
@@ -291,6 +293,14 @@ class Cart:
         self.session[CART_SESSION_KEY] = self.data
         self.session.modified = True
 
+    def _changed(self):
+        """Save a change the shopper made, and mirror it for the abandoned cart
+        reminders (a no-op unless they are signed in and the store opted in)."""
+        self._save()
+        from commerce import abandoned_cart
+
+        abandoned_cart.record_activity(self.request, self.site, self.data)
+
     def add(self, product_id, qty: int = 1, variant_key: str = "", attributes=None):
         """Add ``qty`` of a product (optionally a specific variation).
 
@@ -303,6 +313,11 @@ class Cart:
         lk = self._line_key(pid, vk)
         line = self.data.get(lk)
         current = int(line["qty"]) if isinstance(line, dict) else 0
+        more = self._quantity_room(pid, vk)
+        if more is not None:
+            if more <= 0:
+                return
+            qty = min(max(1, qty), more)
         self.data[lk] = {
             "pid": pid,
             "vk": vk,
@@ -311,7 +326,7 @@ class Cart:
         attrs = clean_attrs(attributes) if vk else []
         if attrs:
             self.data[lk]["attrs"] = attrs
-        self._save()
+        self._changed()
 
     def qty_of(self, product_id, variant_key: str = "") -> int:
         """Units of this product (+ variation) already in the cart."""
@@ -328,9 +343,31 @@ class Cart:
             self.data.pop(lk, None)
         else:
             qty = self._stock_cap(line, qty)
+            room = self._quantity_room(str(line.get("pid")), str(line.get("vk") or ""), exclude=lk)
+            if room is not None:
+                qty = max(1, min(qty, room))
             line["qty"] = min(MAX_QTY_PER_LINE, qty)
             self.data[lk] = line
-        self._save()
+        self._changed()
+
+    def _quantity_room(self, pid: str, vk: str = "", exclude: str = ""):
+        """Units of this product the store's quantity-discount limit still
+        allows (``None`` = no limit). ``exclude`` leaves one line out of the
+        count (the line being set)."""
+        from commerce import quantity_pricing as qp
+
+        if not qp.is_live(self.site):
+            return None
+        product = (
+            Product.objects.for_site(self.site)
+            .filter(pk=pid, is_active=True, is_deleted=False)
+            .first()
+        )
+        if product is None:
+            return None
+        data = {k: v for k, v in self.data.items() if k != exclude} if exclude else self.data
+        room, _plan = qp.allowed_more(self.site, product, data, vk)
+        return room
 
     def _stock_cap(self, line: dict, qty: int) -> int:
         """Cap a requested quantity at the stock left. A line whose item sold
@@ -352,12 +389,25 @@ class Cart:
 
     def remove(self, line_key):
         self.data.pop(str(line_key), None)
-        self._save()
+        self._changed()
 
     def clear(self):
+        """Empty the cart after a placed order (checkout is the only caller), so
+        any abandoned cart reminders for it stop."""
         self.data = {}
         self.session.pop(COUPON_SESSION_KEY, None)
         self._save()
+        from commerce import abandoned_cart
+
+        abandoned_cart.mark_converted(self.request, self.site)
+
+    def track_signed_in(self):
+        """A shopper just signed in with items already in their cart: start the
+        reminder sequence for them as if they had just changed it."""
+        if self.data:
+            from commerce import abandoned_cart
+
+            abandoned_cart.record_activity(self.request, self.site, self.data)
 
     # -- reading -----------------------------------------------------------
     def _products(self):
@@ -432,6 +482,11 @@ class Cart:
             )
         if pruned:
             self._save()
+        # Quantity discounts (the Quantity Discounts app): lowers unit_price /
+        # line_total of lines that reach a tier; a no-op when the app is off.
+        from commerce import quantity_pricing as qp
+
+        qp.apply_to_lines(self.site, out, self._currency())
         return out
 
     def count(self) -> int:
@@ -479,11 +534,13 @@ class Cart:
         meeting its minimum, or ceases to apply falls away on its own.
         """
         from commerce import discounts as engine
+        from commerce import quantity_pricing as qp
 
+        lines, base, _left_out = qp.coupon_lines(self.site, self.items())
         return engine.compute(
             self.site,
-            lines=self.items(),
-            subtotal=self.subtotal(),
+            lines=lines,
+            subtotal=base,
             code=self.coupon_code,
             customer=None,  # guest cart; eligibility is re-checked at checkout
             currency=self._currency(),
@@ -498,12 +555,18 @@ class Cart:
         if not code:
             self.clear_coupon()
             return True, "Coupon removed."
+        from commerce import quantity_pricing as qp
+
+        lines, base, left_out = qp.coupon_lines(self.site, self.items())
         result = engine.compute(
-            self.site, lines=self.items(), subtotal=self.subtotal(),
+            self.site, lines=lines, subtotal=base,
             code=code, customer=None, currency=self._currency(), strict=False,
         )
         if result.code_error or result.code_coupon is None:
-            return False, result.code_error or "That code isn’t valid."
+            msg = result.code_error or "That code isn’t valid."
+            if left_out and result.code_coupon is not None:
+                msg += " Codes don’t apply to items already at a quantity price."
+            return False, msg
         self.session[COUPON_SESSION_KEY] = result.code_coupon.code
         self.session.modified = True
         return True, f"“{result.code_coupon.code}” applied."

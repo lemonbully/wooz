@@ -1,0 +1,104 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Overview{% endblock %}
+{% block heading %}Overview{% endblock %}
+{% block lead %}<p>OneWooz Apps at a glance: what's live, what owners have, money in, and anything that needs attention.</p>{% endblock %}
+{% block actions %}
+  {% if can_write %}<a class="pal-btn" href="{% url 'mkt_console:app_new' %}">New app <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>{% endif %}
+  <a class="pal-btn pal-btn--ghost" href="{{ live_url }}" target="_blank" rel="noopener">View marketplace &#8599;</a>
+{% endblock %}
+
+{% block main %}
+{% if mkt_settings.is_enabled %}
+<div class="mc-status">
+  <span class="mc-status__txt"><span class="mc-dot"></span> Marketplace is open. Browsing, installs and purchases are on.</span>
+  {% if can_write %}<form method="post" action="{% url 'mkt_console:toggle' %}" data-confirm="Close the marketplace? Browsing, installs and purchases stop. Everything already installed keeps working.">{% csrf_token %}<button class="pal-btn pal-btn--ghost" type="submit">Close marketplace</button></form>{% endif %}
+</div>
+{% endif %}
+
+{% if not has_recipients %}
+<div class="mc-status">
+  <span class="mc-status__txt"><span class="mc-dot mc-dot--warn"></span> Nobody receives marketplace alerts yet (auto-pauses, payment mismatches).</span>
+  <a class="pal-btn pal-btn--ghost" href="{% url 'mkt_console:alerts' %}">Add a recipient</a>
+</div>
+{% endif %}
+
+<div class="mc-kpis">
+  {% for k in kpis %}
+  <div class="mc-kpi{% if k.warn %} mc-kpi--warn{% endif %}">
+    <div class="mc-kpi__value">{{ k.value }}</div>
+    <div class="mc-kpi__label">{{ k.label }}</div>
+    {% if k.sub %}<div class="mc-kpi__sub">{{ k.sub }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="mc-grid2">
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Apps</h2><a class="mc-panel__link" href="{% url 'mkt_console:apps' %}">All apps &rarr;</a></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <thead><tr><th>App</th><th>Status</th><th>Price</th><th class="num">Errors now</th><th></th></tr></thead>
+        <tbody>
+          {% for a in apps %}
+          <tr>
+            <td><a class="mc-name" href="{% url 'mkt_console:app_edit' a.pk %}">{% include "marketplace/console/_app_icon.html" %}<span><b>{{ a.name }}</b><small>{{ a.slug }}</small></span></a></td>
+            <td>{% if a.is_paused %}<span class="mc-chip mc-chip--paused">Paused</span>{% else %}<span class="mc-chip mc-chip--{{ a.status }}">{{ a.status_label }}</span>{% endif %}</td>
+            <td class="mc-mono">{{ a.pricing_label }}</td>
+            <td class="num">{{ a.err_window }}</td>
+            <td><a class="mc-panel__link" href="{% url 'mkt_console:app_edit' a.pk %}">Edit</a></td>
+          </tr>
+          {% empty %}<tr><td colspan="5" class="mc-empty">No apps yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Recent orders</h2><a class="mc-panel__link" href="{% url 'mkt_console:orders' %}">All orders &rarr;</a></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <tbody>
+          {% for o in orders %}
+          <tr>
+            <td><b class="mc-mono">{{ o.number }}</b><br><span class="mc-muted" style="font-size:.8rem;">{{ o.owner_email }}</span></td>
+            <td class="num mc-mono">&#8377;{{ o.total_amount|floatformat:"2g" }}</td>
+            <td><span class="mc-chip mc-chip--{{ o.status }}">{{ o.get_status_display }}</span></td>
+          </tr>
+          {% empty %}<tr><td class="mc-empty">No orders yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div class="mc-grid2">
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Licence activity</h2><a class="mc-panel__link" href="{% url 'mkt_console:licences' %}">Licences &rarr;</a></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <tbody>
+          {% for e in events %}
+          <tr>
+            <td><span class="mc-chip mc-chip--{% if e.event == 'granted' or e.event == 'restored' %}ok{% elif e.event == 'revoked' %}revoked{% else %}expired{% endif %}">{{ e.event }}</span></td>
+            <td><b>{{ e.licence.name_snapshot }}</b><br><span class="mc-muted" style="font-size:.8rem;">{{ e.licence.owner_email }}</span></td>
+            <td class="mc-mono mc-muted">{{ e.created_at|timesince }} ago</td>
+          </tr>
+          {% empty %}<tr><td class="mc-empty">Nothing yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Latest alerts</h2><a class="mc-panel__link" href="{% url 'mkt_console:alerts' %}">Alerts &rarr;</a></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <tbody>
+          {% for al in alerts %}
+          <tr><td><b>{{ al.subject }}</b><br><span class="mc-muted mc-mono">{{ al.created_at|date:"j M, H:i" }} &middot; {% if al.delivered %}sent{% else %}not sent{% endif %}</span></td></tr>
+          {% empty %}<tr><td class="mc-empty">No alerts. All quiet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

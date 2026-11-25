@@ -1,0 +1,72 @@
+{% extends "marketplace/surface/base.html" %}
+
+{% block content %}
+<section class="pal-section pal-section--tight pal-blueprint">
+  <div class="pal-container">
+    <nav class="mk-crumbs" aria-label="Breadcrumb">
+      <a href="{% url 'marketplace:home' %}">App Store</a><span aria-hidden="true">/</span>
+      <a href="{% url 'marketplace:app' app.slug %}">{{ app.name }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ item.name }}</span>
+    </nav>
+
+    <div class="mk-item">
+      <div class="pal-viewport">
+        <div class="pal-viewport__caption"><span><span class="dot">&#9632;</span> {{ item.name }} &middot; preview</span><span>{{ item.fits_label }}</span></div>
+        <div class="pal-frame">
+          <span class="pal-corner pal-corner--tl" aria-hidden="true"></span>
+          <span class="pal-corner pal-corner--tr" aria-hidden="true"></span>
+          <span class="pal-corner pal-corner--bl" aria-hidden="true"></span>
+          <span class="pal-corner pal-corner--br" aria-hidden="true"></span>
+          {% if owned %}<span class="pal-tag pal-tag--tr"><span class="led" aria-hidden="true"></span> {% if item.is_system_default %}On every store{% else %}In your library{% endif %}</span>{% endif %}
+          <span class="mk-design__shot mk-design__shot--hero">
+            {% if item.thumbnail %}<img src="{{ item.thumbnail }}" alt="{{ item.name }} preview">{% else %}{% include "marketplace/surface/_design_mock.html" with look=item.key name=item.name %}{% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <div class="pal-marker"><span class="pal-marker__num">{{ app.name }}</span></div>
+        <h1 class="pal-pagehead__title">{{ item.name }}</h1>
+        {% if item.tagline %}<p class="pal-lead mk-intro">{{ item.tagline }}</p>{% endif %}
+        <div class="mk-item__price">
+          <span class="mk-item__amount">{% if item.is_priced %}&#8377;{{ item.price|floatformat:"-2g" }}{% else %}Included{% endif %}</span>
+          <span class="mk-price">{% if item.is_priced %}+ GST &middot; {% if item.is_yearly %}per year{% else %}one-time, yours for good{% endif %}{% else %}with every OneWooz store{% endif %}</span>
+        </div>
+        <div class="mk-design__tags">
+          <span class="mk-chip">{{ item.fits_label }}</span>
+          {% for t in item.tags %}<span class="mk-chip">{{ t }}</span>{% endfor %}
+        </div>
+        {% if item.description %}<div class="pal-prose mk-prose">{{ item.description|safe }}</div>{% endif %}
+
+        <div class="pal-btn-row mk-item__actions">
+          {% if owned %}
+            {% if item.is_yearly and not item.is_system_default %}<a class="pal-btn" href="{{ install_url }}">Renew licence <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>{% endif %}
+            <a class="pal-btn pal-btn--ghost" href="{{ dashboard_url }}">Use it from Store Settings</a>
+          {% else %}
+            <a class="pal-btn" href="{{ install_url }}">{% if item.is_priced %}Buy {{ item.name }}{% else %}Add to my library{% endif %} <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+          {% endif %}
+          {% if item.preview_url %}<a class="pal-btn pal-btn--ghost" href="{{ item.preview_url }}" target="_blank" rel="noopener">Live demo &#8599;</a>{% endif %}
+        </div>
+        {% if owned and licence.expires_at %}<p class="mk-hint">Licence runs until {{ licence.expires_at|date:"j M Y" }}</p>{% endif %}
+        {% if not owned %}<p class="mk-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> You confirm it's you in your dashboard first</p>{% endif %}
+
+        <ul class="mk-facts mk-facts--ruled">
+          <li><span>Carries over</span><span>Products, pages, blogs, SEO, settings</span></li>
+          <li><span>Switching</span><span>OneWooz Templates, in your dashboard menu</span></li>
+          <li><span>Switch back</span><span>Any time, to any design you own</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if others %}
+<section class="pal-section pal-section--tight pal-ruled">
+  <div class="pal-container">
+    <div class="pal-marker"><span class="pal-marker__num">+</span><span>Other designs</span></div>
+    <div class="mk-designs mk-block">
+      {% for it in others %}{% include "marketplace/surface/_design_card.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Settings{% endblock %}
+{% block crumbs %}<span>/</span><span>Settings</span>{% endblock %}
+{% block heading %}Settings{% endblock %}
+{% block lead %}<p>Switches for the whole marketplace, and a reference of the building blocks every app is composed from.</p>{% endblock %}
+
+{% block main %}
+<div class="mc-grid2">
+  <form method="post" class="mc-form">
+    {% csrf_token %}
+    <section class="mc-section">
+      <div class="mc-section__head"><h2 class="mc-panel__title">Marketplace</h2>{% if form.instance.is_enabled %}<span class="mc-chip mc-chip--ok">Open</span>{% else %}<span class="mc-chip mc-chip--failed">Closed</span>{% endif %}</div>
+      <div class="mc-section__body">
+        {% for field in form %}{% include "marketplace/console/_field.html" with wide=True %}{% endfor %}
+      </div>
+    </section>
+    {% if can_write %}<div class="mc-actions"><button class="pal-btn" type="submit">Save settings <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button></div>{% endif %}
+  </form>
+
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Building blocks</h2></div>
+    <div class="mc-panel__body" style="display:grid;gap:1.5rem;">
+      <div><p class="mc-label">Code modules</p><ul class="mc-ref" style="margin-top:.6rem;">{% for key, name in module_list %}<li><b>{{ name }}</b> <code>{{ key }}</code></li>{% empty %}<li class="mc-muted">None</li>{% endfor %}</ul></div>
+      <div><p class="mc-label">Dashboard placement points</p><ul class="mc-ref" style="margin-top:.6rem;">{% for key, label in points %}<li><code>{{ key }}</code><span>{{ label }}</span></li>{% endfor %}</ul></div>
+      <div><p class="mc-label">Storefront widgets</p><ul class="mc-ref" style="margin-top:.6rem;">{% for w in widgets %}<li><b>{{ w.label }}</b> <code>{{ w.key }}</code><span>{{ w.description }}</span></li>{% endfor %}</ul></div>
+      <div><p class="mc-label">Storefront slots</p><ul class="mc-ref" style="margin-top:.6rem;">{% for s in slots %}<li><code>{{ s.key }}</code><span>{{ s.label }}</span></li>{% endfor %}</ul></div>
+      <div><p class="mc-label">Owner form field types</p><ul class="mc-ref" style="margin-top:.6rem;">{% for f in field_types %}<li><b>{{ f.label }}</b> <code>{{ f.key }}</code></li>{% endfor %}</ul></div>
+      <p class="mc-help">New blocks are added in code (marketplace/blocks.py, marketplace/modules/). Everything else is composed here.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

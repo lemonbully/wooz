@@ -1,0 +1,103 @@
+/* Ask OneWooz console (admin surface). Builds on onewooz-pal.css and
+   marketplace-console.css (the mc-* shell); only community-specific pieces
+   live here, all prefixed ac-. */
+
+.ac-title { font-weight: 500; color: var(--pal-ink); }
+.ac-title:hover { color: var(--pal-accent); }
+.ac-sub { margin-top: 0.2rem; font-size: 0.78rem; }
+.ac-sub a { color: inherit; border-bottom: 1px solid var(--pal-line); }
+.ac-sub a:hover { color: var(--pal-accent); }
+.ac-warn { color: #b42318; }
+.ac-tabs { margin-bottom: 1rem; }
+.ac-table td { vertical-align: top; }
+.ac-post { min-width: 16rem; max-width: 34rem; }
+.ac-text { margin-top: 0.35rem; font-size: 0.9rem; line-height: 1.5; color: var(--pal-ink-2); overflow-wrap: anywhere; }
+.ac-why { max-width: 14rem; font-size: 0.85rem; }
+
+/* One form, several buttons: the clicked button is the action. */
+.ac-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.9rem; margin-top: 0.6rem; }
+.ac-actions .ac-reason { width: 11rem; min-width: 0; padding: 0.3rem 0.5rem; font-size: 0.78rem; }
+.mc-linkbtn.ac-ok { color: #05603a; }
+
+/* Thread */
+.ac-post-card { scroll-margin-top: 1.5rem; }
+.ac-post-card:target { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
+.ac-qtitle { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.35rem; letter-spacing: -0.02em; line-height: 1.25; }
+.ac-reasonline { margin-top: 0.4rem; font-size: 0.82rem; color: #93370d; }
+.ac-body { margin-top: 0.7rem; font-size: 0.95rem; line-height: 1.65; color: var(--pal-ink-2); overflow-wrap: anywhere; }
+.ac-body > * + * { margin-top: 0.7rem; }
+.ac-body ul { padding-left: 1.2rem; list-style: disc; }
+.ac-ai { margin-top: 1rem; padding: 0.75rem 0.9rem; border: 1px solid var(--pal-line); background: var(--pal-paper); }
+.ac-ai summary { cursor: pointer; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
+.ac-edit { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--pal-line); }
+.ac-edit summary { list-style: none; cursor: pointer; }
+.ac-edit summary::-webkit-details-marker { display: none; }
+.ac-editform { margin-top: 0.9rem; display: grid; gap: 0.9rem; }
+.ac-h2 { margin: 1.75rem 0 0.75rem; font-family: var(--pal-font-display); font-weight: 500; font-size: 1.2rem; letter-spacing: -0.02em; }
+.ac-accepted { border-left: 2px solid var(--pal-accent); }
+.ac-dim { opacity: 0.72; }
+.ac-dim:hover, .ac-dim:target { opacity: 1; }
+.ac-replies { display: grid; gap: 0.9rem; margin: 1.1rem 0 0; padding: 0 0 0 1rem; list-style: none; border-left: 1px solid var(--pal-line); }
+.ac-replies li { scroll-margin-top: 1.5rem; }
+.ac-replies li:target { outline: 2px solid var(--pal-accent); outline-offset: 4px; }
+.ac-replyhead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; font-size: 0.85rem; font-weight: 500; }
+.ac-replytext { margin-top: 0.3rem; font-size: 0.9rem; line-height: 1.5; color: var(--pal-ink-2); overflow-wrap: anywhere; }
+
+/* Member page */
+.ac-side { display: grid; gap: 1.25rem; align-content: start; }
+.ac-buttons { display: grid; gap: 0.6rem; justify-items: start; border-top: 1px solid var(--pal-line); }
+.ac-buttons form { margin: 0; }
+.ac-pad { padding: 0 1.25rem 1.1rem; }
+
+/* Topic rooms */
+.ac-rooms { display: grid; gap: 1rem; align-content: start; min-width: 0; }
+.ac-roomform { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1fr); gap: 0.75rem; align-items: end; }
+.ac-roomform .mc-label { display: grid; gap: 0.3rem; }
+.ac-wide { grid-column: 1 / -1; }
+.ac-roomdel { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 0.75rem; border-top: 1px solid var(--pal-line-soft); }
+.ac-roomdel .mc-label { display: grid; gap: 0.3rem; }
+.ac-sticky { position: sticky; top: 1rem; align-self: start; }
+
+/* Settings */
+.ac-narrow { max-width: 46rem; }
+.ac-group { margin-top: 0.5rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--pal-line); font-family: var(--pal-font-mono); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-accent); }
+.ac-group:first-child { margin-top: 0; }
+
+@media (max-width: 60rem) {
+  .ac-roomform { grid-template-columns: minmax(0, 1fr); }
+  .ac-sticky { position: static; }
+}
+
+/* Blocked keywords and phrases: a chip input (Settings). Keywords and
+   phrases look different at a glance: a keyword chip is outlined, a phrase
+   chip is tinted with the accent. */
+.ac-chipfield [hidden] { display: none !important; }
+.ac-chipbox { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; min-height: 3rem; padding: 0.45rem; border: 1px solid var(--pal-line); background: var(--pal-panel); cursor: text; }
+.ac-chipbox:focus-within { border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+.ac-chips { display: contents; margin: 0; padding: 0; list-style: none; }
+.ac-chip { display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%; padding: 0.22rem 0.3rem 0.22rem 0.45rem; border: 1px solid var(--pal-line); background: var(--pal-paper); font-size: 0.85rem; line-height: 1.3; cursor: pointer; }
+.ac-chip:hover { border-color: var(--pal-ink); }
+.ac-chip--phrase { border-color: rgb(75 43 245 / 0.35); background: rgb(75 43 245 / 0.06); }
+.ac-chip__kind { flex: none; font-family: var(--pal-font-mono); font-size: 0.52rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pal-muted); }
+.ac-chip--phrase .ac-chip__kind { color: var(--pal-accent); }
+.ac-chip__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--pal-ink); }
+.ac-chip__x { flex: none; width: 1.2rem; height: 1.2rem; padding: 0; border: 0; background: none; font-size: 1rem; line-height: 1; color: var(--pal-faint); cursor: pointer; }
+.ac-chip__x:hover { color: #b42318; }
+.ac-chip.is-flash { animation: ac-flash 0.9s ease; }
+@keyframes ac-flash { 0%, 100% { box-shadow: none; } 30% { box-shadow: 0 0 0 2px var(--pal-accent); } }
+.ac-chipbox__input { flex: 1 1 14rem; min-width: 8rem; border: 0 !important; box-shadow: none !important; background: transparent !important; padding: 0.3rem 0.35rem !important; font-size: 0.9rem; outline: none; }
+/* The box's own border is the focus ring; drop the console's per-input one
+   (.mc input:focus) and the site-wide :focus-visible ring inside it. */
+.mc .ac-chipbox__input:focus, .mc .ac-chipbox__input:focus-visible { outline: none; border-color: transparent; }
+.ac-chipcount { margin-top: 0.35rem; font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); }
+.ac-chipsource { margin-top: 0.5rem; }
+@media (prefers-reduced-motion: reduce) { .ac-chip.is-flash { animation: none; outline: 2px solid var(--pal-accent); } }
+
+/* Writing questions and answers (community/authoring.py) */
+.mc-field[hidden] { display: none; }
+.ac-compose { display: grid; gap: 1.25rem; }
+.ac-compose .mc-card__head { flex-wrap: wrap; }
+.ac-shown { border-top: 1px dashed var(--pal-line); padding-top: 0.9rem; }
+.ac-shown__label { grid-column: 1 / -1; margin: 0; font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--pal-muted); }
+.ac-persona { font-size: 0.72rem; }

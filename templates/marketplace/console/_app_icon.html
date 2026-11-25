@@ -1,0 +1,1 @@
+<span class="mc-ico{% if large %} mc-ico--lg{% endif %}" style="--tile:{{ a.accent|default:'#4b2bf5' }}" aria-hidden="true">{% if a.icon %}<img src="{{ a.icon.url }}" alt="">{% else %}{% include "store/_icons.html" with icon=a.icon_key %}{% endif %}</span>

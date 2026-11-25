@@ -229,7 +229,11 @@ class _Graph:
         self.ctx = ctx or {}
         # The theme decides the business surface, exactly as it decides
         # cart-vs-enquiry on the product page.
-        self.b2b = getattr(site, "template_dir", "") == "template1"
+        _tdir = getattr(site, "template_dir", "")
+        # template3 serves both models, so it follows the store's business model.
+        self.b2b = _tdir == "template1" or (
+            _tdir in ("template3", "template4") and bool(getattr(site, "is_b2b", False))
+        )
         self.country = (_s(getattr(site, "country", "")) or "IN").upper()
         self.currency = _s(getattr(site, "currency", "")) or "INR"
         self.lang = f"en-{self.country}"

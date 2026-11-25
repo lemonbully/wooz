@@ -8,7 +8,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
-from core.fields import EncryptedCharField
+from core.fields import EncryptedCharField, EncryptedTextField
 from core.ids import uuid7
 from core.models import BaseModel
 
@@ -133,6 +133,10 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     notify_store_activity = models.BooleanField(default=True)
     notify_billing = models.BooleanField(default=True)
     notify_product_news = models.BooleanField(default=False)
+    #: Browser push: comma-separated ``Notification.Kind`` values the owner has
+    #: muted (e.g. ``"stock,system"``). Blank = every kind pops up. A short
+    #: CharField rather than JSON so the users table stays narrow for sorting.
+    push_muted_kinds = models.CharField(max_length=80, blank=True, default="")
 
     # The store the owner last worked on / switched to. Persisted on the account
     # (not just the session) so the chosen store stays selected across logout and
@@ -145,6 +149,24 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     # dashboard's "Resume where you left off" returns there, not just to the
     # store overview. Written by commerce.middleware.LastStorePageMiddleware.
     active_site_path = models.CharField(max_length=540, blank=True, default="", editable=False)
+
+    # -- Account deletion (accounts.deletion) ---------------------------------
+    #: Set by "Delete My Account". Nothing is erased: the account, its stores,
+    #: orders and customers stay on the server. Signing in again within the
+    #: retention window (settings.ACCOUNT_DELETION_RETENTION_DAYS) restores it;
+    #: after that the account is closed (``is_active`` off) for good.
+    account_deleted_at = models.DateTimeField(null=True, blank=True, db_index=True, editable=False)
+    #: Optional reason the owner gave when deleting.
+    account_deletion_reason = models.CharField(max_length=300, blank=True, default="", editable=False)
+    #: Plan standing at the moment of deletion ("Pro (paid) until 12 Dec 2026"),
+    #: kept for the admin "Deleted users" page.
+    account_deletion_plan = models.CharField(max_length=160, blank=True, default="", editable=False)
+    #: Store names at the moment of deletion, comma separated, for the admin.
+    account_deletion_sites = models.CharField(max_length=600, blank=True, default="", editable=False)
+    #: Set once the retention window passed without a restore.
+    account_closed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    #: Last time a deleted account was brought back (sign-in, after any renewal).
+    account_restored_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     objects = UserManager()
 
@@ -195,6 +217,19 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
         if category == "security":
             return bool(flag)
         return bool(flag) and self.notification_digest != self.Digest.OFF
+
+    @property
+    def push_muted(self) -> set[str]:
+        """``Notification.Kind`` values muted for browser push."""
+        return {k for k in (self.push_muted_kinds or "").split(",") if k}
+
+    def wants_push(self, kind: str) -> bool:
+        """Whether a bell notification of ``kind`` should also pop up."""
+        return (kind or "") not in self.push_muted
+
+    @property
+    def is_account_deleted(self) -> bool:
+        return self.account_deleted_at is not None
 
     @property
     def is_email_verified(self) -> bool:
@@ -511,3 +546,71 @@ class Notification(BaseModel):
             self.read_at = timezone.now()
             if save:
                 self.save(update_fields=["is_read", "read_at", "updated_at"])
+
+
+class PushSubscription(BaseModel):
+    """One browser that agreed to receive OneWooz push notifications.
+
+    Created when the owner clicks "Allow" in the browser's permission prompt
+    (see ``js/app/push.js``). Every :class:`Notification` saved for the owner is
+    then also delivered to each of their subscribed browsers by
+    :mod:`accounts.webpush`, so it pops up on the desktop or phone even when no
+    dashboard tab is open. A browser that was closed receives it on its next
+    launch (the push service holds it for the message TTL).
+
+    A subscription is bound to the **login session** it was created in
+    (``session_key_hash``): signing out, ending that session from Security, the
+    device cap ending it, or the session expiring removes the row (see
+    ``accounts.signals``), so a shared computer stops receiving the owner's
+    alerts once they sign out. Signing back in re-binds the same browser
+    silently, with no second permission prompt.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="push_subscriptions")
+    #: The push service URL (FCM, Mozilla, Apple or WNS). Not indexed (too
+    #: wide); ``endpoint_hash`` is the unique key.
+    endpoint = models.CharField(max_length=1024)
+    endpoint_hash = models.CharField(max_length=64, unique=True, editable=False)
+    #: The browser's P-256 public key and auth secret (base64url), used to
+    #: encrypt every payload so only that browser can read it.
+    p256dh = models.CharField(max_length=128)
+    auth = models.CharField(max_length=48)
+    #: SHA-256 of the login session's key, never the key itself.
+    session_key_hash = models.CharField(max_length=64, db_index=True, editable=False)
+    session_expires_at = models.DateTimeField(null=True, blank=True)
+    device_label = models.CharField(max_length=120, blank=True, default="")
+    user_agent = models.CharField(max_length=300, blank=True, default="")
+    last_success_at = models.DateTimeField(null=True, blank=True, editable=False)
+    last_failure_at = models.DateTimeField(null=True, blank=True, editable=False)
+    #: Consecutive failed deliveries; the row is dropped past a threshold.
+    failure_count = models.PositiveSmallIntegerField(default=0, editable=False)
+
+    class Meta:
+        verbose_name = "push subscription"
+        verbose_name_plural = "push subscriptions"
+        indexes = [models.Index(fields=("user", "created_at"))]
+
+    def __str__(self) -> str:
+        return f"{self.device_label or 'Browser'} → {self.user_id}"
+
+
+class WebPushKey(BaseModel):
+    """The platform's VAPID signing key, generated automatically on first use.
+
+    Web Push requires one P-256 key pair per application server; every browser
+    subscription is tied to its public half. Generating it in code and keeping
+    it here (encrypted) means no one has to create or paste a key before push
+    works, and every web/worker instance shares the same key. Setting
+    ``ONEWOOZ_VAPID_PRIVATE_KEY`` overrides it.
+    """
+
+    name = models.CharField(max_length=40, unique=True, default="vapid")
+    #: base64url of the raw 32-byte private scalar.
+    private_key = EncryptedTextField()
+
+    class Meta:
+        verbose_name = "web push key"
+        verbose_name_plural = "web push keys"
+
+    def __str__(self) -> str:
+        return self.name

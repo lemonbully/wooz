@@ -1,0 +1,46 @@
+{% load static %}<!doctype html>
+{% comment %}
+  The shell the shared transactional pages (checkout, account and sign-in,
+  order confirmation) render inside on a Template 4 store (owner-facing "Template 3"): its own
+  header, footer, cart drawer and search, around the platform's checkout and
+  account flows. Those flows are written in Tailwind utilities, so the compiled
+  Tailwind sheet is loaded first and Template 4's theme after it.
+{% endcomment %}
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{% include "storefront/template4/_head.html" %}
+<link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+<link rel="stylesheet" href="{% static 'css/storefront-richtext.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'storefront-t4/css/theme.css' %}">
+<style>
+  /* Keep the platform flows readable inside the theme. */
+  .t3-flow { padding: clamp(20px, 3vw, 40px) 0 var(--section, 64px); }
+  .t3-flow img { display: inline-block; }
+  .t3-flow img.block, .t3-flow .block > img { display: block; }
+</style>
+{% if website.content.custom_css %}<style>{{ website.content.custom_css|safe }}</style>{% endif %}
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+{% include "storefront/_tracking_body.html" %}
+<div data-header></div>
+<main class="t3-flow">
+  {% block content %}{% block page_content %}{% endblock %}{% endblock %}
+</main>
+<div data-footer></div>
+
+{{ t3_data|json_script:"t3-data" }}
+<script src="{% static 'storefront-t4/js/boot.js' %}"></script>
+<script src="{% static 'storefront-t4/js/app.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
+{% if website.content.custom_js %}<script nonce="{{ csp_nonce }}">{{ website.content.custom_js|safe }}</script>{% endif %}
+{% if request.analytics_context %}
+{{ request.analytics_context|json_script:"analytics-config" }}
+<script src="{% static 'js/website/analytics.js' %}" defer></script>
+{% endif %}
+</body>
+</html>

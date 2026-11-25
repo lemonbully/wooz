@@ -1,0 +1,19 @@
+{% comment %}
+Moderation buttons for one post. Context: kind ("question"|"answer"|"reply"),
+obj, can_write, and optional `reports` (show "Clear reports"), `accept` (show
+the accept toggle for answers). One form, the clicked button picks the action.
+{% endcomment %}
+{% if can_write %}
+<form method="post" action="{% url 'ask_console:post_action' kind obj.pk %}" class="ac-actions">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <input type="text" name="reason" placeholder="Reason (optional)" maxlength="120" class="ac-reason">
+  {% if obj.status != "published" %}<button class="mc-linkbtn ac-ok" type="submit" name="action" value="approve">Approve</button>{% endif %}
+  {% if obj.status != "hidden" %}<button class="mc-linkbtn mc-linkbtn--danger" type="submit" name="action" value="hide">Hide</button>{% endif %}
+  {% if obj.status == "published" %}<button class="mc-linkbtn" type="submit" name="action" value="hold">Hold</button>{% endif %}
+  {% if reports %}<button class="mc-linkbtn" type="submit" name="action" value="resolve">Clear reports</button>{% endif %}
+  {% if accept and kind == "answer" and obj.status == "published" %}<button class="mc-linkbtn ac-ok" type="submit" name="action" value="accept">{% if obj.is_accepted %}Unaccept{% else %}Accept{% endif %}</button>{% endif %}
+  {% if not obj.author.is_banned %}<button class="mc-linkbtn mc-linkbtn--danger" type="submit" name="action" value="ban_author" data-confirm="Ban {{ obj.author.display_name }}? They can still read but can't ask, answer, reply or vote. This post is hidden.">Ban author</button>{% endif %}
+  <button class="mc-linkbtn mc-linkbtn--danger" type="submit" name="action" value="delete" data-confirm="Delete this {{ kind }} for good?{% if kind == 'question' %} Its answers and replies go with it.{% elif kind == 'answer' %} Its replies go with it.{% endif %} This can't be undone. Hide keeps it recoverable.">Delete</button>
+</form>
+{% endif %}

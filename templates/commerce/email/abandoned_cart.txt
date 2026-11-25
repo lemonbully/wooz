@@ -1,0 +1,15 @@
+{% autoescape off %}{{ brand }}: {{ heading }}
+
+{{ lead }}
+
+In your cart:
+{% for it in items %}- {{ it.title }}{% if it.variant_label %} ({{ it.variant_label }}){% endif %} | Qty {{ it.quantity }} x {{ sym }}{{ it.unit_price }} | {{ sym }}{{ it.line_total }}
+{% endfor %}
+Subtotal: {{ sym }}{{ subtotal }}
+Shipping, discounts and GST are worked out at checkout.
+
+Return to your cart: {{ cart_url }}
+
+{% if is_last %}This is the last reminder about this cart.{% else %}You're getting this because you left items in your cart at {{ brand }}.{% endif %}
+Stop these reminders: {{ stop_url }}
+{% if reply_to %}Reply to this email to reach {{ brand }}.{% endif %}{% endautoescape %}

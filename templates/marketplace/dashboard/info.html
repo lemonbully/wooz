@@ -1,0 +1,13 @@
+{% extends "store/_shell.html" %}
+{% block title %}{{ placement.label }} · {{ site.name }}{% endblock %}
+{% block crumb %}{{ placement.label }}{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-head"><div>
+    <p class="pal-mono pal-mono--accent">{{ app.name }}</p>
+    <h1 class="app-head__title pal-mt-4">{{ placement.label }}</h1>
+  </div></div>
+  <div class="app-card app-block"><div class="app-card__body mkt-prose">{{ body|safe }}</div></div>
+</div>
+{% endblock %}

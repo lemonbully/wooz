@@ -1,90 +1,69 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>About Us | Mellow Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Caveat:wght@700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
-<div data-header></div>
-<main>
-  <section class="container" style="text-align:center;padding-top:clamp(36px,6vw,80px);position:relative">
-    <span class="sticker sticker--star" style="top:20%;left:6%">Soft</span>
-    <span class="sticker sticker--pill" style="top:30%;right:8%">Since 2019</span>
-    <p class="eyebrow muted">About us</p>
-    <h1 class="mega" style="max-width:15ch;margin:14px auto 18px">Clothes that feel good, made by people who care</h1>
-    <p class="muted" style="max-width:600px;margin:0 auto">Mellow began as a two person studio in Tiruppur with a simple brief: make the tee you reach for first. Seven years and 2 lakh customers later, the brief has not changed.</p>
-  </section>
+{% extends "storefront/template3/_base.html" %}
+{% comment %}
+  About page: Edit Content → About page, field for field, in Template 1's order.
+  1. Editorial intro: the page title, paragraphs 1 and 2, the wide banner.
+  2. Feature block 1: title, description, image and the three metrics.
+  3. Brand section: eyebrow, story title, story description, main + secondary image.
+  Server-rendered from t3_data.page.about (storefront/template3.py:_about) so
+  search engines read the copy directly. A section with nothing filled in is
+  left out; no section here takes content from anywhere else.
+{% endcomment %}
+{% block main %}
+{% with A=t3_data.page.about %}
+<main class="ab">
+  <div class="container"><nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'public_website' %}">Home</a><span class="sep">/</span><span>About us</span></nav></div>
 
-  <section class="container section--tight" style="padding-top:clamp(30px,4vw,56px)">
-    <div class="mosaic" data-mosaic></div>
-  </section>
-
-  <section class="container section--tight">
-    <div class="stat-row reveal">
-      <div><b>2L+</b><span>Happy customers</span></div>
-      <div><b>82%</b><span>Organic or recycled fabric</span></div>
-      <div><b>140</b><span>Artisans in our studios</span></div>
-      <div><b>4.8★</b><span>Average rating</span></div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container story">
-      <div class="story__media reveal">
-        <span class="sticker sticker--sun" style="top:6%;right:4%">Hi!</span>
-        <div class="story__circle"><img src="" data-src-id="store2" alt="Inside our studio"></div>
+  <section class="container ab-intro">
+    <div class="ab-intro__head{% if not A.intro1 and not A.intro2 %} ab-intro__head--solo{% endif %}">
+      <h1 class="mega ab-intro__title">About {% firstof A.brand website.content.site_name website.name %}</h1>
+      {% if A.intro1 or A.intro2 %}
+      <div class="ab-intro__copy">
+        {% if A.intro1 %}<div class="ab-intro__lead">{{ A.intro1|linebreaks }}</div>{% endif %}
+        {% if A.intro2 %}<div class="ab-intro__more">{{ A.intro2|linebreaks }}</div>{% endif %}
       </div>
-      <div class="story__text reveal">
-        <p class="eyebrow">Our studio</p>
-        <h2 class="h1" style="margin-top:12px">Cut, stitched and checked in India.</h2>
-        <p>Every piece passes through 23 hands before it reaches you. We pay above the regional living wage, run on 60% solar power and send our offcuts to a recycler in Panipat who spins them into yarn again.</p>
-        <a href="shop.html" class="btn btn--black btn--arrow">Shop the collection <span class="btn__dot" data-ico="arrow"></span></a>
+      {% endif %}
+    </div>
+    {% if A.banner %}<figure class="ab-banner reveal"><img src="{{ A.banner }}" alt="{{ A.brand }}" decoding="async" fetchpriority="high"></figure>{% endif %}
+  </section>
+
+  {% if A.blockTitle or A.blockText or A.blockImage or A.metrics %}
+  <section class="section ab-feature-sec">
+    <div class="container">
+      <div class="ab-feature{% if not A.blockImage %} ab-feature--text{% endif %} reveal">
+        {% if A.blockImage %}<div class="ab-feature__media"><img src="{{ A.blockImage }}" alt="{{ A.blockTitle|default:A.brand }}" loading="lazy" decoding="async"></div>{% endif %}
+        <div class="ab-feature__body">
+          {% if A.blockTitle %}<h2 class="h1 ab-feature__title">{{ A.blockTitle }}</h2>{% endif %}
+          {% if A.blockText %}<div class="ab-feature__text">{{ A.blockText|linebreaks }}</div>{% endif %}
+          {% if A.metrics %}
+          <div class="ab-metrics ab-metrics--{{ A.metrics|length }}{% if A.metricsText %} ab-metrics--text{% endif %}">
+            {% for m in A.metrics %}<div class="ab-metric">{% if m.value %}<b>{{ m.value }}</b>{% endif %}{% if m.label %}<span>{{ m.label }}</span>{% endif %}</div>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </section>
+  {% endif %}
 
-  <div class="band" aria-hidden="true"><div class="band__track" data-band></div></div>
-
-  <section class="section">
-    <div class="container">
-      <div class="sec-head sec-head--center"><p class="eyebrow">What we believe</p><h2 class="h2">Three promises we keep</h2></div>
-      <div class="features features--3" data-values></div>
+  {% if A.label or A.title or A.text or A.mainImage or A.secondImage %}
+  <section class="section ab-brand-sec">
+    <div class="container ab-brand{% if not A.mainImage and not A.secondImage %} ab-brand--text{% endif %}">
+      {% if A.label or A.title or A.text %}
+      <div class="ab-brand__text reveal">
+        {% if A.label %}<p class="eyebrow ab-brand__label">{{ A.label }}</p>{% endif %}
+        {% if A.title %}<h2 class="h1 ab-brand__title">{{ A.title }}</h2>{% endif %}
+        {% if A.text %}<div class="ab-brand__body">{{ A.text|linebreaks }}</div>{% endif %}
+      </div>
+      {% endif %}
+      {% if A.mainImage or A.secondImage %}
+      <div class="ab-collage{% if A.mainImage and A.secondImage %} ab-collage--pair{% endif %} reveal">
+        {% if A.mainImage %}<div class="ab-collage__main"><img src="{{ A.mainImage }}" alt="{{ A.title|default:A.brand }}" loading="lazy" decoding="async"></div>{% endif %}
+        {% if A.secondImage %}<div class="ab-collage__second"><img src="{{ A.secondImage }}" alt="" loading="lazy" decoding="async"></div>{% endif %}
+      </div>
+      {% endif %}
     </div>
   </section>
-
-  <section class="section" style="padding-top:0">
-    <div class="container">
-      <div class="sec-head"><div><p class="eyebrow">The people</p><h2 class="h2">Meet the team</h2></div></div>
-      <div class="grid grid--4" data-team></div>
-    </div>
-  </section>
-
-  <section class="section reviews-sec">
-    <div class="container center">
-      <p class="eyebrow">From our community</p>
-      <h2 class="h1" style="max-width:20ch;margin:12px auto 26px">“The only tees I have bought in three years. They just last.”</h2>
-      <div class="author" style="justify-content:center"><img src="" data-src-id="p1" alt=""><div style="text-align:left"><b>Riya Sharma</b><div class="small muted">Customer since 2021</div></div></div>
-    </div>
-  </section>
+  {% endif %}
 </main>
-<div data-footer></div>
-<script src="assets/js/data.js"></script>
-<script>
-window.T3Page = function () {
-  const D = T3, I = T3.I, $ = T3.$;
-  document.querySelectorAll('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
-  document.querySelectorAll('[data-src-id]').forEach(e => e.src = D.U(D.IMG[e.dataset.srcId], 900, 900));
-  $('[data-mosaic]').innerHTML = ['store', 'rack2', 'flatlay', 'teeRack', 'store3'].map(k => `<div class="reveal"><img src="${D.U(D.IMG[k], 900, 700)}" alt="" loading="lazy"></div>`).join('');
-  const band = ['Organic Cotton', 'Fair Wages', 'Solar Powered', 'Plastic Free Packaging', 'Made in India'].map(t => `<span class="band__item">${I.leaf} ${t}</span>`).join('');
-  $('[data-band]').innerHTML = band + band;
-  $('[data-values]').innerHTML = [['leaf', 'Better fabric', 'Organic cotton, linen and recycled fibres in over 80% of our range, rising every season.'], ['heart', 'Fair work', 'Living wages, health cover and a five day week for every artisan in our studios.'], ['return', 'Built to last', 'Reinforced seams and pre-shrunk fabric, backed by a six month quality promise.']].map(([i, t, s]) => `<div class="feature reveal"><div class="feature__icon">${I[i]}</div><h3>${t}</h3><p>${s}</p></div>`).join('');
-  $('[data-team]').innerHTML = [['p4', 'Kabir Rao', 'Co-founder, Design'], ['p3', 'Neha Kapoor', 'Co-founder, Operations'], ['p2', 'Arjun Menon', 'Head of Production'], ['p5', 'Meera Iyer', 'Community &amp; Journal']].map(([k, n, r]) => `<div class="team-card reveal"><img src="${D.U(D.IMG[k], 600, 750)}" alt="" loading="lazy"><b>${n}</b><span>${r}</span></div>`).join('');
-};
-</script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endwith %}
+{% endblock %}

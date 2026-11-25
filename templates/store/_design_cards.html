@@ -1,0 +1,53 @@
+{% comment %}
+The store's design library as cards: preview, name, price / licence, "Use this
+design". Shared by the OneWooz Templates page (design_from="templates") and
+Settings > Storefront design (design_from="settings"). One small form per card
+(store:settings_theme); js/app/design-picker.js confirms the switch and runs Buy.
+Context: commerce.views.settings.design_context. The page links design-mock.css.
+{% endcomment %}
+<div class="dz-grid" data-design-cards data-design-buy-url="{% url 'store:settings_template_buy' site.id %}" data-csrf="{{ csrf_token }}">
+  {% for o in design_options %}
+  <article class="dz-card{% if o.is_current %} is-current{% endif %}">
+    {% if o.is_current %}
+    <span class="pal-corner pal-corner--tl" aria-hidden="true"></span><span class="pal-corner pal-corner--tr" aria-hidden="true"></span><span class="pal-corner pal-corner--bl" aria-hidden="true"></span><span class="pal-corner pal-corner--br" aria-hidden="true"></span>
+    {% endif %}
+    <a class="dz-card__stage" href="{% url 'store:editor_preview' site.id %}?theme={{ o.key }}" target="_blank" rel="noopener" aria-label="Preview {{ o.name }} with your content">
+      {% if o.is_current %}<span class="dz-card__live">Live on your store</span>{% endif %}
+      <span class="dz-card__shot">{% if o.thumbnail_url %}<img src="{{ o.thumbnail_url }}" alt="{{ o.name }} preview" loading="lazy">{% else %}{% include "marketplace/surface/_design_mock.html" with look=o.key name=o.name %}{% endif %}</span>
+    </a>
+    <div class="dz-card__body">
+      <div class="dz-card__row">
+        <h3 class="dz-card__name">{{ o.name }}</h3>
+        <span class="dz-card__price">{% if not o.is_priced %}Included{% elif o.owned %}Bought{% else %}<b>&#8377;{{ o.price|floatformat:'-2' }}</b> + GST {% if o.is_yearly %}/ year{% else %}one-time{% endif %}{% endif %}</span>
+      </div>
+      {% if o.description %}<p class="dz-card__text">{{ o.description|striptags }}</p>{% endif %}
+      {% if o.is_priced %}
+        {% if o.owned and o.expires_at %}<p class="dz-card__note">Licence active until {{ o.expires_at|date:"j M Y" }}.</p>
+        {% elif o.owned %}<p class="dz-card__note">Use it on any of your stores.</p>
+        {% elif o.lapsed %}<p class="dz-card__note dz-card__note--warn">Your yearly licence has expired. Buy it again to keep using it.</p>
+        {% elif not o.can_use %}<p class="dz-card__note">Buy this design to use it on your store.</p>{% endif %}
+      {% endif %}
+    </div>
+    <div class="dz-card__foot">
+      <a class="dz-card__link" href="{% url 'store:editor_preview' site.id %}?theme={{ o.key }}" target="_blank" rel="noopener">Preview &#8599;</a>
+      <div class="dz-card__acts">
+        {% if o.marketplace_url %}
+          {% if o.is_priced and o.is_yearly and is_store_owner %}<a class="pal-btn pal-btn--ghost pal-btn--sm" href="{{ o.marketplace_url }}" target="_blank" rel="noopener">Renew</a>{% endif %}
+        {% elif o.can_buy and is_store_owner %}
+          <button type="button" class="pal-btn pal-btn--ghost pal-btn--sm" data-design-buy="{{ o.key }}" data-name="{{ o.name }}" data-total="{{ o.total|floatformat:'-2' }}"{% if not cashfree_ready %} disabled title="Online payment isn't available right now"{% endif %}>{% if o.owned %}Renew{% else %}Buy{% endif %} for &#8377;{{ o.total|floatformat:'-2' }}</button>
+        {% endif %}
+        {% if o.is_current %}
+          <span class="dz-card__using">In use</span>
+        {% elif o.can_use %}
+          <form method="post" action="{% url 'store:settings_theme' site.id %}" data-design-use="{{ o.name }}">
+            {% csrf_token %}
+            <input type="hidden" name="template_choice" value="{{ o.key }}">
+            <input type="hidden" name="from" value="{{ design_from }}">
+            <button class="pal-btn pal-btn--sm" type="submit">Use this design</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>

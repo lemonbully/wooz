@@ -3,6 +3,13 @@
 (function () {
   "use strict";
 
+  // Results surface in the universal toast stack (js/app/toast.js): errors in
+  // red, confirmations in green. Falls back to a plain alert if it's missing.
+  function owAlert(msg, ok) {
+    if (window.OWToast) { if (ok) window.OWToast.success(msg); else window.OWToast.error(msg); }
+    else window.alert(msg);
+  }
+
   function cookie(name) {
     try {
       var m = ("; " + document.cookie).split("; " + name + "=");
@@ -45,6 +52,47 @@
     });
   })();
 
+  /* ── Template 2: feature two categories (Categories page top pair) ──── */
+  // Each card's feature button toggles it; the server keeps pick order
+  // (1 = left card) and refuses a third, so the UI is redrawn from its reply.
+  function renderFeatured(pair) {
+    Array.prototype.forEach.call(document.querySelectorAll(".cat-card[data-category-id]"), function (card) {
+      var pos = pair.indexOf(card.getAttribute("data-category-id")) + 1;
+      var btn = card.querySelector("[data-feature]");
+      var badge = card.querySelector("[data-feature-pos]");
+      card.classList.toggle("is-featured", pos > 0);
+      if (btn) { btn.classList.toggle("is-on", pos > 0); btn.setAttribute("aria-pressed", pos > 0 ? "true" : "false"); }
+      if (badge) { badge.textContent = pos > 0 ? String(pos) : ""; badge.hidden = pos === 0; }
+    });
+    var status = document.getElementById("featureStatus");
+    if (status) {
+      var text = status.querySelector("[data-feature-text]");
+      var dot = status.querySelector(".inv-dot");
+      if (text) text.textContent = pair.length ? "Featured " + pair.length + " of 2" : "None featured yet, your first two categories show";
+      if (dot) dot.classList.toggle("inv-dot--ok", pair.length > 0);
+    }
+  }
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-feature]");
+    if (!btn || btn.disabled) return;
+    e.preventDefault();
+    if (btn.getAttribute("aria-busy") === "true") return;
+    btn.setAttribute("aria-busy", "true");
+    postForm(btn.getAttribute("data-url"), {}).then(function (res) {
+      btn.removeAttribute("aria-busy");
+      if (!res.ok || !res.d || !res.d.success) {
+        owAlert((res.d && res.d.error) || "Couldn't update the featured categories. Please try again.");
+        return;
+      }
+      renderFeatured(res.d.pair || []);
+      owAlert(res.d.featured ? "Category featured on your Categories page." : "Category removed from the top of your Categories page.", true);
+    }).catch(function () {
+      btn.removeAttribute("aria-busy");
+      owAlert("Couldn't reach the server. Check your connection and try again.");
+    });
+  });
+
   /* ── Mega-Highlight star (single highlight) ──────────────────────────── */
   document.addEventListener("click", function (e) {
     var btn = e.target.closest && e.target.closest("[data-highlight]");
@@ -70,15 +118,16 @@
         // a specific message) instead of a generic "couldn't update", so a
         // silent refusal is visible rather than looking like a failed save.
         revert();
-        alert((res.d && res.d.error) || "Couldn't update the highlight. Please try again.");
+        owAlert((res.d && res.d.error) || "Couldn't update the highlight. Please try again.");
         return;
       }
       // Reconcile with the server's truth (it may have toggled off).
       btn.classList.toggle("is-on", !!res.d.highlighted);
+      owAlert(res.d.highlighted ? "Category highlighted." : "Category highlight removed.", true);
     }).catch(function () {
       btn.removeAttribute("aria-busy");
       revert();
-      alert("Couldn't reach the server to update the highlight. Check your connection and try again.");
+      owAlert("Couldn't reach the server to update the highlight. Check your connection and try again.");
     });
   });
 
@@ -146,8 +195,8 @@
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrf(), "X-Requested-With": "XMLHttpRequest" },
         body: JSON.stringify({ icons: icons }),
       }).then(function (r) { return r.json(); })
-        .then(function (d) { if (d && d.success) close(); else alert("Couldn't save icons."); })
-        .catch(function () { alert("Couldn't save icons."); })
+        .then(function (d) { if (d && d.success) { close(); owAlert("Trusted icons saved.", true); } else owAlert("Couldn't save icons."); })
+        .catch(function () { owAlert("Couldn't save icons."); })
         .finally(function () { saveBtn.disabled = false; });
     });
   })();

@@ -1,0 +1,220 @@
+{% comment %}
+"We have updated our user agreement" popup.
+
+Included by ud/_shell.html and store/_shell.html, so it covers every owner
+dashboard page. Rendered only while `pending_agreement` is set (see
+billing.agreement_update): an owner who bought a plan under an earlier agreement
+version and has not yet accepted the one in force.
+
+Flow: read the agreement → the Accept button unlocks only once the owner has
+scrolled to the very end → Accept emails a one-time code to the account address
+→ entering it records a new AgreementAcceptance row for this version (earlier
+versions' rows stay). Un-dismissable; Sign out is the only other way out.
+{% endcomment %}
+{% if pending_agreement %}
+<style nonce="{{ csp_nonce }}">
+  html.owau-lock, html.owau-lock body { overflow: hidden; }
+  .owau { position: fixed; inset: 0; z-index: 2147482000; display: flex; align-items: center; justify-content: center;
+    padding: clamp(0.75rem, 0.5rem + 1.5vw, 2rem); background: rgb(10 10 11 / 0.55); backdrop-filter: blur(3px); }
+  .owau *, .owau *::before, .owau *::after { box-sizing: border-box; }
+  .owau__card { width: 100%; max-width: 46rem; max-height: calc(100vh - 2rem); display: flex; flex-direction: column;
+    background: var(--pal-panel, #fff); border: 1px solid var(--pal-ink, #0a0a0b); box-shadow: 16px 16px 0 -1px rgb(10 10 11 / 0.12);
+    padding: clamp(1.1rem, 0.8rem + 1.4vw, 2rem); min-width: 0; }
+  .owau__kick { font-family: var(--pal-font-mono, monospace); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--pal-accent, #4b2bf5); margin: 0 0 0.5rem; }
+  .owau__title { font-family: var(--pal-font-display, inherit); font-weight: 500; font-size: clamp(1.3rem, 1rem + 1.2vw, 1.85rem);
+    letter-spacing: -0.03em; line-height: 1.1; margin: 0; color: var(--pal-ink, #0a0a0b); }
+  .owau__lead { margin: 0.7rem 0 0; font-size: 0.92rem; line-height: 1.55; color: var(--pal-muted, #555); }
+  .owau__lead strong { color: var(--pal-ink, #0a0a0b); font-weight: 600; }
+  .owau__doc { margin-top: 1rem; flex: 1 1 auto; min-height: 10rem; max-height: 52vh; overflow-y: auto; overscroll-behavior: contain;
+    padding: 1rem 1.15rem; border: 1px solid var(--pal-line, #ddd); background: var(--pal-paper, #fafaf8);
+    font-size: 0.88rem; line-height: 1.65; color: var(--pal-ink-2, #222); overflow-wrap: anywhere; }
+  .owau__doc h1, .owau__doc h2, .owau__doc h3, .owau__doc h4 { font-family: var(--pal-font-display, inherit); font-weight: 500;
+    letter-spacing: -0.02em; color: var(--pal-ink, #0a0a0b); margin: 1rem 0 0.5rem; line-height: 1.2; }
+  .owau__doc > :first-child { margin-top: 0; }
+  .owau__doc p { margin: 0 0 0.75rem; }
+  .owau__doc img, .owau__doc table { max-width: 100%; }
+  .owau__progress { margin-top: 0.6rem; height: 3px; background: var(--pal-line-soft, #eee); overflow: hidden; }
+  .owau__progress span { display: block; height: 100%; width: 0; background: var(--pal-accent, #4b2bf5); transition: width .15s linear; }
+  .owau__hint { margin: 0.5rem 0 0; font-family: var(--pal-font-mono, monospace); font-size: 0.62rem; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--pal-muted, #666); }
+  .owau__hint.is-done { color: #05603a; }
+  .owau__err { margin: 0.75rem 0 0; padding: 0.6rem 0.8rem; border-left: 3px solid #f04438; background: #fef3f2; color: #b42318;
+    font-size: 0.85rem; line-height: 1.45; }
+  .owau__err[hidden] { display: none; }
+  .owau__ok { margin: 0.75rem 0 0; padding: 0.6rem 0.8rem; border-left: 3px solid #12b76a; background: #ecfdf3; color: #05603a;
+    font-size: 0.85rem; line-height: 1.45; }
+  .owau__ok[hidden] { display: none; }
+  .owau__foot { margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+  .owau__signout { margin: 0; }
+  .owau__signout button { appearance: none; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-size: 0.82rem;
+    color: var(--pal-muted, #666); text-decoration: underline; text-underline-offset: 3px; }
+  .owau__btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+  .owau__step[hidden] { display: none; }
+  .owau__otp { margin-top: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: stretch; }
+  .owau__otp input { flex: 1 1 12rem; min-width: 0; padding: 0.75rem 0.9rem; font-family: var(--pal-font-mono, monospace); font-size: 1.15rem;
+    letter-spacing: 0.4em; text-align: center; border: 1px solid var(--pal-line, #ccc); background: var(--pal-panel, #fff); color: var(--pal-ink, #0a0a0b); }
+  .owau__otp input:focus { outline: 2px solid var(--pal-accent, #4b2bf5); outline-offset: -1px; }
+  .owau__resend { appearance: none; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-size: 0.82rem;
+    color: var(--pal-accent, #4b2bf5); text-decoration: underline; text-underline-offset: 3px; }
+  .owau__resend[disabled] { color: var(--pal-muted, #888); cursor: default; text-decoration: none; }
+</style>
+
+<div class="owau" id="owau" role="dialog" aria-modal="true" aria-labelledby="owau-title"
+     data-agreement="{{ pending_agreement.id }}"
+     data-send-url="{% url 'billing_agreement:send_code' %}"
+     data-verify-url="{% url 'billing_agreement:verify' %}"
+     data-version="{{ pending_agreement.version_label }}">
+  <div class="owau__card">
+    <p class="owau__kick">User agreement · {{ pending_agreement.version_label }}</p>
+    <h2 class="owau__title" id="owau-title">We have updated our user agreement</h2>
+
+    {# Step 1: read to the end, then accept #}
+    <div class="owau__step" id="owau-read">
+      <p class="owau__lead">We have updated the terms that apply to your OneWooz subscription. Please read the updated
+        <strong>{{ pending_agreement.title }}</strong> below and accept it to continue using your dashboard.</p>
+      <div class="owau__doc" id="owau-doc" tabindex="0" aria-label="{{ pending_agreement.title }}">
+        {{ pending_agreement.content|safe }}
+      </div>
+      <div class="owau__progress" aria-hidden="true"><span id="owau-bar"></span></div>
+      <p class="owau__hint" id="owau-hint">Scroll to the end of the agreement to accept it.</p>
+      <p class="owau__err" id="owau-err1" role="alert" hidden></p>
+      <div class="owau__foot">
+        <form class="owau__signout" method="post" action="{% url 'accounts:sign_out' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+        <button type="button" class="pal-btn owau__btn" id="owau-accept" disabled>I accept</button>
+      </div>
+    </div>
+
+    {# Step 2: confirm with the emailed code #}
+    <div class="owau__step" id="owau-otp" hidden>
+      <p class="owau__lead">To confirm your acceptance, we have emailed a 6-digit code to <strong id="owau-email">your account email</strong>. Enter it below.</p>
+      <div class="owau__otp">
+        <input type="text" id="owau-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="······" aria-label="6-digit code">
+        <button type="button" class="pal-btn owau__btn" id="owau-verify" disabled>Confirm acceptance</button>
+      </div>
+      <p class="owau__err" id="owau-err2" role="alert" hidden></p>
+      <p class="owau__ok" id="owau-sent" role="status" hidden></p>
+      <div class="owau__foot">
+        <button type="button" class="owau__resend" id="owau-back">Back to the agreement</button>
+        <button type="button" class="owau__resend" id="owau-resend">Resend code</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+  (function () {
+    "use strict";
+    var root = document.getElementById("owau");
+    if (!root) return;
+    document.documentElement.classList.add("owau-lock");
+
+    var CSRF = "{{ csrf_token }}";
+    var AGREEMENT = root.getAttribute("data-agreement");
+    var SEND_URL = root.getAttribute("data-send-url");
+    var VERIFY_URL = root.getAttribute("data-verify-url");
+    var VERSION = root.getAttribute("data-version") || "";
+
+    var $ = function (id) { return document.getElementById(id); };
+    var doc = $("owau-doc"), bar = $("owau-bar"), hint = $("owau-hint"), accept = $("owau-accept");
+    var stepRead = $("owau-read"), stepOtp = $("owau-otp");
+    var code = $("owau-code"), verify = $("owau-verify"), resend = $("owau-resend"), back = $("owau-back");
+    var err1 = $("owau-err1"), err2 = $("owau-err2"), sent = $("owau-sent"), emailEl = $("owau-email");
+    var reachedEnd = false, busy = false;
+
+    function showErr(el, msg) { el.textContent = msg; el.hidden = !msg; }
+
+    // ── Step 1: Accept unlocks only once the whole agreement was scrolled. ──
+    function onScroll() {
+      var max = doc.scrollHeight - doc.clientHeight;
+      var pct = max <= 0 ? 100 : Math.min(100, Math.round((doc.scrollTop / max) * 100));
+      bar.style.width = pct + "%";
+      if (!reachedEnd && (max <= 4 || doc.scrollTop >= max - 4)) {
+        reachedEnd = true;
+        accept.disabled = false;
+        hint.textContent = "You have reached the end. You can now accept the agreement.";
+        hint.classList.add("is-done");
+      }
+    }
+    doc.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    // Images inside the agreement change its height once loaded.
+    Array.prototype.forEach.call(doc.querySelectorAll("img"), function (img) { img.addEventListener("load", onScroll); });
+    setTimeout(onScroll, 50);
+
+    function post(url, data) {
+      var body = new URLSearchParams();
+      Object.keys(data).forEach(function (k) { body.set(k, data[k]); });
+      return fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": CSRF, "X-Requested-With": "XMLHttpRequest", "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d || {} }; });
+      });
+    }
+
+    function sendCode(fromResend) {
+      if (busy) return;
+      busy = true;
+      var btn = fromResend ? resend : accept;
+      var label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Sending code…";
+      showErr(err1, ""); showErr(err2, ""); sent.hidden = true;
+      post(SEND_URL, { agreement: AGREEMENT })
+        .then(function (res) {
+          if (res.d.reload) { window.location.reload(); return; }
+          if (!res.d.ok) throw new Error(res.d.error || "We couldn't send the code. Please try again.");
+          if (res.d.email) emailEl.textContent = res.d.email;
+          stepRead.hidden = true;
+          stepOtp.hidden = false;
+          sent.textContent = "Code sent. It is valid for " + (res.d.minutes || 10) + " minutes.";
+          sent.hidden = false;
+          code.value = "";
+          verify.disabled = true;
+          code.focus();
+        })
+        .catch(function (e) { showErr(fromResend ? err2 : err1, e.message || "Network error. Please try again."); })
+        .then(function () {
+          busy = false;
+          btn.textContent = label;
+          btn.disabled = fromResend ? false : !reachedEnd;
+        });
+    }
+    accept.addEventListener("click", function () { if (reachedEnd) sendCode(false); });
+    resend.addEventListener("click", function () { sendCode(true); });
+    back.addEventListener("click", function () { stepOtp.hidden = true; stepRead.hidden = false; showErr(err2, ""); });
+
+    // ── Step 2: the emailed code records the acceptance. ──
+    code.addEventListener("input", function () {
+      code.value = code.value.replace(/\D/g, "").slice(0, 6);
+      verify.disabled = code.value.length !== 6 || busy;
+      showErr(err2, "");
+    });
+    code.addEventListener("keydown", function (e) { if (e.key === "Enter" && !verify.disabled) { e.preventDefault(); verify.click(); } });
+    verify.addEventListener("click", function () {
+      if (busy || code.value.length !== 6) return;
+      busy = true;
+      verify.disabled = true;
+      verify.textContent = "Confirming…";
+      post(VERIFY_URL, { agreement: AGREEMENT, otp: code.value })
+        .then(function (res) {
+          if (res.d.reload) { window.location.reload(); return; }
+          if (!res.d.ok) throw new Error(res.d.error || "That code is incorrect. Please try again.");
+          root.parentNode.removeChild(root);
+          document.documentElement.classList.remove("owau-lock");
+          var msg = "Thank you. You have accepted the updated user agreement" + (res.d.version || VERSION ? " (" + (res.d.version || VERSION) + ")" : "") + ".";
+          if (window.OWToast) window.OWToast.success(msg);
+        })
+        .catch(function (e) {
+          showErr(err2, e.message || "Network error. Please try again.");
+          busy = false;
+          verify.textContent = "Confirm acceptance";
+          verify.disabled = code.value.length !== 6;
+        });
+    });
+  })();
+</script>
+{% endif %}

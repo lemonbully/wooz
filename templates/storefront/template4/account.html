@@ -1,140 +1,361 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Account | velora</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
-<div data-header></div>
+{% extends "storefront/template4/_base.html" %}
+{% load website_filters %}
+{% comment %}
+  Template 3 "My account" for a signed-in shopper, on the platform's account
+  data and endpoints: orders (status filter, details, tracking, invoice,
+  cancel / replace / support requests), wishlist, saved addresses, store
+  credit, profile, sign-in email change and account deletion.
+{% endcomment %}
+{% block main %}
+{% with sym=website.currency|currency_symbol %}
 <main class="container" style="padding-top:clamp(24px,4vw,44px)">
-  <div class="sec-head"><div><p class="eyebrow muted">My account</p><h1 class="h1">Hello, Aarav</h1></div><a href="login.html" class="btn btn--outline btn--sm">Sign out</a></div>
+  {% csrf_token %}
+  <div class="sec-head"><div><p class="eyebrow muted">My account</p><h1 class="h1">Hello, {{ account_first_name|default:"there" }}</h1></div><a href="{% url 'public_account_logout' %}" class="btn btn--outline btn--sm">Sign out</a></div>
   <div class="acct">
     <nav class="acct-nav" data-tabs aria-label="Account">
-      <div class="acct-user"><span class="av">AM</span><div><b>Aarav Mehta</b><small>aarav.mehta@example.com</small></div></div>
+      <div class="acct-user"><span class="av" data-initials></span><div><b data-acct-name>{{ account_profile.name|default:account_first_name|default:"My account" }}</b><small>{{ customer_email }}</small></div></div>
       <button data-t="overview" class="is-active">Overview</button>
-      <button data-t="orders">Orders <em>4</em></button>
-      <button data-t="wishlist">Wishlist <em data-wish-count></em></button>
+      <button data-t="orders">Orders <em>{{ orders_count }}</em></button>
+      <button data-t="wishlist">Wishlist <em data-wish-count>{{ wishlist|length }}</em></button>
       <button data-t="addresses">Addresses</button>
       <button data-t="credits">Store credit</button>
       <button data-t="details">Account details</button>
     </nav>
 
     <div>
+      {# ------------------------------ Overview ------------------------------ #}
       <section class="acct-pane is-active" data-p="overview">
         <div class="stats">
-          <div class="stat"><small>Total orders</small><b>12</b></div>
-          <div class="stat"><small>Wishlist</small><b data-wish-count></b></div>
-          <div class="stat"><small>Store credit</small><b>₹250</b></div>
-          <div class="stat"><small>Member since</small><b>2024</b></div>
+          <div class="stat"><small>Total orders</small><b>{{ orders_count }}</b></div>
+          <div class="stat"><small>Wishlist</small><b data-wish-count>{{ wishlist|length }}</b></div>
+          <div class="stat"><small>Store credit</small><b>{{ sym }}{{ credit_total|floatformat:"-2" }}</b></div>
+          <div class="stat"><small>Member since</small><b>{% if account_profile.created_at %}{{ account_profile.created_at|date:"Y" }}{% else %}{% now "Y" %}{% endif %}</b></div>
         </div>
-        <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Recent orders</h2><button class="link small" data-go="orders">View all</button></div>
-        <div data-orders-recent></div>
-        <div class="highlight-card" style="background:var(--lime);min-height:220px;margin-top:20px">
-          <div><p class="eyebrow">Refer a friend</p><h3 class="h3">Give ₹300, get ₹300</h3><p class="muted small">Share your code AARAV300. When a friend places their first order you both get store credit.</p><button class="btn btn--black btn--sm" style="align-self:flex-start" onclick="T3.toast('Referral link copied')">Copy invite link</button></div>
-          <div style="padding:0;overflow:hidden"><img src="" data-ref-img alt=""></div>
-        </div>
+        <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Recent orders</h2>{% if orders %}<button class="link small" data-go="orders">View all</button>{% endif %}</div>
+        {% for order in orders|slice:":2" %}{% include "storefront/template4/_order_card.html" %}{% empty %}
+        <div class="empty-state card"><h3 class="h4">No orders yet</h3><p class="muted small" style="margin:6px 0 16px">When you place an order, you can track it right here.</p><a href="{% url 'public_all_products' %}" class="btn btn--black">Start shopping</a></div>
+        {% endfor %}
       </section>
 
+      {# ------------------------------ Orders ------------------------------ #}
       <section class="acct-pane" data-p="orders">
-        <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Your orders</h2><div class="pill-tabs"><button class="is-active">All</button><button>Processing</button><button>Shipped</button><button>Delivered</button></div></div>
-        <div data-orders></div>
+        <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Your orders</h2>
+          <div class="pill-tabs"><a href="?#orders" class="{% if not status_filter %}is-active{% endif %}">All</a>{% for val, label in order_chips %}<a href="?status={{ val }}#orders" class="{% if status_filter == val %}is-active{% endif %}">{{ label }}</a>{% endfor %}</div>
+        </div>
+        {% for order in orders %}{% include "storefront/template4/_order_card.html" %}{% empty %}
+        <div class="empty-state card">
+          {% if status_filter %}<h3 class="h4">No orders with this status</h3><p class="muted small" style="margin:6px 0 16px">Try another filter to see the rest of your orders.</p><a href="?#orders" class="btn btn--black">Show all orders</a>
+          {% else %}<h3 class="h4">No orders yet</h3><p class="muted small" style="margin:6px 0 16px">When you place an order, you can track it right here.</p><a href="{% url 'public_all_products' %}" class="btn btn--black">Start shopping</a>{% endif %}
+        </div>
+        {% endfor %}
       </section>
 
+      {# ------------------------------ Wishlist ------------------------------ #}
       <section class="acct-pane" data-p="wishlist">
         <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Wishlist</h2><span class="muted small">Saved items stay here across devices.</span></div>
         <div class="grid grid--3" data-wishlist></div>
       </section>
 
+      {# ------------------------------ Addresses ------------------------------ #}
       <section class="acct-pane" data-p="addresses">
         <div class="sec-head" style="margin-bottom:14px"><h2 class="h3">Saved addresses</h2></div>
         <div class="addr-grid">
-          <div class="addr is-default"><span class="badge badge--new" style="position:absolute;top:18px;right:18px">Default</span><b>Home</b><p>Aarav Mehta<br>B-1204, Lodha Splendora, Andheri West<br>Mumbai, Maharashtra 400053<br>+91 98765 43210</p><div class="addr__actions"><a href="#">Edit</a><a href="#">Remove</a></div></div>
-          <div class="addr"><b>Work</b><p>Aarav Mehta<br>7th Floor, One BKC, Bandra Kurla Complex<br>Mumbai, Maharashtra 400051<br>+91 98765 43210</p><div class="addr__actions"><a href="#">Edit</a><a href="#">Remove</a><a href="#">Set as default</a></div></div>
-          <div class="addr"><b>Parents</b><p>Rakesh Mehta<br>21, Shanti Kunj, Navrangpura<br>Ahmedabad, Gujarat 380009<br>+91 98250 11223</p><div class="addr__actions"><a href="#">Edit</a><a href="#">Remove</a><a href="#">Set as default</a></div></div>
-          <button class="addr addr--new"><span><span style="font-size:28px;display:block">+</span>Add a new address</span></button>
+          {% for a in saved_addresses %}
+          <div class="addr{% if a.is_default %} is-default{% endif %}">
+            {% if a.is_default %}<span class="badge badge--new" style="position:absolute;top:18px;right:18px">Default</span>{% endif %}
+            <b>{{ a.label|default:"Address" }}</b>
+            <p>{{ account_profile.name|default:"" }}{% if account_profile.name %}<br>{% endif %}{% if a.house_no or a.street_area %}{{ a.house_no }}{% if a.house_no and a.street_area %}, {% endif %}{{ a.street_area }}{% else %}{{ a.address_text }}{% endif %}<br>{{ a.city }}{% if a.state %}, {{ a.state }}{% endif %} {{ a.pincode }}{% if a.phone %}<br>{{ a.phone }}{% endif %}<br><span class="small muted">{{ a.get_address_type_display }}</span></p>
+            <div class="addr__actions">
+              <a href="#" data-addr-edit data-id="{{ a.id }}" data-label="{{ a.label }}" data-type="{{ a.address_type }}" data-house="{% if a.house_no or a.street_area %}{{ a.house_no }}{% else %}{{ a.address_text }}{% endif %}" data-street="{{ a.street_area }}" data-city="{{ a.city }}" data-state="{{ a.state }}" data-pincode="{{ a.pincode }}" data-phone="{{ a.phone }}" data-default="{% if a.is_default %}1{% endif %}">Edit</a>
+              <a href="#" data-addr-del="{% url 'public_account_address_delete' a.id %}">Remove</a>
+              {% if not a.is_default %}<a href="#" data-addr-default>Set as default</a>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          <button class="addr addr--new" type="button" data-addr-new><span><span style="font-size:28px;display:block">+</span>Add a new address</span></button>
         </div>
       </section>
 
+      {# ------------------------------ Store credit ------------------------------ #}
       <section class="acct-pane" data-p="credits">
         <div class="card" style="background:var(--lilac);border:0;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
-          <div><p class="eyebrow">Available balance</p><b style="font-size:44px;font-weight:800">₹250</b><p class="small muted">Applied automatically at checkout once you verify your phone.</p></div>
-          <a href="shop.html" class="btn btn--black">Shop now</a>
+          <div><p class="eyebrow">Available balance</p><b style="font-size:44px;font-weight:800">{{ sym }}{{ credit_total|floatformat:"-2" }}</b><p class="small muted">Applied automatically at checkout while you are signed in with this email.</p></div>
+          <a href="{% url 'public_all_products' %}" class="btn btn--black">Shop now</a>
         </div>
         <div class="card" style="margin-top:16px">
+          {% if customer_credits %}
           <table class="spec-table">
             <tr><td>Date</td><td>Description</td><td style="text-align:right">Amount</td></tr>
-            <tr><td>Nov 02, 2026</td><td style="font-weight:500">Birthday credit</td><td style="text-align:right;color:var(--ok);font-weight:700">+ ₹200</td></tr>
-            <tr><td>Oct 18, 2026</td><td style="font-weight:500">Used on order #MLW-24390</td><td style="text-align:right;font-weight:700">- ₹150</td></tr>
-            <tr><td>Sep 05, 2026</td><td style="font-weight:500">Referral: Riya joined</td><td style="text-align:right;color:var(--ok);font-weight:700">+ ₹200</td></tr>
+            {% for cr in customer_credits %}
+            <tr><td>{{ cr.created_at|date:"M d, Y" }}</td><td style="font-weight:500">{{ cr.note|default:"Store credit" }}{% if cr.valid_until %}<div class="small muted">Valid until {{ cr.valid_until|date:"M d, Y" }}</div>{% endif %}</td><td style="text-align:right;color:var(--ok);font-weight:700">{% if cr.credit_type == 'percent' %}{{ cr.credit_value|floatformat:"-2" }}% off{% else %}+ {{ sym }}{{ cr.remaining_amount|default:cr.credit_value|floatformat:"-2" }}{% endif %}</td></tr>
+            {% endfor %}
           </table>
+          {% else %}
+          <p class="muted small" style="margin:0">No store credit right now. When the store gives you credit, it shows here and applies automatically at checkout.</p>
+          {% endif %}
         </div>
       </section>
 
+      {# ------------------------------ Account details ------------------------------ #}
       <section class="acct-pane" data-p="details">
         <form class="card" data-details>
           <h2 class="h3" style="margin-bottom:18px">Account details</h2>
           <div class="form-grid">
-            <div class="field"><label>First name</label><input class="input" value="Aarav"></div>
-            <div class="field"><label>Last name</label><input class="input" value="Mehta"></div>
-            <div class="field"><label>Email <span class="verified">✓ Verified</span></label><input class="input" value="aarav.mehta@example.com"></div>
-            <div class="field"><label>Mobile <span class="verified">✓ Verified</span></label><input class="input" value="+91 98765 43210"></div>
-            <div class="field"><label>Birthday</label><input class="input" type="date" value="1995-11-20"></div>
-            <div class="field"><label>Gender</label><select class="select"><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
+            <div class="field"><label for="ad-first">First name</label><input id="ad-first" class="input" autocomplete="given-name" data-first></div>
+            <div class="field"><label for="ad-last">Last name</label><input id="ad-last" class="input" autocomplete="family-name" data-last></div>
+            <div class="field"><label for="ad-email">Email <span class="verified">✓ Verified</span></label><div style="display:flex;gap:8px"><input id="ad-email" class="input" value="{{ customer_email }}" readonly><button type="button" class="btn btn--grey btn--sm" style="height:auto" data-email-open>Change</button></div></div>
+            <div class="field"><label for="ad-phone">Mobile</label><input id="ad-phone" class="input" inputmode="tel" autocomplete="tel" placeholder="e.g. +91 98765 43210" value="{{ account_profile.phone|default:'' }}" data-phone></div>
           </div>
-          <label class="check" style="margin:18px 0"><input type="checkbox" checked> Send me offers and new drops on WhatsApp</label>
-          <button class="btn btn--black">Save changes</button>
+          <div class="hide" data-email-box style="margin-top:16px">
+            <div class="form-grid" style="margin:0">
+              <div class="field span-2" data-email-step="1"><label for="ad-new">New email</label><div style="display:flex;gap:8px"><input id="ad-new" type="email" class="input" placeholder="you@example.com" data-new-email><button type="button" class="btn btn--black btn--sm" style="height:auto" data-email-send>Send code</button></div></div>
+              <div class="field span-2 hide" data-email-step="2"><label for="ad-code">Code sent to your new email</label><div style="display:flex;gap:8px"><input id="ad-code" class="input" inputmode="numeric" maxlength="6" placeholder="6-digit code" data-email-code><button type="button" class="btn btn--black btn--sm" style="height:auto" data-email-verify>Confirm</button></div></div>
+            </div>
+          </div>
+          <p class="co-err" data-details-err style="margin-top:14px"></p>
+          <button class="btn btn--black" style="margin-top:18px">Save changes</button>
         </form>
         <div class="card" style="margin-top:16px;border-color:#f3c7c0">
           <h3 class="h4">Delete my account</h3>
           <p class="small muted" style="margin:6px 0 14px">Your order history is kept for invoices and warranty, everything else is removed.</p>
-          <button class="btn btn--outline btn--sm" style="border-color:var(--badge-sale);color:var(--badge-sale)" onclick="T3.toast('Preview only: nothing was deleted')">Delete account</button>
+          <button class="btn btn--outline btn--sm" style="border-color:var(--badge-sale);color:var(--badge-sale)" type="button" data-del-open>Delete account</button>
         </div>
       </section>
     </div>
   </div>
 </main>
-<div data-footer></div>
-<script src="assets/js/data.js"></script>
-<script>
-window.T3Page = function () {
-  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$;
-  $('[data-ref-img]').src = D.U(D.IMG.flatlay2, 700, 500);
-  const orders = [
-    { no: 'MLW-24816', date: 'Nov 12, 2026', status: 'processing', items: ['argan-milk-serum', 'barrier-repair-cream', 'rose-quartz-roller'], total: 10096 },
-    { no: 'MLW-24602', date: 'Nov 03, 2026', status: 'shipped', items: ['sunset-spf-fluid'], total: 3499, track: 'Out for delivery today' },
-    { no: 'MLW-24390', date: 'Oct 18, 2026', status: 'delivered', items: ['vitamin-c-glow-drops', 'oat-milk-soap-bar'], total: 6248 },
-    { no: 'MLW-23911', date: 'Sep 22, 2026', status: 'cancelled', items: ['velvet-matte-lip'], total: 1899 },
-  ];
-  const label = { processing: 'Processing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' };
-  const oc = o => `<div class="order-card"><div class="order-card__head"><div><b>#${o.no}</b><small>Placed on ${o.date}</small></div><span class="status status--${o.status}">${label[o.status]}</span></div>
-    <div class="order-card__items">${o.items.map(id => `<img src="${T3.byId(id).img[0]}" alt="">`).join('')}<div style="margin-left:6px"><b>${T3.byId(o.items[0]).name}</b>${o.items.length > 1 ? `<div class="small muted">+ ${o.items.length - 1} more item${o.items.length > 2 ? 's' : ''}</div>` : ''}${o.track ? `<div class="small" style="color:var(--ok);font-weight:700">${o.track}</div>` : ''}</div></div>
-    <div class="order-card__foot"><b>${T3.inr(o.total)}</b><div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${o.status === 'delivered' ? '<button class="btn btn--grey btn--sm">Return / Replace</button><button class="btn btn--grey btn--sm">Invoice</button>' : ''}
-      ${o.status === 'processing' ? '<button class="btn btn--grey btn--sm">Edit order</button><button class="btn btn--grey btn--sm">Cancel</button>' : ''}
-      ${o.status !== 'cancelled' ? '<a class="btn btn--black btn--sm" href="order-confirmation.html">Track order</a>' : '<a class="btn btn--grey btn--sm" href="shop.html">Buy again</a>'}
-    </div></div></div>`;
-  $('[data-orders]').innerHTML = orders.map(oc).join('');
-  $('[data-orders-recent]').innerHTML = orders.slice(0, 2).map(oc).join('');
 
+{# ---------------- Order details ---------------- #}
+<div class="modal" id="modal-order" role="dialog" aria-label="Order details">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__box modal__box--single" style="width:min(620px,100%)">
+    <button type="button" class="modal__close" data-close aria-label="Close" data-x></button>
+    <div data-order-body></div>
+  </div>
+</div>
+
+{# ---------------- Cancel / replace / support ---------------- #}
+<div class="modal" id="modal-req" role="dialog" aria-label="Order request">
+  <div class="modal__backdrop" data-close></div>
+  <form class="modal__box modal__box--single" data-req-form>
+    <button type="button" class="modal__close" data-close aria-label="Close" data-x></button>
+    <h3 class="h3" data-req-title></h3>
+    <p class="muted small" style="margin:6px 0 18px" data-req-hint></p>
+    <div style="display:grid;gap:14px">
+      <div class="field"><label for="rq-r" data-req-reason-label>Reason</label><select id="rq-r" class="select" name="reason" required data-req-reason></select></div>
+      <div class="field"><label for="rq-d" data-req-desc-label>Details (optional)</label><textarea id="rq-d" class="textarea" name="description" data-req-desc></textarea></div>
+      <p class="co-err" data-req-err></p>
+      <button class="btn btn--black btn--block" data-req-submit>Submit request</button>
+    </div>
+  </form>
+</div>
+
+{# ---------------- Address ---------------- #}
+<div class="modal" id="modal-addr" role="dialog" aria-label="Address">
+  <div class="modal__backdrop" data-close></div>
+  <form class="modal__box modal__box--single" data-addr-form>
+    <button type="button" class="modal__close" data-close aria-label="Close" data-x></button>
+    <h3 class="h3" data-addr-title>Add a new address</h3>
+    <input type="hidden" name="id">
+    <div class="form-grid" style="margin-top:18px">
+      <div class="field span-2"><label>Save as</label><div class="pill-tabs" data-label-pick><button type="button" data-v="home" class="is-active">Home</button><button type="button" data-v="office">Office</button><button type="button" data-v="other">Other</button></div><input type="hidden" name="label_choice" value="home"></div>
+      <div class="field span-2 hide" data-label-custom><label for="ad-lc">Address name</label><input id="ad-lc" class="input" name="label_custom" maxlength="40" placeholder="e.g. Parents"></div>
+      <div class="field span-2"><label for="ad-h">House / flat / building</label><input id="ad-h" class="input" name="house_no" maxlength="120" autocomplete="address-line1"></div>
+      <div class="field span-2"><label for="ad-s">Street / area / landmark</label><input id="ad-s" class="input" name="street_area" maxlength="200" autocomplete="address-line2"></div>
+      <div class="field"><label for="ad-c">City</label><input id="ad-c" class="input" name="city" maxlength="120" autocomplete="address-level2"></div>
+      <div class="field"><label for="ad-st">State</label><input id="ad-st" class="input" name="state" maxlength="120" autocomplete="address-level1"></div>
+      <div class="field"><label for="ad-p">Pincode</label><input id="ad-p" class="input" name="pincode" maxlength="10" inputmode="numeric" autocomplete="postal-code"></div>
+      <div class="field"><label for="ad-ph">Phone (optional)</label><input id="ad-ph" class="input" name="phone" maxlength="20" inputmode="tel"></div>
+      <div class="field span-2"><label for="ad-t">Use this address for</label><select id="ad-t" class="select" name="address_type"><option value="both">Shipping &amp; billing</option><option value="shipping">Shipping only</option><option value="billing">Billing only</option></select></div>
+      <label class="check span-2"><input type="checkbox" name="is_default" value="1"> Make this my default address</label>
+    </div>
+    <p class="co-err" data-addr-err style="margin-top:12px"></p>
+    <button class="btn btn--black btn--block" style="margin-top:12px">Save address</button>
+  </form>
+</div>
+
+{# ---------------- Delete account ---------------- #}
+<div class="modal" id="modal-del" role="dialog" aria-label="Delete account">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__box modal__box--single">
+    <button type="button" class="modal__close" data-close aria-label="Close" data-x></button>
+    <h3 class="h3">Delete your account?</h3>
+    <div data-del-step="1" style="margin-top:14px">
+      <p class="small">This cannot be undone. Once your account is deleted:</p>
+      <ul class="small muted" style="margin:10px 0 14px 18px;list-style:disc;display:grid;gap:4px">
+        <li>You can no longer sign in to it or see its orders</li>
+        <li>Your email, mobile number and saved addresses are removed</li>
+        <li>Your wishlist and any store credit are removed</li>
+        <li>You are unsubscribed from the newsletter</li>
+      </ul>
+      <p class="small muted">The store keeps a record of your past orders, as it may need them for legal, tax and accounting purposes.</p>
+      <label class="check" style="margin:16px 0"><input type="checkbox" data-del-ack> I understand, delete my account</label>
+      <button type="button" class="btn btn--black btn--block" data-del-send disabled>Send confirmation code</button>
+    </div>
+    <form data-del-step="2" class="hide" style="display:grid;gap:12px;margin-top:14px">
+      <p class="small">Enter the 6 digit code we sent to <b>{{ customer_email }}</b>.</p>
+      <input class="input" inputmode="numeric" maxlength="6" placeholder="6-digit code" aria-label="Confirmation code" data-del-code>
+      <button class="btn btn--block" style="background:var(--badge-sale);color:#fff">Delete my account</button>
+    </form>
+    <p class="co-err" data-del-err style="margin-top:12px"></p>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ csp_nonce }}">
+window.T3ACC = {
+  profile: '{% url "public_account_profile" %}',
+  emailOtp: '{% url "public_account_email_otp" %}',
+  emailVerify: '{% url "public_account_email_verify" %}',
+  addrSave: '{% url "public_account_address_save" %}',
+  delOtp: '{% url "public_account_delete_otp" %}',
+  delConfirm: '{% url "public_account_delete_confirm" %}',
+  name: '{{ account_profile.name|default:""|escapejs }}',
+  email: '{{ customer_email|escapejs }}',
+};
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$, esc = T3.esc, A = window.T3ACC;
+  $$('[data-x]').forEach(b => b.innerHTML = I.close);
+  const initials = s => String(s || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || (A.email[0] || 'A').toUpperCase();
+  $('[data-initials]').textContent = initials(A.name);
+
+  /* ---- tabs ---- */
+  const go = t => { $$('[data-t]').forEach(b => b.classList.toggle('is-active', b.dataset.t === t)); $$('[data-p]').forEach(p => p.classList.toggle('is-active', p.dataset.p === t)); history.replaceState(null, '', location.search + '#' + t); };
+  $('[data-tabs]').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) go(b.dataset.t); });
+  document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
+  const h = location.hash.slice(1); if (h && $(`[data-p="${h}"]`)) go(h);
+  addEventListener('hashchange', () => { const k = location.hash.slice(1); if ($(`[data-p="${k}"]`)) go(k); });
+
+  /* ---- wishlist ---- */
+  let wl = (D.page.wishlist || []).slice();
   const renderWish = () => {
-    const list = T3.getWish().map(T3.byId).filter(Boolean);
-    $('[data-wishlist]').innerHTML = list.length ? list.map(p => T3.card(p, { reveal: false })).join('') : `<div class="empty-state" style="grid-column:1/-1">${I.heart.replace(/18/g, '44')}<h3 class="h4">Nothing saved yet</h3><p class="muted small" style="margin:6px 0 16px">Tap the heart on any product to save it here.</p><a href="shop.html" class="btn btn--black">Browse products</a></div>`;
-    $$('[data-wish-count]').forEach(e => e.textContent = list.length);
+    const ids = T3.getWish(); wl = wl.filter(p => ids.includes(p.id));
+    $('[data-wishlist]').innerHTML = wl.length ? wl.map(p => T3.card(p, { reveal: false })).join('') : `<div class="empty-state" style="grid-column:1/-1">${I.heart.replace(/18/g, '44')}<h3 class="h4">Nothing saved yet</h3><p class="muted small" style="margin:6px 0 16px">Tap the heart on any product to save it here.</p><a href="${D.urls.shop}" class="btn btn--black">Browse products</a></div>`;
+    $$('[data-wish-count]').forEach(e => e.textContent = wl.length);
   };
   renderWish(); document.addEventListener('t3:wish', renderWish);
 
-  const go = t => { $$('[data-t]').forEach(b => b.classList.toggle('is-active', b.dataset.t === t)); $$('[data-p]').forEach(p => p.classList.toggle('is-active', p.dataset.p === t)); history.replaceState(null, '', '#' + t); };
-  $('[data-tabs]').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) go(b.dataset.t); });
-  document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
-  $('[data-details]').addEventListener('submit', e => { e.preventDefault(); T3.toast('Details saved'); });
-  const h = location.hash.slice(1); if (h && $(`[data-p="${h}"]`)) go(h);
-  addEventListener('hashchange', () => { const k = location.hash.slice(1); if ($(`[data-p="${k}"]`)) go(k); });
+  /* ---- order details ---- */
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-view-order]'); if (!b) return;
+    const src = document.getElementById('order-detail-' + b.dataset.viewOrder); if (!src) return;
+    $('[data-order-body]').innerHTML = src.innerHTML; T3.openDrawer('order');
+  });
+
+  /* ---- cancel / replace / support ---- */
+  const REASONS = {
+    cancel: ['Ordered by mistake', 'Found a better price elsewhere', 'Delivery is taking too long', 'Want to change the address or items', 'Changed my mind', 'Other'],
+    replace: ['Product arrived damaged', 'Received the wrong item', 'Product is defective / not working', 'Parts or accessories missing', 'Wrong size or variant received', 'Other'],
+    support: ['Where is my order?', 'Delivery or tracking issue', 'Payment or refund query', 'Invoice or GST query', 'Problem with the product', 'Change address or contact details', 'Other'],
+  };
+  const COPY = {
+    cancel: ['Request cancellation', 'You can cancel until your order ships. The store will confirm the cancellation by email.', 'Reason', 'Details (optional)', 'Submit request'],
+    replace: ['Request replacement', 'Tell the store what went wrong. Once approved, a replacement is sent for the same order.', 'Reason', 'Details (optional)', 'Submit request'],
+    support: ['Get help with your order', 'Ask the store anything about this order. They will reply to you by email, and the reply also shows here under the order.', 'What do you need help with?', 'Your message', 'Send to store'],
+  };
+  let req = { url: '', type: '' };
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-req]'); if (!b) return;
+    req = { url: b.dataset.url, type: b.dataset.req };
+    const c = COPY[req.type];
+    $('[data-req-title]').textContent = `${c[0]} · #${b.dataset.order}`; $('[data-req-hint]').textContent = c[1];
+    $('[data-req-reason-label]').textContent = c[2]; $('[data-req-desc-label]').textContent = c[3]; $('[data-req-submit]').textContent = c[4];
+    $('[data-req-reason]').innerHTML = '<option value="">Choose a reason</option>' + REASONS[req.type].map(r => `<option>${esc(r)}</option>`).join('');
+    $('[data-req-desc]').value = ''; $('[data-req-desc]').required = req.type === 'support'; $('[data-req-err]').textContent = '';
+    T3.openDrawer('req');
+  });
+  $('[data-req-form]').addEventListener('submit', e => {
+    e.preventDefault();
+    const reason = $('[data-req-reason]').value, desc = $('[data-req-desc]').value.trim(), err = $('[data-req-err]');
+    if (!reason) { err.textContent = req.type === 'support' ? 'Please choose what you need help with.' : 'Please choose a reason.'; return; }
+    if (req.type === 'support' && desc.length < 5) { err.textContent = 'Please describe how the store can help.'; return; }
+    T3.post(req.url, { type: req.type, reason, description: desc }).then(res => {
+      const j = res.data || {};
+      if (!res.ok || !j.ok) { err.textContent = j.error || 'Could not send your request. Please try again.'; return; }
+      T3.closeAll(); T3.toast(j.message || 'Request sent'); setTimeout(() => location.reload(), 900);
+    }).catch(() => { err.textContent = 'Network error. Please try again.'; });
+  });
+
+  /* ---- addresses ---- */
+  const af = $('[data-addr-form]');
+  const pickLabel = v => { $$('[data-label-pick] button').forEach(b => b.classList.toggle('is-active', b.dataset.v === v)); af.label_choice.value = v; $('[data-label-custom]').classList.toggle('hide', v !== 'other'); };
+  $('[data-label-pick]').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) pickLabel(b.dataset.v); });
+  const openAddr = d => {
+    af.reset(); $('[data-addr-err]').textContent = '';
+    af.id.value = d.id || ''; $('[data-addr-title]').textContent = d.id ? 'Edit address' : 'Add a new address';
+    const lab = (d.label || '').trim(), low = lab.toLowerCase();
+    pickLabel(!d.id || low === 'home' ? 'home' : low === 'office' ? 'office' : 'other'); af.label_custom.value = low === 'home' || low === 'office' ? '' : lab;
+    af.house_no.value = d.house || ''; af.street_area.value = d.street || ''; af.city.value = d.city || ''; af.state.value = d.state || '';
+    af.pincode.value = d.pincode || ''; af.phone.value = d.phone || ''; af.address_type.value = d.type || 'both'; af.is_default.checked = !!d.default;
+    T3.openDrawer('addr');
+  };
+  const addrData = el => ({ ...el.dataset });
+  const saveAddr = body => T3.post(A.addrSave, body).then(res => { const j = res.data || {}; if (!res.ok || !j.ok) throw new Error(j.error || 'Could not save this address.'); return j; });
+  $('[data-addr-new]').onclick = () => openAddr({});
+  document.addEventListener('click', e => {
+    const ed = e.target.closest('[data-addr-edit]'); if (ed) { e.preventDefault(); openAddr(addrData(ed)); return; }
+    const df = e.target.closest('[data-addr-default]');
+    if (df) { e.preventDefault(); const d = addrData(df.parentElement.querySelector('[data-addr-edit]')); const low = (d.label || '').toLowerCase();
+      saveAddr({ id: d.id, label_choice: low === 'home' || low === 'office' ? low : 'other', label_custom: d.label || 'Address', address_type: d.type || 'both', house_no: d.house || '', street_area: d.street || '', city: d.city || '', state: d.state || '', pincode: d.pincode || '', phone: d.phone || '', is_default: '1' })
+        .then(() => { T3.toast('Default address updated'); setTimeout(() => location.reload(), 600); }).catch(x => T3.toast(x.message)); return; }
+    const rm = e.target.closest('[data-addr-del]');
+    if (rm) { e.preventDefault(); if (!confirm('Remove this address?')) return;
+      T3.post(rm.dataset.addrDel, {}).then(res => { const j = res.data || {}; if (!res.ok || !j.ok) { T3.toast(j.error || 'Could not remove this address.'); return; } T3.toast('Address removed'); setTimeout(() => location.reload(), 600); }); }
+  });
+  af.addEventListener('submit', e => {
+    e.preventDefault();
+    const body = {}; new FormData(af).forEach((v, k) => body[k] = v);
+    saveAddr(body).then(() => { T3.closeAll(); T3.toast('Address saved'); setTimeout(() => location.reload(), 600); }).catch(x => { $('[data-addr-err]').textContent = x.message; });
+  });
+
+  /* ---- account details ---- */
+  const nm = A.name.trim().split(/\s+/); $('[data-first]').value = nm.shift() || ''; $('[data-last]').value = nm.join(' ');
+  $('[data-details]').addEventListener('submit', e => {
+    e.preventDefault();
+    const err = $('[data-details-err]'); err.textContent = '';
+    const name = [$('[data-first]').value.trim(), $('[data-last]').value.trim()].filter(Boolean).join(' ');
+    T3.post(A.profile, { name, phone: $('input[data-phone]').value.trim() }).then(res => {
+      const j = res.data || {};
+      if (!res.ok || !j.ok) { err.textContent = j.error || 'Could not save your details.'; return; }
+      T3.toast(j.message || 'Details saved'); $('[data-acct-name]').textContent = j.name; $('[data-initials]').textContent = initials(j.name);
+    });
+  });
+  $('[data-email-open]').onclick = () => { $('[data-email-box]').classList.toggle('hide'); $('[data-new-email]').focus(); };
+  $('[data-email-send]').onclick = () => {
+    const err = $('[data-details-err]'); err.textContent = '';
+    T3.post(A.emailOtp, { email: $('[data-new-email]').value.trim() }).then(res => {
+      const j = res.data || {};
+      if (!res.ok || !j.ok) { err.textContent = j.error || 'Could not send a code.'; return; }
+      T3.toast(j.message || 'Code sent'); $('[data-email-step="2"]').classList.remove('hide'); $('[data-email-code]').focus();
+    });
+  };
+  $('[data-email-verify]').onclick = () => {
+    const err = $('[data-details-err]'); err.textContent = '';
+    T3.post(A.emailVerify, { code: $('[data-email-code]').value.trim() }).then(res => {
+      const j = res.data || {};
+      if (!res.ok || !j.ok) { err.textContent = j.error || 'That code is incorrect or has expired.'; return; }
+      T3.toast(j.message || 'Your email is updated.'); setTimeout(() => location.reload(), 700);
+    });
+  };
+
+  /* ---- delete account ---- */
+  $('[data-del-open]').onclick = () => { $('[data-del-step="1"]').classList.remove('hide'); $('[data-del-step="2"]').classList.add('hide'); $('[data-del-err]').textContent = ''; T3.openDrawer('del'); };
+  $('[data-del-ack]').onchange = e => $('[data-del-send]').disabled = !e.target.checked;
+  $('[data-del-send]').onclick = () => T3.post(A.delOtp, {}).then(res => {
+    const j = res.data || {};
+    if (!res.ok || !j.ok) { $('[data-del-err]').textContent = j.error || 'Could not send a code.'; return; }
+    $('[data-del-step="1"]').classList.add('hide'); $('[data-del-step="2"]').classList.remove('hide'); $('[data-del-code]').focus();
+  });
+  $('[data-del-step="2"]').addEventListener('submit', e => {
+    e.preventDefault();
+    T3.post(A.delConfirm, { code: $('[data-del-code]').value.trim() }).then(res => {
+      const j = res.data || {};
+      if (!res.ok || !j.ok) { $('[data-del-err]').textContent = j.error || 'That code is incorrect or has expired.'; return; }
+      T3.toast(j.message || 'Your account has been deleted.'); setTimeout(() => location.href = j.redirect || D.urls.home, 900);
+    });
+  });
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

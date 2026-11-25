@@ -1,0 +1,11 @@
+<li>
+  <a class="mk-row" href="{% url 'marketplace:app' a.slug %}">
+    {% include "marketplace/surface/_icon.html" %}
+    <span class="mk-row__body">
+      <span class="mk-row__name">{{ a.name }}</span>
+      <span class="mk-row__desc">{{ a.tagline }}</span>
+    </span>
+    <span class="mk-row__price">{% if a.slug in installed %}Installed{% else %}{{ a.pricing_label }}{% endif %}</span>
+    <span class="mk-row__go" aria-hidden="true">&rarr;</span>
+  </a>
+</li>

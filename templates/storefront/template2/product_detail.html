@@ -1,11 +1,69 @@
 {% extends "storefront/template2/base.html" %}
 {% load static %}
+{% load marketplace_slots %}
 {% load website_filters %}
 
 {% block title %}{{ product.title }} · {{ website.name|default:website.content.site_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
+/* Phone / tablet thumbnails: one row of equal squares, centred under the
+   square main image; when there are more than fit, the row scrolls sideways
+   (auto margins centre it without clipping the first thumbnail). */
+/* Main image: a true square at every width (the sm 425px height with a 420px
+   max width made it 420x425), so a square upload fills it exactly, uncut. */
+#pdp-image-stage { height: auto !important; aspect-ratio: 1 / 1; }
+/* Gallery and columns. --pdp-stage is the image's side, --pdp-rail the
+   thumbnail strip beside it. The gallery column hugs the two, so no empty band
+   opens next to the image, and the details take whatever is left (minmax(0)
+   lets them shrink, so the purchase column is never pushed off the page). */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  #pdp-image-stage { width: 100%; max-width: 420px; }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .pdp-grid.pdp-grid { padding-left: 48px; padding-right: 24px; }
+}
+@media (min-width: 1024px) {
+  .pdp-grid.pdp-grid {
+    --pdp-rail: 72px;
+    /* Small laptops / zoomed in: image and details share what the purchase
+       column, gutters, left margin and strip (472px) leave over; the image
+       gives up the 12px beside the strip. */
+    --pdp-stage: clamp(248px, 50vw - 248px, 408px);
+    grid-template-columns: auto minmax(0, 1fr) 304px;
+    column-gap: 24px;
+  }
+  /* Stick clear of the fixed header: its height varies with the announcement
+     bar, logo and zoom, and navigation.html measures it into --header-height. */
+  .pdp-gallery.pdp-gallery { top: calc(var(--header-height, 96px) + 24px); }
+  #pdp-image-stage { flex: none; width: var(--pdp-stage); max-width: none; }
+  /* 12px between the strip and the image at every width. */
+  #desktop-thumbs { width: var(--pdp-rail); margin-right: 12px; flex: none; height: var(--pdp-stage) !important; }
+  /* Square thumbnails: five fill the strip, more shrink to fit, fewer never
+     grow past the strip's width. */
+  #desktop-thumbs > .thumb { flex: 0 1 min(var(--pdp-rail), (var(--pdp-stage) - 16px) / 5); min-height: 0; }
+  #desktop-thumbs > .thumb img { height: 100% !important; }
+}
+@media (min-width: 1366px) {
+  .pdp-grid.pdp-grid {
+    --pdp-rail: 96px;
+    /* 408px until 1536px, then it grows with the screen, never taller than the
+       window. 356px = half of the purchase column and gutters (400px), the left
+       margin and strip (144px) and the 12px beside the strip. */
+    --pdp-stage: clamp(408px, 50vw - 356px, max(408px, min(708px, 100vh - var(--header-height, 96px) - 60px)));
+    grid-template-columns: auto minmax(0, 1fr) 320px;
+    column-gap: 40px;
+  }
+}
+@media (max-width: 1023.98px) {
+  #pdp-image-stage { margin-left: auto; margin-right: auto; }
+  #mobile-thumbs.pdp-mthumbs { display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; padding: 2px 0; }
+  #mobile-thumbs.pdp-mthumbs::-webkit-scrollbar { display: none; }
+  #mobile-thumbs.pdp-mthumbs > .thumb { flex: 0 0 64px; width: 64px; height: 64px; }
+  #mobile-thumbs.pdp-mthumbs > .thumb:first-child { margin-left: auto; }
+  #mobile-thumbs.pdp-mthumbs > .thumb:last-child { margin-right: auto; }
+  #mobile-thumbs.pdp-mthumbs > .thumb img { width: 100%; height: 100% !important; object-fit: cover; }
+}
   /* Cross-browser thin horizontal scrollbar */
 .scroll-small {
   -webkit-overflow-scrolling: touch; 
@@ -85,7 +143,7 @@
     </nav>
 
     <!-- Product Details -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:[grid-template-columns:1fr_1fr_320px] gap-6 md:gap-8 lg:gap-10 px-4 md:px-0 lg:ml-0 w-full mx-auto lg:items-start">
+    <div class="pdp-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:[grid-template-columns:1fr_1fr_320px] gap-6 md:gap-8 lg:gap-10 px-4 md:px-0 lg:ml-0 w-full mx-auto lg:items-start">
       {% block pdp_sticky_sidebar %}
       <!-- Sticky purchase sidebar within section (desktop) -->
       <aside class="hidden lg:block lg:col-start-3 lg:row-start-1">
@@ -93,15 +151,15 @@
           <div class="p-6">
             {% with specs=product.specifications %}
             <div class="flex items-baseline gap-2">
-              <div id="sidebar-price" class="text-[28px] leading-none font-semibold text-gray-900">₹{{ product.price }}</div>
+              <div id="sidebar-price" data-ow-price class="text-[28px] leading-none font-semibold text-gray-900">₹{{ product.price }}</div>
               {% if specs and specs.mrp %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through">₹{{ specs.mrp }}</div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp">₹{{ specs.mrp }}</div>
               {% elif specs and specs.original_price %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through">₹{{ specs.original_price }}</div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp">₹{{ specs.original_price }}</div>
               {% elif product.mrp %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through">₹{{ product.mrp }}</div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp">₹{{ product.mrp }}</div>
               {% else %}
-              <div id="sidebar-mrp" class="text-gray-400 line-through hidden"></div>
+              <div id="sidebar-mrp" class="text-gray-400 ow-mrp hidden"></div>
               {% endif %}
             </div>
             {% if specs and specs.prime or specs.is_prime %}
@@ -111,7 +169,7 @@
             {% endif %}
             <div class="mt-2 text-[13px] text-gray-800">
               <span class="font-medium">FREE delivery</span>
-              <span id="purch-delivery-date" class="font-semibold"></span>.
+              <span data-delivery-date class="font-semibold"></span>.
             </div>
             <div class="mt-3 flex items-start gap-2 text-[13px] text-gray-700">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21s7-5.686 7-11a7 7 0 10-14 0c0 5.314 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"/></svg>
@@ -169,7 +227,7 @@
             </div>
             <div class="mt-4">
               <label class="block text-[13px] text-gray-800 mb-1">Quantity:</label>
-              <select id="purch-qty" class="w-full h-8 rounded-md border border-gray-300 px-2 py-1 text-[11px] leading-[1.1] focus:ring-2 focus:ring-blue-600 focus:outline-none">
+              <select id="purch-qty" data-ow-qty class="w-full h-8 rounded-md border border-gray-300 px-2 py-1 text-[11px] leading-[1.1] focus:ring-2 focus:ring-blue-600 focus:outline-none">
                 {% num_range 1 101 as qty_range %}
                 {% for i in qty_range %}
                 <option class="text-[11px]" style="line-height:1.1;padding:2px 6px;" value="{{ i }}">{{ i }}</option>
@@ -197,7 +255,7 @@
       </aside>
       {% endblock %}
       <!-- Gallery -->
-      <div class="lg:ml-12 lg:sticky lg:top-24 lg:self-start">
+      <div class="pdp-gallery lg:ml-12 lg:sticky lg:top-24 lg:self-start">
         <div class="lg:flex lg:gap-0 overflow-hidden sm:overflow-visible">
           <!-- Vertical thumbnails (desktop) -->
           <div id="desktop-thumbs" class="hidden lg:flex lg:flex-col lg:w-24 gap-1 lg:justify-start" style="height:425px;overflow:hidden;">
@@ -295,9 +353,7 @@
         </div>
 
         <!-- Thumbnails (mobile) -->
-        <div id="mobile-thumbs" class="grid grid-cols-4 gap-3 md:gap-4 lg:hidden mt-4">
-          <!-- Tailwind safelist for dynamically-applied grid-cols-* in the JS below -->
-          <div class="hidden grid-cols-1 grid-cols-2 grid-cols-3 grid-cols-4 grid-cols-5 grid-cols-6 grid-cols-7 grid-cols-8"></div>
+        <div id="mobile-thumbs" class="pdp-mthumbs lg:hidden mt-4">
           {% for i in "1234567" %}
             {% with image_attr="image"|add:i %}
             {% with img=product|getattribute:image_attr %}
@@ -329,43 +385,6 @@
         </div>
       </div>
 
-      <script>
-        document.addEventListener('DOMContentLoaded', function(){
-          // Mobile thumbnails: auto grid columns
-          var container = document.getElementById('mobile-thumbs');
-          if(container) {
-            var thumbs = container.querySelectorAll('button.thumb');
-            var cols = thumbs ? thumbs.length : 0;
-            if (cols > 0) {
-              container.className = container.className
-                .split(' ')
-                .filter(function(c){ return !/^grid-cols-\d+$/.test(c); })
-                .join(' ')
-                .trim();
-              container.classList.add('grid-cols-' + cols);
-            }
-          }
-
-          // Desktop thumbnails: auto-size to fill container height without scrollbar
-          var dtContainer = document.getElementById('desktop-thumbs');
-          if(dtContainer) {
-            var dtThumbs = dtContainer.querySelectorAll('button.thumb');
-            var n = dtThumbs.length;
-            if(n > 0) {
-              var containerH = dtContainer.offsetHeight; // 425px
-              var gap = 4; // gap-1 = 4px
-              // Use at least 5 slots so fewer images don't grow oversized
-              var slots = Math.max(n, 5);
-              var thumbH = Math.floor((containerH - (slots - 1) * gap) / slots);
-              dtThumbs.forEach(function(btn) {
-                var img = btn.querySelector('img');
-                if(img) img.style.height = thumbH + 'px';
-              });
-            }
-          }
-        });
-      </script>
-
       <!-- Details -->
       <div class="ml-[1rem] mt-[1rem] md:mt-0 md:ml-2 lg:ml-0 lg:pr-2">
         <div class="flex items-start justify-between gap-3">
@@ -380,7 +399,7 @@
         </div>
         <div class="mt-2 flex flex-wrap items-center gap-y-2">
           <div class="flex items-center">
-            <a href="#reviews-section" class="flex items-center">
+            <a aria-label="See customer reviews" href="#reviews-section" class="flex items-center">
             {% num_range 0 rating_full as full_range %}
             {% for i in full_range %}
                 <svg class="w-4 h-4 text-black fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
@@ -431,7 +450,7 @@
           </p>
           {% endif %}
           <div class="pdp-priceblock__row">
-            <span id="product-price" class="text-2xl text-gray-900">₹{{ product.price }}</span>
+            <span id="product-price" data-ow-price class="text-2xl text-gray-900">₹{{ product.price }}</span>
             {% if is_d2c %}
             <button type="button" class="pdp-ph-tag" id="pdp-ph-open" aria-haspopup="dialog" aria-controls="pdp-ph"
                     data-url="{% url 'public_product_price_history' product.product_id %}">
@@ -444,9 +463,9 @@
             {% firstof specs.mrp specs.original_price product.mrp as pdp_mrp %}
             <div class="pdp-priceblock__mrp">
               {% if pdp_mrp %}
-              <span id="product-mrp" class="text-gray-400 line-through">₹{{ pdp_mrp }}</span>
+              <span id="product-mrp" class="text-gray-400 ow-mrp">₹{{ pdp_mrp }}</span>
               {% else %}
-              <span id="product-mrp" class="text-gray-400 line-through hidden"></span>
+              <span id="product-mrp" class="text-gray-400 ow-mrp hidden"></span>
               {% endif %}
             </div>
           {% endwith %}
@@ -486,6 +505,8 @@
         </div>
         {{ product.variant_combinations|json_script:"pdp-variant-combos" }}
         {% endif %}
+        {# Theme contract: app blocks placed below the variations (e.g. Quantity Discounts). #}
+        {% app_slot "pdp.after_variations" %}
         {# data-vp-slot: swapped for the picked variation's own details (storefront/_variant_profiles.html). #}
         <div data-vp-slot="features">{% include "storefront/_pdp_features.html" %}</div>
         {% block pdp_mobile_purchase_actions %}
@@ -494,7 +515,7 @@
           <div class="bg-white py-4 pr-4 space-y-3">
             <div class="mt-2 text-[13px] text-gray-800">
               <span class="font-medium">FREE delivery</span>
-              <span id="purch-delivery-date" class="font-semibold"></span>.
+              <span data-delivery-date class="font-semibold"></span>.
             </div>
             <div class="mt-3 flex items-start gap-2 text-[13px] text-gray-700">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21s7-5.686 7-11a7 7 0 10-14 0c0 5.314 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"/></svg>
@@ -531,16 +552,16 @@
               {% endif %}
             <div class="flex flex-row gap-4">
               <div class="flex items-baseline gap-2">
-                <div id="mobile-price" class="text-[22px] leading-none font-semibold text-gray-900">₹{{ product.price }}</div>
+                <div id="mobile-price" data-ow-price class="text-[22px] leading-none font-semibold text-gray-900">₹{{ product.price }}</div>
                 {% with specs=product.specifications %}
                 {% if specs and specs.mrp %}
-                <div id="mobile-mrp" class="text-gray-400 line-through">₹{{ specs.mrp }}</div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp">₹{{ specs.mrp }}</div>
                 {% elif specs and specs.original_price %}
-                <div id="mobile-mrp" class="text-gray-400 line-through">₹{{ specs.original_price }}</div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp">₹{{ specs.original_price }}</div>
                 {% elif product.mrp %}
-                <div id="mobile-mrp" class="text-gray-400 line-through">₹{{ product.mrp }}</div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp">₹{{ product.mrp }}</div>
                 {% else %}
-                <div id="mobile-mrp" class="text-gray-400 line-through hidden"></div>
+                <div id="mobile-mrp" class="text-gray-400 ow-mrp hidden"></div>
                 {% endif %}
                 {% endwith %}
               </div>
@@ -550,7 +571,7 @@
             </div>
             <div>
               <label class="block text-[12px] text-gray-800 mb-1">Quantity</label>
-              <select id="purch-qty-m" class="w-full h-8 rounded-md border border-gray-300 px-2 py-1 text-[11px] leading-[1.1] focus:ring-2 focus:ring-blue-600 focus:outline-none">
+              <select id="purch-qty-m" data-ow-qty class="w-full h-8 rounded-md border border-gray-300 px-2 py-1 text-[11px] leading-[1.1] focus:ring-2 focus:ring-blue-600 focus:outline-none">
                 {% num_range 1 101 as qty_range_m %}
                 {% for i in qty_range_m %}
                 <option class="text-[11px]" style="line-height:1.1;padding:2px 6px;" value="{{ i }}">{{ i }}</option>
@@ -809,7 +830,7 @@
     <div class="w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-gray-200">
       <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <h3 class="text-base font-semibold text-gray-900">Product Enquiry</h3>
-        <button type="button" id="pdp-enquiry-close" class="text-gray-400 hover:text-gray-600">
+        <button aria-label="Close" type="button" id="pdp-enquiry-close" class="text-gray-400 hover:text-gray-600">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5"><path fill="currentColor" d="M6.4 5l12.6 12.6-1.4 1.4L5 6.4z"/><path fill="currentColor" d="M5 17.6L17.6 5l1.4 1.4L6.4 19z"/></svg>
         </button>
       </div>
@@ -831,6 +852,7 @@
             <input type="number" name="quantity" min="1" step="1" {% if enquiry_form_mode != 'mobile_only' %}required{% endif %} class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter quantity" />
           </div>
         </div>
+        {% include "storefront/_recaptcha.html" %}
         <div class="mt-5 flex items-center justify-end gap-2">
           <button type="button" id="pdp-enquiry-cancel" class="inline-flex items-center justify-center px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
           <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-black text-white text-xs uppercase tracking-[0.15em] hover:bg-gray-800 shadow-sm transition-colors">Submit</button>
@@ -1366,7 +1388,9 @@
         sourceEl.setAttribute('src', vUrl);
         // Detect MIME type from URL extension
         const ext = (vUrl.split('?')[0] || '').split('.').pop().toLowerCase();
-        const mimeMap = { 'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg', 'mov': 'video/quicktime', 'ogv': 'video/ogg' };
+        // .mov uploads are H.264 (and re-encoded to MP4 after upload); Chrome skips
+        // a <source type="video/quicktime">, so declare them as MP4 (as Template 1).
+        const mimeMap = { 'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg', 'mov': 'video/mp4', 'm4v': 'video/mp4', 'ogv': 'video/ogg' };
         sourceEl.setAttribute('type', mimeMap[ext] || 'video/mp4');
         videoEl.appendChild(sourceEl);
         // No controls, autoplay + loop for a clean popup experience
@@ -1591,12 +1615,14 @@
     syncLinks();
 
     // Compute a friendly delivery date (+5 days) if not provided
-    var dd = document.getElementById('purch-delivery-date');
-    if(dd){
+    // The purchase box is in the page twice (desktop sidebar, phone / tablet): fill both.
+    var dds = document.querySelectorAll('[data-delivery-date]');
+    if(dds.length){
       var d = new Date();
       d.setDate(d.getDate() + 5);
       var opts = { weekday: 'long', day: 'numeric', month: 'long' };
-      dd.textContent = ' ' + d.toLocaleDateString(undefined, opts);
+      var ddText = ' ' + d.toLocaleDateString(undefined, opts);
+      dds.forEach(function(el){ el.textContent = ddText; });
     }
 
     // Add to wishlist via AJAX
@@ -3201,6 +3227,8 @@ labelled with its price and date.
       if (showMrp) { el.textContent = CUR + fmtMoney(mrp); el.classList.remove("hidden"); }
       else { el.classList.add("hidden"); }
     });
+    // Theme contract: tell app blocks the unit price now showing.
+    try { var owv = { price: price, mrp: mrp, key: combo ? (combo.key || "") : "" }; window.__owVariant = owv; document.dispatchEvent(new CustomEvent("ow:variant", { detail: owv })); } catch (e) {}
   }
 
   // Tells the page which stored variation is showing ("" = none / the

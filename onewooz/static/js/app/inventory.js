@@ -3,6 +3,13 @@
 (function () {
   "use strict";
 
+  // Results surface in the universal toast stack (js/app/toast.js): errors in
+  // red, confirmations in green. Falls back to a plain alert if it's missing.
+  function owAlert(msg, ok) {
+    if (window.OWToast) { if (ok) window.OWToast.success(msg); else window.OWToast.error(msg); }
+    else window.alert(msg);
+  }
+
   function cookie(name) {
     try {
       var m = ("; " + document.cookie).split("; " + name + "=");
@@ -85,7 +92,7 @@
     if (saveBtn) {
       saveBtn.addEventListener("click", function () {
         var q = parseInt(qtyEl.value, 10);
-        if (isNaN(q) || q < 0) { alert("Enter a valid quantity."); return; }
+        if (isNaN(q) || q < 0) { owAlert("Enter a valid quantity."); return; }
         saveBtn.disabled = true;
         fetch(endpointEl.value, {
           method: "POST",
@@ -95,10 +102,10 @@
         })
           .then(function (r) { return r.json(); })
           .then(function (d) {
-            if (d && d.status === "success") { paintBadge(q); close(); }
-            else { alert((d && d.message) || "Failed to update inventory."); }
+            if (d && d.status === "success") { paintBadge(q); close(); owAlert("Stock updated.", true); }
+            else { owAlert((d && d.message) || "Failed to update inventory."); }
           })
-          .catch(function () { alert("Failed to update inventory."); })
+          .catch(function () { owAlert("Failed to update inventory."); })
           .finally(function () { saveBtn.disabled = false; });
       });
     }

@@ -2145,59 +2145,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 <!-- Featured Products Section (Below Category Collections) -->
-<style>
-    .product-image-link{
-        width: 100%;
-        height: 100%;
-    }
-    .best-seller-d2c-actions{
-        display: grid;
-        grid-template-columns: minmax(0, 4fr) minmax(0, 1fr);
-        gap: 0.5rem;
-        width: 100%;
-        align-items: stretch;
-    }
-    .product_card{
-        margin: 1.5rem;
-    }
-    @media (max-width: 767px) {
-        .product-image-link{
-            width: 100%;
-            height: 100%;
-        }
-        .best-seller-d2c-actions{
-            grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-        }
-        .products-grid-lg{
-            gap: 0rem;
-        }
-        .product_card{
-            margin: 0.75rem !important;
-        }
-        .best-seller-d2c-content{
-            width: 40vw;
-            max-width: 100%;
-            margin-left: 4px;
-            margin-right: 4px;
-            overflow: hidden;
-        }
-        .best-seller-d2c-title{
-            font-size: 12px;
-            line-clamp: 2;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-    }
-    @media (min-width: 1024px) {
-        .products-grid-lg {
-            max-width: 90%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-    }
-</style>
+{% include "storefront/template2/components/product_card_styles.html" %}
 <section class="py-8 md:py-8 bg-white">
     <div class="container mx-auto px-4">
         <div class="text-center max-w-4xl mx-auto mb-8 md:mb-6">
@@ -2213,10 +2161,10 @@ document.addEventListener('DOMContentLoaded', function() {
         {% if latest_products %}
         {% with product_list=latest_products %}
             {% if product_list %}
-            <div class="grid grid-cols-2 sm:mx-auto lg:grid-cols-4 gap-2 sm:gap-3 md:gap-8 lg:max-w-[90%] products-grid-lg">
+            <div class="ow-pgrid ow-pgrid--inset">
                 {% for product in product_list|slice:":8" %}
                 {% if product.is_active %}
-                <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] md:m-[1rem] lg:m-4 product_card" style="border-radius: 8px;">
+                <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] product_card" style="border-radius: 8px;">
                     <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
                         {% if product.image1 %}
                         <a href="{% url 'public_product_detail' product_slug=product.slug|default:'_' %}"
@@ -2265,9 +2213,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 {% with specs=product.specifications %}
                                     <span class="text-[15px] font-normal uppercase leading-none text-gray-900 break-words best-seller-d2c-price">₹{{ product.price }}</span>
                                     {% if specs and specs.mrp %}
-                                        <span class="text-[15px] text-gray-400 line-through break-words">₹{{ specs.mrp }}</span>
+                                        <span class="text-[15px] text-gray-400 ow-mrp break-words">₹{{ specs.mrp }}</span>
                                     {% elif specs and specs.original_price %}
-                                        <span class="text-[15px] text-gray-400 line-through break-words">₹{{ specs.original_price }}</span>
+                                        <span class="text-[15px] text-gray-400 ow-mrp break-words">₹{{ specs.original_price }}</span>
                                     {% endif %}
                                 {% endwith %}
                             </a>
@@ -2308,10 +2256,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                class="inline-flex items-baseline justify-center gap-2 hover:text-black transition-colors">
                                 {% with specs=product.specifications %}
                                     {% if specs and specs.mrp %}
-                                        <span class="text-gray-400 line-through text-[11px]">₹{{ specs.mrp }}</span>
+                                        <span class="text-gray-400 ow-mrp text-[11px]">₹{{ specs.mrp }}</span>
                                         <span class="text-xs">₹{{ product.price }}</span>
                                     {% elif specs and specs.original_price %}
-                                        <span class="text-gray-400 line-through text-[11px]">₹{{ specs.original_price }}</span>
+                                        <span class="text-gray-400 ow-mrp text-[11px]">₹{{ specs.original_price }}</span>
                                         <span class="text-xs">₹{{ product.price }}</span>
                                     {% else %}
                                         <span class="text-xs">₹{{ product.price }}</span>
@@ -2337,9 +2285,9 @@ document.addEventListener('DOMContentLoaded', function() {
             {% endif %}
         {% endwith %}
         {% else %}
-            <div class="grid grid-cols-2 sm:mx-auto lg:grid-cols-4 gap-2 sm:gap-3 md:gap-8 lg:max-w-[90%] products-grid-lg">
+            <div class="ow-pgrid ow-pgrid--inset">
                 {% for i in '1234'|make_list %}
-                <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] md:m-[1rem] lg:m-4 product_card" style="border-radius: 8px;">
+                <div class="bg-white overflow-hidden shadow-[0_0_5px_rgba(0,0,0,0.1)] product_card" style="border-radius: 8px;">
                     <div class="relative aspect-square bg-white overflow-hidden flex items-center justify-center">
                         <img src="{% demo_media 'product' forloop.counter0 %}" alt="Demo product" class="block w-full h-full object-cover" data-no-srcset="true" loading="lazy" />
                     </div>
@@ -2357,7 +2305,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                disabled>
                                 <span class="font-medium text-[11px] md:text-[12px] leading-none truncate">Add To Cart</span>
                             </button>
-                            <button type="button"
+                            <button aria-label="Wishlist unavailable" type="button"
                                     class="w-full h-7 sm:h-8 uppercase inline-flex items-center justify-center rounded-[6px] text-gray-700 bg-white cursor-default opacity-70"
                                     style="border: 1px solid #888888;"
                                     disabled>
@@ -2482,9 +2430,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 {% with ab=website.content.about_button %}
                 <div class="about-actions">
                     {% if ab and ab.url and ab.label %}
-                    <a href="{{ ab.url|public_href:website_base }}" class="about-cta">{{ ab.label }}</a>
+                    <a href="{{ ab.url|public_href:website_base }}" class="about-cta">{{ ab.label }}{% if ab.label|generic_link_text %}<span class="sr-only"> about {{ website.content.site_name|default:website.name }}</span>{% endif %}</a>
                     {% else %}
-                    <a href="{% url 'public_about_us' %}" class="about-cta">Learn More</a>
+                    <a href="{% url 'public_about' %}" class="about-cta">Learn More<span class="sr-only"> about {{ website.content.site_name|default:website.name }}</span></a>
                     {% endif %}
                 </div>
                 {% endwith %}

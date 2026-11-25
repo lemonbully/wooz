@@ -1,0 +1,58 @@
+{% comment %}
+"Edit profile" popup on a member's own profile (community.views.profile_update;
+photo, brand and website rules in community.profile). Opened and saved in place
+by _js.html; ?edit=1 renders it open, for browsers without JavaScript.
+Context: person (the signed-in Member).
+{% endcomment %}
+<dialog class="ask-dlg" id="ask-edit-profile" aria-labelledby="ask-edit-title"{% if request.GET.edit %} open{% endif %}>
+  <form method="post" action="{% url 'ask:profile_update' %}" enctype="multipart/form-data" class="ask-dlg__form">
+    {% csrf_token %}
+    <div class="ask-dlg__head">
+      <h2 class="ask-dlg__title" id="ask-edit-title">Edit profile</h2>
+      <a class="ask-dlg__x" href="{{ person.get_absolute_url }}" data-dlg-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
+    </div>
+
+    <div class="ask-dlg__body">
+      <div class="pal-alert ask-dlg__error" role="alert" data-dlg-error hidden></div>
+      <div class="ask-joingrid">
+        <div class="ask-jf ask-jf--name">
+          <label class="ask-jf__label" for="pf-name">Display name <span class="ask-jf__req" aria-hidden="true">*</span></label>
+          <input id="pf-name" class="pal-input" name="display_name" value="{{ person.display_name }}" autocomplete="name" minlength="2" maxlength="40" required>
+        </div>
+        <div class="ask-jf ask-jf--brand">
+          <label class="ask-jf__label" for="pf-brand">Brand <span class="ask-jf__aside">optional</span></label>
+          <input id="pf-brand" class="pal-input" name="brand_name" value="{{ person.brand_name|default:'' }}" maxlength="60" autocomplete="organization" placeholder="Jaipur Block Prints">
+        </div>
+        <div class="ask-jf ask-jf--bio">
+          <label class="ask-jf__label" for="pf-bio">Short bio <span class="ask-jf__aside">optional</span></label>
+          <input id="pf-bio" class="pal-input" name="bio" value="{{ person.bio }}" maxlength="160" placeholder="What you sell, and where">
+        </div>
+        <div class="ask-jf ask-jf--site">
+          <label class="ask-jf__label" for="pf-website">Website <span class="ask-jf__aside">optional</span></label>
+          <input id="pf-website" class="pal-input" inputmode="url" spellcheck="false" autocapitalize="off" name="website" value="{{ person.website|default:'' }}" maxlength="300" autocomplete="url" placeholder="yourbrand.com">
+        </div>
+        <div class="ask-jf ask-jf--photo">
+          <label class="ask-jf__label" for="pf-avatar">Photo <span class="ask-jf__aside">optional</span></label>
+          <div class="ask-photo ask-jfphoto">
+            {% include "community/_avatar.html" with m=person size="" tag="" %}
+            <label class="ask-jfphoto__pick" for="pf-avatar">{% if person.avatar %}Change photo{% else %}Choose photo{% endif %}</label>
+            <input id="pf-avatar" class="ask-jfphoto__file" type="file" name="avatar" accept="image/png,image/jpeg,image/webp" aria-describedby="pf-avatar-help" data-avatar-input>
+            {% if person.avatar %}<label class="ask-check"><input type="checkbox" name="remove_avatar" value="1"> Remove</label>{% endif %}
+            <span class="{% if person.avatar %}sr-only{% else %}ask-jfphoto__help{% endif %}" id="pf-avatar-help">Up to 5 MB</span>
+          </div>
+        </div>
+        <div class="ask-jf ask-jf--check">
+          <label class="ask-check"><input type="checkbox" name="notify_answers" value="1"{% if person.notify_answers %} checked{% endif %}> Email me when someone answers my questions</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ask-dlg__foot">
+      <a class="ask-textbtn" href="{% url 'ask:weekly' %}#subscribe">Weekly digest settings</a>
+      <div class="ask-dlg__acts">
+        <a class="pal-btn pal-btn--ghost ask-btn-sm" href="{{ person.get_absolute_url }}" data-dlg-close>Cancel</a>
+        <button type="submit" class="pal-btn ask-btn-sm">Save</button>
+      </div>
+    </div>
+  </form>
+</dialog>

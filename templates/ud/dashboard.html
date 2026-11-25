@@ -1,4 +1,6 @@
 {% extends "ud/_shell.html" %}
+{% load marketplace_points %}
+{% load store_extras %}
 
 {% block title %}Dashboard · OneWooz{% endblock %}
 {% block crumb %}Dashboard{% endblock %}
@@ -30,7 +32,7 @@
       <p class="pal-mono">Performance · all stores</p>
       <span class="app-pill">30-day window</span>
     </div>
-    <div class="app-kpis app-kpis--five">
+    <div class="app-kpis app-kpis--six">
       {% for kpi in kpis %}
         {% if kpi.url and kpi.value is not None %}
           <a href="{{ kpi.url }}" class="app-kpi app-kpi--link">
@@ -76,32 +78,26 @@
   <div class="app-block">
     <div class="app-split">
 
-      {% if gs_complete and ai_enabled %}
-      <section data-getting-started data-ai-assistant data-ai-url="{% url 'ud:ai_chat' %}" data-csrf="{{ csrf_token }}">
-        <div class="app-card__head">
-          <h2 class="app-card__title">AI assistant</h2>
-          <span class="app-mono">Grok · OpenAI</span>
+      {% comment %}
+      Left column. Before setup is complete it holds the Getting started
+      checklist; after, the focused store's Pending orders. On localhost only
+      (dev_tabs) both are rendered with a tab bar to switch between them, so
+      either can be checked whatever the setup state. The wrapper carries
+      data-getting-started: the activity feed sizes itself to it.
+      {% endcomment %}
+      <div data-getting-started{% if dev_tabs %} data-dtabs{% endif %}>
+        {% if dev_tabs %}
+        <div class="dtab" role="tablist" aria-label="Dashboard panel">
+          <button type="button" role="tab" class="dtab__btn" data-dtab="setup" aria-selected="{% if gs_complete %}false{% else %}true{% endif %}">Getting started</button>
+          <button type="button" role="tab" class="dtab__btn" data-dtab="orders" aria-selected="{% if gs_complete %}true{% else %}false{% endif %}">
+            Pending orders{% if pending_total %} <span class="dtab__n">{{ pending_total }}</span>{% endif %}
+          </button>
+          <span class="dtab__tag" title="These tabs only appear on localhost">Localhost</span>
         </div>
-        <div class="app-ai">
-          <div class="app-ai__feed" data-ai-feed>
-            <div class="app-ai__msg app-ai__msg--bot">
-              <p>Setup complete 🎉 I’m your OneWooz assistant. Ask me to write product copy, marketing ideas or SEO, or switch to <strong>Image</strong> and describe a picture to generate.</p>
-            </div>
-          </div>
-          <form class="app-ai__form" data-ai-form>
-            <div class="app-ai__modes" role="group" aria-label="Assistant mode">
-              <button type="button" class="app-ai__mode is-active" data-ai-mode="text" aria-pressed="true">Text</button>
-              <button type="button" class="app-ai__mode" data-ai-mode="image" aria-pressed="false">Image</button>
-            </div>
-            <div class="app-ai__row">
-              <textarea class="app-ai__input" data-ai-input rows="1" placeholder="Ask the assistant…" required></textarea>
-              <button type="submit" class="pal-btn app-ai__send" data-ai-send>Send</button>
-            </div>
-          </form>
-        </div>
-      </section>
-      {% else %}
-      <section data-getting-started>
+        {% endif %}
+
+        {% if not gs_complete or dev_tabs %}
+        <section data-dtab-panel="setup"{% if gs_complete %} hidden{% endif %}>
         <div class="app-card__head">
           <h2 class="app-card__title">Getting started</h2>
           <span class="app-mono">Step {{ current_step }} of {{ steps|length }}</span>
@@ -128,8 +124,85 @@
             </div>
           {% endfor %}
         </div>
-      </section>
-      {% endif %}
+        </section>
+        {% endif %}
+
+        {% if gs_complete or dev_tabs %}
+      {% comment %}
+      Setup is done, so the checklist's slot becomes the focused store's Pending
+      orders: the newest five, each with its amount and units, then View all.
+      Accepting and rejecting happen on the Orders page.
+      {% endcomment %}
+        <section data-dash-orders data-dtab-panel="orders"{% if not gs_complete %} hidden{% endif %}>
+        <div class="app-card__head">
+          <h2 class="app-card__title">
+            Pending orders{% if pending_total %} <span class="dord-count">{{ pending_total }}</span>{% endif %}
+          </h2>
+          {% if orders_site %}<span class="app-mono">{{ orders_site.name }}</span>{% endif %}
+        </div>
+
+        {% if pending_orders %}
+          <ul class="dord-list" data-dord-list>
+            {% for o in pending_orders %}
+              {% with it=o.dash_item %}
+              <li class="dord" data-dord-item>
+                <div class="dord__thumb">
+                  {% if o.dash_image %}
+                    <img src="{{ o.dash_image }}" alt="" loading="lazy" width="52" height="52">
+                  {% else %}
+                    <span class="dord__thumb-empty" aria-hidden="true"></span>
+                  {% endif %}
+                </div>
+
+                <div class="dord__body">
+                  <p class="dord__title">
+                    {% if o.dash_url %}
+                      <a href="{{ o.dash_url }}" target="_blank" rel="noopener" title="Open {{ it.title }} on your store">{{ it.title }}</a>
+                    {% else %}
+                      <span>{{ it.title|default:'Order' }}</span>
+                    {% endif %}
+                  </p>
+                  <p class="dord__meta">
+                    <span class="dord__num">#{{ o.display_number }}</span>
+                    <span>SKU <strong>{{ o.dash_sku|default:'n/a' }}</strong></span>
+                    <span>{{ o.shipping_state|default:'State not given' }}</span>
+                    <span>Qty <strong>{{ o.dash_qty }}</strong></span>
+                    <time class="dord__ago" datetime="{{ o.created_at|date:'c' }}" title="{{ o.created_at|date:'d M Y, g:i A' }}">{{ o.dash_ago }}</time>
+                    {% if o.dash_more %}<span>+{{ o.dash_more }} more item{{ o.dash_more|pluralize }}</span>{% endif %}
+                  </p>
+                </div>
+
+                <div class="dord__side">
+                  <p class="dord__amt">{{ o.total|money:orders_site.currency }}</p>
+                  {% with pm=o|payment_tag %}<span class="dord-pay dord-pay--{{ pm.kind }}">{{ pm.label }}</span>{% endwith %}
+                </div>
+              </li>
+              {% endwith %}
+            {% endfor %}
+          </ul>
+          <div class="dord-foot">
+            <a href="{% url 'store:orders' orders_site.id %}?tab=pending" class="pal-btn pal-btn--ghost dord-all">
+              View all{% if pending_total > pending_orders|length %} {{ pending_total }}{% endif %} <span class="pal-btn__arrow" aria-hidden="true">→</span>
+            </a>
+          </div>
+        {% else %}
+          <div class="dord-empty">
+            {% if orders_site %}
+              <p class="app-note-inline">
+                No orders waiting. New orders from <strong>{{ orders_site.name }}</strong> land here,
+                ready to accept or reject in one click.
+              </p>
+              <a href="{% url 'store:orders' orders_site.id %}" class="pal-btn pal-btn--ghost dord-all">
+                View all orders <span class="pal-btn__arrow" aria-hidden="true">→</span>
+              </a>
+            {% else %}
+              <p class="app-note-inline">Order acceptance is available for D2C stores.</p>
+            {% endif %}
+          </div>
+        {% endif %}
+        </section>
+        {% endif %}
+      </div>
 
       <aside data-activity>
         <div class="app-card__head">
@@ -171,6 +244,7 @@
   </div>
 
 </div>
+{% app_point "dashboard_card" %}
 {% endblock %}
 
 {% block scripts %}
@@ -188,36 +262,81 @@
   .app-feed__d { margin-top: 0.2rem; font-family: var(--pal-font-mono, monospace); font-size: 0.62rem;
     letter-spacing: 0.03em; color: var(--pal-faint); font-variant-numeric: tabular-nums; }
 
-  /* AI assistant panel (replaces Getting started once setup is complete). */
-  .app-ai { display: flex; flex-direction: column; gap: 0.75rem; }
-  .app-ai__feed { display: flex; flex-direction: column; gap: 0.6rem; max-height: 22rem; overflow-y: auto;
-    padding: 0.25rem; }
-  .app-ai__msg { font-size: 0.86rem; line-height: 1.5; padding: 0.6rem 0.8rem; border: 1px solid var(--pal-line);
-    max-width: 88%; }
-  .app-ai__msg p { margin: 0; }
-  .app-ai__msg--bot { align-self: flex-start; background: var(--pal-paper-2, #ececea); color: var(--pal-ink-2); }
-  .app-ai__msg--me { align-self: flex-end; background: var(--pal-ink); color: var(--pal-paper); border-color: var(--pal-ink); }
-  .app-ai__msg--err { align-self: flex-start; border-left: 2px solid #b0271d; color: #b0271d; }
-  .app-ai__msg img { display: block; max-width: 100%; height: auto; border: 1px solid var(--pal-line); }
-  .app-ai__modes { display: inline-flex; border: 1px solid var(--pal-line); width: max-content; }
-  .app-ai__mode { appearance: none; border: 0; border-right: 1px solid var(--pal-line); background: transparent;
-    cursor: pointer; font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.08em;
-    text-transform: uppercase; padding: 0.4rem 0.85rem; color: var(--pal-muted); }
-  .app-ai__mode:last-child { border-right: 0; }
-  .app-ai__mode.is-active { background: var(--pal-ink); color: var(--pal-paper); }
-  .app-ai__row { display: flex; gap: 0.5rem; align-items: stretch; }
-  .app-ai__input { flex: 1; resize: none; font: inherit; font-size: 0.9rem; padding: 0.6rem 0.7rem;
-    border: 1px solid var(--pal-line); border-radius: 0; background: var(--pal-panel, #fff); color: var(--pal-ink);
-    min-height: 2.6rem; max-height: 8rem; }
-  .app-ai__input:focus { outline: none; border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
-  .app-ai__send { white-space: nowrap; }
-  .app-ai__send[disabled] { opacity: 0.5; cursor: default; }
+  /* Localhost-only tab bar: Getting started ↔ Pending orders. */
+  .dtab { display: flex; align-items: flex-end; gap: 1.1rem; padding: 0.35rem 1.25rem 0;
+    border-bottom: 1px solid var(--pal-line); }
+  .dtab__btn { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; padding: 0.55rem 0 0.5rem; cursor: pointer; font-family: var(--pal-font-mono, monospace);
+    font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted);
+    display: inline-flex; align-items: center; gap: 0.35rem; }
+  .dtab__btn:hover { color: var(--pal-ink); }
+  .dtab__btn[aria-selected="true"] { color: var(--pal-ink); border-bottom-color: var(--pal-accent, #4b2bf5); }
+  .dtab__n { display: inline-flex; align-items: center; justify-content: center; min-width: 1.1rem; height: 1.1rem;
+    padding: 0 0.3rem; border-radius: 999px; font-size: 0.58rem; letter-spacing: 0; color: var(--pal-paper);
+    background: var(--pal-accent, #4b2bf5); font-variant-numeric: tabular-nums; }
+  .dtab__tag { margin-left: auto; align-self: center; font-family: var(--pal-font-mono, monospace); font-size: 0.56rem;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-faint, var(--pal-muted));
+    border: 1px dashed var(--pal-line); padding: 0.15rem 0.4rem; }
+
+  /* Pending orders card (replaces Getting started once setup is complete).
+     Compact rows (52px photo, two text lines) so a page of five fits in about
+     the height the checklist used to take. */
+  [data-dash-orders] { container-type: inline-size; }
+  .dord-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.35rem;
+    height: 1.35rem; padding: 0 0.4rem; margin-left: 0.35rem; font-family: var(--pal-font-mono, monospace);
+    font-size: 0.66rem; font-variant-numeric: tabular-nums; color: var(--pal-paper); background: var(--pal-accent, #4b2bf5);
+    border-radius: 999px; vertical-align: 0.1em; }
+  /* The base sheet's `ul[class] { padding: 0 }` outranks a lone class, so the
+     inset lives on each row (like the checklist): content sits 1.25rem in from
+     the card edge while the divider lines run full width. */
+  ul.dord-list { list-style: none; margin: 0; padding: 0; }
+  .dord { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 1rem;
+    padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--pal-line-soft, var(--pal-line));
+    --dord-fs: 0.7rem; /* every text in a row uses the order number's size */ }
+  .dord[hidden] { display: none; }
+  .dord__thumb { width: 52px; height: 52px; border: 1px solid var(--pal-line); background: var(--pal-paper-2, #f3f2ef);
+    overflow: hidden; }
+  .dord__thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .dord__thumb-empty { display: block; width: 100%; height: 100%; }
+  .dord__body { min-width: 0; }
+  .dord__title { margin: 0; font-size: var(--dord-fs); font-weight: 500; line-height: 1.35; color: var(--pal-ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(100%, 29rem); }
+  .dord__title a { color: inherit; text-decoration: none; }
+  .dord__title a:hover { color: var(--pal-accent, #4b2bf5); text-decoration: underline; text-underline-offset: 2px; }
+  .dord__meta { margin: 0.3rem 0 0; display: flex; flex-wrap: wrap; gap: 0.2rem 0.75rem; font-size: var(--dord-fs);
+    line-height: 1.4; color: var(--pal-muted); }
+  .dord__meta strong { font-weight: 500; color: var(--pal-ink-2); font-family: var(--pal-font-mono, monospace);
+    font-size: var(--dord-fs); }
+  .dord__num { font-family: var(--pal-font-mono, monospace); font-size: var(--dord-fs); color: var(--pal-ink-2);
+    font-variant-numeric: tabular-nums; }
+  .dord__ago { white-space: nowrap; }
+  .dord__side { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; }
+  .dord__amt { margin: 0; font-size: var(--dord-fs); font-weight: 600; color: var(--pal-ink); white-space: nowrap;
+    font-variant-numeric: tabular-nums; }
+  /* Payment type pill, same palette as the Orders page. */
+  .dord-pay { display: inline-flex; align-items: center; padding: 0.14rem 0.45rem; border: 1px solid var(--pal-line);
+    font-size: var(--dord-fs); line-height: 1.3; white-space: nowrap; color: var(--pal-ink-2); background: var(--pal-paper-2, transparent); }
+  .dord-pay--cod { color: #8a5a00; border-color: rgb(180 120 0 / 0.30); background: rgb(180 120 0 / 0.07); }
+  .dord-pay--partial { color: #1d4f91; border-color: rgb(29 79 145 / 0.28); background: rgb(29 79 145 / 0.07); }
+  .dord-pay--prepaid { color: #0f7a53; border-color: rgb(15 122 83 / 0.28); background: rgb(15 122 83 / 0.07); }
+  .dord-pay--credit { color: var(--pal-accent); border-color: rgb(75 43 245 / 0.25); background: rgb(75 43 245 / 0.06); }
+  .dord-pay--free, .dord-pay--none { color: var(--pal-muted); }
+  .dord-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.85rem 1.25rem 1.1rem; }
+  .dord-all { margin-left: auto; }
+  .dord-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 0.85rem; padding: 1.25rem; }
+  /* Narrow card: photo + text on the first line, payment and buttons below. */
+  @container (max-width: 30rem) {
+    .dord { grid-template-columns: 44px minmax(0, 1fr); gap: 0.6rem 0.75rem; }
+    .dord__thumb { width: 44px; height: 44px; }
+    .dord__side { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
+  }
 
   /* Recent-activity feed is capped to the getting-started column's height and
-     paginated (below) so it never overflows the row. `align-items:start` keeps
-     the left column at its natural height instead of stretching to the (taller)
-     feed before the pager kicks in. */
-  .app-block .app-split:has([data-activity]) { align-items: start; }
+     paginated (below) so it never overflows the row. Both columns stretch to
+     the row's height so neither ever leaves the grid's grey divider colour
+     showing beneath it; the pager measures the left column by its children
+     (naturalHeight), so the stretch doesn't feed back into the sizing. */
+  .app-block .app-split:has([data-activity]) { align-items: stretch; }
   .app-activity { display: flex; flex-direction: column; }
   .app-activity .app-feed { overflow: hidden; }
   .app-activity__nav { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem;
@@ -231,6 +350,29 @@
   .app-activity__btn:hover:not([disabled]) { border-color: var(--pal-accent, #4b2bf5); color: var(--pal-accent, #4b2bf5); }
   .app-activity__btn[disabled] { opacity: 0.4; cursor: default; }
 </style>
+<script nonce="{{ csp_nonce }}">
+// Localhost-only tabs between Getting started and Pending orders. Switching
+// fires a resize so the activity feed re-fits to the newly shown panel.
+(function () {
+  "use strict";
+  var root = document.querySelector("[data-dtabs]");
+  if (!root) return;
+  var tabs = root.querySelectorAll("[data-dtab]");
+  var panels = root.querySelectorAll("[data-dtab-panel]");
+  function show(name) {
+    Array.prototype.forEach.call(tabs, function (t) {
+      t.setAttribute("aria-selected", t.getAttribute("data-dtab") === name ? "true" : "false");
+    });
+    Array.prototype.forEach.call(panels, function (p) {
+      p.hidden = p.getAttribute("data-dtab-panel") !== name;
+    });
+    window.dispatchEvent(new Event("resize"));
+  }
+  Array.prototype.forEach.call(tabs, function (t) {
+    t.addEventListener("click", function () { show(t.getAttribute("data-dtab")); });
+  });
+})();
+</script>
 <script nonce="{{ csp_nonce }}">
 // Cap the recent-activity feed to the height of the "Getting started" column and
 // paginate it when it holds more items than fit  so the two columns stay the
@@ -311,76 +453,6 @@
   window.addEventListener("resize", function () { clearTimeout(t); t = setTimeout(layout, 150); });
   // Measure after layout/paint so heights are real.
   if (window.requestAnimationFrame) requestAnimationFrame(layout); else setTimeout(layout, 60);
-})();
-</script>
-<script nonce="{{ csp_nonce }}">
-// Dashboard AI assistant: talks only to our same-origin endpoint, which calls
-// Grok (text) / OpenAI (image) server-side. No key or third-party host here.
-(function () {
-  "use strict";
-  var root = document.querySelector("[data-ai-assistant]");
-  if (!root) return;
-  var url = root.getAttribute("data-ai-url");
-  var csrf = root.getAttribute("data-csrf") || "";
-  var feed = root.querySelector("[data-ai-feed]");
-  var form = root.querySelector("[data-ai-form]");
-  var input = root.querySelector("[data-ai-input]");
-  var send = root.querySelector("[data-ai-send]");
-  var mode = "text";
-
-  Array.prototype.forEach.call(root.querySelectorAll("[data-ai-mode]"), function (btn) {
-    btn.addEventListener("click", function () {
-      mode = btn.getAttribute("data-ai-mode");
-      Array.prototype.forEach.call(root.querySelectorAll("[data-ai-mode]"), function (b) {
-        var on = b === btn;
-        b.classList.toggle("is-active", on);
-        b.setAttribute("aria-pressed", on ? "true" : "false");
-      });
-      input.placeholder = mode === "image" ? "Describe an image to generate…" : "Ask the assistant…";
-    });
-  });
-
-  function bubble(kind, node) {
-    var el = document.createElement("div");
-    el.className = "app-ai__msg app-ai__msg--" + kind;
-    if (typeof node === "string") { var p = document.createElement("p"); p.textContent = node; el.appendChild(p); }
-    else { el.appendChild(node); }
-    feed.appendChild(el);
-    feed.scrollTop = feed.scrollHeight;
-    return el;
-  }
-
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    var text = (input.value || "").trim();
-    if (!text) return;
-    bubble("me", text);
-    input.value = "";
-    send.disabled = true;
-    var pending = bubble("bot", mode === "image" ? "Generating your image…" : "Thinking…");
-
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf, "Accept": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ message: text, mode: mode }),
-    }).then(function (r) { return r.json().catch(function () { return {}; }); })
-      .then(function (d) {
-        pending.remove();
-        if (d && d.ok && d.type === "image" && d.image) {
-          var img = document.createElement("img");
-          img.src = d.image; img.alt = text;
-          bubble("bot", img);
-        } else if (d && d.ok && d.text) {
-          bubble("bot", d.text);
-        } else {
-          bubble("err", (d && d.error) || "Something went wrong. Please try again.");
-        }
-      }).catch(function () {
-        pending.remove();
-        bubble("err", "Network error. Please try again.");
-      }).then(function () { send.disabled = false; input.focus(); });
-  });
 })();
 </script>
 {% endblock %}

@@ -1,12 +1,14 @@
 """Unread counters on the store sidebar.
 
-Orders, Requests, Reviews, Subscribers, Out of stock, Collaborations and Bills
-each show a small round counter: how many new items reached that page since the
-signed-in user last opened it.
+Orders, Requests, Enquiries, Reviews, Subscribers, Out of stock, Collaborations
+and Bills each show a small round counter: how many new items reached that page
+since the signed-in user last opened it.
 
 * Orders: placed orders (online ones only once paid; replacements, which the
   owner makes, are not counted).
 * Requests: customer cancel / return / replace / warranty / support requests.
+* Enquiries: contact-form and product enquiries from the storefront (deleted
+  ones are not counted).
 * Reviews: product reviews from shoppers.
 * Subscribers: newsletter sign-ups.
 * Out of stock: products / variations that sold out and are not yet seen.
@@ -34,7 +36,8 @@ logger = logging.getLogger(__name__)
 
 #: Sidebar keys that carry a counter.
 COUNTED_KEYS = (
-    "orders", "requests", "reviews", "subscribers", "out_of_stock", "collaborations", "bills",
+    "orders", "requests", "enquiries", "reviews", "subscribers", "out_of_stock",
+    "collaborations", "bills",
 )
 CACHE_SECONDS = 60
 #: Shown as "99+" past this.
@@ -82,6 +85,7 @@ def _count(site, key: str, row) -> int:
     from commerce.models import (
         Bill,
         CollaborationPayoutRequest,
+        Enquiry,
         NewsletterSubscriber,
         Order,
         OrderRequest,
@@ -93,6 +97,8 @@ def _count(site, key: str, row) -> int:
         qs = Order.objects.for_site(site).filter(created_at__gt=since, replacement_of__isnull=True)
     elif key == "requests":
         qs = OrderRequest.objects.for_site(site).filter(created_at__gt=since)
+    elif key == "enquiries":
+        qs = Enquiry.objects.for_site(site).filter(created_at__gt=since, is_deleted=False)
     elif key == "reviews":
         qs = Review.objects.for_site(site).filter(created_at__gt=since, is_deleted=False)
     elif key == "subscribers":
@@ -194,6 +200,30 @@ def mark_seen(request, site, key: str) -> None:
         cache.delete(_cache_key(user, site))
     except Exception:
         pass
+
+
+def sidebar_counts(request, site):
+    """Counters for every unlocked page the user's sidebar shows on ``site``
+    (the same set :func:`commerce.context.store_context` counts), without
+    marking anything seen. ``None`` when the user has no access to the store.
+
+    Backs the live refresh in ``static/js/app/nav-counts.js``: a page restored
+    from the browser's back/forward cache, or a tab left open, re-reads its
+    badges here instead of showing the ones it was first rendered with.
+    """
+    from . import features
+    from . import staff as staff_mod
+    from .context import visible_groups
+
+    access = staff_mod.access_for(request, site)
+    if access is None:
+        return None
+    allowed = features.allowed_features_for_owner(getattr(site, "owner", None))
+    groups = visible_groups(site, allowed, access.allowed_pages())
+    keys = [i["key"] for g in groups for i in g["items"] if not i["locked"]]
+    counts = counts_for(request, site, keys)
+    # Every counted key is reported (0 included) so the page can clear a badge.
+    return {k: int(counts.get(k, 0) or 0) for k in keys if k in COUNTED_KEYS}
 
 
 def attach(groups, counts: dict):

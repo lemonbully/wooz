@@ -1,0 +1,13 @@
+{% extends "ud/_shell.html" %}
+{% block title %}OneWooz Apps{% endblock %}
+{% block crumb %}OneWooz Apps{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-empty app-block">
+    <h1 class="app-empty__title">The marketplace is closed for now</h1>
+    <p class="app-empty__text">{{ message }}</p>
+    <p class="mkt-actions"><a class="pal-btn pal-btn--ghost" href="{% url 'mkt_gateway:my_apps' %}">Open my apps</a></p>
+  </div>
+</div>
+{% endblock %}

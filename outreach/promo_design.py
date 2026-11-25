@@ -1,7 +1,8 @@
 """The built-in "Promo collection" email design.
 
 A fixed, hand-built layout (hero with a frosted brand badge, headline + intro +
-pill button, a "sale starts in" countdown, a six-product grid, a dark offer card
+pill button, a "sale starts in" countdown, a product grid laid out by how many
+products were chosen, a dark offer card
 with a promo code, a beige waitlist band with a highlights card, and a quiet
 footer). Unlike the admin-published :class:`~outreach.models.EmailTemplate`
 designs, the owner never touches HTML here: the composer shows one input per
@@ -27,9 +28,11 @@ from decimal import Decimal, InvalidOperation
 
 DESIGN_KEY = "promo"
 DESIGN_NAME = "Promo collection"
-DESIGN_DESCRIPTION = "Hero image with brand badge, countdown, six-product grid, promo code and highlights."
+DESIGN_DESCRIPTION = "Hero image with brand badge, countdown, product grid, promo code and highlights."
 
-#: How many products the grid holds (two rows of three on desktop).
+#: How many products the grid holds. The layout follows the count (see
+#: :func:`grid_rows`): 1 full width, 2 or 3 on one row, 4 as 2x2, 5 as 2x2
+#: with the fifth centred, 6 as two rows of three.
 MAX_PRODUCTS = 6
 
 #: Highlight icons (PNG, see ``static/email/icons``). key -> label.
@@ -199,11 +202,15 @@ def countdown_text(end_raw: str, now=None) -> str:
     return f"{days:02d}:{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
-def load_products(site, ids=None, limit: int = MAX_PRODUCTS, *, demo: bool = False) -> list[dict]:
+def load_products(
+    site, ids=None, limit: int = MAX_PRODUCTS, *, demo: bool = False, show_price: bool = True
+) -> list[dict]:
     """The grid's products: the chosen ids in order, else the newest.
 
     ``demo`` (the composer preview only) shows a stock photo for a product
     without images; a real send never does, it shows a neutral tile instead.
+    ``show_price=False`` (the campaign's "Show product prices" switched off)
+    leaves price and MRP blank, so the cards carry title + picture only.
     """
     from commerce.models import Product
 
@@ -239,8 +246,8 @@ def load_products(site, ids=None, limit: int = MAX_PRODUCTS, *, demo: bool = Fal
         items.append(
             {
                 "title": p.title,
-                "price": _money(price),
-                "mrp": _money(mrp) if show_mrp else "",
+                "price": _money(price) if show_price else "",
+                "mrp": _money(mrp) if (show_mrp and show_price) else "",
                 "image": img,
                 "url": f"{shop}products/{slug}/" if slug else shop,
             }
@@ -263,52 +270,135 @@ def _pill(href: str, label: str, *, dark: bool = True, size: int = 13) -> str:
     )
 
 
-def _product_cell(item: dict, link) -> str:
+#: Inner width of the product grid (600px email, 21px padding each side).
+_GRID_W = 558
+#: Per column width -> (image width, title px, price px).
+_CELL_SPEC = {
+    558: (518, 15, 14),  # one product: the full width, with a little air around it
+    279: (239, 12, 12),  # two per row
+    186: (132, 11, 11),  # three per row
+}
+
+
+def grid_rows(count: int) -> list[int]:
+    """How many products sit on each row of the grid.
+
+    * 1 -> one product across the whole width
+    * 2 -> both on one row
+    * 3 -> all three on one row
+    * 4 -> two rows of two
+    * 5 -> two rows of two, the fifth centred on a row of its own
+    * 6 -> two rows of three
+
+    Anything past :data:`MAX_PRODUCTS` is never passed in (the composer and
+    the save path cap it), but larger counts still lay out sensibly: rows of
+    two, an odd last one centred.
+    """
+    n = max(0, int(count or 0))
+    if n == 0:
+        return []
+    if n <= 3:
+        return [n]
+    if n == 6:
+        return [3, 3]
+    rows = [2] * (n // 2)
+    if n % 2:
+        rows.append(1)
+    return rows
+
+
+def _col_width(row_size: int, total: int) -> int:
+    """Column width for a row of ``row_size``. A lone product on the last row
+    of a bigger grid (the fifth of five) keeps the two-per-row size and is
+    centred, so it matches the cards above it."""
+    if row_size == 1:
+        return _GRID_W if total == 1 else _GRID_W // 2
+    return _GRID_W // row_size
+
+
+def _product_cell(item: dict, link, width: int = 186) -> str:
+    """One product card.
+
+    Nothing in a card may have a fixed pixel width: an email table grows to
+    fit its widest unshrinkable child, so a single fixed-width picture (the
+    518px one of a lone product) used to stretch the WHOLE email past a phone
+    screen, re-cropping the hero, pushing the offer card off the edge and
+    cutting off the third highlight. Pictures are therefore ``width:100%``
+    capped by ``max-width`` (the ``width`` attribute is for Outlook only), and
+    the photo-less tile is a fluid table whose height the phone styles retune.
+    """
+    img_w, title_px, price_px = _CELL_SPEC.get(width, _CELL_SPEC[186])
+    img_h = round(img_w * 1.25)
+    full = width == _GRID_W
     price = f'<span style="color:#111111;">{_e(item["price"])}</span>' if item.get("price") else ""
     if item.get("mrp"):
         price += f' <span style="color:#9a9a9a;text-decoration:line-through;">{_e(item["mrp"])}</span>'
     href = _e(link(item["url"]))
+    radius = "border-radius:6px;" if full else ""
     if item.get("image"):
         picture = (
-            f'<img src="{_e(item["image"])}" width="132" alt="{_e(item["title"])}" '
-            'style="display:block;margin:0 auto;width:132px;max-width:100%;height:auto;border:0;outline:none;">'
+            f'<img src="{_e(item["image"])}" width="{img_w}" alt="{_e(item["title"])}" class="ow-pimg" '
+            f'style="display:block;margin:0 auto;width:100%;max-width:{img_w}px;height:auto;border:0;'
+            f'outline:none;{radius}">'
         )
     else:
         picture = (
-            '<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" '
-            'style="margin:0 auto;"><tr><td width="132" height="165" bgcolor="#f3efeb" '
-            'style="width:132px;height:165px;background:#f3efeb;font-size:0;line-height:0;">&nbsp;</td></tr></table>'
+            '<table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" '
+            f'border="0" style="margin:0 auto;width:100%;max-width:{img_w}px;"><tr>'
+            f'<td height="{img_h}" bgcolor="#f3efeb" class="ow-ph ow-ph--{width}" '
+            f'style="height:{img_h}px;background:#f3efeb;font-size:0;line-height:0;{radius}">&nbsp;</td>'
+            "</tr></table>"
         )
+    pad = "20px 20px 26px" if full else "14px 10px 22px"
     return (
-        '<div class="ow-col" style="display:inline-block;width:100%;max-width:186px;vertical-align:top;">'
+        f'<div class="ow-col ow-col--{width}" style="display:inline-block;width:100%;max-width:{width}px;'
+        'vertical-align:top;">'
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
-        '<tr><td align="center" style="padding:14px 10px 22px;">'
+        f'<tr><td align="center" class="ow-pcell" style="padding:{pad};">'
         f'<a href="{href}" style="text-decoration:none;">{picture}</a>'
-        f'<p style="margin:14px 0 0;font-family:{_FONT};font-size:11px;line-height:1.4;letter-spacing:0.04em;'
+        f'<p class="ow-ptitle" style="margin:14px 0 0;font-family:{_FONT};font-size:{title_px}px;line-height:1.4;letter-spacing:0.04em;'
+        "word-wrap:break-word;overflow-wrap:break-word;"
         f'text-transform:uppercase;color:#111111;"><a href="{href}" style="color:#111111;text-decoration:none;">'
         f'{_e(item["title"])}</a></p>'
-        f'<p style="margin:4px 0 0;font-family:{_FONT};font-size:11px;line-height:1.4;">{price}</p>'
+        f'<p class="ow-pprice" style="margin:4px 0 0;font-family:{_FONT};font-size:{price_px}px;line-height:1.4;">{price}</p>'
         "</td></tr></table></div>"
     )
 
 
 def _products_block(items: list[dict], link) -> str:
+    """The product grid laid out per :func:`grid_rows`.
+
+    Every card sits in ONE centred line of inline-blocks, so the browser wraps
+    them: on desktop the card widths give exactly the rows :func:`grid_rows`
+    asks for (a short last row, the fifth of five, lands in the middle); on a
+    phone the stylesheet makes each card half the width, so products show two
+    per row (and one per row only on the narrowest screens). Outlook ignores
+    inline-block, so it gets one ghost table per row instead.
+    """
     if not items:
         return ""
-    cells = []
-    for i, item in enumerate(items):
-        if i and i % 3 == 0:
-            cells.append('<!--[if mso]></td></tr><tr><td width="186" valign="top"><![endif]-->')
-        elif i:
-            cells.append('<!--[if mso]></td><td width="186" valign="top"><![endif]-->')
-        cells.append(_product_cell(item, link))
+    total = len(items)
+    parts = []
+    pos = 0
+    for size in grid_rows(total):
+        row = items[pos:pos + size]
+        pos += size
+        width = _col_width(size, total)
+        parts.append(
+            f'<!--[if mso]><table role="presentation" align="center" width="{width * len(row)}" '
+            f'cellpadding="0" cellspacing="0" border="0"><tr><td width="{width}" valign="top"><![endif]-->'
+        )
+        for i, item in enumerate(row):
+            if i:
+                parts.append(f'<!--[if mso]></td><td width="{width}" valign="top"><![endif]-->')
+            parts.append(_product_cell(item, link, width))
+        parts.append("<!--[if mso]></td></tr></table><![endif]-->")
+    pad = "10px 21px 18px" if total == 1 else "4px 21px 18px"
     return (
-        '<tr><td align="center" class="ow-grid" style="padding:4px 21px 18px;font-size:0;line-height:0;">'
-        '<!--[if mso]><table role="presentation" width="558" cellpadding="0" cellspacing="0" border="0">'
-        '<tr><td width="186" valign="top"><![endif]-->'
-        + "".join(cells)
-        + "<!--[if mso]></td></tr></table><![endif]-->"
-        "</td></tr>"
+        f'<tr><td align="center" class="ow-grid" style="padding:{pad};font-size:0;line-height:0;">'
+        '<div class="ow-row" style="text-align:center;font-size:0;line-height:0;">'
+        + "".join(parts)
+        + "</div></td></tr>"
     )
 
 
@@ -570,6 +660,22 @@ def render(site, data: dict, *, products: list[dict], preheader: str = "", link=
         ".ow-offer{padding:24px 20px 20px!important;}"
         ".ow-offer-h{font-size:22px!important;}"
         ".ow-col{max-width:100%!important;}"
+        # Phones: products two per row (a single product keeps the full width).
+        ".ow-grid{padding-left:8px!important;padding-right:8px!important;}"
+        ".ow-col--279,.ow-col--186{width:50%!important;max-width:50%!important;}"
+        ".ow-col--279 .ow-pcell,.ow-col--186 .ow-pcell{padding:10px 6px 18px!important;}"
+        ".ow-col--279 .ow-pimg,.ow-col--186 .ow-pimg{width:100%!important;max-width:100%!important;}"
+        ".ow-col--279 .ow-ptitle,.ow-col--186 .ow-ptitle{font-size:11px!important;}"
+        ".ow-col--279 .ow-pprice,.ow-col--186 .ow-pprice{font-size:11px!important;}"
+        ".ow-col--558 .ow-pcell{padding:14px 12px 22px!important;}"
+        # Photo-less tiles keep roughly the 4:5 shape at phone widths.
+        ".ow-ph--558{height:420px!important;}"
+        ".ow-ph--279,.ow-ph--186{height:210px!important;}"
+        "}"
+        # Only the narrowest phones fall back to one product per row.
+        "@media only screen and (max-width:300px){"
+        ".ow-col--279,.ow-col--186{width:100%!important;max-width:100%!important;}"
+        ".ow-col--279 .ow-pimg,.ow-col--186 .ow-pimg{width:75%!important;}"
         "}"
         "</style></head>"
         '<body style="margin:0;padding:0;background:#f3efeb;">'
@@ -577,8 +683,11 @@ def render(site, data: dict, *, products: list[dict], preheader: str = "", link=
         + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
         'style="background:#f3efeb;"><tr><td align="center" style="padding:0;">'
         '<!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->'
+        # table-layout:fixed: the email's width is the table's own (600px, or
+        # the phone's width), never its content's, so no block inside it can
+        # ever stretch the hero, offer card and highlights past the screen.
         '<table role="presentation" class="ow-wrap" width="600" cellpadding="0" cellspacing="0" border="0" '
-        'style="width:600px;max-width:600px;background:#ffffff;">'
+        'style="width:600px;max-width:600px;table-layout:fixed;background:#ffffff;">'
         + "".join(parts)
         + "</table>"
         "<!--[if mso]></td></tr></table><![endif]-->"

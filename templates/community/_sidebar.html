@@ -1,0 +1,23 @@
+{% comment %}Right column: topics with counts, plus optional stats. Context: topics, stats, room.{% endcomment %}
+<aside class="ask-side" aria-label="Topics">
+  <p class="ask-side__label">Topics</p>
+  <ul class="ask-side__topics">
+    {% for t in topics %}
+      <li><a href="{{ t.get_absolute_url }}"{% if room and room.pk == t.pk %} aria-current="page"{% endif %}><span>{{ t.name }}</span><span class="ask-side__n">{{ t.n }}</span></a></li>
+    {% endfor %}
+  </ul>
+  <a class="ask-textbtn" href="{% url 'ask:topics' %}">All topics →</a>
+
+  {% if stats %}
+  <div class="ask-side__stat">
+    <p class="ask-side__label">This week</p>
+    <p class="ask-side__big">{{ stats.answered_week }}</p>
+    <p class="ask-side__small">questions got new answers</p>
+  </div>
+  {% endif %}
+
+  <div class="ask-side__note">
+    <p class="ask-side__label">House rules</p>
+    <p>Be specific, be kind, no selling. Never post passwords, OTPs or card details. Links are checked before they go live.</p>
+  </div>
+</aside>

@@ -37,12 +37,15 @@ ENV PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=onewooz.settings.prod
 
 # Runtime shared libraries only (no compiler): the MySQL client lib for
-# mysqlclient, libjpeg/zlib for Pillow, curl for the container health check.
+# mysqlclient, libjpeg/zlib for Pillow, curl for the container health check,
+# ffmpeg for compressing uploaded videos (commerce.video_optimise; only the
+# worker-media service runs it).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         default-libmysqlclient-dev \
         libjpeg62-turbo \
         zlib1g \
         curl \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 10001 app
 
@@ -51,7 +54,10 @@ COPY --from=build /venv /venv
 WORKDIR /app
 COPY . .
 COPY deploy/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh \
+# Strip Windows line endings: a CRLF entrypoint fails as "/bin/sh^M: not found"
+# and would stop every service from booting.
+RUN sed -i 's/\r$//' /entrypoint.sh \
+    && chmod +x /entrypoint.sh \
     && mkdir -p /app/staticfiles /app/media \
     && chown -R app:app /app
 

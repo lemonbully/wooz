@@ -1,0 +1,57 @@
+{% comment %}
+Duration filter shared by Deleted users and Expiring users. Quick-range chips
+are links; "Custom range" reveals the from/to dates. Params: ranges, window,
+q, action (the page url), past (True on Deleted users: dates up to today).
+{% endcomment %}
+<form method="get" action="{{ action }}" class="owa-panel owa-life__filter" id="ow-life-filter">
+  <div class="owa-life__chips" role="group" aria-label="Duration">
+    {% for key, label in ranges %}
+      {% if key == "custom" %}
+        <button type="button" class="owa-export__chip{% if window.key == 'custom' %} is-active{% endif %}" data-life-custom aria-pressed="{% if window.key == 'custom' %}true{% else %}false{% endif %}">{{ label }}</button>
+      {% else %}
+        <a class="owa-export__chip{% if window.key == key %} is-active{% endif %}" href="{{ action }}?range={{ key }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}"{% if window.key == key %} aria-current="true"{% endif %}>{{ label }}</a>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <div class="owa-life__row">
+    <div class="owa-life__dates" id="ow-life-dates"{% if window.key != 'custom' %} hidden{% endif %}>
+      <input type="hidden" name="range" value="custom" {% if window.key != 'custom' %}disabled{% endif %} data-life-range>
+      <label class="owa-field">
+        <span class="owa-field__label">From</span>
+        <input type="date" name="from" class="owa-input" value="{{ window.date_from }}"{% if past %} max="{{ today|date:'Y-m-d' }}"{% else %} min="{{ today|date:'Y-m-d' }}"{% endif %}>
+      </label>
+      <label class="owa-field">
+        <span class="owa-field__label">To</span>
+        <input type="date" name="to" class="owa-input" value="{{ window.date_to }}"{% if past %} max="{{ today|date:'Y-m-d' }}"{% else %} min="{{ today|date:'Y-m-d' }}"{% endif %}>
+      </label>
+    </div>
+    {% if window.key != 'custom' %}<input type="hidden" name="range" value="{{ window.key }}" data-life-quick>{% endif %}
+    <label class="owa-field owa-life__search">
+      <span class="owa-field__label">Search</span>
+      <input type="search" name="q" class="owa-input" value="{{ q }}" placeholder="Name, email, phone or store">
+    </label>
+    <button type="submit" class="owa-btn owa-btn--accent">Apply</button>
+  </div>
+  {% if window.error %}<div class="owa-alert owa-alert--error owa-life__alert" role="alert">{{ window.error }}</div>{% endif %}
+</form>
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var form = document.getElementById("ow-life-filter");
+  if (!form) return;
+  var btn = form.querySelector("[data-life-custom]");
+  var dates = document.getElementById("ow-life-dates");
+  var range = form.querySelector("[data-life-range]");
+  var quick = form.querySelector("[data-life-quick]");
+  if (!btn || !dates) return;
+  btn.addEventListener("click", function () {
+    dates.hidden = false;
+    btn.classList.add("is-active");
+    btn.setAttribute("aria-pressed", "true");
+    if (range) range.disabled = false;
+    if (quick) quick.disabled = true;
+    Array.prototype.forEach.call(form.querySelectorAll(".owa-export__chip.is-active"), function (c) { if (c !== btn) c.classList.remove("is-active"); });
+    var first = dates.querySelector("input[type=date]");
+    if (first) first.focus();
+  });
+})();
+</script>

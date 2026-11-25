@@ -1,0 +1,70 @@
+{% extends "community/console/_shell.html" %}
+{% block page_title %}Weekly digest{% endblock %}
+{% block crumbs %}<span>/</span><span>Weekly digest</span>{% endblock %}
+{% block heading %}Weekly digest{% endblock %}
+{% block lead %}<p>The Monday email: last week's question of the week, most helpful answers and what still needs an answer. Sent once Monday 09:00 IST has passed.</p>{% endblock %}
+{% block actions %}<a class="pal-btn pal-btn--ghost" href="{{ weekly_url }}" target="_blank" rel="noopener">This week on the site &#8599;</a>{% endblock %}
+
+{% block main %}
+<div class="mc-status{% if not conf.digest_enabled %} mc-status--off{% endif %}">
+  <span class="mc-status__txt">{% if conf.digest_enabled %}<span class="mc-dot"></span> The Monday email is on.{% else %}<span class="mc-dot mc-dot--off"></span> The Monday email is paused.{% endif %}</span>
+  <a class="pal-btn pal-btn--ghost" href="{% url 'ask_console:settings' %}">Change in settings</a>
+</div>
+
+<div class="mc-kpis">
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ counts.active }}</div><div class="mc-kpi__label">Subscribed</div><div class="mc-kpi__sub">get the email</div></div>
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ counts.pending }}</div><div class="mc-kpi__label">Not confirmed</div><div class="mc-kpi__sub">link sent, not clicked</div></div>
+  <div class="mc-kpi"><div class="mc-kpi__value">{{ counts.left }}</div><div class="mc-kpi__label">Unsubscribed</div></div>
+</div>
+
+<div class="mc-grid2">
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Subscribers</h2>
+      <form method="get" class="mc-inline"><input type="text" name="q" value="{{ q }}" placeholder="Email"><button class="mc-linkbtn" type="submit">Search</button></form>
+    </div>
+    <div class="mc-tablewrap">
+      <table class="mc-table ac-table">
+        <thead><tr><th>Email</th><th>Status</th><th>Since</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for s in page %}
+          <tr>
+            <td class="mc-trunc" title="{{ s.email }}">{{ s.email }}{% if s.member %}<div class="mc-muted ac-sub"><a href="{% url 'ask_console:member' s.member.pk %}">{{ s.member.display_name }}</a></div>{% endif %}</td>
+            <td>{% if s.unsubscribed_at %}<span class="mc-chip mc-chip--retired">Left</span>{% elif s.is_confirmed %}<span class="mc-chip mc-chip--published">Subscribed</span>{% else %}<span class="mc-chip mc-chip--pending">Unconfirmed</span>{% endif %}</td>
+            <td class="mc-mono">{{ s.created_at|date:"j M Y" }}</td>
+            <td>
+              {% if can_write %}
+              <form method="post" action="{% url 'ask_console:subscriber_action' s.pk %}" class="mc-inline">
+                {% csrf_token %}
+                {% if s.is_active %}<button class="mc-linkbtn" type="submit" name="action" value="unsubscribe">Unsubscribe</button>
+                {% else %}<button class="mc-linkbtn" type="submit" name="action" value="confirm">Subscribe</button>{% endif %}
+                <button class="mc-linkbtn mc-linkbtn--danger" type="submit" name="action" value="delete" data-confirm="Remove {{ s.email }} from the list entirely?">Remove</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}<tr><td colspan="4" class="mc-empty">No subscribers yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page.paginator.num_pages > 1 %}
+    <div class="mc-pager"><span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      <span>{% if page.has_previous %}<a href="?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
+      {% if page.has_next %}&nbsp; <a href="?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}</span></div>
+    {% endif %}
+  </section>
+
+  <section class="mc-panel">
+    <div class="mc-panel__head"><h2 class="mc-panel__title">Sent issues</h2></div>
+    <div class="mc-tablewrap">
+      <table class="mc-table">
+        <thead><tr><th>Week</th><th>Sent</th><th class="num">Recipients</th></tr></thead>
+        <tbody>
+          {% for i in issues %}
+          <tr><td>Week {{ i.week }}, {{ i.year }}</td><td class="mc-mono">{{ i.started_at|date:"j M, H:i" }}</td><td class="num">{{ i.recipients }}</td></tr>
+          {% empty %}<tr><td colspan="3" class="mc-empty">The first issue goes out next Monday.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

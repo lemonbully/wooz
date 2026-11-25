@@ -13,9 +13,21 @@
     </span>
   </div>
 
+  {% if show_featured_pair %}
+  {% comment %} Template 2 only: the two large cards at the top of the storefront Categories page, toggled with the feature button on each card below. {% endcomment %}
+  <div class="cat-banner cat-feature-strip" id="featureStrip" data-count="{{ featured_count }}">
+    <span><b class="cat-feature-strip__tag">{{ featured_pair_label|default:"Template 2" }}</b> Feature two categories at the top of your Categories page. Click {% include "store/_icons.html" with icon="feature-top" %} on a category to feature it.</span>
+    <span class="cat-banner__status" id="featureStatus">
+      <span class="inv-dot{% if featured_count %} inv-dot--ok{% endif %}"></span><span data-feature-text>{% if featured_count %}Featured {{ featured_count }} of 2{% else %}None featured yet, your first two categories show{% endif %}</span>
+    </span>
+  </div>
+  {% endif %}
+
   <div class="app-head">
     <div class="cat-head">
       <h1 class="app-head__title">Categories <span class="prd-count">({{ categories_count }})</span></h1>
+      {% if not show_featured_pair %}
+      {% comment %} Template 1 only: Template 2's nav shows a plain "Categories" link, so the toggle would do nothing there. {% endcomment %}
       <div class="cat-megamenu">
         <span class="cat-megamenu__label">Categories menu</span>
         <label class="ow-switch">
@@ -24,6 +36,7 @@
         </label>
         <span class="cat-megamenu__state" id="megaMenuState">{{ mega_menu_enabled|yesno:"MEGA,Simple" }}</span>
       </div>
+      {% endif %}
     </div>
     <div class="app-head__actions">
       <a href="{% url 'store:category_new' site.id %}" class="pal-btn">+ Add Category</a>
@@ -34,16 +47,25 @@
     {% if categories %}
       <div class="cat-grid">
         {% for c in categories %}
-          <div class="cat-card" data-category-id="{{ c.id }}">
+          <div class="cat-card{% if c.feature_pos %} is-featured{% endif %}" data-category-id="{{ c.id }}">
             <div class="cat-card__body">
-              <div class="cat-card__name">{{ c.name }}</div>
+              <div class="cat-card__name">{% if show_featured_pair %}<span class="cat-card__pos" data-feature-pos{% if not c.feature_pos %} hidden{% endif %}>{{ c.feature_pos|default:"" }}</span>{% endif %}{{ c.name }}</div>
               {% if c.description %}<div class="cat-card__desc">{{ c.description }}</div>{% endif %}
             </div>
             <div class="cat-card__acts">
               <a href="{% url 'store:category_edit' site.id c.id %}" class="cat-iconbtn" title="Edit" aria-label="Edit">{% include "store/_icons.html" with icon="pencil" %}</a>
+              {% if not show_featured_pair %}
               <button type="button" class="cat-star{% if highlight_category_id == c.id|stringformat:'s' %} is-on{% endif %}"
                       data-highlight data-url="{% url 'store:category_highlight' site.id c.id %}"
                       title="Set as Mega Highlight" aria-label="Highlight">★</button>
+              {% endif %}
+              {% if show_featured_pair %}
+              <button type="button" class="cat-iconbtn cat-feature{% if c.feature_pos %} is-on{% endif %}"
+                      data-feature data-url="{% url 'store:category_feature' site.id c.id %}"
+                      aria-pressed="{{ c.feature_pos|yesno:'true,false' }}"
+                      {% if not c.is_active and not c.feature_pos %}disabled title="Hidden categories can't be featured. Show it on your store first."{% else %}title="Feature at the top of the Categories page ({{ featured_pair_label|default:"Template 2" }})"{% endif %}
+                      aria-label="Feature at the top of the Categories page">{% include "store/_icons.html" with icon="feature-top" %}</button>
+              {% endif %}
               <form method="post" action="{% url 'store:category_delete' site.id c.id %}" class="ord-inline" data-confirm="Delete this category?">
                 {% csrf_token %}
                 <button type="submit" class="cat-iconbtn cat-iconbtn--danger" title="Delete" aria-label="Delete">{% include "store/_icons.html" with icon="trash" %}</button>

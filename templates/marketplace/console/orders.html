@@ -1,0 +1,45 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Orders{% endblock %}
+{% block crumbs %}<span>/</span><span>Orders</span>{% endblock %}
+{% block heading %}Orders{% endblock %}
+{% block lead %}<p>Every marketplace checkout. Status is only ever learned by asking Cashfree; use "Check now" if an owner says they paid.</p>{% endblock %}
+
+{% block main %}
+<div class="mc-kpis mc-kpis--1">
+  <div class="mc-kpi"><div class="mc-kpi__value">&#8377;{{ totals.t|default:0|floatformat:"0g" }}</div><div class="mc-kpi__label">Paid, 30 days</div><div class="mc-kpi__sub">incl. &#8377;{{ totals.g|default:0|floatformat:"0g" }} GST</div></div>
+</div>
+
+<div class="mc-toolbar">
+  <a class="mc-filter" href="?{% if q %}q={{ q|urlencode }}{% endif %}"{% if not status %} aria-current="page"{% endif %}>All</a>
+  {% for k, l in statuses %}<a class="mc-filter" href="?status={{ k }}{% if q %}&q={{ q|urlencode }}{% endif %}"{% if status == k %} aria-current="page"{% endif %}>{{ l }}</a>{% endfor %}
+  <form method="get" style="margin-left:auto;">{% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}<input type="search" name="q" value="{{ q }}" placeholder="Order number, email or Cashfree id"></form>
+</div>
+
+<section class="mc-panel">
+  <div class="mc-tablewrap">
+    <table class="mc-table">
+      <thead><tr><th>Order</th><th>Owner</th><th>Bought</th><th class="num">Total</th><th>Status</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+        {% for o in page %}
+        <tr>
+          <td><b class="mc-mono">{{ o.number }}</b>{% if o.cf_order_id %}<br><span class="mc-muted mc-mono" style="font-size:.66rem;">{{ o.cf_order_id }}</span>{% endif %}</td>
+          <td class="mc-trunc" title="{{ o.owner_email }}">{{ o.owner_email }}</td>
+          <td>{% for line in o.lines.all %}<div>{{ line.description }} <span class="mc-muted mc-mono">{{ line.licence_type }}</span></div>{% endfor %}</td>
+          <td class="num mc-mono">&#8377;{{ o.total_amount|floatformat:"2g" }}</td>
+          <td><span class="mc-chip mc-chip--{{ o.status }}">{{ o.get_status_display }}</span>{% if o.gateway_status %}<br><span class="mc-muted mc-mono" style="font-size:.62rem;">{{ o.gateway_status }}</span>{% endif %}</td>
+          <td class="mc-mono mc-muted">{{ o.created_at|date:"j M Y, H:i" }}</td>
+          <td>{% if can_write and o.status != "paid" and o.cf_order_id %}<form method="post" action="{% url 'mkt_console:order_check' o.pk %}" class="mc-inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="mc-linkbtn" type="submit">Check now</button></form>{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="7" class="mc-empty">No orders match.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="mc-pager">
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    <span>{% if page.has_previous %}<a href="?{% if status %}status={{ status }}&{% endif %}{% if q %}q={{ q|urlencode }}&{% endif %}page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
+    {% if page.has_next %}&nbsp; <a href="?{% if status %}status={{ status }}&{% endif %}{% if q %}q={{ q|urlencode }}&{% endif %}page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}</span>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

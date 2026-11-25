@@ -1,0 +1,61 @@
+{% extends "web/_shell.html" %}
+{% load ask_tags %}
+
+{% comment %}
+Ask OneWooz chrome: a ruled sub-bar under the marketing nav (sections, search,
+the member's own chip), then the page. Every community page extends this.
+{% endcomment %}
+
+{% block main %}
+{% with here=request.resolver_match.url_name %}
+<div class="ask">
+  <div class="ask-bar">
+    <div class="pal-container ask-bar__inner">
+      <a href="{% url 'ask:ask_home' %}" class="ask-bar__brand"><span class="ask-bar__mark" aria-hidden="true"></span>Ask OneWooz</a>
+      <nav class="ask-bar__nav" aria-label="Ask OneWooz">
+        <a href="{% url 'ask:ask_home' %}"{% if here == 'ask_home' or here == 'question' %} aria-current="page"{% endif %}>Questions</a>
+        <a href="{% url 'ask:live' %}"{% if here == 'live' %} aria-current="page"{% endif %}><span class="ask-live ask-live--nav" aria-hidden="true"></span>Live</a>
+        <a href="{% url 'ask:topics' %}"{% if here == 'topics' or here == 'topic' %} aria-current="page"{% endif %}>Topics</a>
+        <a href="{% url 'ask:weekly' %}"{% if here == 'weekly' or here == 'weekly_issue' %} aria-current="page"{% endif %}>Weekly</a>
+        {% if member.is_team %}<a href="{% url 'ask:desk' %}"{% if here == 'desk' %} aria-current="page"{% endif %} class="ask-bar__desk">Team desk</a>{% endif %}
+      </nav>
+      <form class="ask-bar__search" action="{% url 'ask:ask_home' %}" method="get" role="search">
+        <label class="sr-only" for="ask-bar-q">Search questions</label>
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+        <input id="ask-bar-q" name="q" type="search" value="{{ query|default:'' }}" placeholder="Search questions" autocomplete="off">
+      </form>
+      <div class="ask-bar__me">
+        {% if member %}
+          <a href="{{ member.get_absolute_url }}" class="ask-chip-me" title="Your profile">
+            {% include "community/_avatar.html" with m=member size="sm" tag="" %}
+            <span class="ask-chip-me__name">{{ member.display_name }}</span>
+          </a>
+          <form method="post" action="{% url 'ask:leave' %}">{% csrf_token %}<button type="submit" class="ask-textbtn">Sign out</button></form>
+        {% elif ow_signed_in %}
+          {# Signed in to OneWooz: opening join links their account (community.bridge). #}
+          <a href="{{ join_url }}" class="pal-btn pal-btn--ghost ask-btn-sm">Use my OneWooz account</a>
+        {% else %}
+          <a href="{{ join_url }}" class="pal-btn pal-btn--ghost ask-btn-sm">Join</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if ask_settings.notice or post_block %}
+  <div class="ask-notice" role="status">
+    <div class="pal-container">
+      {% if ask_settings.notice %}<p>{{ ask_settings.notice }}</p>{% endif %}
+      {% if post_block %}<p class="ask-notice__block">{{ post_block }}</p>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% block ask_main %}{% endblock %}
+</div>
+{% endwith %}
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+{% include "community/_js.html" %}
+{% endblock %}

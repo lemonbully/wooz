@@ -109,8 +109,8 @@
 
         <!-- Actions -->
         <div class="flex flex-wrap gap-4 justify-center md:justify-start">
-          <a href="{{ website_base }}products" class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-black text-white hover:bg-gray-900 transition text-xs md:text-sm uppercase tracking-[0.25em]">Shop Now</a>
-          <a href="{{ website_base }}enquiry/" class="inline-flex items-center justify-center px-6 py-3 rounded-full border border-gray-300 text-gray-800 hover:bg-gray-100 transition text-xs md:text-sm uppercase tracking-[0.25em]">Contact</a>
+          <a href="{{ website_base }}shop/" class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-black text-white hover:bg-gray-900 transition text-xs md:text-sm uppercase tracking-[0.25em]">Shop Now</a>
+          <a href="{{ website_base }}contact/" class="inline-flex items-center justify-center px-6 py-3 rounded-full border border-gray-300 text-gray-800 hover:bg-gray-100 transition text-xs md:text-sm uppercase tracking-[0.25em]">Contact</a>
         </div>
       </div>
     </div>
@@ -225,6 +225,7 @@
               <!-- Submit -->
               <button type="submit" class="h-12 md:h-14 px-6 md:px-8 rounded-lg md:rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-colors">Submit</button>
           </div>
+          {% include "storefront/_recaptcha.html" with center=True %}
       </form>
 
       {# Flash messages for form submission #}

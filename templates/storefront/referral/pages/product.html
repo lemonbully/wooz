@@ -14,6 +14,9 @@
 	<style>
 		body, html { font-family: 'Poppins', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; }
 		* { font-family: inherit; }
+		/* MRP reads "MRP: ₹1,299", never struck through (label survives the variation script's text swap). */
+		.ow-mrp { text-decoration: none !important; }
+		.ow-mrp::before { content: "MRP: "; }
 	</style>
 	<script src="https://cdn.tailwindcss.com"></script>
 	<script>
@@ -47,14 +50,14 @@
 				{% endif %}
 
 				<div class="absolute left-0 right-0 safe-pt pt-4 px-5 flex items-center justify-between bg-transparent text-white z-20">
-					<a href="{{ return_to }}" class="p-2 rounded-full bg-gray-500 text-white">
+					<a aria-label="Back" href="{{ return_to }}" class="p-2 rounded-full bg-gray-500 text-white">
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</a>
 					<div class="flex items-center gap-3">
-						<button id="wishlist-btn" class="p-2 rounded-full transition-colors {% if is_wishlisted %}bg-white text-red-600 ring-1 ring-red-300{% else %}bg-black text-white{% endif %}" data-wishlisted="{{ is_wishlisted|yesno:'1,0' }}" data-logged-in="{{ customer_logged_in|yesno:'1,0' }}" data-url-add="{% url 'public_wishlist_add' product_id=product_id %}" data-url-remove="{% url 'public_wishlist_remove' product_id=product_id %}">
+						<button aria-label="Wishlist" id="wishlist-btn" class="p-2 rounded-full transition-colors {% if is_wishlisted %}bg-white text-red-600 ring-1 ring-red-300{% else %}bg-black text-white{% endif %}" data-wishlisted="{{ is_wishlisted|yesno:'1,0' }}" data-logged-in="{{ customer_logged_in|yesno:'1,0' }}" data-url-add="{% url 'public_wishlist_add' product_id=product_id %}" data-url-remove="{% url 'public_wishlist_remove' product_id=product_id %}">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12.1 20.3l-.1.1-.1-.1C7.14 15.86 4 13.07 4 9.9 4 7.57 5.57 6 7.9 6c1.29 0 2.54.6 3.3 1.55A4.36 4.36 0 0 1 14.5 6C16.8 6 18.4 7.6 18.4 9.9c0 3.17-3.14 5.96-6.3 10.4z" fill="currentColor"/></svg>
 						</button>
-						<button id="cart-open-btn" class="p-2 rounded-full bg-black text-white">
+						<button aria-label="Open cart" id="cart-open-btn" class="p-2 rounded-full bg-black text-white">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 6h14l-1.5 9h-11z" stroke="white" stroke-width="2" stroke-linejoin="round"/><circle cx="9" cy="20" r="1.5" fill="white"/><circle cx="17" cy="20" r="1.5" fill="white"/></svg>
 						</button>
 					</div>
@@ -80,7 +83,7 @@
 				<div class="min-h-[100px] flex flex-col justify-center">
 					<div class="text-center">
 						<h1 class="text-[18px] font-semibold text-black" data-vp-title-slot>{{ product_title }}</h1>
-						<p class="mt-1 text-[14px] font-medium text-black"><span data-ugc-price>{{ product_price_display }}</span><span data-ugc-mrp class="ml-2 text-[12px] font-normal text-black/40 line-through"{% if not product_mrp_display %} hidden{% endif %}>{{ product_mrp_display }}</span></p>
+						<p class="mt-1 text-[14px] font-medium text-black"><span data-ugc-price>{{ product_price_display }}</span><span data-ugc-mrp class="ml-2 text-[12px] font-normal text-black/40 ow-mrp"{% if not product_mrp_display %} hidden{% endif %}>{{ product_mrp_display }}</span></p>
 						<p class="mt-1 text-[12px] font-medium {% if product_in_stock %}text-green-700{% else %}text-red-600{% endif %}" data-ugc-stock aria-live="polite">{% if product_in_stock %}In stock{% else %}Out of stock{% endif %}</p>
 						<div class="mt-2 flex items-center justify-center gap-2">
 							<div class="relative inline-block" aria-label="Rating {{ rating_value }} out of 5">
@@ -131,7 +134,7 @@
 								{% if product_hero_image %}<img src="{{ product_hero_image }}" data-ugc-hero alt="{{ product.title }}" class="w-20 h-20 rounded-xl object-cover border border-black/10 bg-gray-50">{% endif %}
 								<div class="min-w-0 flex-1">
 									<div class="text-[16px] font-semibold text-black leading-snug truncate" data-vp-title-slot>{{ product.title }}</div>
-									<div class="mt-1 text-[14px] font-medium text-black"><span data-ugc-price>{{ product_price_display }}</span><span data-ugc-mrp class="ml-2 text-[12px] font-normal text-black/40 line-through"{% if not product_mrp_display %} hidden{% endif %}>{{ product_mrp_display }}</span></div>
+									<div class="mt-1 text-[14px] font-medium text-black"><span data-ugc-price>{{ product_price_display }}</span><span data-ugc-mrp class="ml-2 text-[12px] font-normal text-black/40 ow-mrp"{% if not product_mrp_display %} hidden{% endif %}>{{ product_mrp_display }}</span></div>
 										<p class="mt-1 text-[12px] font-medium {% if product_in_stock %}text-green-700{% else %}text-red-600{% endif %}" data-ugc-stock aria-live="polite">{% if product_in_stock %}In stock{% else %}Out of stock{% endif %}</p>
 									<div class="mt-2 flex items-center gap-2">
 										<div class="relative inline-block" aria-label="Rating {{ rating_value }} out of 5">

@@ -46,6 +46,8 @@ def surface_host(surface: str | Surface) -> str:
         return settings.ADMIN_HOST
     if surface is Surface.STOREFRONT:
         return settings.STOREFRONT_APEX
+    if surface is Surface.MARKETPLACE:
+        return getattr(settings, "MARKETPLACE_HOST", "") or f"marketplace.{settings.MARKETING_HOST}"
     return settings.MARKETING_HOST
 
 

@@ -36,12 +36,14 @@ def _home(request):
             return reverse("ud:dashboard"), "Go to dashboard"
         if surface is Surface.ADMIN:
             return "/", "Back to sign in"
+        if surface is Surface.MARKETPLACE:
+            return reverse("marketplace:home"), "Back to OneWooz Apps"
         return reverse("home"), "Back to home"
     except Exception:
         return "/", "Back to home"
 
 
-def _render(template_name: str, status: int, request) -> HttpResponse:
+def _render(template_name: str, status: int, request, extra: dict | None = None) -> HttpResponse:
     try:
         home_url, home_label = _home(request)
     except Exception:
@@ -50,7 +52,7 @@ def _render(template_name: str, status: int, request) -> HttpResponse:
         # Rendered without the request so no context processor runs  the error
         # page must not depend on (or re-trigger) whatever failed upstream.
         html = loader.render_to_string(
-            template_name, {"home_url": home_url, "home_label": home_label}
+            template_name, {"home_url": home_url, "home_label": home_label, **(extra or {})}
         )
         return HttpResponse(html, status=status)
     except Exception:
@@ -67,3 +69,47 @@ def handler404(request, exception=None):
 
 def handler500(request):
     return _render("500.html", 500, request)
+
+
+def handler400(request, exception=None):
+    return _render("error_page.html", 400, request, {
+        "code": 400,
+        "title": "Something wasn’t right with that request",
+        "desc": "We couldn’t read that request. Go back, refresh the page and try again.",
+    })
+
+
+def handler403(request, exception=None):
+    return _render("error_page.html", 403, request, {
+        "code": 403,
+        "title": "You don’t have access to this page",
+        "desc": "This page isn’t available to you. If you think that’s a mistake, sign in again or head back.",
+    })
+
+
+def _same_origin_back(request) -> str:
+    """The page the visitor came from, if it was on this same host."""
+    from urllib.parse import urlsplit
+
+    ref = request.META.get("HTTP_REFERER", "") or ""
+    try:
+        parts = urlsplit(ref)
+        if parts.scheme in ("http", "https") and parts.netloc == request.get_host():
+            return ref
+    except Exception:
+        pass
+    return ""
+
+
+def csrf_failure(request, reason: str = ""):
+    """settings.CSRF_FAILURE_VIEW: a branded page instead of Django's bare
+    "CSRF verification failed" one. Django has already logged ``reason``
+    (logger django.security.csrf) before calling this. The usual causes are a
+    page left open for long, cookies cleared, or the form opened in another
+    tab, so the advice is to reload and try again."""
+    return _render("error_page.html", 403, request, {
+        "code": 403,
+        "title": "This page has expired",
+        "desc": "For your security we couldn’t complete that action. Go back, refresh the page and try again.",
+        "retry_url": _same_origin_back(request),
+    })

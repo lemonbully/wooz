@@ -4,7 +4,7 @@ Store-scoped sidebar navigation. Rendered from `nav_groups` (built by
 to this store's business model  reviews and collaborations are D2C-only.
 `nav_active` marks the current page.
 {% endcomment %}
-<nav class="app-nav" aria-label="Store">
+<nav class="app-nav" aria-label="Store" data-nav-counts="{% url 'ud:store_nav_counts' site.id %}">
   <div class="app-nav__group">
     <a href="{% url 'ud:dashboard' %}" class="app-nav__link app-nav__link--back">
       <span class="app-nav__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></span>
@@ -16,7 +16,7 @@ to this store's business model  reviews and collaborations are D2C-only.
     <div class="app-nav__group">
       <p class="app-nav__label">{{ group.label }}</p>
       {% for item in group.items %}
-        <a href="{% url item.url_name site.id %}" class="app-nav__link{% if item.locked %} app-nav__link--locked{% endif %}"{% if nav_active == item.key %} aria-current="page"{% endif %}{% if item.locked %} title="Upgrade to unlock {{ item.label }}"{% endif %}>
+        <a href="{% if item.href %}{{ item.href }}{% else %}{% url item.url_name site.id %}{% endif %}" data-nav-key="{{ item.key }}" class="app-nav__link{% if item.locked %} app-nav__link--locked{% endif %}"{% if nav_active == item.key %} aria-current="page"{% endif %}{% if item.locked %} title="Upgrade to unlock {{ item.label }}"{% endif %}>
           <span class="app-nav__ico" aria-hidden="true">{% include "store/_icons.html" with icon=item.icon %}</span>
           {{ item.label }}
           {% if item.locked %}<span class="app-nav__lock" aria-label="Upgrade required">Upgrade</span>{% endif %}{% if item.count %}<span class="app-nav__count" aria-label="{{ item.count }} new">{{ item.count_label }}</span>{% endif %}
@@ -24,6 +24,16 @@ to this store's business model  reviews and collaborations are D2C-only.
       {% endfor %}
     </div>
   {% endfor %}
+
+  {# OneWooz Apps: installed apps and the marketplace (owner only). #}
+  {% if is_store_owner %}
+  <div class="app-nav__group">
+    <a href="{% url 'mkt_gateway:my_apps' %}" class="app-nav__link"{% if nav_active == 'apps' %} aria-current="page"{% endif %}>
+      <span class="app-nav__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/></svg></span>
+      Apps
+    </a>
+  </div>
+  {% endif %}
 
   {# Account-level plan upgrade (no site argument  the checkout uses the owner). #}
   <div class="app-nav__group">

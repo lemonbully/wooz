@@ -1,0 +1,54 @@
+{% load ask_tags %}
+{% comment %}
+The live desk's pulse strip and three columns. Rendered with the page and
+re-rendered by ask:live_columns every few seconds.
+Context: fresh, hot, waiting, pulse, updated_at.
+{% endcomment %}
+<dl class="ask-pulse">
+  <div><dt>Asked today</dt><dd>{{ pulse.questions_today }}</dd></div>
+  <div><dt>Answers today</dt><dd>{{ pulse.answers_today }}</dd></div>
+  <div><dt>People answering today</dt><dd>{{ pulse.people_today }}</dd></div>
+  <div><dt>Waiting for an answer</dt><dd class="ask-pulse__accent">{{ pulse.waiting }}</dd></div>
+</dl>
+
+<div class="ask-livecols">
+  <section class="ask-livecol" aria-labelledby="col-live">
+    <h2 class="ask-livecol__head" id="col-live"><span class="ask-live" aria-hidden="true"></span>Live now</h2>
+    {% for q in fresh %}
+      <a class="ask-liveitem" href="{{ q.get_absolute_url }}">
+        <span class="ask-liveitem__t">{{ q.title }}</span>
+        <span class="ask-liveitem__m">{{ q.created_at|ago }}{% if q.topic %} · {{ q.topic.name }}{% endif %} · {{ q.answer_count }} answer{{ q.answer_count|pluralize }}</span>
+      </a>
+    {% empty %}
+      <p class="ask-livecol__empty">Nothing asked yet. Be the first.</p>
+    {% endfor %}
+  </section>
+
+  <section class="ask-livecol" aria-labelledby="col-hot">
+    <h2 class="ask-livecol__head" id="col-hot"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 1.5c.6 2.6 3.8 4 3.8 7.3A3.8 3.8 0 0 1 8 12.6a3.8 3.8 0 0 1-3.8-3.8c0-1.7 1-2.6 1.6-3.4.2 1 .7 1.7 1.5 2C7.6 5.6 7.2 3.4 8 1.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>Hot right now</h2>
+    {% for q in hot %}
+      <a class="ask-liveitem" href="{{ q.get_absolute_url }}">
+        <span class="ask-liveitem__t">{{ q.title }}</span>
+        <span class="ask-liveitem__m">↑ {{ q.score }} · {{ q.answer_count }} answer{{ q.answer_count|pluralize }}{% if q.topic %} · {{ q.topic.name }}{% endif %}</span>
+      </a>
+    {% empty %}
+      <p class="ask-livecol__empty">Quiet for the last two days.</p>
+    {% endfor %}
+  </section>
+
+  <section class="ask-livecol ask-livecol--waiting" aria-labelledby="col-wait">
+    <h2 class="ask-livecol__head" id="col-wait"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M4 2h8M4 14h8M5 2c0 3 6 3 6 6s-6 3-6 6M11 2c0 3-6 3-6 6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>Waiting for an answer</h2>
+    {% for q in waiting %}
+      <div class="ask-liveitem ask-liveitem--waiting">
+        <a class="ask-liveitem__t" href="{{ q.get_absolute_url }}">{{ q.title }}</a>
+        <span class="ask-liveitem__row">
+          <span class="ask-liveitem__m">{{ q.created_at|ago }}{% if q.topic %} · {{ q.topic.name }}{% endif %}</span>
+          <a class="pal-btn pal-btn--ghost ask-btn-xs" href="{{ q.get_absolute_url }}#answer">Answer</a>
+        </span>
+      </div>
+    {% empty %}
+      <p class="ask-livecol__empty">Every question has an answer. Nice.</p>
+    {% endfor %}
+  </section>
+</div>
+<p class="ask-live__stamp">Updated {{ updated_at|time:"H:i" }}</p>

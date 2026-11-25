@@ -1,0 +1,190 @@
+{% extends "marketplace/surface/base.html" %}
+
+{% block content %}
+{# ---------------------------------------------------------------- Hero #}
+<section class="mk-hero pal-blueprint">
+  <div class="pal-container mk-hero__grid">
+    <div class="mk-hero__copy">
+      <div class="pal-marker"><span class="pal-marker__num">{{ stats.apps }}</span><span>Apps &middot; {{ stats.designs }} store designs</span></div>
+      <h1 class="mk-hero__title">Apps for your OneWooz <span class="pal-accent-word">store</span>.</h1>
+      <p class="pal-lead mk-intro">Add marketing, sales, support and trust tools to your store in a few clicks. Every app is built by OneWooz, says exactly what it adds, and stays off until you switch it on.</p>
+      {% if tiles %}
+      <div class="mk-popular">
+        <span class="pal-mono">Popular</span>
+        {% for t in tiles|slice:":4" %}<a href="{{ t.url }}">{{ t.label }}</a>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if spotlight %}
+    <a class="mk-banner" href="{% url 'marketplace:app' spotlight.slug %}" style="--tile:{{ spotlight.accent|default:'#4b2bf5' }}">
+      <div class="mk-banner__copy">
+        <span class="mk-state mk-state--on">Featured app</span>
+        <div class="mk-banner__id">
+          {% include "marketplace/surface/_icon.html" with a=spotlight size="lg" %}
+          <div>
+            <p class="mk-banner__name">{{ spotlight.name }}</p>
+            <p class="mk-card__by">by {{ spotlight.developer|default:"OneWooz" }} &middot; {{ spotlight.category_label }}</p>
+          </div>
+        </div>
+        <p class="mk-banner__tagline">{{ spotlight.tagline }}</p>
+        <p class="mk-banner__foot"><span class="mk-card__price">{{ spotlight.pricing_label }}</span><span class="pal-btn">View app <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></span></p>
+      </div>
+      <div class="mk-banner__stage" aria-hidden="true">
+        <div class="mk-mini">
+          <div class="mk-mini__ann">{{ spotlight.name }}</div>
+          <div class="mk-mini__bar"><b></b><span></span><span></span><span></span></div>
+          <div class="mk-mini__hero"></div>
+          <div class="mk-mini__grid"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    </a>
+    {% endif %}
+  </div>
+</section>
+
+{# -------------------------------------------------------- Categories #}
+{% if tiles %}
+<section class="mk-sec">
+  <div class="pal-container">
+    <div class="mk-sechead">
+      <h2 class="mk-sechead__title">Browse by category</h2>
+      <a class="mk-seeall" href="{% url 'marketplace:browse' %}">All {{ stats.apps }} apps &rarr;</a>
+    </div>
+    <div class="mk-tiles">
+      {% for t in tiles %}
+      <a class="mk-tile" href="{{ t.url }}">
+        <span class="mk-tile__ico">{% include "store/_icons.html" with icon=t.icon %}</span>
+        <span class="mk-tile__label">{{ t.label }}</span>
+        <span class="mk-tile__need">{{ t.need }}</span>
+        <span class="mk-tile__n">{{ t.n }} app{{ t.n|pluralize }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ------------------------------------------------- Collections + needs #}
+{% for col in collections %}
+<section class="mk-sec{% if not forloop.first %} mk-sec--ruled{% endif %}" id="col-{{ col.key }}">
+  <div class="pal-container">
+    <div class="mk-sechead">
+      <div>
+        <h2 class="mk-sechead__title">{{ col.title }}</h2>
+        <p class="mk-sechead__sub">{{ col.sub }}</p>
+      </div>
+      <a class="mk-seeall" href="{{ col.url }}">See all{% if col.n > col.apps|length %} {{ col.n }}{% endif %} &rarr;</a>
+    </div>
+    <div class="mk-cards">
+      {% for a in col.apps %}{% include "marketplace/surface/_app_card.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if forloop.first and problems %}
+<section class="mk-sec mk-sec--ruled" id="needs">
+  <div class="pal-container">
+    <div class="mk-sechead">
+      <div>
+        <h2 class="mk-sechead__title">Find apps for a common need</h2>
+        <p class="mk-sechead__sub">Start from what's going wrong in your store.</p>
+      </div>
+    </div>
+    <div class="mk-solve" data-mk-tabs>
+      <div class="mk-solve__list" role="tablist" aria-label="Common needs">
+        {% for p in problems %}
+        <button type="button" class="mk-solve__tab" role="tab" id="mk-tab-{{ p.key }}" aria-controls="mk-panel-{{ p.key }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+          <span class="mk-solve__glyph">{% include "store/_icons.html" with icon=p.icon %}</span>
+          <span class="mk-solve__text">{{ p.short }}</span>
+          <span class="mk-solve__count">{{ p.n }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      {% for p in problems %}
+      <div class="mk-solve__panel" role="tabpanel" id="mk-panel-{{ p.key }}" aria-labelledby="mk-tab-{{ p.key }}">
+        <div class="mk-solve__pf">
+          <div><p class="pal-mono">The problem</p><p class="mk-solve__problem">{{ p.problem }}</p></div>
+          <div><p class="pal-mono pal-mono--accent">What helps</p><p class="mk-solve__fix">{{ p.fix }}</p></div>
+        </div>
+        <ul class="mk-rows">
+          {% for a in p.apps %}{% include "marketplace/surface/_app_row.html" %}{% endfor %}
+        </ul>
+        <a class="mk-seeall" href="{% url 'marketplace:browse' %}?c={{ p.key }}">All {{ p.label|lower }} apps &rarr;</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endfor %}
+
+{# ------------------------------------------------------------ Bundles #}
+{% if stacks %}
+<section class="mk-sec mk-sec--ruled" id="bundles">
+  <div class="pal-container">
+    <div class="mk-sechead">
+      <div>
+        <h2 class="mk-sechead__title">Frequently used together</h2>
+        <p class="mk-sechead__sub">Bundles of apps that cover a whole moment in your store. Add each one from its page.</p>
+      </div>
+    </div>
+    <div class="mk-bundles">
+      {% for s in stacks %}
+      <article class="mk-bundle">
+        <div class="mk-bundle__icons">
+          {% for a in s.apps %}{% include "marketplace/surface/_icon.html" with size="md" %}{% if not forloop.last %}<span class="mk-bundle__plus" aria-hidden="true">+</span>{% endif %}{% endfor %}
+        </div>
+        <h3 class="mk-bundle__name">{{ s.name }}</h3>
+        <p class="mk-bundle__pitch">{{ s.pitch }}</p>
+        <ul class="mk-bundle__list">
+          {% for a in s.apps %}<li><a href="{% url 'marketplace:app' a.slug %}"><span>{{ a.name }}</span><span class="mk-bundle__price">{{ a.pricing_label }}</span></a></li>{% endfor %}
+        </ul>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ------------------------------------------------------------- Designs #}
+{% if design_items %}
+<section class="mk-sec pal-section--ink">
+  <div class="pal-container">
+    <div class="mk-sechead">
+      <div>
+        <h2 class="mk-sechead__title">Store designs</h2>
+        <p class="mk-sechead__sub">Switch your storefront's look in one click. Products, pages and SEO carry over.</p>
+      </div>
+      <a class="mk-seeall" href="{% url 'marketplace:app' 'templates' %}">All {{ stats.designs }} designs &rarr;</a>
+    </div>
+    <div class="mk-designstrip">
+      {% for it in design_items %}
+      <a class="mk-designstrip__item" href="{{ it.url }}">
+        <span class="mk-designstrip__shot">{% if it.thumbnail %}<img src="{{ it.thumbnail }}" alt="{{ it.name }} preview" loading="lazy">{% else %}{% include "marketplace/surface/_design_mock.html" with look=it.key name=it.name %}{% endif %}</span>
+        <span class="mk-designstrip__meta"><b>{{ it.name }}</b><span>{% if it.is_priced %}{{ it.pricing_label }}{% else %}Included{% endif %}</span></span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ---------------------------------------------------------------- CTA #}
+<section class="mk-sec mk-sec--ruled">
+  <div class="pal-container mk-cta">
+    <div>
+      <h2 class="mk-sechead__title">{% if mkt_owner %}Your apps live in your dashboard.{% else %}New to OneWooz?{% endif %}</h2>
+      <p class="mk-sechead__sub">{% if mkt_owner %}Set them up, switch them on per store, or remove them any time.{% else %}Every app here runs on a OneWooz store. Get your store live first, then add what it needs.{% endif %}</p>
+    </div>
+    <div class="pal-btn-row">
+      {% if mkt_owner %}
+        <a class="pal-btn" href="{{ dashboard_url }}">Open dashboard <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      {% else %}
+        <a class="pal-btn" href="{{ signup_url }}">Deploy a store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+        <a class="pal-btn pal-btn--ghost" href="{{ connect_url }}">Sign in</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

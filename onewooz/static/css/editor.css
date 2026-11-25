@@ -1144,3 +1144,157 @@ a.pg__ic { text-decoration: none; }
 .pg .ed-card.pg-node.pg-editing { border-color: var(--pal-accent); box-shadow: inset 0 0 0 1px var(--pal-accent); }
 .pg .ed-card.pg-node.pg-editing > .ed-card__head { background: rgb(75 43 245 / 0.06); cursor: default; }
 .pg .ed-card.pg-node.pg-editing .pg-node__tag { border-color: var(--pal-accent); background: var(--pal-accent); color: #fff; }
+
+/* ---- Magic SEO (marketplace app): the SEO tab's pencil bar + options --- */
+/* It shares the "SEO scope" row: the scope field takes 8 of the panel's 12
+   columns (its buttons were stretched across the whole row) and Magic SEO the
+   other 4, laid out like a field so the rows line up: label row, button row
+   level with the scope buttons, help line level with the scope's help. The
+   !important beats the span the editor writes inline on every field. */
+#ed-panel-seo.has-ms > [data-field-wrap="seo_mode"] { grid-column: 1 / span 8 !important; }
+.ms { grid-column: 9 / -1; min-width: 0; display: flex; flex-direction: column; }
+@media (max-width: 75rem) {
+  #ed-panel-seo.has-ms > [data-field-wrap="seo_mode"] { grid-column: 1 / span 7 !important; }
+  .ms { grid-column: 8 / -1; }
+}
+@media (max-width: 60rem) {
+  #ed-panel-seo.has-ms > [data-field-wrap="seo_mode"] { grid-column: 1 / -1 !important; }
+  .ms { grid-column: 1 / -1; }
+}
+.ms__head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.45rem; }
+.ms__label { display: inline-flex; align-items: center; gap: 0.35rem; margin-bottom: 0; min-width: 0; }
+.ms__label svg { flex: none; fill: none; stroke: var(--pal-accent); stroke-width: 1.8; stroke-linejoin: round; }
+.ms__tag { padding: 0.05rem 0.3rem; border: 1px solid var(--pal-accent); color: var(--pal-accent); font-size: 0.5rem; letter-spacing: 0.08em; line-height: 1.4; }
+.ms__actions { flex: none; display: inline-flex; gap: 0.75rem; }
+.ms__link { border: 0; background: none; padding: 0; cursor: pointer; font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-accent); }
+.ms__link:hover:not(:disabled) { text-decoration: underline; text-underline-offset: 3px; }
+.ms__link:focus-visible { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
+.ms__link:disabled { opacity: 0.4; cursor: default; }
+.ms__link[hidden] { display: none; }
+/* Same height and type as the scope buttons beside it, filled with the accent. */
+.ms__run { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;
+  padding: 0.55rem 0.75rem; border: 1px solid var(--pal-accent); background: var(--pal-accent); color: #fff;
+  font-family: var(--pal-font-mono); font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase;
+  transition: background .15s ease; }
+.ms__run:hover:not(:disabled) { background: var(--pal-accent-2, #6a44fb); }
+.ms__run:focus-visible { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
+.ms__run:disabled { cursor: progress; background: rgb(75 43 245 / 0.08); color: var(--pal-accent); }
+/* Done: the run already wrote the SEO. A calm, ticked state (outlined, not the
+   filled call to action) that opens "what changed"; running again is the
+   separate "Run again" link, so nobody re-runs it by reflex. */
+.ms__run.is-done { background: rgb(15 122 83 / 0.06); border-color: rgb(15 122 83 / 0.45); color: #0f7a53; }
+.ms__run.is-done:hover { background: rgb(15 122 83 / 0.12); border-color: #0f7a53; }
+.ms__run.is-done .ms__ico svg { stroke-width: 2.4; }
+.ms__ico { display: inline-grid; place-items: center; }
+.ms__ico svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ms__runlabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms__run.is-busy .ms__ico svg { animation: ms-write 1.1s ease-in-out infinite; }
+@keyframes ms-write { 0%, 100% { transform: translate(0, 0) rotate(0); } 50% { transform: translate(2px, -2px) rotate(-8deg); } }
+.ms__progress { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
+.ms__progress[hidden] { display: none; }
+.ms__track { flex: 1; height: 3px; background: var(--pal-line); overflow: hidden; }
+.ms__fill { display: block; height: 100%; width: 4%; background: var(--pal-accent); transition: width .4s ease; }
+.ms__count { flex: none; font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-muted); font-variant-numeric: tabular-nums; }
+.ms__sub { margin-bottom: 0; }
+/* While a run writes the tab, its fields are read-only (inert) and dimmed. */
+.ed-panel.ms-busy > :not(.ms) { opacity: 0.45; filter: saturate(0.6); transition: opacity .2s ease; }
+@media (prefers-reduced-motion: reduce) { .ms__run.is-busy .ms__ico svg { animation: none; } .ms__fill { transition: none; } }
+
+/* Options dialog: the dashboard's own modal (.app-dlg in onewooz-app.css) with
+   Edit content's field parts inside, on the same 12-column rows as a tab. */
+.ms-dlg { z-index: 140; }
+.ms-dlg__panel { width: min(44rem, calc(100vw - 2rem)); }
+.ms-dlg .app-dlg__head { padding: 1.1rem 1.4rem 1rem; }
+.ms-dlg__headtxt { min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.ms-dlg__eyebrow { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--pal-font-mono); font-size: 0.62rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--pal-accent); }
+.ms-dlg__eyebrow svg { flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.ms-dlg .app-dlg__title { font-size: 1.3rem; letter-spacing: -0.015em; line-height: 1.2; }
+.ms-dlg__lead { font-size: 0.82rem; line-height: 1.5; color: var(--pal-muted); max-width: 58ch; }
+.ms-dlg .app-dlg__x svg { width: 0.95rem; height: 0.95rem; }
+.ms-dlg__body { padding: 1.25rem 1.4rem 1.5rem; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 1.25rem; row-gap: 1.1rem; align-content: start; }
+.ms-dlg__body .ed-field { min-width: 0; }
+.ms-dlg__subhead { margin-top: 0.6rem; padding-top: 1rem; }
+.ms-dlg__subhead:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.ms-dlg__subhead .ed-subhead__title { font-size: 1rem; }
+/* Choice cards: outlined like the SEO scope buttons, accent when picked. */
+.ms-dlg__opts { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.ms-dlg__opts--one { grid-template-columns: 1fr; }
+.ms-dlg__opt { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.8rem 0.9rem; cursor: pointer;
+  border: 1px solid var(--pal-line); background: var(--pal-panel, #fff); transition: border-color 140ms ease, background 140ms ease; }
+.ms-dlg__opt:hover { border-color: var(--pal-muted); }
+.ms-dlg__opt:has(input:checked) { border-color: var(--pal-accent); background: rgb(75 43 245 / 0.05); box-shadow: inset 0 0 0 1px var(--pal-accent); }
+.ms-dlg__opt:has(input:focus-visible) { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
+.ms-dlg__opt input { flex: none; width: 1rem; height: 1rem; margin: 0.1rem 0 0; accent-color: var(--pal-accent); }
+.ms-dlg__opttxt { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.ms-dlg__opttitle { font-family: var(--pal-font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-ink); }
+.ms-dlg__opt:has(input:checked) .ms-dlg__opttitle { color: var(--pal-accent); }
+.ms-dlg__optdesc { font-size: 0.78rem; line-height: 1.5; color: var(--pal-muted); }
+.ms-dlg__foot { align-items: center; padding: 0.9rem 1.4rem; background: var(--pal-paper, #f4f4f2); }
+.ms-dlg__note { flex: 1 1 auto; margin: 0 auto 0 0; font-size: 0.72rem; line-height: 1.45; color: var(--pal-faint); }
+.ms-dlg__foot .pal-btn { flex: none; display: inline-flex; align-items: center; gap: 0.45rem; }
+.ms-dlg__foot .pal-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* Options: "already ran" notice. */
+.ms-dlg__again { grid-column: 1 / -1; display: flex; gap: 0.55rem; align-items: flex-start; margin: 0; padding: 0.7rem 0.85rem;
+  border: 1px solid rgb(15 122 83 / 0.35); background: rgb(15 122 83 / 0.05); font-size: 0.8rem; line-height: 1.5; color: var(--pal-ink-2); }
+.ms-dlg__again[hidden] { display: none; }
+.ms-dlg__again svg { flex: none; margin-top: 0.15rem; fill: none; stroke: #0f7a53; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+/* "What changed" report: tab bar + search under the head, one card per page. */
+.ms-dlg__panel.ms-rep__panel { width: min(56rem, calc(100vw - 2rem)); max-width: none; }
+.ms-rep .app-dlg__title { display: inline-flex; align-items: center; gap: 0.45rem; }
+.ms-rep .app-dlg__title svg { flex: none; fill: none; stroke: #0f7a53; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.ms-rep__bar { flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  padding: 0 1.4rem; border-bottom: 1px solid var(--pal-line); }
+.ms-rep__tabs { display: flex; gap: 1.4rem; }
+.ms-rep__tab { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.85rem 0 0.7rem; margin-bottom: -1px; cursor: pointer;
+  border: 0; border-bottom: 2px solid transparent; background: none; font-family: var(--pal-font-mono); font-size: 0.66rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); }
+.ms-rep__tab b { min-width: 1.5rem; padding: 0.08rem 0.35rem; border: 1px solid var(--pal-line); font-weight: 500; font-size: 0.6rem; text-align: center; }
+.ms-rep__tab:hover { color: var(--pal-ink); }
+.ms-rep__tab.is-active { color: var(--pal-ink); border-bottom-color: var(--pal-accent); }
+.ms-rep__tab.is-active b { border-color: var(--pal-accent); background: var(--pal-accent); color: #fff; }
+.ms-rep__tab:focus-visible { outline: 2px solid var(--pal-accent); outline-offset: 2px; }
+.ms-rep__search { width: min(16rem, 100%); margin: 0.55rem 0; }
+.ms-rep__body { display: flex; flex-direction: column; gap: 0.75rem; padding: 1.1rem 1.4rem 1.4rem; }
+.ms-rep__empty { margin: 1.5rem 0; text-align: center; font-size: 0.85rem; color: var(--pal-muted); }
+.ms-rep__page { border: 1px solid var(--pal-line); background: var(--pal-panel, #fff); }
+.ms-rep__page > summary { display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.9rem; cursor: pointer; list-style: none; }
+.ms-rep__page > summary::-webkit-details-marker { display: none; }
+.ms-rep__page > summary::before { content: "+"; flex: none; width: 1rem; font-family: var(--pal-font-mono); color: var(--pal-muted); }
+.ms-rep__page[open] > summary::before { content: "\2212"; }
+.ms-rep__page[open] > summary { border-bottom: 1px solid var(--pal-line); }
+.ms-rep__pname { min-width: 0; font-weight: 500; font-size: 0.9rem; color: var(--pal-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-rep__group, .ms-rep__n { flex: none; font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); }
+.ms-rep__group { padding: 0.08rem 0.35rem; border: 1px solid var(--pal-line); }
+.ms-rep__n { margin-left: auto; }
+.ms-rep__rows { list-style: none; margin: 0; padding: 0; }
+.ms-rep__row { display: grid; grid-template-columns: 11rem minmax(0, 1fr) auto; gap: 0.4rem 1rem; align-items: start; padding: 0.65rem 0.9rem; }
+.ms-rep__row + .ms-rep__row { border-top: 1px solid var(--pal-line-soft, rgb(10 10 11 / 0.07)); }
+.ms-rep__field { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-muted); padding-top: 0.2rem; }
+.ms-rep__vals { min-width: 0; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.35rem 0.5rem; font-size: 0.82rem; line-height: 1.5; }
+.ms-rep__before { color: var(--pal-faint); text-decoration: line-through; text-decoration-color: rgb(10 10 11 / 0.25); overflow-wrap: anywhere; }
+.ms-rep__after, .ms-rep__now { color: var(--pal-ink); overflow-wrap: anywhere; }
+.ms-rep__before.is-empty, .ms-rep__now.is-empty { text-decoration: none; font-style: italic; }
+.ms-rep__arrow { flex: none; color: var(--pal-accent); }
+.ms-rep__img { display: inline-block; text-decoration: none; }
+.ms-rep__img img { display: block; width: 7.5rem; aspect-ratio: 1.91 / 1; object-fit: cover; border: 1px solid var(--pal-line); }
+.ms-rep__before.ms-rep__img img { opacity: 0.55; }
+.ms-rep__src, .ms-rep__why { justify-self: end; max-width: 13rem; padding: 0.12rem 0.4rem; border: 1px solid var(--pal-line); font-family: var(--pal-font-mono);
+  font-size: 0.56rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-muted); text-align: right; }
+.ms-rep__why { text-transform: none; letter-spacing: 0; font-family: inherit; font-size: 0.72rem; border: 0; padding: 0; }
+.ms-rep__src--ai, .ms-rep__src--ai_image { border-color: var(--pal-accent); color: var(--pal-accent); background: rgb(75 43 245 / 0.05); }
+@media (max-width: 40rem) {
+  .ms-rep__bar { padding: 0 1.1rem; }
+  .ms-rep__body { padding: 1rem 1.1rem; }
+  .ms-rep__row { grid-template-columns: 1fr; }
+  .ms-rep__src, .ms-rep__why { justify-self: start; text-align: left; }
+  .ms-rep__search { width: 100%; }
+}
+@media (max-width: 40rem) {
+  .ms-dlg__body { grid-template-columns: 1fr; padding: 1.1rem; }
+  .ms-dlg__body .ed-field { grid-column: 1 / -1 !important; }
+  .ms-dlg__opts { grid-template-columns: 1fr; }
+  .ms-dlg .app-dlg__head, .ms-dlg__foot { padding-left: 1.1rem; padding-right: 1.1rem; }
+  .ms-dlg__foot { flex-wrap: wrap; }
+  .ms-dlg__note { flex-basis: 100%; }
+}

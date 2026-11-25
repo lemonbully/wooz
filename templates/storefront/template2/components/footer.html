@@ -30,9 +30,9 @@
                     <h3 class="text-sm font-semibold leading-6 text-white">Company</h3>
                     <ul class="mt-6 space-y-4 text-sm">
                         <li><a href="{{ website_base }}" class="text-gray-400 hover:text-white">Home</a></li>
-                        <li><a href="{{ website_base }}about-us/" class="text-gray-400 hover:text-white">About Us</a></li>
-                        <li><a href="{{ website_base }}enquiry/" class="text-gray-400 hover:text-white">Contact</a></li>
-                            <li><a href="{{ website_base }}products/" class="text-gray-400 hover:text-white">Shop</a></li>
+                        <li><a href="{{ website_base }}about/" class="text-gray-400 hover:text-white">About Us</a></li>
+                        <li><a href="{{ website_base }}contact/" class="text-gray-400 hover:text-white">Contact</a></li>
+                            <li><a href="{{ website_base }}shop/" class="text-gray-400 hover:text-white">Shop</a></li>
                             <li><a href="{{ website_base }}categories/" class="text-gray-400 hover:text-white">Category</a></li>
                     </ul>
                 </div>
@@ -137,8 +137,14 @@
                         </a>
                         {% endif %}
                     </div>
-                    <p class="text-sm text-gray-400">
-                        Created At <a href="https://onewooz.com" class="text-gray-400 hover:text-white font-bold">onewooz.com</a>
+                    {% comment %}
+                    Platform credit: plain text, no link. The name comes from CSS
+                    generated content, not HTML text, so search engines do not
+                    match this store's pages to a "OneWooz" search.
+                    {% endcomment %}
+                    <style>.ow-credit::after{content:"OneWooz"}</style>
+                    <p class="text-sm text-gray-400" data-nosnippet>
+                        Created at <span class="ow-credit font-bold"></span>
                     </p>
                 </div>
             </div>

@@ -1,0 +1,100 @@
+{% extends "marketplace/surface/base.html" %}
+
+{% comment %}
+Search results + category pages, Amazon/Shopify style: filter sidebar with
+counts, active-filter chips, result count and sort. Every control is a link or
+a GET form, so it works without JavaScript and every view has its own URL.
+{% endcomment %}
+
+{% block content %}
+<section class="mk-browsehead">
+  <div class="pal-container">
+    <nav class="mk-crumbs" aria-label="Breadcrumb"><a href="{% url 'marketplace:home' %}">App Store</a><span aria-hidden="true">/</span>{% if cat_label %}<a href="{% url 'marketplace:browse' %}">All apps</a><span aria-hidden="true">/</span><span aria-current="page">{{ cat_label }}</span>{% else %}<span aria-current="page">{% if q %}Search{% else %}All apps{% endif %}</span>{% endif %}</nav>
+    <h1 class="mk-browsehead__title">{{ heading }}</h1>
+    {% if cat_problem %}<p class="mk-browsehead__sub">{{ cat_problem.problem }} {{ cat_problem.fix }}</p>{% endif %}
+  </div>
+</section>
+
+<div class="pal-container mk-browse">
+  <aside class="mk-filters" aria-label="Filters">
+    <details class="mk-filters__wrap" open>
+      <summary class="mk-filters__toggle">Filters{% if active %} &middot; {{ active|length }}{% endif %}</summary>
+
+      <div class="mk-fgroup">
+        <p class="mk-fgroup__title">Category</p>
+        <ul>
+          <li><a href="{% url 'marketplace:browse' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="mk-fopt{% if not cat %} is-on{% endif %}"><span>All categories</span></a></li>
+          {% for c in categories %}
+          <li><a href="{{ c.url }}" class="mk-fopt{% if c.on %} is-on{% endif %}{% if not c.n %} is-empty{% endif %}"><span>{{ c.label }}</span><span class="mk-fopt__n">{{ c.n }}</span></a></li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="mk-fgroup">
+        <p class="mk-fgroup__title">Price</p>
+        <ul>
+          {% for p in prices %}
+          <li><a href="{{ p.url }}" class="mk-fopt mk-fopt--check{% if p.on %} is-on{% endif %}{% if not p.n %} is-empty{% endif %}"><span class="mk-box" aria-hidden="true"></span><span>{{ p.label }}</span><span class="mk-fopt__n">{{ p.n }}</span></a></li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="mk-fgroup">
+        <p class="mk-fgroup__title">Works with</p>
+        <ul>
+          {% for f in fits %}
+          <li><a href="{{ f.url }}" class="mk-fopt mk-fopt--check{% if f.on %} is-on{% endif %}{% if not f.n %} is-empty{% endif %}"><span class="mk-box" aria-hidden="true"></span><span>{{ f.label }}</span><span class="mk-fopt__n">{{ f.n }}</span></a></li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="mk-fgroup mk-fgroup--note">
+        <p class="mk-fgroup__title">Store designs</p>
+        <p>Looking for a new look? <a class="mk-seeall" href="{% url 'marketplace:app' 'templates' %}">Browse designs &rarr;</a></p>
+      </div>
+    </details>
+  </aside>
+
+  <div class="mk-results">
+    <div class="mk-resultsbar">
+      <p class="mk-resultsbar__count"><b>{{ apps|length }}</b> of {{ total }} app{{ total|pluralize }}{% if q %} for &ldquo;{{ q }}&rdquo;{% endif %}</p>
+      <form class="mk-sort" action="{% url 'marketplace:browse' %}" method="get">
+        {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+        {% if cat %}<input type="hidden" name="c" value="{{ cat }}">{% endif %}
+        {% if price %}<input type="hidden" name="price" value="{{ price }}">{% endif %}
+        {% if fit %}<input type="hidden" name="fit" value="{{ fit }}">{% endif %}
+        <label for="mk-sort" class="pal-mono">Sort by</label>
+        <select id="mk-sort" name="sort" data-mk-autosubmit>
+          {% for s in sorts %}<option value="{{ s.key }}"{% if s.key == sort %} selected{% endif %}>{{ s.label }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="mk-sort__go">Apply</button>
+      </form>
+    </div>
+
+    {% if active %}
+    <div class="mk-active">
+      {% for f in active %}<a class="mk-active__chip" href="{{ f.url }}" aria-label="Remove filter {{ f.label }}">{{ f.label }} <span aria-hidden="true">&times;</span></a>{% endfor %}
+      <a class="mk-seeall" href="{{ clear_url }}">Clear all</a>
+    </div>
+    {% endif %}
+
+    {% if apps %}
+    <ol class="mk-resultlist">
+      {% for a in apps %}{% include "marketplace/surface/_app_result.html" %}{% endfor %}
+    </ol>
+    {% else %}
+    <div class="mk-noresults">
+      <p class="mk-noresults__title">No apps match {% if q %}&ldquo;{{ q }}&rdquo;{% else %}these filters{% endif %}.</p>
+      <p>Try fewer words, check the spelling, or remove a filter.</p>
+      <a class="pal-btn pal-btn--ghost" href="{{ clear_url }}">See all apps</a>
+    </div>
+    {% if suggestions %}
+    <div class="mk-sechead mk-sechead--spaced"><h2 class="mk-sechead__title">You might like</h2></div>
+    <div class="mk-cards">
+      {% for a in suggestions %}{% include "marketplace/surface/_app_card.html" %}{% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

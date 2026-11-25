@@ -52,6 +52,8 @@ __all__ = [
     "AccountEntitlement",
     "PlatformPaymentAccount",
     "CommerceBillDetails",
+    "WebsiteTemplate",
+    "TemplatePurchase",
 ]
 
 #: How long a subscription invite link stays usable, in minutes.
@@ -666,21 +668,65 @@ class UserAgreement(BaseModel):
     @classmethod
     def active(cls) -> "UserAgreement | None":
         """The agreement currently in force (most recently authored active one)."""
-        return cls.objects.filter(is_active=True).order_by("-created_at").first()
+        return (
+            cls.objects.filter(is_active=True)
+            .defer("content")
+            .order_by("-created_at")
+            .first()
+        )
+
+    @property
+    def version_label(self) -> str:
+        """How this agreement is named in records: "v2", else its authored date."""
+        if self.version:
+            v = self.version.strip()
+            return v if v.lower().startswith("v") else f"v{v}"
+        return f"{self.created_at:%d %b %Y}" if self.created_at else ""
 
 
 class AgreementAcceptance(BaseModel):
-    """A compliance record: this email accepted this agreement, from this IP.
+    """A compliance record: this email accepted this agreement version, when, from where.
 
-    Written once the buyer has passed the email OTP step, so the record is
-    evidence that the person who accepted controlled the address. Purchases are
-    anonymous (no account), so the buyer is identified by email, not a user FK.
+    Append-only. Each acceptance is its own row, so when a new agreement version
+    is published and an existing owner re-accepts it, their earlier acceptance
+    (version 1) stays on record beside the new one (version 2).
+
+    Written once the person has passed an email OTP step (checkout, or the
+    "we've updated our agreement" re-acceptance popup in the dashboard), so the
+    record is evidence that whoever accepted controlled the address. Checkout
+    purchases are anonymous, so the email is the identity; ``user`` is filled
+    when the acceptance happened inside a signed-in dashboard.
+
+    ``agreement_title`` / ``agreement_version`` are frozen copies taken when the
+    row is written, so the record still names the exact version even if the
+    agreement row is later edited or deleted.
     """
+
+    class Source(models.TextChoices):
+        CHECKOUT = "checkout", "Plan checkout"
+        RENEWAL = "renewal", "Plan renewal / upgrade"
+        UPDATE = "update", "Updated agreement (dashboard popup)"
 
     agreement = models.ForeignKey(
         UserAgreement, on_delete=models.SET_NULL, null=True, related_name="acceptances"
     )
+    agreement_title = models.CharField(max_length=160, blank=True, default="")
+    agreement_version = models.CharField(max_length=40, blank=True, default="")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="agreement_acceptances",
+    )
     email = models.EmailField(db_index=True)
+    source = models.CharField(
+        max_length=12, choices=Source.choices, default=Source.CHECKOUT, db_index=True
+    )
+    otp_verified = models.BooleanField(
+        default=True,
+        help_text="Whether an emailed one-time code was confirmed for this acceptance.",
+    )
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=400, blank=True, default="")
 
@@ -688,10 +734,31 @@ class AgreementAcceptance(BaseModel):
         ordering = ("-created_at",)
         verbose_name = "agreement acceptance"
         verbose_name_plural = "agreement acceptances"
-        indexes = [models.Index(fields=("email", "-created_at"))]
+        indexes = [
+            models.Index(fields=("email", "-created_at")),
+            models.Index(fields=("agreement", "email")),
+        ]
 
     def __str__(self) -> str:
-        return f"{self.email} accepted {self.agreement_id} at {self.created_at:%Y-%m-%d %H:%M}"
+        label = self.agreement_version or self.agreement_title or "agreement"
+        when = f"{self.created_at:%Y-%m-%d %H:%M}" if self.created_at else ""
+        return f"{self.email} accepted {label} {when}".strip()
+
+    def save(self, *args, **kwargs):
+        # Freeze which version was accepted, so the record survives later edits.
+        if self.agreement_id and not (self.agreement_title and self.agreement_version):
+            agreement = self.agreement
+            if agreement is not None:
+                self.agreement_title = self.agreement_title or (agreement.title or "")[:160]
+                self.agreement_version = self.agreement_version or agreement.version_label[:40]
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def has_accepted(cls, email: str, agreement) -> bool:
+        """True when ``email`` has an acceptance on record for ``agreement``."""
+        if not email or agreement is None:
+            return False
+        return cls.objects.filter(agreement=agreement, email__iexact=email.strip()).exists()
 
 
 class SubscriptionInvite(BaseModel):
@@ -1229,3 +1296,188 @@ class PricingFeature(BaseModel):
     @classmethod
     def active(cls):
         return list(cls.objects.filter(is_active=True).order_by("order", "created_at"))
+
+
+# --------------------------------------------------------------------------
+# Storefront website templates (designs) and their purchases
+# --------------------------------------------------------------------------
+class WebsiteTemplate(BaseModel):
+    """One storefront design owners can pick for their store, as sold by OneWooz.
+
+    The designs themselves are code (``templates/storefront/...``), built and
+    deployed by OneWooz; every design in the code registry
+    (:data:`billing.website_templates.REGISTRY`) gets one row here automatically,
+    so a newly deployed design simply appears in this list. Rows cannot be added
+    or deleted by hand; staff edit how each design is presented and sold:
+
+    * its name, thumbnail and short description;
+    * which stores may use it (D2C, B2B or both);
+    * free, or priced (charged through OneWooz's own Cashfree account, plus GST);
+    * a priced design's licence: **permanent** (bought once, bound to the buyer's
+      email for good) or **yearly** (expires one year after purchase and must be
+      bought again);
+    * whether owners can see it at all (``is_available``).
+    """
+
+    class TemplateType(models.TextChoices):
+        BOTH = "both", "D2C and B2B"
+        D2C = "d2c", "D2C only"
+        B2B = "b2b", "B2B only"
+
+    class Pricing(models.TextChoices):
+        FREE = "free", "Free"
+        PRICED = "priced", "Priced"
+
+    class License(models.TextChoices):
+        PERMANENT = "permanent", "Fixed (permanent, bound to the buyer's email)"
+        YEARLY = "yearly", "Yearly (expires one year after purchase)"
+
+    key = models.CharField(
+        max_length=20, unique=True, editable=False,
+        help_text="The design's code identifier. Set by the deployed code; not editable.",
+    )
+    name = models.CharField(max_length=80)
+    description = models.CharField(max_length=300, blank=True, default="")
+    thumbnail = models.ImageField(
+        upload_to="website-templates/", blank=True,
+        help_text="Preview image shown to owners on the design picker (about 4:3).",
+    )
+    template_type = models.CharField(
+        max_length=8, choices=TemplateType.choices, default=TemplateType.BOTH,
+        help_text="Which stores may use this design.",
+    )
+    pricing = models.CharField(
+        max_length=8, choices=Pricing.choices, default=Pricing.FREE,
+        help_text="Free designs can be used by anyone. Priced designs must be bought first.",
+    )
+    currency = models.CharField(max_length=3, default="INR")
+    price = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Price for a priced design (GST is added at checkout). Ignored when free.",
+    )
+    license_type = models.CharField(
+        max_length=10, choices=License.choices, default=License.PERMANENT,
+        help_text="Fixed: bought once, usable for good by that email. Yearly: expires a year after purchase.",
+    )
+    is_available = models.BooleanField(
+        default=True, db_index=True,
+        help_text="Show this design to store owners. Untick to hide it from every picker.",
+    )
+    order = models.PositiveSmallIntegerField(default=0, db_index=True)
+
+    class Meta:
+        ordering = ("order", "key")
+        verbose_name = "website template"
+        verbose_name_plural = "website templates"
+
+    def __str__(self) -> str:
+        return self.name or f"Template {self.key}"
+
+    @property
+    def is_priced(self) -> bool:
+        return self.pricing == self.Pricing.PRICED and (self.price or Decimal("0")) > 0
+
+    @property
+    def is_yearly(self) -> bool:
+        return self.license_type == self.License.YEARLY
+
+    def fits(self, business_model: str) -> bool:
+        """May a store with ``business_model`` (d2c / b2b / both) use this design?"""
+        if self.template_type == self.TemplateType.BOTH:
+            return True
+        bm = (business_model or "").lower()
+        if self.template_type == self.TemplateType.D2C:
+            return bm in ("d2c", "both")
+        return bm in ("b2b", "both")
+
+
+class TemplatePurchase(BaseModel):
+    """A store owner's purchase of a priced :class:`WebsiteTemplate`.
+
+    Bound to the buyer's **email** (like subscriptions), so a design bought from
+    one store can be used on every store the same owner runs. A permanent
+    licence never expires; a yearly one expires a year after payment (buying
+    again while still active extends it from the current end).
+
+    Payment runs through OneWooz's own Cashfree account and is confirmed only by
+    fetching the order's real status from Cashfree (never from a redirect or a
+    webhook body), exactly like subscription orders. The design's name, price
+    and licence are frozen on the row, so later admin edits never rewrite it.
+    """
+
+    class Status(models.TextChoices):
+        CREATED = "created", "Created"
+        PENDING = "pending", "Pending payment"
+        PAID = "paid", "Paid"
+        FAILED = "failed", "Failed"
+
+    number = models.CharField(max_length=20, unique=True, editable=False, db_index=True)
+    template = models.ForeignKey(
+        WebsiteTemplate, on_delete=models.SET_NULL, null=True, blank=True, related_name="purchases"
+    )
+    template_key = models.CharField(max_length=20, db_index=True)
+    template_name = models.CharField(max_length=80)
+    license_type = models.CharField(max_length=10, choices=WebsiteTemplate.License.choices)
+
+    email = models.EmailField(db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="template_purchases",
+    )
+    # The store the design was bought from; it is switched to the design as soon
+    # as payment confirms. A plain UUID, not a foreign key: the licence belongs to
+    # the email, not to one store.
+    site_ref = models.UUIDField(null=True, blank=True)
+
+    currency = models.CharField(max_length=3, default="INR")
+    base_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    gst_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("18.00"))
+    gst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.CREATED, db_index=True
+    )
+    cf_order_id = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    cf_payment_id = models.CharField(max_length=64, blank=True, default="")
+    gateway_status = models.CharField(max_length=40, blank=True, default="")
+    paid_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(
+        null=True, blank=True, help_text="Empty for a permanent licence.",
+    )
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "template purchase"
+        verbose_name_plural = "template purchases"
+        indexes = [
+            models.Index(fields=("email", "template_key", "status")),
+            models.Index(fields=("status", "-created_at")),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.number} · {self.template_name} · {self.email}"
+
+    def save(self, *args, **kwargs):
+        if not self.number:
+            self.number = self._new_number()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _new_number() -> str:
+        for _ in range(10):
+            candidate = "OWT" + get_random_string(9, "0123456789")
+            if not TemplatePurchase.objects.filter(number=candidate).exists():
+                return candidate
+        return "OWT" + get_random_string(12, "0123456789")
+
+    @property
+    def is_paid(self) -> bool:
+        return self.status == self.Status.PAID
+
+    @property
+    def is_current(self) -> bool:
+        """Paid and not yet expired."""
+        if not self.is_paid:
+            return False
+        return self.expires_at is None or self.expires_at > timezone.now()

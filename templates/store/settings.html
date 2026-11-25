@@ -1,8 +1,10 @@
 {% extends "store/_shell.html" %}
+{% load static marketplace_points %}
 {% block title %}{{ site.name }} · Settings{% endblock %}
 {% block crumb %}Settings{% endblock %}
 
 {% block main %}
+<link rel="stylesheet" href="{% static 'css/design-mock.css' %}">
 <style nonce="{{ csp_nonce }}">
   .set [hidden] { display: none !important; }
   .set-card { background: var(--pal-panel); border: 1px solid var(--pal-line); }
@@ -70,6 +72,34 @@
   .elock-fs:disabled .set-sig__box:hover { border-color: var(--pal-line); border-style: dashed; }
   .elock-fs:disabled .set-sig__box:hover .set-sig__change { opacity: 0; }
   .elock-fs:disabled .set-sig__remove { color: var(--pal-faint); }
+  /* Danger zone: delete this store (owner only) */
+  .set-danger { border-color: #f0c4bf; }
+  .set-danger .set-card__head { border-bottom-color: #f0c4bf; }
+  .set-danger .set-card__title { color: #b42318; }
+  .set-danger__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.9rem 1.5rem; }
+  .set-danger__text { flex: 1 1 22rem; min-width: 0; margin: 0; font-size: 0.86rem; color: var(--pal-ink-2); line-height: 1.55; }
+  .set-btn-danger { border: 1px solid #b42318; background: #b42318; color: #fff; padding: 0.6rem 1rem; font: inherit; font-size: 0.86rem; cursor: pointer; }
+  .set-btn-danger:hover { background: #912018; border-color: #912018; }
+  .set-btn-danger[disabled] { opacity: 0.55; cursor: default; }
+  .sdel { border: 1px solid var(--pal-line); padding: 0; width: min(34rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); background: var(--pal-panel); color: var(--pal-ink); }
+  .sdel::backdrop { background: rgb(10 10 11 / 0.55); }
+  .sdel__head { padding: 1.1rem 1.35rem; border-bottom: 1px solid var(--pal-line); display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+  .sdel__title { margin: 0; font-family: var(--pal-font-display); font-weight: 500; font-size: 1.1rem; letter-spacing: -0.01em; }
+  .sdel__x { border: 0; background: none; font-size: 1.3rem; line-height: 1; color: var(--pal-muted); cursor: pointer; padding: 0.1rem 0.3rem; }
+  .sdel__body { padding: 1.2rem 1.35rem; font-size: 0.88rem; line-height: 1.55; }
+  .sdel__warn { margin: 0 0 1rem; padding: 0.85rem 1rem; border: 1px solid #f0c4bf; background: #fef3f2; color: #7a271a; }
+  .sdel__warn strong { color: #b42318; }
+  .sdel__warn a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  .sdel__list { margin: 0 0 1rem; padding-left: 1.1rem; color: var(--pal-ink-2); }
+  .sdel__list li + li { margin-top: 0.35rem; }
+  .sdel__ack { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.86rem; cursor: pointer; }
+  .sdel__ack input { margin-top: 0.2rem; width: 1rem; height: 1rem; accent-color: #b42318; flex: none; }
+  .sdel__code { width: 100%; box-sizing: border-box; border: 1px solid var(--pal-line); padding: 0.7rem 0.8rem; font-size: 1.15rem; letter-spacing: 0.35em; text-align: center; font-family: var(--pal-font-mono); background: var(--pal-panel); color: var(--pal-ink); }
+  .sdel__code:focus { outline: none; border-color: #b42318; box-shadow: inset 0 0 0 1px #b42318; }
+  .sdel__err { margin: 0.75rem 0 0; color: #b42318; font-size: 0.82rem; }
+  .sdel__muted { color: var(--pal-muted); font-size: 0.8rem; }
+  .sdel__link { border: 0; background: none; padding: 0; font: inherit; font-size: 0.8rem; color: var(--pal-accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+  .sdel__foot { padding: 1rem 1.35rem; border-top: 1px solid var(--pal-line); display: flex; justify-content: flex-end; gap: 0.6rem; flex-wrap: wrap; }
 </style>
 
 <div class="app-page set">
@@ -78,6 +108,28 @@
     <h1 class="app-head__title pal-mt-4">Settings</h1>
     <p class="app-head__lead">Your store’s identity, where customers reach you, your business &amp; tax details, and store-wide controls.</p>
   </div></div>
+
+  {# ── Storefront design (switch any time) ─────────────────────────── #}
+  <section class="app-block" id="design" style="margin-top:1.75rem;">
+    <div class="set-card">
+      <div class="set-card__head">
+        <h2 class="set-card__title">Storefront design</h2>
+        <p class="set-card__lead">Switch your store's design any time. Your products, content, pages, SEO and settings carry over as they are, and you can switch back whenever you like.</p>
+      </div>
+      <div class="set-card__body">
+        {% include "store/_design_cards.html" with design_from="settings" %}
+        {% if design_from_marketplace and is_store_owner %}
+        <p class="set-card__lead" style="margin-top:1rem;">
+          Showing the designs in your library.
+          <a href="{% url 'store_apps:open' site.id 'templates' %}" style="color:var(--pal-accent);text-decoration:underline;text-underline-offset:2px;">See every design in OneWooz Templates</a>
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {# OneWooz Apps that placed a card in Settings. #}
+  {% app_point "settings_card" %}
 
   <form method="post" enctype="multipart/form-data" class="app-form set-form app-block" style="margin-top:1.75rem;" data-edit-lock{% if form.errors or signature_error %}="open"{% endif %}>
     {% csrf_token %}
@@ -213,7 +265,7 @@
       <div class="set-card__body">
         <label class="set-toggle">
           {{ form.abandoned_cart_emails_enabled }}
-          <span><span class="set-toggle__t">{{ form.abandoned_cart_emails_enabled.label }}</span><span class="set-toggle__d">Automatically remind shoppers who leave items in their cart.</span></span>
+          <span><span class="set-toggle__t">{{ form.abandoned_cart_emails_enabled.label }}</span><span class="set-toggle__d">Signed-in shoppers who leave items in their cart are emailed 1, 6, 24, 48 and 72 hours later. Reminders stop once they click one, place an order, or after 72 hours.</span></span>
         </label>
         <label class="set-toggle">
           {{ form.maintenance_mode }}
@@ -243,7 +295,135 @@
       </div>
     </div>
   </div>
+
+  {% if is_store_owner and not request.impersonation %}
+  {# ── Danger zone: delete this store (owner only) ───────────────── #}
+  <div class="app-block" id="delete-store">
+    <div class="set-card set-danger">
+      <div class="set-card__head">
+        <h2 class="set-card__title">Delete this store</h2>
+        <p class="set-card__lead">Take {{ site.name }} offline and remove it from your dashboard.</p>
+      </div>
+      <div class="set-card__body">
+        <div class="set-danger__row">
+          <p class="set-danger__text">The storefront goes offline straight away. Its products, orders, customers and settings stay on our servers for <strong>{{ deletion_days }} days</strong>; to get the store back within that time, contact our support team. We email you a one-time code to confirm before anything is deleted.</p>
+          <button type="button" class="set-btn-danger" data-sdel-open>Delete this store</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <dialog class="sdel" id="sdel" aria-labelledby="sdel-title"
+          data-send-url="{% url 'ud:delete_site_send_code' site.id %}"
+          data-confirm-url="{% url 'ud:delete_site_confirm' site.id %}">
+    <div class="sdel__head">
+      <h2 class="sdel__title" id="sdel-title">Delete “{{ site.name }}”?</h2>
+      <button type="button" class="sdel__x" data-sdel-close aria-label="Close">&times;</button>
+    </div>
+
+    <div data-sdel-step="warn">
+      <div class="sdel__body">
+        <p class="sdel__warn"><strong>Warning:</strong> your store’s data stays on our servers for <strong>{{ deletion_days }} days</strong> after you delete it. To recover it within that time, contact our support team{% if support_url %} from the <a href="{{ support_url }}">Business Hub</a>{% endif %}. After {{ deletion_days }} days it can no longer be recovered.</p>
+        <ul class="sdel__list">
+          <li>The storefront at <strong>{{ site.slug }}.onewooz.site</strong>{% if site.custom_domain %} and {{ site.custom_domain }}{% endif %} goes offline immediately.</li>
+          <li>The store disappears from your dashboard and store switcher.</li>
+          <li>Every order and customer record is kept on our servers.</li>
+          <li>Your account and your other stores are not affected.</li>
+        </ul>
+        <label class="sdel__ack">
+          <input type="checkbox" data-sdel-ack>
+          <span>I understand {{ site.name }} goes offline now and can only be recovered by contacting support within {{ deletion_days }} days.</span>
+        </label>
+        <p class="sdel__err" data-sdel-err hidden role="alert"></p>
+      </div>
+      <div class="sdel__foot">
+        <button type="button" class="pal-btn pal-btn--ghost" data-sdel-close>Cancel</button>
+        <button type="button" class="set-btn-danger" data-sdel-send disabled>Email me a confirmation code</button>
+      </div>
+    </div>
+
+    <div data-sdel-step="code" hidden>
+      <div class="sdel__body">
+        <p style="margin:0 0 0.9rem;">We emailed a one-time code to <strong data-sdel-email></strong>. Enter it to delete <strong>{{ site.name }}</strong>.</p>
+        <input class="sdel__code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="••••••" aria-label="Confirmation code" data-sdel-code>
+        <p class="sdel__err" data-sdel-err hidden role="alert"></p>
+        <p class="sdel__muted" style="margin:0.8rem 0 0;">Didn’t get it? Check spam, or <button type="button" class="sdel__link" data-sdel-resend>send a new code</button>.</p>
+      </div>
+      <div class="sdel__foot">
+        <button type="button" class="pal-btn pal-btn--ghost" data-sdel-close>Cancel</button>
+        <button type="button" class="set-btn-danger" data-sdel-confirm>Delete store</button>
+      </div>
+    </div>
+  </dialog>
+  <script nonce="{{ csp_nonce }}">
+    // Delete this store: warning + acknowledgement, emailed code, then the
+    // soft delete (ud.views.delete_site_send_code / delete_site_confirm).
+    (function () {
+      var dlg = document.getElementById("sdel");
+      var opener = document.querySelector("[data-sdel-open]");
+      if (!dlg || !opener) return;
+      var csrf = "{{ csrf_token }}";
+      var ack = dlg.querySelector("[data-sdel-ack]");
+      var sendBtn = dlg.querySelector("[data-sdel-send]");
+      var confirmBtn = dlg.querySelector("[data-sdel-confirm]");
+      var codeInput = dlg.querySelector("[data-sdel-code]");
+      function showErr(msg) {
+        Array.prototype.forEach.call(dlg.querySelectorAll("[data-sdel-err]"), function (el) {
+          el.textContent = msg || ""; el.hidden = !msg;
+        });
+      }
+      function step(name) {
+        Array.prototype.forEach.call(dlg.querySelectorAll("[data-sdel-step]"), function (el) {
+          el.hidden = el.getAttribute("data-sdel-step") !== name;
+        });
+        showErr("");
+      }
+      function post(url, data) {
+        var body = new URLSearchParams();
+        Object.keys(data || {}).forEach(function (k) { body.set(k, data[k]); });
+        return fetch(url, {
+          method: "POST", credentials: "same-origin",
+          headers: { "X-CSRFToken": csrf, "X-Requested-With": "XMLHttpRequest", "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+        }).then(function (r) { return r.json().catch(function () { return { ok: false }; }); });
+      }
+      function open() {
+        step("warn"); ack.checked = false; sendBtn.disabled = true; codeInput.value = "";
+        if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+      }
+      function close() { if (dlg.close) dlg.close(); else dlg.removeAttribute("open"); }
+      opener.addEventListener("click", open);
+      Array.prototype.forEach.call(dlg.querySelectorAll("[data-sdel-close]"), function (b) { b.addEventListener("click", close); });
+      ack.addEventListener("change", function () { sendBtn.disabled = !ack.checked; });
+      function sendCode(btn) {
+        var label = btn.textContent; btn.disabled = true; btn.textContent = "Sending…";
+        return post(dlg.getAttribute("data-send-url"), {}).then(function (d) {
+          btn.disabled = false; btn.textContent = label;
+          if (!d || !d.ok) { showErr((d && d.error) || "We couldn't send the code. Please try again."); return; }
+          dlg.querySelector("[data-sdel-email]").textContent = d.email || "your email";
+          step("code"); codeInput.focus();
+        }).catch(function () { btn.disabled = false; btn.textContent = label; showErr("Network error. Please try again."); });
+      }
+      sendBtn.addEventListener("click", function () { if (ack.checked) sendCode(sendBtn); });
+      dlg.querySelector("[data-sdel-resend]").addEventListener("click", function (e) { sendCode(e.currentTarget); });
+      function confirmDelete() {
+        var code = (codeInput.value || "").replace(/\s+/g, "");
+        if (!code) { showErr("Enter the code we emailed you."); return; }
+        confirmBtn.disabled = true; confirmBtn.textContent = "Deleting…";
+        post(dlg.getAttribute("data-confirm-url"), { code: code }).then(function (d) {
+          if (d && d.ok) { window.location.href = d.redirect || "/"; return; }
+          confirmBtn.disabled = false; confirmBtn.textContent = "Delete store";
+          showErr((d && d.error) || "That code isn't right. Please try again.");
+        }).catch(function () { confirmBtn.disabled = false; confirmBtn.textContent = "Delete store"; showErr("Network error. Please try again."); });
+      }
+      confirmBtn.addEventListener("click", confirmDelete);
+      codeInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); confirmDelete(); } });
+    })();
+  </script>
+  {% endif %}
 </div>
+<script nonce="{{ csp_nonce }}" src="{% static 'js/app/design-picker.js' %}"></script>
+{% if design_checkout %}<script nonce="{{ csp_nonce }}" src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>{% endif %}
 <script nonce="{{ csp_nonce }}">
   // Signature picker: the box opens the store's universal media library modal
   // (upload or pick there). The chosen asset's id travels in a hidden field

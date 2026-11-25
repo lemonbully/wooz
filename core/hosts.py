@@ -31,6 +31,9 @@ class Surface(StrEnum):
     #: (login + dashboard). Distinct from the referral *subdomains*
     #: (``<sub>.myugcstore.com``), which are STOREFRONT with ``referral=True``.
     REFERRAL = "referral"
+    #: OneWooz Apps, the marketplace (``marketplace.onewooz.com``). Its own
+    #: surface and URLconf, so nothing on it can resolve a dashboard route.
+    MARKETPLACE = "marketplace"
     UNKNOWN = "unknown"
 
 
@@ -100,7 +103,7 @@ def resolve_dev_path(path: str) -> PathResolution:
 
     candidates = [
         (surface, dev_prefix_for(surface))
-        for surface in (Surface.ADMIN, Surface.APP, Surface.STOREFRONT, Surface.REFERRAL)
+        for surface in (Surface.ADMIN, Surface.APP, Surface.STOREFRONT, Surface.REFERRAL, Surface.MARKETPLACE)
     ]
     # Longest prefix first, so a nested prefix can never be shadowed by a
     # shorter one that happens to be a prefix of it.
@@ -175,6 +178,9 @@ def resolve(raw_host: str | None) -> Resolution:
 
     if host == settings.ADMIN_HOST:
         return Resolution(Surface.ADMIN, "", False, host)
+
+    if host == getattr(settings, "MARKETPLACE_HOST", ""):
+        return Resolution(Surface.MARKETPLACE, "", False, host)
 
     if host in (settings.MARKETING_HOST, f"www.{settings.MARKETING_HOST}"):
         return Resolution(Surface.MARKETING, "", False, host)

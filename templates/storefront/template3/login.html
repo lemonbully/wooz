@@ -1,62 +1,86 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign In | Mellow Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Caveat:wght@700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
-<div data-header></div>
+{% extends "storefront/template3/_base.html" %}
+{% comment %}
+  Template 3 sign-in: the platform's email one-time code (account/send-otp/ →
+  account/verify-otp/). A ?next=/… path (same store only) is where a verified
+  shopper lands, e.g. back to checkout.
+{% endcomment %}
+{% block main %}
 <main class="container">
-  <div class="auth auth--split">
-    <div class="hide-sm" style="border-radius:28px;overflow:hidden;height:min(640px,75vh);position:relative">
-      <img src="" data-img alt="" style="width:100%;height:100%;object-fit:cover">
-      <div style="position:absolute;left:24px;right:24px;bottom:24px;background:rgba(255,255,255,.3);backdrop-filter:blur(14px);border-radius:20px;padding:20px;color:#fff">
-        <b style="font-size:22px;display:block">Members get more</b>
-        <span class="small">Early access to drops, birthday credit and free express shipping on your first order.</span>
-      </div>
-    </div>
-    <div class="auth-card" style="justify-self:center">
-      <h1 class="h2">Welcome back</h1>
-      <p class="muted small" style="margin-top:6px">Sign in with a one time code. No passwords to remember.</p>
-      <div class="auth-tabs"><button class="is-active" data-tab="email">Email</button><button data-tab="phone">Mobile</button></div>
-      <form data-step="1" style="display:grid;gap:12px">
-        <div class="field"><label for="id" data-label>Email address</label><input id="id" class="input" type="email" placeholder="you@example.com" required data-id></div>
-        <button class="btn btn--black btn--block">Send code</button>
+  <div class="auth">
+    <div class="auth-card">
+      <h1 class="h2 center">Welcome back</h1>
+      <p class="muted small center" style="margin-top:6px">Sign in with a one time code. No passwords to remember.</p>
+      <form data-step="1" style="display:grid;gap:12px;margin-top:20px">
+        {% csrf_token %}
+        <div class="field"><label for="id">Email address</label><input id="id" class="input" type="email" name="email" placeholder="you@example.com" autocomplete="email" required data-id></div>
+        <p class="co-err" data-err1></p>
+        <button class="btn btn--black btn--block" data-send>Send code</button>
       </form>
-      <form data-step="2" class="hide" style="display:grid;gap:14px">
+      <form data-step="2" class="hide" style="display:grid;gap:14px;margin-top:20px">
         <p class="small">Enter the 6 digit code sent to <b data-sent></b> <button type="button" class="link" data-back>Change</button></p>
         <div class="otp"></div>
-        <button class="btn btn--black btn--block">Verify &amp; Sign in</button>
-        <p class="small muted center">Did not get it? <button type="button" class="link" data-resend>Resend in <span data-timer>30</span>s</button></p>
+        <p class="co-err" data-err2></p>
+        <button class="btn btn--black btn--block" data-verify>Verify &amp; Sign in</button>
+        <p class="small muted center">Did not get it? <button type="button" class="link" data-resend disabled>Resend in <span data-timer>30</span>s</button></p>
       </form>
-      <div class="or-line" style="margin:22px 0">OR</div>
-      <a href="account.html" class="btn btn--outline btn--block">Continue as guest</a>
-      <p class="small muted center" style="margin-top:18px">New here? Your account is created automatically when you verify.</p>
+      <p class="small muted center" style="margin-top:22px">New here? Your account is created automatically when you verify.</p>
     </div>
   </div>
 </main>
-<div data-footer></div>
-<script src="assets/js/data.js"></script>
-<script>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ csp_nonce }}">
 window.T3Page = function () {
   const $ = T3.$, $$ = T3.$$;
-  $('[data-img]').src = T3.U(T3.IMG.tealGirl, 900, 1200);
-  $('.otp').innerHTML = Array.from({ length: 6 }, () => '<input maxlength="1" inputmode="numeric" aria-label="Digit">').join('');
-  let mode = 'email';
-  $$('[data-tab]').forEach(b => b.onclick = () => { mode = b.dataset.tab; $$('[data-tab]').forEach(x => x.classList.toggle('is-active', x === b));
-    $('[data-label]').textContent = mode === 'email' ? 'Email address' : 'Mobile number'; const i = $('[data-id]'); i.type = mode === 'email' ? 'email' : 'tel'; i.placeholder = mode === 'email' ? 'you@example.com' : '98765 43210'; i.value = ''; });
-  $('[data-step="1"]').addEventListener('submit', e => { e.preventDefault(); $('[data-sent]').textContent = $('[data-id]').value; $('[data-step="1"]').classList.add('hide'); $('[data-step="2"]').classList.remove('hide'); $('.otp input').focus();
-    let t = 30; const iv = setInterval(() => { t--; $('[data-timer]').textContent = t; if (t <= 0) clearInterval(iv); }, 1000); });
-  $('[data-back]').onclick = () => { $('[data-step="2"]').classList.add('hide'); $('[data-step="1"]').classList.remove('hide'); };
-  $('.otp').addEventListener('input', e => { if (e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus(); });
-  $('.otp').addEventListener('keydown', e => { if (e.key === 'Backspace' && !e.target.value && e.target.previousElementSibling) e.target.previousElementSibling.focus(); });
-  $('[data-step="2"]').addEventListener('submit', e => { e.preventDefault(); T3.toast('Signed in'); setTimeout(() => location.href = 'account.html', 600); });
+  const SEND = '{% url "public_account_send_otp" %}', VERIFY = '{% url "public_account_verify_otp" %}';
+  $('.otp').innerHTML = Array.from({ length: 6 }, () => '<input maxlength="1" inputmode="numeric" autocomplete="one-time-code" aria-label="Digit">').join('');
+  const s1 = $('[data-step="1"]'), s2 = $('[data-step="2"]'), boxes = () => $$('.otp input');
+  let email = '', iv;
+  const next = (() => { const n = T3.qs('next') || ''; return /^\/(?!\/)/.test(n) ? n : ''; })();
+
+  const timer = () => {
+    const rb = $('[data-resend]'); let t = 30; rb.disabled = true; rb.innerHTML = 'Resend in <span data-timer>30</span>s';
+    clearInterval(iv); iv = setInterval(() => { t--; const el = $('[data-timer]'); if (el) el.textContent = t; if (t <= 0) { clearInterval(iv); rb.disabled = false; rb.textContent = 'Resend code'; } }, 1000);
+  };
+  const send = () => T3.post(SEND, { email }).then(res => {
+    if (res.ok && res.data && res.data.success) return true;
+    throw new Error((res.data && res.data.error) || 'We could not send a code. Please try again.');
+  });
+
+  s1.addEventListener('submit', e => {
+    e.preventDefault();
+    email = $('[data-id]').value.trim();
+    const err = $('[data-err1]'), b = $('[data-send]'); err.textContent = '';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Enter a valid email address.'; return; }
+    b.disabled = true; b.textContent = 'Sending…';
+    send().then(() => {
+      $('[data-sent]').textContent = email; s1.classList.add('hide'); s2.classList.remove('hide');
+      boxes().forEach(i => i.value = ''); boxes()[0].focus(); timer();
+    }).catch(x => { err.textContent = x.message; }).finally(() => { b.disabled = false; b.textContent = 'Send code'; });
+  });
+  $('[data-back]').onclick = () => { clearInterval(iv); s2.classList.add('hide'); s1.classList.remove('hide'); $('[data-id]').focus(); };
+  $('[data-resend]').onclick = () => send().then(() => { T3.toast(`We sent a new code to ${email}`); timer(); }).catch(x => { $('[data-err2]').textContent = x.message; });
+
+  const otp = $('.otp');
+  otp.addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(-1); if (e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus(); });
+  otp.addEventListener('keydown', e => { if (e.key === 'Backspace' && !e.target.value && e.target.previousElementSibling) e.target.previousElementSibling.focus(); });
+  otp.addEventListener('paste', e => {
+    const digits = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!digits) return; e.preventDefault();
+    boxes().forEach((i, k) => i.value = digits[k] || ''); (boxes()[Math.min(digits.length, 5)]).focus();
+  });
+  s2.addEventListener('submit', e => {
+    e.preventDefault();
+    const code = boxes().map(i => i.value).join(''), err = $('[data-err2]'), b = $('[data-verify]'); err.textContent = '';
+    if (code.length < 6) { err.textContent = 'Enter the 6 digit code from your email.'; return; }
+    b.disabled = true; b.textContent = 'Verifying…';
+    T3.post(VERIFY, { email, otp: code }).then(res => {
+      if (res.ok && res.data && res.data.success) { T3.toast('Signed in'); location.href = next || res.data.redirect || T3.urls.account; return; }
+      err.textContent = (res.data && res.data.error) || 'That code is incorrect or has expired.';
+      b.disabled = false; b.innerHTML = 'Verify &amp; Sign in';
+    }).catch(() => { err.textContent = 'Something went wrong. Please try again.'; b.disabled = false; b.innerHTML = 'Verify &amp; Sign in'; });
+  });
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

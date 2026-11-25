@@ -1,0 +1,1 @@
+{% comment %}Status chip. Context: s ("published" | "held" | "hidden").{% endcomment %}{% if s == "held" %}<span class="mc-chip mc-chip--pending">Held</span>{% elif s == "hidden" %}<span class="mc-chip mc-chip--revoked">Hidden</span>{% else %}<span class="mc-chip mc-chip--published">Live</span>{% endif %}

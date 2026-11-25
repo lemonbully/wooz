@@ -7,10 +7,10 @@
 <header class="pal-pagehead pal-blueprint">
   <div class="pal-container">
     <p class="pal-breadcrumb"><a href="{% url 'web:home' %}">OneWooz</a> / <span>Pricing</span></p>
-    <h1 class="pal-pagehead__title">Start free.<br>Pay when you're selling.</h1>
+    <h1 class="pal-pagehead__title">Simple plans.<br>Grow as you sell.</h1>
     <p class="pal-lead pal-pagehead__lead">
-      Build your store and see it live before you decide anything. No card to
-      begin, and we never take a cut of your sales.
+      Pick a plan, build your store and go live in minutes. Alongside your plan,
+      we charge a small percentage of each order as a commerce fee.
     </p>
     {% if demo_links %}
     <div class="pal-btn-row pal-mt-6">
@@ -238,9 +238,9 @@
           {% if plan.plan_type == 'free' %}
             {% if plan.custom_cta_url %}
               <a href="{{ plan.custom_cta_url }}"
-                 class="pal-btn{% if not plan.is_featured %} pal-btn--ghost{% endif %}">{{ plan.cta_label|default:"Start free" }}</a>
+                 class="pal-btn{% if not plan.is_featured %} pal-btn--ghost{% endif %}">{{ plan.cta_label|default:"Get started" }}</a>
             {% else %}
-              <a href="#" data-buy class="pal-btn{% if not plan.is_featured %} pal-btn--ghost{% endif %}">{{ plan.cta_label|default:"Start free" }}</a>
+              <a href="#" data-buy class="pal-btn{% if not plan.is_featured %} pal-btn--ghost{% endif %}">{{ plan.cta_label|default:"Get started" }}</a>
             {% endif %}
           {% elif plan.plan_type == 'custom' %}
             <a href="{% if plan.custom_cta_url %}{{ plan.custom_cta_url }}{% else %}{% url 'web:contact' %}{% endif %}"
@@ -831,15 +831,15 @@
     <div class="pal-plans pal-mt-12" data-reveal>
       <div class="pal-plan">
         <div class="pal-plan__name">Launch</div>
-        <div class="pal-plan__price">Free</div>
-        <div class="pal-plan__desc">Everything you need to build a store and see it live on a OneWooz address.</div>
+        <div class="pal-plan__price">₹ 399 <span>/ month</span></div>
+        <div class="pal-plan__desc">Everything you need to build a store and go live on a OneWooz address.</div>
         <ul class="pal-plan__list">
           <li>Full store, built for your industry</li>
           <li>OneWooz subdomain, HTTPS included</li>
           <li>Products, cart and checkout</li>
-          <li>No card required</li>
+          <li>Small commerce fee per order</li>
         </ul>
-        <div class="pal-plan__cta"><a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn pal-btn--ghost">Start free</a></div>
+        <div class="pal-plan__cta"><a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn pal-btn--ghost">Get started</a></div>
       </div>
 
       <div class="pal-plan pal-plan--featured">
@@ -855,7 +855,7 @@
           <li>Cards, UPI and cash on delivery</li>
           <li>Live shipping rates &amp; labels</li>
           <li>Analytics and SEO switched on</li>
-          <li>We never take a cut of sales</li>
+          <li>Small commerce fee per order</li>
         </ul>
         <div class="pal-plan__cta"><a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store</a></div>
       </div>
@@ -981,11 +981,9 @@ description stays visible under its title, so nothing is ever hidden.
   <div class="pal-container">
     <div class="pal-marker" data-reveal><span class="pal-marker__num">{% if pricing_features %}03{% else %}02{% endif %}</span><span>Questions</span></div>
     <div class="pal-matrix pal-mt-12" data-reveal>
-      <div class="pal-matrix__row"><div class="pal-matrix__idx">01</div><div class="pal-matrix__body"><div class="pal-matrix__title">Do you take a cut of my sales?</div><div class="pal-matrix__desc">No. Your revenue is yours. Payment settlement goes to your own account through your payment provider.</div></div></div>
-      <div class="pal-matrix__row"><div class="pal-matrix__idx">02</div><div class="pal-matrix__body"><div class="pal-matrix__title">What does it cost to try?</div><div class="pal-matrix__desc">Nothing. Build the store, see it live on a OneWooz address, and only pay when you connect a custom domain and go to market.</div></div></div>
-      <div class="pal-matrix__row"><div class="pal-matrix__idx">03</div><div class="pal-matrix__body"><div class="pal-matrix__title">Can I leave?</div><div class="pal-matrix__desc">Any time. Export your data and point your domain elsewhere. There is no lock-in and nothing is held hostage.</div></div></div>
-      <div class="pal-matrix__row"><div class="pal-matrix__idx">04</div><div class="pal-matrix__body"><div class="pal-matrix__title">Who owns the domain?</div><div class="pal-matrix__desc">You do. Connect a domain you already own, or one we help you register in your name.</div></div></div>
-      <div class="pal-matrix__row"><div class="pal-matrix__idx">05</div><div class="pal-matrix__body"><div class="pal-matrix__title">Is email marketing included?</div><div class="pal-matrix__desc">Yes, it is built into the dashboard: campaigns, automatic welcome series, templates and AI writing, with opens and clicks tracked. Paid plans include it with a monthly sending allowance for your plan; on a free plan it is available when the plan lists it. <a href="{% url 'web:platform' %}#email-marketing">See how it works</a>.</div></div></div>
+      {% for f in page_faq %}
+      <div class="pal-matrix__row"><div class="pal-matrix__idx">{{ forloop.counter|stringformat:"02d" }}</div><div class="pal-matrix__body"><div class="pal-matrix__title">{{ f.q }}</div><div class="pal-matrix__desc">{{ f.a_html }}</div></div></div>
+      {% endfor %}
     </div>
   </div>
 </section>
@@ -993,7 +991,7 @@ description stays visible under its title, so nothing is ever hidden.
 <section class="pal-section pal-ruled pal-section--ink pal-cta">
   <div class="pal-container">
     <div class="pal-marker" data-reveal><span class="pal-marker__num">03</span><span>Deploy</span></div>
-    <h2 class="pal-display pal-cta__title pal-mt-6" style="font-size:clamp(2.4rem,1.2rem+5vw,4.5rem);" data-reveal>Build it free. Decide later.</h2>
+    <h2 class="pal-display pal-cta__title pal-mt-6" style="font-size:clamp(2.4rem,1.2rem+5vw,4.5rem);" data-reveal>Your store, live in minutes.</h2>
     <div class="pal-btn-row pal-mt-8" data-reveal>
       <a href="{% surface_url 'app' '/sign-up/' %}" class="pal-btn">Deploy a store <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
       {% if demo_links_d2c %}

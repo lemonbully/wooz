@@ -155,6 +155,16 @@ def send_order_update_email(self, order_id: str, kind: str, changes: list | None
     return order_notify.send(order_id, kind, changes or [])
 
 
+@shared_task(bind=True, soft_time_limit=600, time_limit=660)
+def send_abandoned_cart_reminders(self) -> int:
+    """Beat (every 5 minutes): email signed-in shoppers who left items in their
+    cart, 1, 6, 24, 48 and 72 hours after their last cart change, at stores
+    that switched abandoned cart emails on (see :mod:`commerce.abandoned_cart`)."""
+    from commerce import abandoned_cart
+
+    return abandoned_cart.send_due_reminders()
+
+
 @shared_task(bind=True)
 def generate_due_bills(self) -> int:
     """Beat (daily): every store's commerce fee bill is generated automatically
@@ -163,3 +173,21 @@ def generate_due_bills(self) -> int:
     from commerce import billing_service
 
     return billing_service.generate_all_due_bills()
+
+
+# Not acks_late: if a worker is killed mid-encode the message is dropped rather
+# than redelivered forever; the video simply stays as uploaded.
+@shared_task(bind=True, soft_time_limit=900, time_limit=960, ignore_result=True)
+def optimise_video(self, key: str) -> str:
+    """Re-encode one uploaded video in place (commerce.video_optimise).
+
+    Queued by commerce.media_storage.MediaStorage after every video upload and
+    by ``manage.py optimise_videos`` for videos uploaded before this existed.
+    Routed to the ``media`` queue when ONEWOOZ_MEDIA_QUEUE is set, so a long
+    encode never delays order emails on the default queue.
+    """
+    from commerce.video_optimise import optimise
+
+    outcome = optimise(key)
+    logging.getLogger("onewooz.media").info("optimise_video %s: %s", key, outcome)
+    return outcome

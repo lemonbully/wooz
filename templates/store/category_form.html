@@ -9,29 +9,83 @@
     <h1 class="app-head__title pal-mt-4">{% if is_edit %}Edit category{% else %}New category{% endif %}</h1>
   </div></div>
   <div class="app-block">
-    <form method="post" enctype="multipart/form-data" class="app-form app-card" style="padding:1.5rem;">
+    <form method="post" enctype="multipart/form-data" class="app-form app-card">
       {% csrf_token %}
-      {% include "store/_form.html" with wide_fields="description" %}
+      {% comment %}
+      Fields are sized by how much they are predicted to hold (app-len--*:
+      basis = typical width, grow = the same number), so each row's spare
+      space is shared in proportion to that prediction.
+        Row 1  name (m, ~15-30 chars) | parent (s, a short name) | sort order (xs, 1-3 digits)
+        Row 2  the page URL the name produces (full width, directly under the name)
+        Row 3  description (l, a few sentences, fills the row's height) | image + visibility (m)
+      {% endcomment %}
+      {% if form.non_field_errors %}
+        <div class="pal-alert" role="alert">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="app-mediainput-holder">{{ form.image }}</div>
 
-      <p class="app-field-hint cat-url" style="margin-top:0.75rem" data-cat-url data-base="{{ category_url_base }}" data-current="{{ category.slug|default:'' }}">
-        Page URL: <span class="cat-url__path">{{ category_url_base }}<b data-cat-slug>{{ category.slug|default:"your-category" }}</b>/</span><br>
-        <span data-cat-url-note>The URL follows the category name. Renaming it updates the link on your store and in your sitemap, and the old link redirects here.</span>
-      </p>
+      <div class="app-formgrid">
+        <label class="pal-field app-len--m">
+          <span class="pal-field__label">{{ form.name.label }} <span class="app-req">*</span></span>
+          {{ form.name }}
+          {% for error in form.name.errors %}<span class="app-field-err">{{ error }}</span>{% endfor %}
+        </label>
 
-      <div class="app-medfield" style="margin-top:1.25rem">
-        <span class="pal-field__label">Category image</span>
-        <div class="app-medfield__row">
-          <button type="button" class="pal-btn" data-ow-media-open data-ow-kind="image"
-                  data-ow-title="Select category image"
-                  data-ow-ids="media_image_category" data-ow-preview="#app-medfield-category">
-            Choose from media library
-          </button>
-          <span class="app-field-hint" style="margin:0">Pick an image (or upload a new one) from your store library.</span>
-        </div>
-        <div class="app-medfield__preview" id="app-medfield-category">
-          {% if category.image %}
-            <span class="app-medfield__item"><img class="app-medfield__thumb" src="{{ category.image.url }}" alt="{{ category.name }}"></span>
-          {% endif %}
+        <label class="pal-field app-len--s">
+          <span class="pal-field__label">{{ form.parent.label }}</span>
+          {{ form.parent }}
+          {% for error in form.parent.errors %}<span class="app-field-err">{{ error }}</span>{% endfor %}
+        </label>
+
+        <label class="pal-field app-len--xs">
+          <span class="pal-field__label">{{ form.order.label }}</span>
+          {{ form.order }}
+          {% for error in form.order.errors %}<span class="app-field-err">{{ error }}</span>{% endfor %}
+        </label>
+
+        <p class="app-field-hint cat-url app-f--full" style="margin-top:-0.6rem" data-cat-url data-base="{{ category_url_base }}" data-current="{{ category.slug|default:'' }}">
+          Page URL: <span class="cat-url__path">{{ category_url_base }}<b data-cat-slug>{{ category.slug|default:"your-category" }}</b>/</span><br>
+          <span data-cat-url-note>The URL follows the category name. Renaming it updates the link on your store and in your sitemap, and the old link redirects here.</span>
+        </p>
+
+        <label class="pal-field app-len--l app-len--fill">
+          <span class="pal-field__label">{{ form.description.label }}</span>
+          {{ form.description }}
+          {% for error in form.description.errors %}<span class="app-field-err">{{ error }}</span>{% endfor %}
+        </label>
+
+        <div class="app-formcol app-len--m">
+          <div class="app-medfield">
+            <span class="pal-field__label" style="margin-bottom:0">Category image</span>
+            <div class="app-medfield__row">
+              <button type="button" class="pal-btn" data-ow-media-open data-ow-kind="image"
+                      data-ow-title="Select category image"
+                      data-ow-ids="media_image_category" data-ow-preview="#app-medfield-category">
+                Choose from media library
+              </button>
+              <span class="app-field-hint" style="margin:0">Pick an image or upload a new one.</span>
+            </div>
+            <div class="app-medfield__preview" id="app-medfield-category">
+              {% if category.image %}
+                {% comment %}
+                  The saved image. The x removes it (a hidden remove_image flag
+                  clears it on save); picking a new image replaces it at once
+                  (media-library.js drops this item and sets the same flag, so
+                  the old image never comes back if the new pick is removed).
+                {% endcomment %}
+                <span class="app-medfield__item" data-existing-image data-remove-name="remove_image"><img class="app-medfield__thumb" src="{{ category.image.url }}" alt="{{ category.name }}"><button type="button" class="app-medfield__rm" data-remove-existing="1" data-remove-name="remove_image" aria-label="Remove category image" title="Remove image">&times;</button></span>
+              {% endif %}
+            </div>
+            {% for error in form.image.errors %}<span class="app-field-err">{{ error }}</span>{% endfor %}
+          </div>
+
+          <div role="group" aria-labelledby="cat-visibility-label">
+            <span class="pal-field__label" id="cat-visibility-label" style="display:block;margin-bottom:0.45rem">Visibility</span>
+            <div class="app-checkrow">
+              <label class="app-check">{{ form.is_active }}<span class="app-check__label">{{ form.is_active.label }}</span></label>
+              <label class="app-check">{{ form.show_on_homepage }}<span class="app-check__label">{{ form.show_on_homepage.label }}</span></label>
+            </div>
+          </div>
         </div>
       </div>
 

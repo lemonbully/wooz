@@ -16,6 +16,28 @@ class StorefrontConfig(AppConfig):
 
         register_custom_domain_checker(_is_verified_custom_domain)
 
+        # A remembered "no such store" (storefront.resolver) must not outlive
+        # the store or collaboration that takes the label.
+        from django.db.models.signals import post_save
+
+        from commerce.models import Collaboration
+        from tenancy.models import Site
+
+        post_save.connect(_forget_site_miss, sender=Site, dispatch_uid="storefront.forget_site_miss")
+        post_save.connect(_forget_collab_miss, sender=Collaboration, dispatch_uid="storefront.forget_collab_miss")
+
+
+def _forget_site_miss(sender, instance, **kwargs):
+    from .resolver import forget_miss
+
+    forget_miss("slug", getattr(instance, "slug", ""))
+
+
+def _forget_collab_miss(sender, instance, **kwargs):
+    from .resolver import forget_miss
+
+    forget_miss("ref", getattr(instance, "subdomain", ""))
+
 
 def custom_domain_candidates(host: str) -> list[str]:
     """The stored ``custom_domain`` values a request host can belong to: the

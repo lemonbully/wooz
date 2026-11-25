@@ -76,3 +76,14 @@
 .prose.text-gray-500, .ow-richtext.text-gray-500 { color: #6b7280; }
 .prose.text-gray-500 h1, .prose.text-gray-500 h2, .prose.text-gray-500 h3,
 .prose.text-gray-500 strong { color: #4b5563; }
+
+/* ==========================================================================
+   MRP label (product pages and product cards, every Tailwind-built design)
+   --------------------------------------------------------------------------
+   The MRP is never shown struck through: it reads "MRP: ₹1,299". The label
+   is generated here (not typed in the markup) because the product page's
+   variation script replaces the element's text with the picked variation's
+   MRP, which would wipe a typed label.
+   ========================================================================== */
+.ow-mrp { text-decoration: none !important; }
+.ow-mrp::before { content: "MRP: "; }

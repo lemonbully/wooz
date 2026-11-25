@@ -32,7 +32,7 @@ from . import renewal
 #: URL namespaces that make up the owner dashboard  the surfaces to wall. The
 #: account (auth) namespace is deliberately absent so an owner can always sign
 #: out or manage their account while locked.
-_WALLED_NAMESPACES = frozenset({"ud", "store"})
+_WALLED_NAMESPACES = frozenset({"ud", "store", "store_apps"})
 
 
 class SubscriptionRenewalGateMiddleware:
@@ -52,6 +52,18 @@ class SubscriptionRenewalGateMiddleware:
             return None  # Let the view's own auth (login_required) handle it.
 
         if not renewal.state(request).locked:
+            # A deleted account that signed in while its paid plan had lapsed
+            # waits here: the first dashboard request after the renewal settles
+            # brings the account and its stores back (accounts.deletion).
+            if getattr(user, "account_deleted_at", None) and not getattr(request, "impersonation", None):
+                from accounts import deletion
+
+                if deletion.restore_if_unlocked(request, user):
+                    from django.shortcuts import redirect
+
+                    # Reload so the store switcher and context see the stores.
+                    if request.method == "GET":
+                        return redirect(request.get_full_path())
             return None
 
         # Actions and AJAX get a hard, cheap refusal  the page they came from
@@ -107,5 +119,16 @@ def _render_wall(request):
         "quote": initial_quote,
         "cards": cards,
         "cashfree_ready": cashfree_ready,
+        "account_restore_until": _restore_until(request),
     }
     return render(request, "billing/renewal_wall.html", ctx, status=402)
+
+
+def _restore_until(request):
+    """When the owner deleted their account: the last day renewing restores it."""
+    deleted_at = getattr(getattr(request, "user", None), "account_deleted_at", None)
+    if not deleted_at:
+        return None
+    from accounts import deletion
+
+    return deletion.recover_until(deleted_at)

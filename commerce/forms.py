@@ -55,7 +55,10 @@ class SiteForm(forms.ModelForm):
             }),
             "legal_name": forms.TextInput(attrs={"placeholder": "e.g. Acme Retail Private Limited"}),
         }
-        labels = {"legal_name": "Legal business name"}
+        labels = {
+            "legal_name": "Legal business name",
+            "abandoned_cart_emails_enabled": "Send abandoned cart emails",
+        }
 
     # Formats (all optional). A GSTIN embeds the business PAN at characters
     # 3–12, so when both are given they must agree.
@@ -104,9 +107,28 @@ class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
         fields = ["name", "parent", "description", "image", "order", "is_active", "show_on_homepage"]
+        labels = {
+            "name": "Category name",
+            "parent": "Parent category",
+            "order": "Sort order",
+            "is_active": "Active on store",
+            "show_on_homepage": "Show on home page",
+        }
+        widgets = {
+            "name": forms.TextInput(attrs={"placeholder": "e.g. Running shoes"}),
+            "description": forms.Textarea(attrs={
+                "rows": 5,
+                "placeholder": "A line or two that introduces this category to shoppers.",
+            }),
+            "order": forms.NumberInput(attrs={
+                "min": 0, "step": 1, "placeholder": "0",
+                "title": "Lower numbers show first",
+            }),
+        }
 
     def __init__(self, *args, site=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["parent"].empty_label = "None (top level)"
         if site is not None:
             # Parent choices must stay within this store.
             qs = Category.objects.for_site(site).filter(is_deleted=False)

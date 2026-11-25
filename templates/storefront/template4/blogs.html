@@ -1,42 +1,50 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Journal | velora</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
-<div data-header></div>
+{% extends "storefront/template4/_base.html" %}
+{% block main %}
 <main class="container">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>Journal</span></nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'public_website' %}">Home</a><span class="sep">/</span><span>Blogs</span></nav>
   <div class="page-head sec-head">
-    <div><h1 class="mega">The Journal</h1><p>Style notes, care guides and stories from our studio.</p></div>
-    <div class="pill-tabs" data-filter><button class="is-active" data-f="">All</button><button data-f="Style guide">Style guide</button><button data-f="Care">Care</button><button data-f="Footwear">Footwear</button><button data-f="Trends">Trends</button><button data-f="Our story">Our story</button></div>
+    <div><h1 class="mega" data-blogs-title>Blogs</h1><p data-blogs-sub>Stories, guides and news from our team.</p></div>
+    <div class="pill-tabs" data-filter><button class="is-active" data-f="">All</button></div>
   </div>
 
   <a class="highlight-card highlight-card--wide reveal" data-featured style="background:var(--lilac)"></a>
 
   <div class="grid grid--3" data-list style="margin-top:clamp(28px,4vw,48px);row-gap:40px"></div>
-  <div class="pagination"><a href="#" class="is-active">1</a><a href="#">2</a><a href="#">3</a></div>
+  <div class="pagination" data-pages></div>
 </main>
-<div data-footer></div>
-<script src="assets/js/data.js"></script>
-<script>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ csp_nonce }}">
 window.T3Page = function () {
-  const D = T3, I = T3.I, $ = T3.$;
-  const f = D.blogs[0];
+  const D = T3, I = T3.I, $ = T3.$, esc = T3.esc, H = D.home || {};
+  if (H.blogTitle) $('[data-blogs-title]').textContent = H.blogTitle;
+  if (H.blogSubtitle) $('[data-blogs-sub]').textContent = H.blogSubtitle;
   const feat = $('[data-featured]');
-  feat.href = `blog.html?b=${f.slug}`;
-  feat.innerHTML = `<div style="padding:0;overflow:hidden"><img src="${f.img}" alt=""></div><div><span class="badge badge--light" style="align-self:flex-start">Featured · ${f.tag}</span><h2 class="h1">${f.title}</h2><p class="muted">${f.excerpt}</p><div class="blog-card__meta" style="margin:0">${f.date}<i></i>${f.read}</div><span class="btn btn--black" style="align-self:flex-start">Read article <span class="btn__dot">${I.arrow}</span></span></div>`;
-  const all = [...D.blogs.slice(1), ...D.blogs.slice(0, 4).map(b => ({ ...b, title: b.title.replace(/^(How to|The)/, 'More on:') }))];
-  const render = tag => { $('[data-list]').innerHTML = all.filter(b => !tag || b.tag === tag).map(b => `<a class="blog-card reveal" href="blog.html?b=${b.slug}"><div class="blog-card__media"><img src="${b.img}" alt="" loading="lazy"><span class="badge badge--light">${b.tag}</span></div><div class="blog-card__meta">${b.date}<i></i>${b.read}</div><h3>${b.title}</h3><p>${b.excerpt}</p></a>`).join('') || '<p class="muted">No articles in this topic yet.</p>'; T3.initReveal($('[data-list]')); };
-  render('');
-  $('[data-filter]').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('[data-filter] .is-active').classList.remove('is-active'); b.classList.add('is-active'); render(b.dataset.f); });
+  if (!D.blogs.length) {
+    feat.hidden = true;
+    $('[data-filter]').hidden = true;
+    $('[data-list]').innerHTML = '<p class="muted">No articles yet. Check back soon.</p>';
+    return;
+  }
+  const f = D.blogs[0];
+  feat.href = f.url;
+  feat.innerHTML = `<div style="padding:0;overflow:hidden"><img src="${D.U(f.img, 1200, 900)}" alt=""></div><div><span class="badge badge--light" style="align-self:flex-start">Featured · ${esc(f.tag)}</span><h2 class="h1">${esc(f.title)}</h2><p class="muted">${esc(f.excerpt)}</p><div class="blog-card__meta" style="margin:0">${esc(f.date)}<i></i>${esc(f.read)}</div><span class="btn btn--black btn--arrow" style="align-self:flex-start">Read article <span class="btn__dot">${I.arrow}</span></span></div>`;
+  const rest = D.blogs.slice(1);
+  const tags = [...new Set(D.blogs.map(b => b.tag).filter(Boolean))];
+  if (tags.length > 1) $('[data-filter]').insertAdjacentHTML('beforeend', tags.map(t => `<button data-f="${esc(t)}">${esc(t)}</button>`).join(''));
+  else $('[data-filter]').hidden = true;
+  const PER = 9; let page = 1, tag = '';
+  const render = () => {
+    const l = (tag ? D.blogs.filter(b => b.tag === tag) : rest);
+    const pages = Math.max(1, Math.ceil(l.length / PER)); page = Math.min(page, pages);
+    $('[data-list]').innerHTML = l.slice((page - 1) * PER, page * PER).map(b => `<a class="blog-card reveal" href="${b.url}"><div class="blog-card__media"><img src="${D.U(b.img, 1200, 900)}" alt="" loading="lazy"><span class="badge badge--light">${esc(b.tag)}</span></div><div class="blog-card__meta">${esc(b.date)}<i></i>${esc(b.read)}</div><h3>${esc(b.title)}</h3><p>${esc(b.excerpt)}</p></a>`).join('') || (tag ? '<p class="muted">No articles in this topic yet.</p>' : '');
+    $('[data-pages]').innerHTML = pages > 1 ? Array.from({ length: pages }, (_, i) => `<a href="#" data-page="${i + 1}" class="${i + 1 === page ? 'is-active' : ''}">${i + 1}</a>`).join('') : '';
+    T3.initReveal($('[data-list]'));
+  };
+  render();
+  $('[data-pages]').addEventListener('click', e => { const a = e.target.closest('[data-page]'); if (!a) return; e.preventDefault(); page = +a.dataset.page; render(); $('[data-list]').scrollIntoView({ behavior: 'smooth' }); });
+  $('[data-filter]').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('[data-filter] .is-active').classList.remove('is-active'); b.classList.add('is-active'); tag = b.dataset.f; page = 1; render(); });
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

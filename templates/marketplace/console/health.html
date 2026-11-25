@@ -1,0 +1,39 @@
+{% extends "marketplace/console/_shell.html" %}
+{% block page_title %}Health{% endblock %}
+{% block crumbs %}<span>/</span><span>Health</span>{% endblock %}
+{% block heading %}Health{% endblock %}
+{% block lead %}<p>Each app's circuit breaker. Too many errors in its window and it pauses itself everywhere, alerts staff, then tries again. Pausing never touches licences or owners' settings.</p>{% endblock %}
+
+{% block main %}
+{% if renders_with_errors %}
+<div class="mc-status"><span class="mc-status__txt"><span class="mc-dot mc-dot--warn"></span> {{ renders_with_errors }} store{{ renders_with_errors|pluralize }} kept their previous app output after a failed build. Usually an owner left a required field empty.</span></div>
+{% endif %}
+
+<section class="mc-panel">
+  <div class="mc-tablewrap">
+    <table class="mc-table">
+      <thead><tr><th>App</th><th>State</th><th class="num">Errors / threshold</th><th>Last error</th><th>Times tripped</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><a class="mc-name" href="{% url 'mkt_console:app_edit' r.app.pk %}">{% include "marketplace/console/_app_icon.html" with a=r.app %}<span><b>{{ r.app.name }}</b><small>{{ r.app.slug }}</small></span></a></td>
+          <td>{% if r.app.is_paused %}<span class="mc-chip mc-chip--paused">Paused</span>{% if r.app.paused_until %}<br><span class="mc-muted mc-mono" style="font-size:.62rem;">until {{ r.app.paused_until|date:"j M, H:i" }}</span>{% endif %}{% else %}<span class="mc-chip mc-chip--{{ r.state_key }}">{{ r.state }}</span>{% endif %}</td>
+          <td class="num mc-mono">{{ r.errors }} / {{ r.app.breaker_threshold }} <span class="mc-muted">in {{ r.app.breaker_window_minutes }}m</span></td>
+          <td><span class="mc-trunc" title="{{ r.health.last_error }}">{{ r.health.last_error|default:"None" }}</span>{% if r.health.last_error_at %}<span class="mc-muted mc-mono" style="font-size:.62rem;">{{ r.health.last_error_at|timesince }} ago</span>{% endif %}</td>
+          <td class="mc-mono">{{ r.health.open_count|default:0 }}</td>
+          <td>
+            {% if can_write %}
+              {% if r.app.is_paused %}
+                <form method="post" action="{% url 'mkt_console:app_action' r.app.pk %}" class="mc-inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="action" value="resume"><button class="mc-linkbtn" type="submit">Resume</button></form>
+              {% else %}
+                <form method="post" action="{% url 'mkt_console:app_action' r.app.pk %}" class="mc-inline" data-confirm="Pause {{ r.app.name }} everywhere?">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="action" value="pause"><input type="number" name="minutes" value="60" min="0" title="Minutes (0 = until resumed)"><input type="text" name="reason" placeholder="Reason" required maxlength="200"><button class="mc-linkbtn mc-linkbtn--danger" type="submit">Pause</button></form>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="6" class="mc-empty">No live apps yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

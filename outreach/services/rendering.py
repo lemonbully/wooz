@@ -139,6 +139,7 @@ def _render_builtin_design(campaign, delivery) -> str:
         campaign.site,
         ids=list(getattr(campaign, "product_ids", None) or []),
         limit=1 if single else promo_design.MAX_PRODUCTS,
+        show_price=bool(getattr(campaign, "show_product_price", True)),
     )
     return promo_design.render(
         campaign.site,
@@ -188,6 +189,7 @@ def render_delivery(campaign, delivery, step: dict | None = None) -> tuple[str, 
         tracking_pixel=_pixel_tag(track["open_pixel_url"]),
         product_ids=product_ids,
         product_limit=product_limit,
+        show_price=bool(getattr(campaign, "show_product_price", True)),
     )
 
     raw_html = _substitute(raw_html, values=values)

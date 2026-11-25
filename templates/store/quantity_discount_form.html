@@ -1,0 +1,200 @@
+{% extends "store/_shell.html" %}
+{% load static %}
+{% block title %}{{ site.name }} · {% if rule %}Edit quantity discount{% else %}New quantity discount{% endif %}{% endblock %}
+{% block crumb %}Quantity discounts{% endblock %}
+
+{% block main %}
+{% include "store/_disc_styles.html" %}
+<style nonce="{{ csp_nonce }}">
+  .qd-tierrows { display: flex; flex-direction: column; gap: 0.5rem; }
+  .qd-tierrow { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) 2.2rem; gap: 0.5rem; align-items: center; }
+  .qd-tierrow__lbl { font-size: 0.8rem; color: var(--pal-muted); }
+  .qd-tierrow__x { border: 1px solid var(--pal-line); background: var(--pal-panel); color: var(--pal-muted); height: 2.35rem; cursor: pointer; font: inherit; }
+  .qd-tierrow__x:hover { color: var(--pal-ink); border-color: var(--pal-ink-2); }
+  .qd-tierhead { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) 2.2rem; gap: 0.5rem; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-faint); margin-bottom: 0.35rem; }
+  .qd-add { margin-top: 0.7rem; }
+  .qd-beyond { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+  .qd-warn { margin-top: 0.5rem; font-size: 0.8rem; color: #a5271b; }
+  .qd-preview { width: 100%; border-collapse: collapse; margin-top: 0.4rem; font-size: 0.85rem; }
+  .qd-preview th, .qd-preview td { text-align: left; padding: 0.4rem 0; border-bottom: 1px solid var(--pal-line); }
+  .qd-preview th { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-faint); font-weight: 400; }
+  .qd-preview td:last-child, .qd-preview th:last-child { text-align: right; }
+  .qd-preview__save { color: #0f7a53; font-size: 0.76rem; margin-left: 0.3rem; }
+  .qd-preview__note { margin-top: 0.6rem; font-size: 0.78rem; color: var(--pal-muted); line-height: 1.5; }
+  .qd-pick-meta { margin-left: auto; color: var(--pal-faint); font-size: 0.76rem; white-space: nowrap; }
+</style>
+
+<div class="app-page disc">
+  <div class="app-head">
+    <div>
+      <p class="pal-mono pal-mono--accent">Quantity discounts</p>
+      <h1 class="app-head__title pal-mt-4">{% if rule %}Edit “{{ rule.name }}”{% else %}New quantity discount{% endif %}</h1>
+      <p class="app-head__lead">The price per piece drops as shoppers buy more. Answer each card from top to bottom.</p>
+    </div>
+    <div class="app-head__actions"><a href="{{ page_url }}" class="pal-btn pal-btn--ghost">← All quantity discounts</a></div>
+  </div>
+
+  {% if errors %}
+    <div class="disc-errors" role="alert">
+      <strong>Please fix the following:</strong>
+      <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  <form method="post" id="qd-form" class="app-block" data-currency="{{ currency }}" data-max-tiers="{{ max_tiers }}" data-max-qty="{{ max_qty }}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_rule">
+    <input type="hidden" name="rule" value="{% if rule %}{{ rule.pk }}{% else %}new{% endif %}">
+    <div class="disc-layout">
+      <div class="disc-main">
+
+        {# 1. Which products #}
+        <div class="disc-card">
+          <h2 class="disc-card__title">1. Which products</h2>
+          <p class="disc-card__lead">If a product falls under more than one discount, the most specific one wins: a product's own, then its category's, then the store-wide one.</p>
+          <div class="disc-card__body disc-typegrid" data-qd-scope>
+            {% for value, label in scopes %}
+              <label class="disc-type"><input type="radio" name="scope" value="{{ value }}" {% if form.scope == value %}checked{% endif %}><span><span class="disc-type__name">{{ label }}</span><span class="disc-type__desc">{% if value == 'store' %}One set of tiers for the whole store.{% elif value == 'categories' %}Every product in the categories you pick (and their sub-categories).{% else %}Only the products you pick.{% endif %}</span></span></label>
+            {% endfor %}
+          </div>
+
+          <div class="disc-field" data-qd-for-scope="products" style="margin-top:1rem;">
+            <details class="disc-picker" {% if form.scope == 'products' %}open{% endif %}>
+              <summary>Choose products <span class="disc-count" data-qd-count="product_ids"></span></summary>
+              <div class="disc-picker__panel">
+                <input type="text" class="disc-picker__search" data-qd-search placeholder="Search products…" spellcheck="false" aria-label="Search products">
+                <div class="disc-picker__list">
+                  {% for p in products %}
+                    <label class="disc-pick" data-search="{{ p.title|lower }} {{ p.sku|lower }}"><input type="checkbox" name="product_ids" value="{{ p.id }}" data-price="{{ p.price }}" data-title="{{ p.title }}" {% if p.picked %}checked{% endif %}><span>{{ p.title }}{% if p.inactive %} <span class="app-sub">(hidden)</span>{% endif %}</span><span class="qd-pick-meta">{% if p.moq > 1 %}MOQ {{ p.moq }} · {% endif %}{{ currency }}{{ p.price }}</span></label>
+                  {% empty %}
+                    <p class="disc-picker__empty">No products yet. Add a product first.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="disc-field" data-qd-for-scope="categories" style="margin-top:1rem;">
+            <details class="disc-picker" {% if form.scope == 'categories' %}open{% endif %}>
+              <summary>Choose categories <span class="disc-count" data-qd-count="category_ids"></span></summary>
+              <div class="disc-picker__panel">
+                <input type="text" class="disc-picker__search" data-qd-search placeholder="Search categories…" spellcheck="false" aria-label="Search categories">
+                <div class="disc-picker__list">
+                  {% for c in categories %}
+                    <label class="disc-pick" data-search="{{ c.name|lower }}"><input type="checkbox" name="category_ids" value="{{ c.id }}" {% if c.picked %}checked{% endif %}><span>{{ c.name }}</span>{% if c.parent %}<span class="qd-pick-meta">in {{ c.parent }}</span>{% endif %}</label>
+                  {% empty %}
+                    <p class="disc-picker__empty">No categories yet.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        {# 2. Tiers #}
+        <div class="disc-card">
+          <h2 class="disc-card__title">2. How the price drops</h2>
+          <div class="disc-card__body">
+            <div class="disc-seg" data-qd-type>
+              {% for value, label in types %}
+                <label data-seg><input type="radio" name="discount_type" value="{{ value }}" {% if form.discount_type == value %}checked{% endif %}>{{ label }}</label>
+              {% endfor %}
+            </div>
+            <span class="disc-hint" data-qd-for-type="fixed_price">Fixed price works for specific products only, and must be below each product's regular price.</span>
+
+            <div style="margin-top:1.1rem;">
+              <div class="qd-tierhead"><span>From qty</span><span data-qd-valuehead>Discount</span><span></span></div>
+              <div class="qd-tierrows" data-qd-rows>
+                {% for t in form.tier_rows %}
+                  <div class="qd-tierrow" data-qd-row {% if forloop.counter > form.tier_count %}hidden{% endif %}>
+                    <input class="disc-in" type="number" min="2" max="{{ max_qty }}" step="1" name="tier_qty" value="{{ t.min_qty }}" placeholder="2" aria-label="From quantity">
+                    <div class="disc-affix">
+                      <span class="disc-affix__tag" data-qd-prefix>{{ currency }}</span>
+                      <input class="disc-in" type="number" min="0" step="0.01" name="tier_value" value="{{ t.value }}" placeholder="5" aria-label="Discount">
+                      <span class="disc-affix__tag disc-affix__tag--suf" data-qd-suffix>%</span>
+                    </div>
+                    <button type="button" class="qd-tierrow__x" data-qd-remove aria-label="Remove tier">×</button>
+                  </div>
+                {% endfor %}
+              </div>
+              <button type="button" class="pal-btn pal-btn--ghost pal-btn--sm qd-add" data-qd-addtier>+ Add a tier</button>
+              <span class="disc-hint">Up to {{ max_tiers }} tiers. Each tier needs more units and a bigger saving than the one before.</span>
+            </div>
+
+            <label class="disc-opt" style="margin-top:0.9rem;">
+              <input type="hidden" name="count_variations_together" value="0">
+              <input type="checkbox" name="count_variations_together" value="1" {% if form.count_variations_together %}checked{% endif %}>
+              <span><span class="disc-opt__label">Count all variations of a product together</span><span class="disc-hint">On: 1 red + 1 blue shirt counts as 2 units. Off: each size or colour has to reach the tier on its own.</span></span>
+            </label>
+          </div>
+        </div>
+
+        {# 3. Above the last tier (required, no default) #}
+        <div class="disc-card">
+          <h2 class="disc-card__title">3. When someone wants more than your last tier</h2>
+          <p class="disc-card__lead">Say your last tier is 5 units at 10% off and a shopper wants 8. What should happen?</p>
+          <div class="disc-card__body qd-beyond" data-qd-beyond>
+            {% for value, label in beyond_choices %}
+              <label class="disc-type"><input type="radio" name="beyond" value="{{ value }}" {% if form.beyond == value %}checked{% endif %} required><span><span class="disc-type__name">{{ label }}</span><span class="disc-type__desc">{% if value == 'same' %}8, 20 or 100 units all get your last tier's price.{% elif value == 'whatsapp' %}Up to your limit the tiers apply. The quantity stops at your limit, and anyone who asks for more is told to message you on WhatsApp.{% elif value == 'limit' %}Nobody can order more than your limit online. The product page, cart and checkout all stop there.{% else %}The quantity stops at your limit, and anyone who asks for more sees your own short message.{% endif %}</span></span></label>
+            {% endfor %}
+            {% if not has_whatsapp %}<p class="qd-warn" data-qd-for-beyond="whatsapp">Your store has no WhatsApp number yet. Add one in Edit content → Contact, or pick another option.</p>{% endif %}
+          </div>
+
+          <div class="disc-card__body" data-qd-for-beyond="whatsapp limit custom">
+            <div class="disc-field" style="max-width:16rem;">
+              <label class="disc-label" for="qd-limit">Most units in one order</label>
+              <input class="disc-in" id="qd-limit" type="number" min="1" max="{{ max_qty }}" step="1" name="beyond_qty" value="{{ form.beyond_qty|default_if_none:'' }}" placeholder="5">
+              <span class="disc-hint">At least your last tier's quantity. Use the same number to stop right at the last tier.</span>
+            </div>
+          </div>
+
+          <div class="disc-card__body" data-qd-for-beyond="custom">
+            <div class="disc-field">
+              <label class="disc-label" for="qd-msg">Message shoppers see above the limit</label>
+              <input class="disc-in" id="qd-msg" type="text" maxlength="240" name="custom_message" value="{{ form.custom_message }}" placeholder="Ordering more than 50? Call 98765 43210 for a wholesale price.">
+            </div>
+            <span class="disc-hint">Shown as a short note in your store's own style. Keep it to one line.</span>
+          </div>
+        </div>
+
+        {# 4. Schedule #}
+        <div class="disc-card">
+          <h2 class="disc-card__title">4. When it runs <span class="app-sub">(optional)</span></h2>
+          <div class="disc-card__body disc-inline">
+            <div class="disc-field"><label class="disc-label" for="qd-start">Starts</label><input class="disc-in" id="qd-start" type="datetime-local" name="starts_at" value="{{ form.starts_at_input }}"></div>
+            <div class="disc-field"><label class="disc-label" for="qd-end">Ends</label><input class="disc-in" id="qd-end" type="datetime-local" name="ends_at" value="{{ form.ends_at_input }}"></div>
+          </div>
+          <span class="disc-hint">Leave both empty to run until you pause it.</span>
+        </div>
+      </div>
+
+      {# Summary #}
+      <aside class="disc-side">
+        <div class="disc-card" style="margin-bottom:0;">
+          <div class="disc-card__head-row">
+            <h2 class="disc-card__title">Summary</h2>
+            <label class="disc-opt" style="padding:0;"><input type="checkbox" name="is_active" value="1" {% if form.is_active %}checked{% endif %}><span class="disc-opt__label">Live</span></label>
+          </div>
+          <div class="disc-card__body disc-summary">
+            <div class="disc-field"><label class="disc-label" for="qd-name">Name (only you see it)</label><input class="disc-in" id="qd-name" type="text" maxlength="120" name="name" value="{{ form.name }}" placeholder="Bulk savings"></div>
+            <dl>
+              <dt>What shoppers see</dt>
+              <dd>
+                <table class="qd-preview" data-qd-preview>
+                  <thead><tr><th>Qty</th><th>Price each</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+                <p class="qd-preview__note" data-qd-preview-note></p>
+              </dd>
+            </dl>
+          </div>
+          <div style="padding:0.9rem 1.3rem; border-top:1px solid var(--pal-line); display:flex; gap:0.6rem; flex-wrap:wrap;">
+            <button class="pal-btn" type="submit">{% if rule %}Save changes{% else %}Create quantity discount{% endif %}</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </form>
+</div>
+<script src="{% static 'js/app/quantity-discounts.js' %}" defer></script>
+{% endblock %}

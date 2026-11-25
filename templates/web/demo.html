@@ -1,0 +1,47 @@
+{% extends "web/_shell.html" %}
+{% load onewooz %}
+
+
+{% block main %}
+
+<header class="pal-pagehead pal-blueprint">
+  <div class="pal-container">
+    <p class="pal-breadcrumb"><a href="{% url 'web:home' %}">OneWooz</a> / <span>Demo</span></p>
+    <h1 class="pal-pagehead__title">See a real store.<br>Click around.</h1>
+    <p class="pal-lead pal-pagehead__lead">
+      Every store below was built on OneWooz. Open one, browse the products,
+      add to cart and walk through checkout, just as your shoppers would.
+    </p>
+  </div>
+</header>
+
+<section class="pal-section pal-ruled">
+  <div class="pal-container">
+    {% if demos %}
+    <div class="pal-demos">
+      {% for d in demos %}
+      <article class="pal-demo" data-reveal>
+        <a class="pal-demo__media" href="{{ d.url }}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true">
+          {% if d.image %}
+          <img src="{{ d.image.url }}" alt="" loading="{% if forloop.counter <= 3 %}eager{% else %}lazy{% endif %}" width="800" height="500">
+          {% else %}
+          <span class="pal-demo__placeholder">Live demo</span>
+          {% endif %}
+        </a>
+        <div class="pal-demo__body">
+          <h2 class="pal-demo__title"><a href="{{ d.url }}" target="_blank" rel="noopener noreferrer">{{ d.label }}</a></h2>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="pal-lead">No demo stores are live right now. Check back soon.</p>
+    {% endif %}
+
+    <div class="pal-btn-row pal-mt-12">
+      <a href="{% url 'web:pricing' %}" class="pal-btn pal-btn--ghost">See plans <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

@@ -419,6 +419,10 @@ def delete_account(site, email: str):
         NewsletterSubscriber.objects.for_site(site).filter(
             email__iexact=email, is_active=True
         ).update(is_active=False, updated_at=now)
+        # A closed account gets no more cart reminders.
+        from commerce.models import AbandonedCart
+
+        AbandonedCart.objects.for_site(site).filter(customer_email=email).delete()
         customer.deleted_email = email
         customer.deleted_phone = customer.phone or ""
         customer.email = parked

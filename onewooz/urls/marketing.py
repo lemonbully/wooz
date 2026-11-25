@@ -18,12 +18,16 @@ urlpatterns = [
     # web.urls so those paths resolve to billing while /pricing/ itself falls
     # through to the marketing pricing page.
     path("pricing/", include("billing.urls")),
+    # Ask OneWooz community (community.urls, namespace "ask").
+    path("ask/", include("community.urls")),
     path("", include("web.urls")),
 ]
 
 # Surface-aware error pages (see core.errors). Django resolves these from the
 # urlconf active when the error occurs, which HostRoutingMiddleware sets per
 # surface  so each surface's urlconf names the same handlers.
+handler400 = "core.errors.handler400"
+handler403 = "core.errors.handler403"
 handler404 = "core.errors.handler404"
 handler500 = "core.errors.handler500"
 

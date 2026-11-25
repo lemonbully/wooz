@@ -1,0 +1,36 @@
+{% comment %}
+"Generate" toolbar button on the Prompts admin: queues one background job
+that generates llms.txt for every store on a verified domain that has no file
+yet and whose required content is filled in (prompts.tasks.generate_missing_store_llms_txt).
+{% endcomment %}
+<li>
+  <form method="post" action="{{ llms_generate_url }}" style="display:inline;margin:0" data-ow-llms-generate>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <button type="submit" class="ow-llms-generate"
+            title="Stores on a verified domain without a published llms.txt{% if llms_waiting_count is not None %}: {{ llms_waiting_count }}{% endif %}. Only those with their required content filled in are generated.">
+      Generate llms.txt{% if llms_waiting_count %} ({{ llms_waiting_count }} waiting){% endif %}
+    </button>
+  </form>
+</li>
+<style nonce="{{ csp_nonce }}">
+  .object-tools .ow-llms-generate {
+    display: block; float: left; padding: 3px 12px; margin: 0;
+    background: var(--object-tools-bg, #417690); color: var(--object-tools-fg, #fff);
+    border: 0; border-radius: 15px; cursor: pointer;
+    font-size: 0.6875rem; font-weight: 400; letter-spacing: 0.5px; line-height: 1rem;
+    text-transform: uppercase;
+  }
+  .object-tools .ow-llms-generate:hover,
+  .object-tools .ow-llms-generate:focus { background: var(--object-tools-hover-bg, #205067); }
+</style>
+<script nonce="{{ csp_nonce }}">
+  document.querySelectorAll("form[data-ow-llms-generate]").forEach(function (form) {
+    form.addEventListener("submit", function (event) {
+      var ok = window.confirm("Generate llms.txt in the background for every store that does not have one yet and has its required content filled in?");
+      if (!ok) { event.preventDefault(); return; }
+      var button = form.querySelector("button");
+      if (button) { button.disabled = true; button.textContent = "Starting..."; }
+    });
+  });
+</script>

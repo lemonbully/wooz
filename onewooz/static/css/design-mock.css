@@ -1,0 +1,47 @@
+/* OneWooz Templates: generated design previews (.mkt-mock), shared by the
+   marketplace, the marketplace console and Store Settings > Storefront design.
+   Needs the pal font variables; falls back to system fonts without them. */
+
+/* Generated design preview (used until staff upload a real screenshot). One
+   structure, three looks keyed by data-look: 1 = original modern, 2 = Pebble,
+   3 = Eurus. Fixed proportions so every card lines up. */
+.mkt-mock { --m-bg: #fff; --m-ink: #0a0a0b; --m-soft: #f3f3f1; --m-acc: #0a0a0b; --m-rad: 0;
+  --m-font: var(--pal-font-display); width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--m-bg);
+  color: var(--m-ink); font-family: var(--m-font); }
+.mkt-mock__bar { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 4.2% 5%; font-size: clamp(0.5rem, 0.4rem + 0.35vw, 0.68rem); }
+.mkt-mock__logo { font-weight: 700; letter-spacing: 0.04em; }
+.mkt-mock__nav { display: flex; gap: 0.7rem; opacity: 0.7; font-size: 0.85em; }
+.mkt-mock__hero { position: relative; margin: 0 5%; height: 36%; flex: none; overflow: hidden; border-radius: var(--m-rad); background: var(--m-soft); }
+.mkt-mock__hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mkt-mock__copy { position: absolute; left: 6%; bottom: 10%; right: 40%; color: #fff; }
+.mkt-mock__kicker { font-family: var(--pal-font-mono); font-size: clamp(0.38rem, 0.3rem + 0.25vw, 0.52rem); letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.85; }
+.mkt-mock__title { font-weight: 600; font-size: clamp(0.8rem, 0.55rem + 0.9vw, 1.2rem); line-height: 1.05; letter-spacing: -0.02em; margin-top: 0.2rem; text-shadow: 0 1px 10px rgb(0 0 0 / 0.35); }
+.mkt-mock__btn { display: inline-block; margin-top: 0.45rem; padding: 0.25rem 0.55rem; background: #fff; color: #111; font-size: clamp(0.38rem, 0.3rem + 0.25vw, 0.52rem);
+  font-family: var(--pal-font-mono); letter-spacing: 0.1em; text-transform: uppercase; border-radius: var(--m-rad); }
+.mkt-mock__label { flex: none; margin: 3.5% 5% 2.5%; font-size: clamp(0.5rem, 0.4rem + 0.35vw, 0.7rem); font-weight: 600; letter-spacing: -0.01em; }
+.mkt-mock__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); gap: 3%; margin: 0 5%; flex: 1 1 0; min-height: 0; }
+.mkt-mock__cell { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.mkt-mock__img { flex: 1 1 0; min-height: 0; background: var(--m-soft); border-radius: var(--m-rad); overflow: hidden; position: relative; }
+.mkt-mock__img img { position: absolute; inset: 9%; width: 82%; height: 82%; object-fit: contain; }
+.mkt-mock__line { flex: none; height: 0.28rem; margin-top: 0.3rem; width: 80%; background: var(--m-ink); opacity: 0.18; border-radius: 2px; }
+.mkt-mock__line--s { width: 45%; opacity: 0.32; background: var(--m-acc); }
+.mkt-mock__foot { height: 5%; flex: none; margin-top: 3.5%; background: var(--m-ink); }
+/* 1: original modern: white, black bar, bold, square */
+.mkt-mock[data-look="1"] .mkt-mock__bar { background: #0a0a0b; color: #fff; }
+.mkt-mock[data-look="1"] .mkt-mock__hero { margin-top: 0; margin-left: 0; margin-right: 0; height: 40%; }
+.mkt-mock[data-look="1"] .mkt-mock__title { text-transform: uppercase; font-weight: 700; }
+/* 2: Pebble: soft cream, rounded, floating header, pastel tiles */
+.mkt-mock[data-look="2"] { --m-bg: #fbf7f1; --m-ink: #2b2420; --m-soft: #f0e6da; --m-acc: #e0703f; --m-rad: 14px; }
+.mkt-mock[data-look="2"] .mkt-mock__bar { margin: 3.5% 5% 3%; padding: 2.6% 4%; background: #fff; border-radius: 999px; box-shadow: 0 4px 14px rgb(43 36 32 / 0.08); }
+.mkt-mock[data-look="2"] .mkt-mock__btn { border-radius: 999px; background: #e0703f; color: #fff; }
+.mkt-mock[data-look="2"] .mkt-mock__cell:nth-child(2n) .mkt-mock__img { background: #e6ecdf; }
+.mkt-mock[data-look="2"] .mkt-mock__cell:nth-child(3n) .mkt-mock__img { background: #f3dfe0; }
+.mkt-mock[data-look="2"] .mkt-mock__foot { border-radius: 14px 14px 0 0; margin-left: 5%; margin-right: 5%; background: #2b2420; }
+/* 3: Eurus: botanical olive, serif accent, pill buttons */
+.mkt-mock[data-look="3"] { --m-bg: #f5f2ea; --m-ink: #2f3a26; --m-soft: #e3e3d3; --m-acc: #6b7a4b; --m-rad: 4px; --m-font: Georgia, "Times New Roman", serif; }
+.mkt-mock[data-look="3"] .mkt-mock__bar { border-bottom: 1px solid rgb(47 58 38 / 0.18); font-family: var(--pal-font-display); }
+.mkt-mock[data-look="3"] .mkt-mock__title { font-style: italic; font-weight: 400; font-size: clamp(0.9rem, 0.6rem + 1vw, 1.35rem); }
+.mkt-mock[data-look="3"] .mkt-mock__btn { border-radius: 999px; background: #f5f2ea; color: #2f3a26; }
+.mkt-mock[data-look="3"] .mkt-mock__hero { margin-top: 3%; }
+.mkt-mock[data-look="3"] .mkt-mock__foot { background: #2f3a26; }
+

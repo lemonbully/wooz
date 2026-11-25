@@ -1,0 +1,75 @@
+{% extends "community/_base.html" %}
+{% load ask_tags %}
+
+{% block ask_main %}
+<section class="ask-body ask-body--thread">
+  <div class="pal-container">
+    <header class="ask-profile">
+      {% include "community/_avatar.html" with m=person size="lg" tag="" %}
+      <div class="ask-profile__id">
+        <h1 class="ask-profile__name">{{ person.display_name }} <span class="ask-level{% if person.is_team %} ask-level--team{% endif %}">{{ person.level }}</span></h1>
+        <p class="ask-profile__meta">
+          @{{ person.handle }} · member since {{ person.created_at|date:"M Y" }}
+          {% if not person.is_banned %}{% if person.safe_website %} · <a class="pal-link" href="{{ person.safe_website }}" rel="nofollow ugc noopener noreferrer" target="_blank" title="{{ person.website_label }}">{{ person.site_label }}</a>{% elif person.brand_name %} · {{ person.brand_name }}{% endif %}{% endif %}
+          {% if person.store_url and not person.is_team %} · Runs <a class="pal-link" href="{{ person.store_url }}" rel="nofollow noopener" target="_blank">{{ person.store_name|default:"a store" }}</a> on OneWooz{% endif %}
+        </p>
+        {% if person.bio %}<p class="ask-profile__bio">{{ person.bio }}</p>{% endif %}
+      </div>
+      {# A link, so it still works without JavaScript; _js.html opens the popup in place. #}
+      {% if is_me %}<a class="pal-btn pal-btn--ghost ask-btn-sm ask-profile__edit" href="{{ person.get_absolute_url }}?edit=1" data-dlg-open="ask-edit-profile" aria-haspopup="dialog">Edit profile</a>{% endif %}
+    </header>
+
+    <dl class="ask-stats">
+      <div><dt>Answers</dt><dd>{{ person.answer_count }}</dd></div>
+      <div><dt>Accepted</dt><dd>{{ person.accepted_count }}</dd></div>
+      <div><dt>Reputation</dt><dd>{{ person.reputation }}</dd></div>
+      <div><dt>Questions</dt><dd>{{ person.question_count }}</dd></div>
+    </dl>
+
+    <div class="ask-layout ask-layout--profile">
+      <aside class="ask-side ask-side--left" aria-label="Strengths">
+        <p class="ask-side__label">Strong in</p>
+        {% for s in strengths %}
+          <div class="ask-bar-row"><span>{{ s.question__topic__name }}</span><span class="ask-meter" aria-hidden="true"><i style="width:{{ s.pct }}%"></i></span></div>
+        {% empty %}
+          <p class="ask-side__small">Answers will show strengths here.</p>
+        {% endfor %}
+        {% if not person.is_team %}
+        <p class="ask-side__label ask-mt">Levels</p>
+        <p class="ask-levels">{% for name in levels %}<span{% if name == person.level %} class="is-on"{% endif %}>{{ name }}</span>{% endfor %}</p>
+        <p class="ask-side__small">Earned from upvotes and accepted answers.</p>
+        {% endif %}
+      </aside>
+
+      <div class="ask-main">
+        <h2 class="ask-section-title">Recent answers</h2>
+        <div class="ask-list">
+          {% for a in answers %}
+            <a class="ask-mini" href="{{ a.question.get_absolute_url }}#a-{{ a.pk }}">
+              <span class="ask-mini__title">{{ a.question.title }}</span>
+              <span class="ask-mini__meta">{% if a.question.topic %}{{ a.question.topic.name }} · {% endif %}{{ a.created_at|ago }}{% if a.is_accepted %} · <span class="ask-accepted">Accepted</span>{% endif %}</span>
+              <span class="ask-mini__score">↑ {{ a.score }}</span>
+            </a>
+          {% empty %}
+            <p class="ask-empty__small">No answers yet.</p>
+          {% endfor %}
+        </div>
+
+        {% if questions %}
+        <h2 class="ask-section-title">Questions asked</h2>
+        <div class="ask-list">
+          {% for q in questions %}
+            <a class="ask-mini" href="{{ q.get_absolute_url }}">
+              <span class="ask-mini__title">{{ q.title }}</span>
+              <span class="ask-mini__meta">{% if q.topic %}{{ q.topic.name }} · {% endif %}{{ q.answer_count }} answer{{ q.answer_count|pluralize }} · {{ q.created_at|ago }}</span>
+              <span class="ask-mini__score">↑ {{ q.score }}</span>
+            </a>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% if is_me %}{% include "community/_profile_edit.html" %}{% endif %}
+{% endblock %}

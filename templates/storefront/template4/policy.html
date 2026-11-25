@@ -1,42 +1,42 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Policies | velora</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@300;400;600&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/theme.css">
-</head>
-<body>
-<div data-header></div>
+{% extends "storefront/template4/_base.html" %}
+{% block main %}
 <main class="container">
-  <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span class="sep">/</span><span>Policies</span><span class="sep">/</span><span data-crumb></span></nav>
-  <div class="page-head"><h1 class="h1" data-title></h1><p class="small" data-updated>Last updated on November 01, 2026</p></div>
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'public_website' %}">Home</a><span class="sep">/</span><span>Policies</span><span class="sep">/</span><span data-crumb></span></nav>
+  <div class="page-head"><h1 class="h1" data-title>{{ page_title }}</h1><p class="small" data-updated></p></div>
   <div class="policy-layout">
     <nav class="policy-nav" data-nav aria-label="Policies"></nav>
     <article class="prose" data-body style="max-width:760px"></article>
   </div>
 </main>
-<div data-footer></div>
-<script src="assets/js/data.js"></script>
-<script>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ csp_nonce }}">
 window.T3Page = function () {
-  const $ = T3.$;
-  const P = {
-    refund: ['Refund & Return Policy', `<p>We want you to love what you ordered. If something is not right, you can return or exchange it within <b>15 days of delivery</b>.</p><h2>Eligibility</h2><ul><li>Items must be unworn, unwashed and have original tags attached.</li><li>Innerwear, socks and items marked final sale cannot be returned.</li><li>Delivered orders can be replaced for a different size at no cost.</li></ul><h2>How to raise a return</h2><p>Go to <b>My Account → Orders</b>, choose the item and select Return or Replace. A pickup is scheduled within 48 hours.</p><h2>Refund timelines</h2><p>Prepaid orders are refunded to the original payment method within 5 to 7 working days of the pickup. COD orders are refunded as store credit instantly, or to a bank account within 7 working days.</p>`],
-    shipping: ['Shipping Policy', `<p>We ship across India from our Mumbai and Kochi warehouses.</p><h2>Delivery times</h2><ul><li>Metro cities: 2 to 4 working days</li><li>Rest of India: 4 to 7 working days</li><li>Express: next day in Mumbai, Delhi NCR, Bengaluru and Pune</li></ul><h2>Charges</h2><p>Standard shipping is free on orders above ₹2,999. Below that, a flat ₹99 applies. Cash on Delivery carries a ₹49 handling fee.</p><h2>Tracking</h2><p>You receive a tracking link on email and WhatsApp as soon as your parcel leaves our warehouse.</p>`],
-    privacy: ['Privacy Policy', `<p>Your privacy matters to us. This policy explains what we collect and why.</p><h2>What we collect</h2><ul><li>Contact details you share at checkout</li><li>Order history and saved addresses</li><li>Anonymous browsing analytics to improve the store</li></ul><h2>How we use it</h2><p>Only to process orders, provide support and, with your consent, send offers. We never sell your data.</p><h2>Your rights</h2><p>You can download or delete your data at any time from your account, or by writing to our grievance officer.</p>`],
-    terms: ['Terms & Conditions', `<p>By using this website you agree to these terms.</p><h2>Pricing</h2><p>All prices are in Indian Rupees and inclusive of GST. We reserve the right to correct pricing errors before dispatch.</p><h2>Orders</h2><p>An order is confirmed once you receive a confirmation email. We may cancel orders that appear fraudulent, with a full refund.</p><h2>Governing law</h2><p>These terms are governed by the laws of India, with courts in Mumbai having exclusive jurisdiction.</p>`],
-    care: ['Usage Guide', `<p>Get the most from every formula.</p><h2>Patch test</h2><p>Apply a small amount behind the ear for 24 hours before first use.</p><h2>Layering</h2><p>Thinnest to thickest: toner, serum, moisturiser, then SPF in the morning.</p><h2>Storage</h2><p>Keep away from direct sunlight and use within 12 months of opening.</p>`],
+  const D = T3, $ = T3.$, esc = T3.esc, L = D.urls, C = D.contact || {};
+  const P = D.page.policy || { key: '', title: D.page.title || 'Policy', html: '' };
+  const brand = esc(D.brand);
+  const mail = C.email ? `<a href="mailto:${esc(C.email)}">${esc(C.email)}</a>` : `our <a href="${L.contact}">contact page</a>`;
+  /* Shown only while the owner has not written this policy yet. */
+  const FALLBACK = {
+    privacy: `<p>${brand} respects your privacy. We collect only the information needed to process your orders and support you, and we never sell your personal data.</p><h2>What we collect</h2><ul><li>Contact details you share at checkout</li><li>Order history and saved addresses</li><li>Anonymous browsing analytics to improve the store</li></ul><h2>Your rights</h2><p>You can ask us to update or delete your data at any time.</p>`,
+    terms: `<p>By browsing ${brand} or placing an order, you agree to these terms.</p><h2>Pricing</h2><p>All prices are shown in ${esc(D.currency || 'INR')} and include applicable taxes unless stated otherwise.</p><h2>Orders</h2><p>An order is confirmed once you receive a confirmation email.</p>`,
+    refund: `<p>If something is not right with your order, here is how cancellations, returns and refunds work at ${brand}.</p><h2>Returns</h2><p>Eligible items can be returned as described on each product page.</p><h2>Refunds</h2><p>Refunds are issued to the original payment method once the return is received.</p>`,
+    shipping: `<p>Orders are processed and shipped as quickly as possible. Tracking details are shared as soon as your order leaves us.</p>`,
   };
-  const k = P[T3.qs('type')] ? T3.qs('type') : 'refund';
-  document.title = `${P[k][0]} | velora`;
-  $('[data-crumb]').textContent = P[k][0]; $('[data-title]').textContent = P[k][0];
-  $('[data-body]').innerHTML = P[k][1] + `<blockquote>Questions? Write to hello@velora.example or call +91 22 4000 1200.</blockquote>`;
-  $('[data-nav]').innerHTML = Object.entries(P).map(([key, v]) => `<a href="policy.html?type=${key}" class="${key === k ? 'is-active' : ''}">${v[0]}</a>`).join('');
+  const key = (P.key || '').split(':')[0];
+  $('[data-crumb]').textContent = P.title; $('[data-title]').textContent = P.title;
+  let html = P.html || FALLBACK[key] || '<p>This policy will be published soon.</p>';
+  const RT = P.returnTerms;
+  if (RT) {
+    const grp = (t, items, label) => items && items.length ? `<h2>${t}</h2><ul>${items.map(i => `<li>${esc(i.title)}${i.days ? ` (${esc(label.replace('{d}', i.days))})` : ''}</li>`).join('')}</ul>` : '';
+    html += grp('Returnable products', RT.returnable, '{d} day return') + grp('Replacement only', RT.replacement, '{d} day replacement') + grp('Non-returnable products', RT.non_returnable, 'replacement within {d} days');
+  }
+  $('[data-body]').innerHTML = html + `<blockquote>Questions? Write to ${mail}${C.phone ? ` or call ${esc(C.phone)}` : ''}.</blockquote>`;
+  const nav = [[L.policy.refund, 'Refund & Return Policy', 'refund'], [L.policy.shipping, 'Shipping Policy', 'shipping'], [L.policy.privacy, 'Privacy Policy', 'privacy'], [L.policy.terms, 'Terms & Conditions', 'terms']]
+    .concat((D.customPolicies || []).map(cp => [cp.url, cp.title, '']));
+  $('[data-nav]').innerHTML = nav.map(([h, t, k]) => `<a href="${h}" class="${(k && k === key) || (!k && location.pathname === h) ? 'is-active' : ''}">${esc(t)}</a>`).join('');
+  $('[data-updated]').hidden = true;
 };
 </script>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+{% endblock %}

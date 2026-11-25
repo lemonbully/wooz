@@ -1,0 +1,96 @@
+{% extends "community/_base.html" %}
+{% load ask_tags %}
+
+{% comment %}
+Team desk: queue on the left, the selected thread on the right, answer box
+with an AI draft. Keyboard: J/K move, A answer, / filter, Ctrl+Enter post.
+{% endcomment %}
+
+{% block ask_main %}
+<section class="ask-desk" data-desk data-prev="{{ prev_url }}" data-next="{{ next_url }}">
+  <div class="pal-container">
+    <header class="ask-desk__head">
+      <h1 class="ask-desk__title">Team desk</h1>
+      <p class="ask-desk__keys"><kbd>J</kbd> <kbd>K</kbd> move · <kbd>A</kbd> answer · <kbd>/</kbd> filter · <kbd>Ctrl</kbd> <kbd>Enter</kbd> post</p>
+    </header>
+
+    <div class="ask-desk__panes">
+      <div class="ask-desk__queue">
+        <nav class="ask-desk__tabs" aria-label="Queue">
+          {% for key, label in desk_tabs %}
+            {% with tab_url=tab_urls|get_item:key n=counts|get_item:key %}
+            <a href="{{ tab_url }}"{% if key == tab %} aria-current="page"{% endif %}>{{ label }}{% if n %} <span class="ask-count">{{ n }}</span>{% endif %}</a>
+            {% endwith %}
+          {% endfor %}
+        </nav>
+        <form method="get" class="ask-desk__filter" role="search">
+          <input type="hidden" name="tab" value="{{ tab }}">
+          <label class="sr-only" for="desk-s">Filter by title</label>
+          <input id="desk-s" name="s" value="{{ search }}" placeholder="Filter by title" autocomplete="off" data-desk-filter>
+        </form>
+        <ul class="ask-desk__list">
+          {% for it in items %}
+            <li>
+              <a href="{{ it.url }}" class="ask-desk__item{% if current and it.q.pk == current.pk %} is-on{% endif %}"{% if current and it.q.pk == current.pk %} aria-current="true"{% endif %}>
+                <span class="ask-desk__itemt">{{ it.q.title }}</span>
+                <span class="ask-desk__itemm">{{ it.q.created_at|ago }}{% if it.q.topic %} · {{ it.q.topic.name }}{% endif %} · {{ it.q.answer_count }} ans{% if it.q.report_count %} · <span class="ask-waiting">{{ it.q.report_count }} report{{ it.q.report_count|pluralize }}</span>{% endif %}</span>
+              </a>
+            </li>
+          {% empty %}
+            <li class="ask-desk__empty">Nothing in this queue. Nice work.</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="ask-desk__pane">
+        {% if current %}
+          <p class="ask-eyebrow">{% if current.topic %}{{ current.topic.name }} · {% endif %}asked by <a href="{{ current.author.get_absolute_url }}">{{ current.author.display_name }}</a> · {{ current.created_at|ago }} · ↑ {{ current.score }}</p>
+          <h2 class="ask-desk__q"><a href="{{ current.get_absolute_url }}" target="_blank" rel="noopener">{{ current.title }}</a></h2>
+          {% if current_html %}<div class="ask-text pal-rte">{{ current_html }}</div>{% endif %}
+
+          {% if ai_html %}
+          <details class="ask-ai">
+            <summary><span class="ask-ai__mark" aria-hidden="true"></span>Instant AI answer the asker saw <span class="ask-ai__hint">Show</span></summary>
+            <div class="ask-text pal-rte">{{ ai_html }}</div>
+          </details>
+          {% endif %}
+
+          {% if answers %}
+          <div class="ask-desk__answers">
+            <p class="ask-front__label">{{ answers|length }} answer{{ answers|length|pluralize }} so far</p>
+            {% for a in answers %}
+              <div class="ask-desk__answer{% if a.is_accepted %} is-accepted{% endif %}">
+                <p class="ask-desk__answerby">{{ a.author.display_name }}{% if a.author.is_team %} · OneWooz team{% endif %} · ↑ {{ a.score }}{% if a.is_accepted %} · <span class="ask-accepted">Accepted</span>{% endif %}</p>
+                <div class="ask-text pal-rte">{{ a.html }}</div>
+              </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <form method="post" action="{% url 'ask:answer_create' current.slug %}" class="ask-desk__compose" data-desk-compose>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next_url|default:here_url }}">
+            <div class="ask-desk__suggest" data-suggest-box data-url="{{ suggest_url }}">
+              <button type="button" class="pal-btn pal-btn--ghost ask-btn-sm" data-suggest-btn>{% if suggestion %}Use AI draft again{% else %}Draft with AI{% endif %}</button>
+              <span class="ask-desk__suggestnote" data-suggest-status>{% if suggestion %}A draft is ready. It fills the box when you click.{% else %}Writes a draft from your Ask prompt. Edit before posting.{% endif %}</span>
+              {% if suggestion %}<template data-suggest-ready>{{ suggestion.text }}</template>{% endif %}
+            </div>
+            <label class="sr-only" for="desk-answer">Your answer</label>
+            <textarea id="desk-answer" name="body" class="pal-textarea ask-compose__input" rows="7" maxlength="5000" required data-autosize data-desk-answer
+                      placeholder="Answer as the OneWooz team. Be specific: where the setting is, what to click, what it costs."></textarea>
+            <div class="ask-compose__row">
+              <p class="ask-compose__note">Posting as {{ member.display_name }} · OneWooz team{% if next_url %} · then the next question{% endif %}</p>
+              <button type="submit" class="pal-btn" data-busy-label="Posting">Post answer <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></button>
+            </div>
+          </form>
+        {% else %}
+          <div class="ask-empty">
+            <p class="ask-empty__title">Pick a question from the queue.</p>
+            <p>Or switch queues above.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

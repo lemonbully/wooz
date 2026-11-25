@@ -11,7 +11,7 @@
   "containerDefinitions": [
     {
       "name": "web",
-      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app@sha256:9dbe9195556b37004007c502615b5b9b81932219084940b3b86044fa09eb8207",
+      "image": "521831014282.dkr.ecr.ap-south-1.amazonaws.com/onewooz-app@sha256:c02947a5efb43b01dc5505e426da03e65d06e1b0fd0ebb41681a781a17bbdec7",
       "essential": true,
       "command": [
         "web"
@@ -78,7 +78,7 @@
         },
         {
           "name": "ONEWOOZ_CUSTOM_DOMAIN_A_RECORDS",
-          "value": "15.252.174.7"
+          "value": "15.252.174.7,65.1.60.159"
         },
         {
           "name": "ONEWOOZ_PLATFORM_CASHFREE_SANDBOX",
@@ -119,6 +119,18 @@
         {
           "name": "ONEWOOZ_REFERRAL_FROM_EMAIL",
           "value": "no-reply@myugcstore.com"
+        },
+        {
+          "name": "ONEWOOZ_MARKETPLACE_QUEUE",
+          "value": "marketplace"
+        },
+        {
+          "name": "ONEWOOZ_MEDIA_QUEUE",
+          "value": "media"
+        },
+        {
+          "name": "ONEWOOZ_MEDIA_CDN_DISTRIBUTION_ID",
+          "value": "ESZR5GF8XLQJF"
         }
       ],
       "secrets": [

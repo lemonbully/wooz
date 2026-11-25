@@ -1,0 +1,20 @@
+{% extends "ud/_shell.html" %}
+{% block title %}Remove {{ app.name }} · OneWooz{% endblock %}
+{% block crumb %}Apps{% endblock %}
+
+{% block main %}
+<div class="app-page">
+  <div class="app-empty app-block">
+    <h1 class="app-empty__title">Remove {{ app.name }}?</h1>
+    <p class="app-empty__text">
+      It disappears from your dashboard and from all your stores within seconds. Your settings and licence are kept,
+      so you can install it again any time without paying again.
+    </p>
+    <form method="post" class="mkt-actions">
+      {% csrf_token %}
+      <button class="pal-btn" type="submit">Remove {{ app.name }}</button>
+      <a class="pal-btn pal-btn--ghost" href="{% url 'mkt_gateway:my_apps' %}">Keep it</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

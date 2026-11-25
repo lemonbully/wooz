@@ -55,6 +55,11 @@ def _record_acceptance(request) -> "UserAgreement | None":
     AgreementAcceptance.objects.create(
         agreement=agreement,
         email=_owner_email(request),
+        user=request.user if getattr(request.user, "is_authenticated", False) else None,
+        source=AgreementAcceptance.Source.RENEWAL,
+        # Signed in to the dashboard: the session, not an emailed code, proves
+        # who accepted here.
+        otp_verified=False,
         ip_address=request.META.get("REMOTE_ADDR") or None,
         user_agent=(request.META.get("HTTP_USER_AGENT") or "")[:400],
     )

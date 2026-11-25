@@ -72,8 +72,69 @@ def renamed_redirect(request, site, kind: str, slug: str):
     return HttpResponsePermanentRedirect(f"{url}?{query}" if query else url)
 
 
+# Template 3 (shown to owners as "Template 2") names its pages after what they
+# are rather than after the reference's file names, and serves D2C and B2B
+# from one set of pages. Map the view-level names onto its files.
+_TEMPLATE3_PAGES = {
+    "home.html": "index.html",
+    "all_products.html": "shop.html",
+    "categories.html": "categories.html",
+    "category_detail.html": "category.html",
+    "product_detail.html": "product.html",
+    "about-us.html": "about.html",
+    "blogs.html": "blogs.html",
+    "blog_detail.html": "blog.html",
+    "enquiry.html": "contact.html",
+    "privacy-policy.html": "policy.html",
+    "terms-conditions.html": "policy.html",
+    "refund-policy.html": "policy.html",
+    "shipping-policy.html": "policy.html",
+    "custom-policy.html": "policy.html",
+    "certificates.html": "certificates.html",
+    "core_page.html": "core_page.html",
+    "core_pages.html": "core_pages.html",
+    "cart.html": "cart.html",
+}
+
+
+#: The designs rendered from the ``window.T3`` data feed (storefront.template3).
+_JS_THEMES = ("template3", "template4")
+
+
+def theme_template(site, name: str) -> str:
+    """The template path for page ``name`` in ``site``'s own design."""
+    tdir = site.template_dir
+    if tdir in _JS_THEMES:
+        # Template 4 (owner-facing "Template 3") shares Template 3's page set.
+        name = _TEMPLATE3_PAGES.get(name, name)
+    return f"storefront/{tdir}/{name}"
+
+
 def _template(site, name: str) -> str:
-    return f"storefront/{site.template_dir}/{name}"
+    return theme_template(site, name)
+
+
+# The shared transactional pages (checkout, account and sign-in, order
+# confirmation) render from storefront/<name> in every theme except Template 3,
+# which has its own designs for them. A UGC collaborator storefront always
+# keeps the shared pages (they sit inside the referral chrome).
+_TEMPLATE3_FLOWS = {
+    "checkout.html": "checkout.html",
+    "account.html": "account.html",
+    "login.html": "login.html",
+    "order_confirmation.html": "order-confirmation.html",
+}
+
+
+def _flow_template(request, site, name: str) -> str:
+    if (
+        site.template_dir in _JS_THEMES
+        and getattr(request, "collaboration", None) is None
+        and name in _TEMPLATE3_FLOWS
+    ):
+        return f"storefront/{site.template_dir}/{_TEMPLATE3_FLOWS[name]}"
+    # The shared account page draws its own sign-in form when signed out.
+    return f"storefront/{'account.html' if name == 'login.html' else name}"
 
 
 def _render(request, name: str, **extra) -> HttpResponse:
@@ -233,12 +294,19 @@ def category_detail(request, category_slug):
     qs = _active_products(request, site).filter(
         Q(category=category) | Q(categories=category)
     ).distinct()
+    extra = {}
+    # A category with no live products is thin content ("No products in this
+    # category yet"): keep it out of search until it has something to sell. It
+    # is also left out of the sitemap (storefront.seo).
+    if not qs.exists():
+        extra["noindex"] = True
     return _render(
         request,
         "category_detail.html",
         page_title=category.name,
         category=category,
         products=proxy_products(qs, request, site),
+        **extra,
     )
 
 
@@ -284,7 +352,10 @@ def _build_product_video(product):
             "thumb_url": f"https://img.youtube.com/vi/{yt_id}/hqdefault.jpg",
             "orientation": ori,
         }
-    return {"type": "file", "url": raw, "embed_url": "", "thumb_url": "", "orientation": ori}
+    # An uploaded file saved as a raw S3 URL plays from the CDN instead.
+    from core.cdn import cdn_url
+
+    return {"type": "file", "url": cdn_url(raw), "embed_url": "", "thumb_url": "", "orientation": ori}
 
 
 def default_product_faqs(site) -> list:
@@ -541,7 +612,9 @@ def core_pages_index(request):
         for p in ((site.content or {}).get("core_pages") or [])
         if isinstance(p, dict) and p.get("slug") and p.get("title")
     ]
-    ctx = build_context(request, site, page_title="Pages", pages=pages)
+    # A hub with no pages is thin content: keep it out of search until it has some.
+    extra = {} if pages else {"noindex": True}
+    ctx = build_context(request, site, page_title="Guides and resources", pages=pages, **extra)
     return render(request, _template(site, "core_pages.html"), ctx)
 
 
@@ -556,8 +629,45 @@ def terms_conditions(request):
     return _render(request, "terms-conditions.html", page_title="Terms & conditions")
 
 
+def _return_terms(request, site) -> dict | None:
+    """Products grouped by their own return terms, for the Returns & Refunds
+    page (storefront/shared/_return_terms.html). Uses the exact properties the
+    product page badge and MerchantReturnPolicy markup use, so the three always
+    agree. None when no product sets its own terms (the general policy covers
+    everything)."""
+    rt = Product.ReturnType
+    groups = {"non_returnable": [], "replacement": [], "returnable": []}
+    rows = (
+        _active_products(request, site)
+        .order_by()
+        .only("id", "title", "slug", "return_type", "return_days", "replacement_days", "trusted_icons")
+    )
+    for product in rows:
+        slug = (product.slug or "").strip()
+        kind = product.effective_return_type
+        if not slug or not kind:
+            continue
+        if kind == rt.NON_RETURNABLE:
+            days = product.effective_replacement_days
+        else:
+            days = product.effective_return_days
+        groups.get(str(kind), []).append({"title": product.title, "slug": slug, "days": days})
+    if not any(groups.values()):
+        return None
+    for items in groups.values():
+        items.sort(key=lambda p: (p["title"] or "").lower())
+    groups["has_replacement_window"] = any(p["days"] for p in groups["non_returnable"])
+    return groups
+
+
 def refund_policy(request):
-    return _render(request, "refund-policy.html", page_title="Refund policy")
+    site = _site_or_404(request)
+    return _render(
+        request,
+        "refund-policy.html",
+        page_title="Refund policy",
+        return_terms=_return_terms(request, site),
+    )
 
 
 def shipping_policy(request):
@@ -603,6 +713,28 @@ def robots_txt(request):
         # may treat as "disallow everything".
         body = "User-agent: *\nAllow: /\n"
     return HttpResponse(body, content_type="text/plain; charset=utf-8")
+
+
+def llms_txt(request):
+    """``/llms.txt``: the store's AI-generated guide for answer engines. Served
+    only on its verified custom domain, and only once it has been generated
+    (see prompts.llms_txt for the content it needs first); otherwise a 404."""
+    site = _site_or_404(request)
+    from . import seo
+
+    if not getattr(request, "is_custom_domain", False) or not seo._indexable(site):
+        raise Http404("No llms.txt for this store.")
+    try:
+        from prompts.llms_txt import published_body
+
+        body = published_body(site)
+    except Exception:
+        body = ""
+    if not body:
+        raise Http404("No llms.txt for this store.")
+    response = HttpResponse(body, content_type="text/plain; charset=utf-8")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
 
 
 def sitemap_xml(request):
@@ -667,6 +799,51 @@ def favicon(request):
 # -- enquiry / contact -----------------------------------------------------
 
 
+def _valid_ids(values) -> list[str]:
+    """The well-formed UUIDs among ``values`` (anything else is dropped, so a
+    tampered field can never raise on the lookup)."""
+    import uuid
+
+    out = []
+    for v in values:
+        try:
+            out.append(str(uuid.UUID(str(v).strip())))
+        except (ValueError, AttributeError, TypeError):
+            continue
+    return out
+
+
+def _enquiry_products(request, site) -> list:
+    """The store's live products an enquiry is about: ``product_id`` (product
+    page / contact forms) and ``products`` (the homepage multi-select)."""
+    ids = _valid_ids([request.POST.get("product_id") or ""] + request.POST.getlist("products"))
+    if not ids:
+        return []
+    return list(_active_products(request, site).filter(pk__in=ids[:50]).order_by())
+
+
+def _enquiry_needs_message(request, site, products) -> str:
+    """The message for a "Discuss your needs" enquiry: the categories and
+    products picked and the quantity, one per line. "" when nothing was picked."""
+    lines = []
+    cat_ids = _valid_ids(request.POST.getlist("categories"))
+    if cat_ids:
+        names = list(
+            Category.objects.for_site(site)
+            .filter(pk__in=cat_ids[:50], is_deleted=False)
+            .order_by()
+            .values_list("name", flat=True)
+        )
+        if names:
+            lines.append("Categories: " + ", ".join(sorted(names)))
+    if products:
+        lines.append("Products: " + ", ".join(sorted(p.title for p in products)))
+    qty = (request.POST.get("quantity") or "").strip()[:12]
+    if qty:
+        lines.append(f"Quantity: {qty}")
+    return "\n".join(lines) if (qty or products or cat_ids) else ""
+
+
 @require_http_methods(["GET", "POST"])
 def enquiry(request):
     site = _site_or_404(request)
@@ -694,11 +871,42 @@ def enquiry(request):
                 return JsonResponse({"status": "error", "message": msg}, status=400)
             return _render(request, "enquiry.html", page_title="Contact", enquiry_error=msg)
 
+        # Google reCAPTCHA (Edit Content > Contact): when the store has its
+        # keys set, EVERY enquiry must carry a token Google confirms. Every
+        # storefront form that posts here renders the checkbox
+        # (storefront/_recaptcha.html + _recaptcha_loader.html), so there is
+        # no unprotected way in. See storefront.recaptcha.
+        from . import recaptcha
+
+        if recaptcha.enabled(site):
+            ok, msg = recaptcha.verify(
+                site, request.POST.get("g-recaptcha-response", ""), identity
+            )
+            if not ok:
+                if ajax:
+                    return JsonResponse({"status": "error", "message": msg, "captcha": True}, status=400)
+                return _render(request, "enquiry.html", page_title="Contact", enquiry_error=msg)
+
         name = (request.POST.get("name") or "").strip()[:100]
         email = (request.POST.get("email") or "").strip()[:254]
-        mobile = (request.POST.get("mobile_number") or request.POST.get("phone") or "").strip()[:20]
+        # ``mobile`` is what the catalogue homepage's "Discuss your needs"
+        # form (template1) sends; the contact forms send ``mobile_number``.
+        mobile = (
+            request.POST.get("mobile_number") or request.POST.get("phone")
+            or request.POST.get("mobile") or ""
+        ).strip()[:20]
         subject = (request.POST.get("subject") or "").strip()[:200]
         message = (request.POST.get("message") or "").strip()
+
+        # "Discuss your needs" sends no message of its own, only what the buyer
+        # picked: categories, products and a quantity. Write that up as the
+        # message (and a subject) so the enquiry is accepted and reads clearly
+        # in the owner's Enquiries inbox.
+        picked_products = _enquiry_products(request, site)
+        if not message:
+            message = _enquiry_needs_message(request, site, picked_products)
+            if message and not subject:
+                subject = "Bulk enquiry from the homepage"
 
         if not (name or email or mobile) or not message:
             msg = "Please add your contact details and a message."
@@ -715,11 +923,8 @@ def enquiry(request):
             message=message,
         )
 
-        product_id = request.POST.get("product_id")
-        if product_id:
-            product = _active_products(request, site).filter(pk=product_id).first()
-            if product is not None:
-                obj.products.add(product)
+        if picked_products:
+            obj.products.add(*picked_products)
 
         from commerce import activity
 
@@ -1108,6 +1313,23 @@ def cart_add(request, product_id):
         )
     qty = min(qty, left - in_cart)
 
+    # Quantity Discounts app: the owner may cap units per order ("don't sell
+    # more than N" / "talk to us above N"). The cart caps too; this explains it.
+    from commerce import quantity_pricing as qp
+
+    room, qplan = qp.allowed_more(site, product, cart.data, variant_key)
+    if room is not None:
+        if room <= 0:
+            msg = f"You can order up to {qplan.max_qty} of this item online."
+            if qplan.beyond in ("whatsapp", "custom"):
+                msg += " Contact the store for a bulk price."
+            if _is_ajax(request):
+                return JsonResponse({"ok": False, "error": msg, "quantity_limit": True}, status=409)
+            return HttpResponseRedirect(
+                reverse("public_product_detail", kwargs={"product_slug": product.slug})
+            )
+        qty = min(qty, room)
+
     cart.add(product.pk, qty, variant_key=variant_key, attributes=variant_attrs)
     buy_now = bool(request.GET.get("buy") or request.POST.get("buy"))
     if _is_ajax(request):
@@ -1150,6 +1372,10 @@ def _cart_drawer_json(cart, site, request=None) -> dict:
             "in_stock": it.get("in_stock", True),
             "available": it.get("available"),
             "short": it.get("short", False),
+            # Extra fields the Template 3 drawer reads (others ignore them).
+            "pid": str(getattr(it.get("product"), "pk", "") or ""),
+            "mrp": str(it["mrp"]) if it.get("mrp") else "",
+            "image_fallback": "" if it["image"] else _demo_product_image(it.get("product")),
         })
     s = cart.summary()
     if request is not None:
@@ -1165,8 +1391,21 @@ def _cart_drawer_json(cart, site, request=None) -> dict:
             "total": str(s["total"]),
             "credit_discount": str(s.get("credit_discount", "0")),
             "total_before_credit": str(s.get("total_before_credit", s["total"])),
+            "coupon_code": s.get("coupon_code") or "",
+            "free_shipping": bool(s.get("free_shipping", False)),
         },
     }
+
+
+def _demo_product_image(product) -> str:
+    """The reference photo a product without uploads shows everywhere else
+    (ProductProxy.image1), so a cart line is never imageless."""
+    if product is None:
+        return ""
+    try:
+        return ProductProxy(product).image1.url or ""
+    except Exception:
+        return ""
 
 
 def cart_data(request):
@@ -1202,6 +1441,11 @@ def cart_view(request):
     # D2C has no standalone cart page  the cart is the slide-out drawer in the
     # nav. Any hit on /cart/ (a bookmark, a JS-disabled click) bounces home with
     # the drawer opened rather than rendering a separate page.
+    # Template 3 has its own cart page (the drawer's "View Cart") for D2C and
+    # B2B alike; it renders from the live cart JSON.
+    if site.template_dir in _JS_THEMES:
+        ctx = build_context(request, site, page_title="Your cart", noindex=True)
+        return render(request, theme_template(site, "cart.html"), ctx)
     if site.is_d2c:
         return HttpResponseRedirect(_cart_landing(site))
     cart = _cart(request, site)
@@ -1211,6 +1455,45 @@ def cart_view(request):
     )
     # Shared template (not per-theme), rendered directly like the core pages.
     return render(request, "storefront/cart.html", ctx)
+
+
+def cart_recover(request, token):
+    """A shopper clicked "Return to your cart" in an abandoned cart reminder.
+
+    That counts as responding: the reminder sequence stops (until they change
+    their cart again), the reminded items are put back into this browser's
+    cart, and they land on the cart. A bad or expired link still lands on the
+    cart, just without restoring anything.
+    """
+    site = _site_or_404(request)
+    from commerce import abandoned_cart
+
+    row = abandoned_cart.read_link(site, token, abandoned_cart.ACTION_OPEN)
+    if row is not None:
+        abandoned_cart.respond(row)
+        abandoned_cart.restore_into(_cart(request, site), row)
+    return HttpResponseRedirect(_cart_landing(site))
+
+
+def cart_reminders_stop(request, token):
+    """"Stop these reminders" from an abandoned cart email.
+
+    A GET only shows a confirm button (mail scanners open links on their own,
+    and must not switch reminders off); the POST stops them.
+    """
+    site = _site_or_404(request)
+    from commerce import abandoned_cart
+
+    row = abandoned_cart.read_link(site, token, abandoned_cart.ACTION_STOP)
+    stopped = False
+    if row is not None and request.method == "POST":
+        abandoned_cart.respond(row, stop=True)
+        stopped = True
+    ctx = build_context(
+        request, site, page_title="Cart reminders", noindex=True,
+        reminder_link_ok=row is not None, reminders_stopped=stopped,
+    )
+    return render(request, "storefront/cart_reminders_stop.html", ctx)
 
 
 @require_POST
@@ -1373,7 +1656,7 @@ def checkout(request):
         prefill=prefill,
         address_book=address_book,
     )
-    return render(request, "storefront/checkout.html", ctx)
+    return render(request, _flow_template(request, site, "checkout.html"), ctx)
 
 
 @require_POST
@@ -1804,6 +2087,12 @@ def account_verify_otp(request):
     email = (request.POST.get("email") or "").strip()
     code = (request.POST.get("otp") or request.POST.get("code") or "").strip()
     if verify_challenge(request, email, code):
+        # Items added before signing in now belong to a known shopper: start
+        # the abandoned cart reminders for them (when the store opted in).
+        try:
+            _cart(request, site).track_signed_in()
+        except Exception:
+            logger.exception("abandoned cart: sign-in tracking failed")
         return JsonResponse({"success": True, "redirect": reverse("public_user_account")})
     return JsonResponse({"success": False, "error": "That code is incorrect or has expired."}, status=400)
 
@@ -1899,7 +2188,11 @@ def user_account(request):
         orders_count=orders_count,
         account_first_name=first_name,
     )
-    return render(request, "storefront/account.html", ctx)
+    return render(
+        request,
+        _flow_template(request, site, "account.html" if email else "login.html"),
+        ctx,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -2284,7 +2577,7 @@ def order_confirmation(request, order_id):
         confirm_steps=_confirmation_steps(order),
         confirm_first_name=((order.customer_name or "").strip().split() or [""])[0],
     )
-    return render(request, "storefront/order_confirmation.html", ctx)
+    return render(request, _flow_template(request, site, "order_confirmation.html"), ctx)
 
 
 def _attach_item_thumbs(site, items) -> None:

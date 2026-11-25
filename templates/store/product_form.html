@@ -1,4 +1,5 @@
 {% extends "store/_shell.html" %}
+{% load marketplace_points %}
 {% load store_extras %}
 {% block title %}{{ site.name }} · {% if is_edit %}Edit product{% else %}New product{% endif %}{% endblock %}
 {% block crumb %}{% if is_edit %}{{ product.title }}{% else %}New product{% endif %}{% endblock %}
@@ -269,6 +270,7 @@
     </form>
   </div>
 </div>
+{% if is_edit %}{% app_point "product_panel" product=product.id %}{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -642,10 +644,10 @@
           body: JSON.stringify({ name: name })
         }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok && d.ok, d: d }; }); })
           .then(function (res) {
-            if (!res.ok) { del.disabled = false; window.alert((res.d && res.d.error) || "Couldn't delete the badge."); return; }
+            if (!res.ok) { del.disabled = false; (window.OWToast ? window.OWToast.error : window.alert)((res.d && res.d.error) || "Couldn't delete the badge."); return; }
             opt.remove(); update(); form.dispatchEvent(new Event("change", { bubbles: true }));
           })
-          .catch(function () { del.disabled = false; window.alert("Couldn't delete the badge. Check your connection."); });
+          .catch(function () { del.disabled = false; (window.OWToast ? window.OWToast.error : window.alert)("Couldn't delete the badge. Check your connection."); });
       });
     }
     Array.prototype.forEach.call(set.querySelectorAll("[data-badge-opt]"), bindDelete);
@@ -1114,7 +1116,7 @@
     if (form.querySelector(".app-imgslot.is-uploading, .app-vc__slot.is-uploading")) {
       e.preventDefault();
       e.stopImmediatePropagation();
-      window.alert("Please wait for the uploads to finish, then save.");
+      (window.OWToast ? window.OWToast.error : window.alert)("Please wait for the uploads to finish, then save.");
     }
   }, true);
 

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oakline | Furniture worth keeping</title>
+<meta name="description" content="Template 5 preview: quiet, gallery-like D2C storefront.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+</head>
+<body data-float="1" data-popup="1">
+<div data-header></div>
+
+<!--
+  Section order follows Template 1's homepage exactly:
+  1 Hero, 2 Categories, 3 Best Sellers, 4 About, 5 Blog, 6 Why Choose Us,
+  7 Testimonials, 8 FAQ, 9 Video (after FAQ by default, or directly below
+  Best Sellers when VIDEO_POSITION is "below_best_sellers").
+-->
+<main>
+  <!-- 1. Hero banner -->
+  <section class="hero" aria-label="Featured" data-hero></section>
+
+  <!-- 2. Categories -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head sec-head--center"><p class="eyebrow">Shop by Room</p><h2 class="h2">Build Your Space</h2></div>
+      <div class="slider" data-slider>
+        <div class="slider__track" data-cat-track style="--col:calc((100% - 3*16px)/4);--col-sm:62%"></div>
+      </div>
+      <div class="grid grid--2 media-grid" style="gap:16px;margin-top:clamp(40px,5vw,72px)" data-media></div>
+    </div>
+  </section>
+
+  <!-- 3. Best sellers -->
+  <section class="section" style="padding-top:0" data-sec-best>
+    <div class="container">
+      <div class="sec-head" style="align-items:center">
+        <div style="display:flex;align-items:baseline;gap:22px;flex-wrap:wrap"><h2 class="h2">Most Loved</h2>
+          <div class="pill-tabs" data-prod-tabs><button class="is-active" data-set="best">All</button><button data-set="new">New</button><button data-set="sale">Sale</button></div></div>
+        <a class="tlink" href="shop.html">Shop All Products <span class="chev" data-ico="right"></span></a>
+      </div>
+      <div class="slider" data-slider>
+        <div class="slider__track" data-best-track style="--col:calc((100% - 3*16px)/4);--col-sm:62%"></div>
+        <div class="slider__foot"><div class="slider__bar"><i></i></div><span class="sec-count" data-best-count></span><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. About -->
+  <section class="section section--alt" data-sec-about>
+    <div class="container about-split">
+      <div class="reveal">
+        <p class="eyebrow">Our Story</p>
+        <h2>Nothing makes the collection until it proves itself comfortable, well made and easy to live with.</h2>
+        <p>We started Oakline in a Jodhpur workshop with one rule: build furniture we would keep for twenty years. Every frame is kiln-dried hardwood, every joint is cut by hand, and every piece is sat on, slept on and lived with before it reaches you.</p>
+        <a href="about.html" class="btn btn--black">Learn More</a>
+        <div class="about-stats" style="margin-top:44px"><div><b>12</b><span>Years of making</span></div><div><b>40</b><span>Cities delivered</span></div><div><b>18K</b><span>Homes furnished</span></div></div>
+      </div>
+      <div class="about-split__media reveal"><img src="" data-src-id="living5" alt="Inside an Oakline living room"></div>
+    </div>
+  </section>
+
+  <!-- 5. Blog -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head sec-head--center"><p class="eyebrow">Blog</p><h2 class="h2">From Our Rooms to Yours</h2><a href="blogs.html" class="btn btn--black">Read More</a></div>
+      <div class="grid grid--4" data-blogs></div>
+    </div>
+  </section>
+
+  <!-- 6. Why choose us -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="sec-head sec-head--center"><p class="eyebrow">Why Oakline</p><h2 class="h2">Made to Stay</h2></div>
+      <div class="features" data-why></div>
+    </div>
+  </section>
+
+  <!-- 7. Testimonials -->
+  <section class="section reviews-sec" style="padding-top:0">
+    <div class="container">
+      <div class="sec-head" style="align-items:center">
+        <h2 class="h2">What Our Customers Say</h2>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="sec-count"><span data-tcur>1</span> / <span data-ttot>5</span></div>
+          <button class="circle-btn" data-tprev aria-label="Previous"></button><button class="circle-btn" data-tnext aria-label="Next"></button>
+        </div>
+      </div>
+      <div class="slider" data-tslider>
+        <div class="slider__track" data-reviews style="--col:calc((100% - 16px)/2);--col-sm:88%"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. FAQ -->
+  <section class="section" id="faq" style="padding-top:0">
+    <div class="container">
+      <div class="sec-head sec-head--center"><p class="eyebrow">Help</p><h2 class="h2">Questions, Answered</h2></div>
+      <div class="faq-wrap">
+        <div class="faq-media reveal"><img src="" data-src-id="chairPlant" alt=""></div>
+        <div data-acc-single data-faqs></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. Video / shoppable reels -->
+  <section class="section" style="padding-top:0" data-sec-reels>
+    <div class="container">
+      <div class="sec-head" style="align-items:center"><h2 class="h2">Seen at Home</h2><a class="tlink" href="shop.html">Shop the Looks <span class="chev" data-ico="right"></span></a></div>
+      <div class="slider" data-slider>
+        <div class="slider__track" data-reels style="--col:calc((100% - 4*16px)/5);--col-sm:62%"></div>
+        <div class="slider__foot"><div class="slider__bar"><i></i></div><button class="circle-btn" data-prev aria-label="Previous"></button><button class="circle-btn" data-next aria-label="Next"></button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div data-footer></div>
+
+<script src="assets/js/data.js"></script>
+<script>
+window.T3Page = function () {
+  const D = T3, I = T3.I, $ = T3.$, $$ = T3.$$;
+  $$('[data-ico]').forEach(e => e.innerHTML = I[e.dataset.ico]);
+  $$('[data-prev]').forEach(e => e.innerHTML = I.left);
+  $$('[data-next]').forEach(e => e.innerHTML = I.right);
+  $$('[data-src-id]').forEach(e => e.src = D.U(D.IMG[e.dataset.srcId], 1400));
+
+  /* Hero: centred light heading, slow image drift, dot pagination */
+  const hero = $('[data-hero]'), N = D.heroSlides.length;
+  hero.innerHTML = D.heroSlides.map((s, i) => `
+    <div class="hero__slide ${i === 0 ? 'is-active' : ''}">
+      <img src="${s.img}" style="object-position:50% ${s.pos}" alt="" ${i ? 'loading="lazy"' : 'fetchpriority="high"'}>
+      <div class="hero__content"><div class="container"><div class="hero__box">
+        ${i === 0 ? '<h1>' : '<h2>'}${s.title}${i === 0 ? '</h1>' : '</h2>'}
+        <p>${s.sub}</p>
+        <div class="hero__ctas"><a href="shop.html" class="btn btn--white">${s.cta}</a></div>
+      </div></div></div>
+    </div>`).join('') + `<div class="hero__bars">${D.heroSlides.map((_, i) => `<button data-go="${i}" aria-label="Slide ${i + 1}"></button>`).join('')}</div>`;
+  let cur = -1, timer; const slides = $$('.hero__slide', hero), bars = $$('.hero__bars button', hero);
+  const go = n => { if (cur >= 0) slides[cur].classList.remove('is-active'); cur = (n + N) % N; slides[cur].classList.add('is-active'); bars.forEach((b, i) => b.classList.toggle('is-active', i === cur)); clearTimeout(timer); timer = setTimeout(() => go(cur + 1), 6500); };
+  bars.forEach(b => b.onclick = () => go(+b.dataset.go)); go(0);
+
+  /* Categories: room tiles, then four large media cards */
+  $('[data-cat-track]').innerHTML = D.categories.map(c => `<a class="cat-card" href="category.html?c=${c.slug}"><div class="cat-card__media"><img src="${D.U(c.img, 600, 800)}" alt="${c.name}" loading="lazy"></div><span class="cat-card__pill">${c.name}</span></a>`).join('');
+  const media = [['bedroom2', 'Bedroom Essentials', 'Wake Up in a Calmer Room', 'bedroom'], ['brownSofa', 'Living Essentials', 'Where Everyone Ends Up', 'sofas'], ['chairPlant', 'Reading Corners', 'Made for Slow Afternoons', 'seating'], ['pendants', 'Light Essentials', 'Set the Mood After Dark', 'lighting']];
+  $('[data-media]').innerHTML = media.map(([k, tag, t, c]) => `<a class="media-card reveal" href="category.html?c=${c}"><img src="${D.U(D.IMG[k], 1200, 750)}" alt="" loading="lazy"><div class="media-card__text"><div><span class="badge badge--light">${tag}</span><h3>${t}</h3></div><span class="media-card__go">${I.right}</span></div></a>`).join('');
+
+  /* Best sellers */
+  const pset = { best: [...D.products].sort((a, b) => b.reviews - a.reviews).slice(0, 12), new: D.products.filter(p => p.badges.includes('new')), sale: D.products.filter(p => p.mrp) };
+  const renderBest = k => { $('[data-best-track]').innerHTML = pset[k].map(p => T3.card(p, { reveal: false })).join(''); $('[data-best-count]').textContent = `1 / ${Math.max(1, Math.ceil(pset[k].length / 4))}`; T3.initReveal($('[data-best-track]')); };
+  renderBest('best');
+  $('[data-prod-tabs]').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('[data-prod-tabs] .is-active').classList.remove('is-active'); b.classList.add('is-active'); renderBest(b.dataset.set); $('[data-best-track]').scrollLeft = 0; });
+  $('[data-best-track]').addEventListener('scroll', e => { const t = e.target, w = t.clientWidth; $('[data-best-count]').textContent = `${Math.min(Math.ceil(t.scrollWidth / w), Math.round(t.scrollLeft / w) + 1)} / ${Math.max(1, Math.ceil(t.scrollWidth / w))}`; }, { passive: true });
+
+  /* Reels (Template 1 position rule) */
+  const VIDEO_POSITION = 'bottom'; /* or 'below_best_sellers' */
+  if (VIDEO_POSITION === 'below_best_sellers') $('[data-sec-best]').after($('[data-sec-reels]'));
+  $('[data-reels]').innerHTML = D.reels.map(r => { const p = T3.byId(r.product); return `<div class="reel">
+      <img src="${r.img}" alt="" loading="lazy"><span class="reel__views">${I.eye} ${r.views}</span><span class="reel__play">${I.play}</span>
+      <a class="reel__product" href="product.html?p=${p.id}"><img src="${p.thumb}" alt=""><span><b>${p.name}</b><small>${T3.inr(p.price)}</small></span></a></div>`; }).join('');
+
+  /* Blog */
+  $('[data-blogs]').innerHTML = D.blogs.slice(0, 4).map(b => `<a class="blog-card reveal" href="blog.html?b=${b.slug}"><div class="blog-card__media"><img src="${b.img}" alt="" loading="lazy"><span class="badge badge--light">${b.tag}</span></div><h3>${b.title}</h3><p>${b.excerpt}</p><span class="tlink">Read Article <span class="chev">${I.right}</span></span></a>`).join('');
+
+  /* Why */
+  $('[data-why]').innerHTML = D.why.map(w => `<div class="feature reveal"><div class="feature__icon">${I[w.icon]}</div><h3>${w.title}</h3><p>${w.text}</p></div>`).join('');
+
+  /* Testimonials */
+  $('[data-reviews]').innerHTML = D.reviews.map(r => { const p = T3.byId(r.product); return `<div class="t-card">
+      <div class="t-card__img"><img src="${r.photo}" alt="" loading="lazy"></div>
+      <div class="t-card__body">${T3.stars(5)}<blockquote>“${r.text}”</blockquote>
+        <div class="t-card__who" style="border:0;padding:0"><img src="${r.avatar}" alt=""><div><b>${r.name}</b><small>${r.city}</small></div></div>
+        <a class="t-card__prod" href="product.html?p=${p.id}"><img src="${p.thumb}" alt=""><span><b>${p.name}</b><span class="small mono">${T3.inr(p.price)}</span></span></a>
+      </div></div>`; }).join('');
+  const tt = $('[data-reviews]'), cards = tt.children.length;
+  $('[data-ttot]').textContent = cards; $('[data-tprev]').innerHTML = I.left; $('[data-tnext]').innerHTML = I.right;
+  const step = () => tt.firstElementChild.getBoundingClientRect().width + 16;
+  $('[data-tprev]').onclick = () => tt.scrollBy({ left: -step() });
+  $('[data-tnext]').onclick = () => tt.scrollBy({ left: step() });
+  tt.addEventListener('scroll', () => { $('[data-tcur]').textContent = Math.min(cards, Math.round(tt.scrollLeft / step()) + 1); }, { passive: true });
+
+  /* FAQ */
+  $('[data-faqs]').innerHTML = D.faqs.map((f, i) => T3.acc(f.q, `<p>${f.a}</p>`, i === 0).replace('class="acc', 'class="acc acc--box')).join('');
+};
+</script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

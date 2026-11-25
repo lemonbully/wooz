@@ -1,0 +1,28 @@
+{% extends "community/_base.html" %}
+
+{% comment %}
+A one-message page (digest confirmed, unsubscribe, answer emails off). With
+form_action + button it asks first and acts on POST, so link scanners that
+open emailed links change nothing.
+{% endcomment %}
+
+{% block ask_main %}
+<section class="ask-body ask-body--thread">
+  <div class="pal-container ask-narrow">
+    <p class="ask-eyebrow"><a href="{% url 'ask:ask_home' %}">Ask OneWooz</a></p>
+    <h1 class="ask-pagehead__title">{{ title }}</h1>
+    <p class="ask-pagehead__lead">{{ text }}</p>
+    <div class="pal-btn-row ask-notice__actions">
+      {% if form_action %}
+        <form method="post" action="{{ form_action }}">
+          {% csrf_token %}
+          <button type="submit" class="pal-btn">{{ button }}</button>
+        </form>
+        <a href="{% url 'ask:ask_home' %}" class="pal-btn pal-btn--ghost">Keep them</a>
+      {% else %}
+        <a href="{% url 'ask:ask_home' %}" class="pal-btn">Go to Ask OneWooz <span class="pal-btn__arrow" aria-hidden="true">&rarr;</span></a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

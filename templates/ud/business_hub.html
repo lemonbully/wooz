@@ -127,13 +127,75 @@ bell / email link opens straight onto the right tab.
   @media (max-width: 40rem) {
     .hub-tab { padding-left: 0.7rem; padding-right: 0.7rem; }
   }
+
+  /* ---- Help tab: page guides (ud.page_guides) ---------------------------- */
+  .hub-guides { margin-top: 1.25rem; }
+  .hub-guides [hidden] { display: none !important; }
+  .hub-guides__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem 1.5rem; }
+  .hub-guides__title { font-family: var(--pal-font-display); font-weight: 500; font-size: clamp(1.2rem, 1rem + 0.8vw, 1.55rem); letter-spacing: -0.02em; color: var(--pal-ink); }
+  .hub-guides__lead { margin-top: 0.35rem; max-width: 40rem; font-size: 0.9rem; line-height: 1.55; color: var(--pal-muted); }
+  .hub-guides__lead b { color: var(--pal-ink); font-weight: 600; }
+  .hub-guides__filter { position: relative; flex: 0 1 18rem; min-width: min(100%, 14rem); }
+  .hub-guides__filter svg { position: absolute; left: 0.7rem; top: 50%; width: 1rem; height: 1rem; transform: translateY(-50%); fill: none; stroke: var(--pal-muted); stroke-width: 1.8; pointer-events: none; }
+  .hub-guides__filter input { width: 100%; min-height: 2.4rem; padding-left: 2.1rem; font-size: 0.875rem; }
+  .hub-guides__jump { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
+  .hub-guides__jump a { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.38rem 0.65rem; border: 1px solid var(--pal-line); background: var(--pal-panel);
+    font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pal-ink-2); text-decoration: none; }
+  .hub-guides__jump a:hover { border-color: var(--pal-accent); color: var(--pal-accent); }
+  .hub-guides__jump span { color: var(--pal-faint); }
+  .hub-gsec { margin-top: 1.4rem; scroll-margin-top: 5rem; }
+  .hub-gsec__label { font-family: var(--pal-font-mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pal-faint); margin-bottom: 0.55rem; }
+  .hub-gsec__list { display: grid; gap: 0.5rem; }
+
+  .hub-guide { background: var(--pal-panel); border: 1px solid var(--pal-line); min-width: 0; scroll-margin-top: 5rem; transition: border-color 160ms ease, box-shadow 160ms ease; }
+  .hub-guide:hover { border-color: rgb(75 43 245 / 0.4); }
+  .hub-guide[open] { border-color: var(--pal-accent); box-shadow: 0 10px 28px -22px rgb(10 10 11 / 0.4); }
+  .hub-guide.is-target { animation: hub-guide-flash 1.6s ease; }
+  @keyframes hub-guide-flash { 0%, 40% { box-shadow: 0 0 0 3px rgb(75 43 245 / 0.25); } 100% { box-shadow: 0 10px 28px -22px rgb(10 10 11 / 0.4); } }
+  .hub-guide > summary { list-style: none; cursor: pointer; display: grid; gap: 0.3rem; padding: 0.95rem 2.75rem 0.95rem 1.05rem; position: relative; }
+  .hub-guide > summary::-webkit-details-marker { display: none; }
+  .hub-guide > summary::after { content: ""; position: absolute; right: 1.1rem; top: 1.25rem; width: 0.5rem; height: 0.5rem;
+    border-right: 1.5px solid var(--pal-muted); border-bottom: 1.5px solid var(--pal-muted); transform: rotate(45deg); transition: transform 220ms ease; }
+  .hub-guide[open] > summary::after { transform: rotate(225deg); top: 1.5rem; border-color: var(--pal-accent); }
+  .hub-guide > summary:focus-visible { outline: 2px solid var(--pal-accent); outline-offset: -2px; }
+  .hub-guide__top { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
+  .hub-guide__name { font-family: var(--pal-font-display); font-weight: 500; font-size: 1.05rem; letter-spacing: -0.015em; color: var(--pal-ink); }
+  .hub-guide__meta { font-family: var(--pal-font-mono); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pal-faint); }
+  .hub-guide__sum { font-size: 0.875rem; line-height: 1.5; color: var(--pal-muted); }
+  .hub-guide__body { padding: 0.2rem 1.05rem 1.1rem; border-top: 1px solid var(--pal-line-soft); }
+  .hub-guide__sec { margin-top: 1rem; }
+  .hub-guide__h { font-family: var(--pal-font-mono); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pal-accent); margin-bottom: 0.55rem; font-weight: 500; }
+  .hub-guide__task + .hub-guide__task { margin-top: 1rem; }
+  .hub-guide__task-t { font-family: var(--pal-font-display); font-weight: 500; font-size: 0.98rem; color: var(--pal-ink); letter-spacing: -0.01em; }
+  .hub-steps { list-style: none; margin: 0.55rem 0 0; padding: 0; counter-reset: hubstep; display: grid; gap: 0.5rem; }
+  .hub-steps li { counter-increment: hubstep; position: relative; padding-left: 2.15rem; font-size: 0.9rem; line-height: 1.55; color: var(--pal-ink-2); min-height: 1.5rem; }
+  .hub-steps li::before { content: counter(hubstep); position: absolute; left: 0; top: 0.05rem; width: 1.45rem; height: 1.45rem; display: grid; place-items: center;
+    font-family: var(--pal-font-mono); font-size: 0.66rem; font-weight: 600; color: var(--pal-accent); border: 1px solid rgb(75 43 245 / 0.35); background: rgb(75 43 245 / 0.05); }
+  .hub-tips { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+  .hub-tips li { position: relative; padding-left: 1.1rem; font-size: 0.875rem; line-height: 1.55; color: var(--pal-ink-2); }
+  .hub-tips li::before { content: ""; position: absolute; left: 0.15rem; top: 0.62em; width: 0.35rem; height: 0.35rem; background: var(--pal-accent); }
+  .hub-faqs { display: grid; gap: 0.7rem; margin: 0; }
+  .hub-faqs > div { border-left: 2px solid var(--pal-line); padding-left: 0.8rem; }
+  .hub-faqs dt { font-size: 0.9rem; font-weight: 600; color: var(--pal-ink); }
+  .hub-faqs dd { margin: 0.2rem 0 0; font-size: 0.875rem; line-height: 1.55; color: var(--pal-ink-2); }
+  .hub-guide__foot { margin-top: 1.15rem; padding-top: 0.9rem; border-top: 1px solid var(--pal-line-soft); display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; }
+  .hub-guide__related { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; font-size: 0.8rem; color: var(--pal-muted); }
+  .hub-guide__related a { color: var(--pal-accent); border-bottom: 1px solid currentColor; }
+  .hub-guide__stuck { margin-left: auto; font-size: 0.8rem; color: var(--pal-muted); }
+  .hub-guide__stuck a { color: var(--pal-ink); border-bottom: 1px solid currentColor; }
+  .hub-guide__stuck a:hover { color: var(--pal-accent); }
+  @media (max-width: 40rem) { .hub-guide__stuck { margin-left: 0; } .hub-guide__foot .pal-btn { width: 100%; justify-content: center; } }
+  .hub-guides__none { margin-top: 1rem; padding: 1.25rem; border: 1px dashed var(--pal-line); text-align: center; font-size: 0.875rem; color: var(--pal-muted); }
+  .hub-guides__none a { color: var(--pal-accent); border-bottom: 1px solid currentColor; }
+  .hub-posts-head { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--pal-line); }
+  @media (prefers-reduced-motion: reduce) { .hub-guide, .hub-guide > summary::after { transition: none; } .hub-guide.is-target { animation: none; } }
 </style>
 
 <div class="app-page">
   <div class="app-head"><div>
     <p class="pal-mono pal-mono--accent">From OneWooz</p>
     <h1 class="app-head__title pal-mt-4">Business hub</h1>
-    <p class="app-head__lead">News, help and important updates from the OneWooz team, sent to your account. Need help? Raise a ticket and we’ll reply right here.</p>
+    <p class="app-head__lead">News, step-by-step page guides and important updates from the OneWooz team. Need help? Open the Help tab, or raise a ticket and we’ll reply right here.</p>
   </div>
   <div class="app-head__actions">
     <button type="button" class="pal-btn pal-btn--ghost hub-tickets-btn" data-popup-open="tickets-modal" aria-haspopup="dialog" aria-controls="tickets-modal">
@@ -164,6 +226,105 @@ bell / email link opens straight onto the right tab.
       </a>
     {% endfor %}
   </nav>
+
+  {% if tab == "help" %}
+  {% comment %} Page guides: one per dashboard page (ud.page_guides). The "Page guide"
+     button on every dashboard page links to ?tab=help&guide=<key>, which opens
+     that guide here. The filter box narrows them instantly; the title search
+     above also filters them on the server. {% endcomment %}
+  <section class="hub-guides" aria-labelledby="hub-guides-title" data-guides data-open-guide="{{ open_guide }}">
+    <div class="hub-guides__head">
+      <div>
+        <h2 class="hub-guides__title" id="hub-guides-title">Page guides</h2>
+        <p class="hub-guides__lead">Step-by-step help for every page of your dashboard. Stuck somewhere? Press <b>Page guide</b> at the top of that page to jump straight to its guide.</p>
+      </div>
+      {% if guide_groups %}
+      <label class="hub-guides__filter">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" class="pal-input" placeholder="Filter guides, e.g. pickup, GST" aria-label="Filter page guides" data-guide-filter autocomplete="off">
+      </label>
+      {% endif %}
+    </div>
+
+    {% if guide_groups %}
+      <nav class="hub-guides__jump" aria-label="Guide sections">
+        {% for grp in guide_groups %}<a href="#guides-{{ grp.key }}" data-guide-jump="{{ grp.key }}">{{ grp.label }} <span>{{ grp.guides|length }}</span></a>{% endfor %}
+      </nav>
+
+      {% for grp in guide_groups %}
+      <div class="hub-gsec" id="guides-{{ grp.key }}" data-guide-group="{{ grp.key }}">
+        <p class="hub-gsec__label">{{ grp.label }}</p>
+        <div class="hub-gsec__list">
+          {% for g in grp.guides %}
+          <details class="hub-guide" id="guide-{{ g.key }}" data-guide="{{ g.key }}" data-search="{{ g.search_text }}"{% if open_guide == g.key %} open{% endif %}>
+            <summary>
+              <span class="hub-guide__top">
+                <span class="hub-guide__name">{{ g.title }}</span>
+                {% if g.audience == "d2c" %}<span class="app-badge">D2C stores</span>{% elif g.audience == "b2b" %}<span class="app-badge">B2B stores</span>{% endif %}
+                <span class="hub-guide__meta">{{ g.tasks|length }} how-to{{ g.tasks|length|pluralize }}{% if g.faqs %} · {{ g.faqs|length }} question{{ g.faqs|length|pluralize }}{% endif %}</span>
+              </span>
+              <span class="hub-guide__sum">{{ g.summary }}</span>
+            </summary>
+            <div class="hub-guide__body">
+              {% if g.tasks %}
+              <div class="hub-guide__sec">
+                <p class="hub-guide__h">How to</p>
+                {% for task in g.tasks %}
+                <div class="hub-guide__task">
+                  <h3 class="hub-guide__task-t">{{ task.title }}</h3>
+                  <ol class="hub-steps">{% for step in task.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% if g.tips %}
+              <div class="hub-guide__sec">
+                <p class="hub-guide__h">Good to know</p>
+                <ul class="hub-tips">{% for tip in g.tips %}<li>{{ tip }}</li>{% endfor %}</ul>
+              </div>
+              {% endif %}
+              {% if g.faqs %}
+              <div class="hub-guide__sec">
+                <p class="hub-guide__h">Common questions</p>
+                <dl class="hub-faqs">{% for f in g.faqs %}<div><dt>{{ f.q }}</dt><dd>{{ f.a }}</dd></div>{% endfor %}</dl>
+              </div>
+              {% endif %}
+              <div class="hub-guide__foot">
+                {% if g.key != "business_hub" %}
+                  {% if g.scope == "account" %}
+                    <a class="pal-btn pal-btn--ghost" href="{% url g.url_name %}">Open {{ g.title }} <span aria-hidden="true">&rarr;</span></a>
+                  {% elif primary_site %}
+                    <a class="pal-btn pal-btn--ghost" href="{% url g.url_name primary_site.id %}">Open {{ g.title }} <span aria-hidden="true">&rarr;</span></a>
+                  {% else %}
+                    <a class="pal-btn pal-btn--ghost" href="{% url 'ud:create_site' %}">Create a store first <span aria-hidden="true">&rarr;</span></a>
+                  {% endif %}
+                {% endif %}
+                {% if g.related_guides %}
+                <span class="hub-guide__related">See also:
+                  {% for r in g.related_guides %}<a href="?tab=help&amp;guide={{ r.key }}#guide-{{ r.key }}" data-guide-link="{{ r.key }}">{{ r.title }}</a>{% endfor %}
+                </span>
+                {% endif %}
+                <span class="hub-guide__stuck">Still stuck? <a href="#support" data-guide-ticket="{{ g.title }}">Raise a ticket</a></span>
+              </div>
+            </div>
+          </details>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      <p class="hub-guides__none" data-guide-none hidden role="status">No guide matches that. Try another word, or raise a ticket and we&rsquo;ll help.</p>
+    {% else %}
+      <p class="hub-guides__none">No guide matches &ldquo;{{ q }}&rdquo;. <a href="?tab=help">Show all guides</a>.</p>
+    {% endif %}
+  </section>
+
+  {% if posts %}
+  <div class="hub-posts-head">
+    <h2 class="hub-guides__title">Help from the OneWooz team</h2>
+    <p class="hub-guides__lead">Articles and videos we&rsquo;ve sent to your account.</p>
+  </div>
+  {% endif %}
+  {% endif %}
 
   {% if posts %}
     <div class="hub-list">
@@ -200,7 +361,7 @@ bell / email link opens straight onto the right tab.
         {% if page_obj.has_next %}<a class="app-pager__link" href="?tab={{ tab }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}&amp;page={{ page_obj.next_page_number }}">Next →</a>{% else %}<span class="app-pager__link app-pager__link--off">Next →</span>{% endif %}
       </div>
     {% endif %}
-  {% else %}
+  {% elif tab != "help" %}
     <div class="app-empty hub-empty">
       <span class="app-empty__ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8"/><path d="M8 12h5"/></svg></span>
       {% if q %}
@@ -216,11 +377,7 @@ bell / email link opens straight onto the right tab.
 
   {# ── Support: raise a ticket + the owner's own tickets (the 40% column) ── #}
   <aside class="hub-side" id="support" aria-label="Support tickets">
-    {% if not open_tickets %}
-      {% for message in messages %}
-        <div class="pal-alert{% if message.tags == 'success' %} pal-alert--ok{% endif %}" role="status">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
+    {# Messages (ticket raised / reply sent) show in the universal green/red toast stack. #}
 
     <section class="hub-panel" aria-labelledby="hub-ticket-title">
       <h2 class="hub-panel__title" id="hub-ticket-title">Raise a ticket</h2>
@@ -281,11 +438,6 @@ bell / email link opens straight onto the right tab.
         <button type="button" class="app-modal__x" data-popup-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>
       <div class="app-modal__body">
-        {% if open_tickets %}
-          {% for message in messages %}
-            <div class="pal-alert{% if message.tags == 'success' %} pal-alert--ok{% endif %} hub-alert hub-alert--modal" role="status">{{ message }}</div>
-          {% endfor %}
-        {% endif %}
         {% if tickets %}
           <div class="hub-tickets hub-tickets--modal">
             {% for t in tickets %}
@@ -505,6 +657,77 @@ bell / email link opens straight onto the right tab.
   // popup.js is deferred, so it is ready by DOMContentLoaded.
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", autoOpen);
   else autoOpen();
+})();
+
+// Help tab page guides: instant filter, open + scroll to the guide a "Page
+// guide" button asked for, related links that open in place, and "Raise a
+// ticket" that pre-fills the subject with the page's name.
+(function () {
+  var root = document.querySelector("[data-guides]");
+  if (!root) return;
+  var guides = Array.prototype.slice.call(root.querySelectorAll("[data-guide]"));
+  var groups = Array.prototype.slice.call(root.querySelectorAll("[data-guide-group]"));
+  var none = root.querySelector("[data-guide-none]");
+  var filter = root.querySelector("[data-guide-filter]");
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function reveal(key, flash) {
+    var el = document.getElementById("guide-" + key);
+    if (!el) return false;
+    el.hidden = false;
+    el.open = true;
+    try { el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }); } catch (e) { el.scrollIntoView(); }
+    if (flash) {
+      el.classList.remove("is-target");
+      void el.offsetWidth;
+      el.classList.add("is-target");
+    }
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set("tab", "help");
+      url.searchParams.set("guide", key);
+      url.hash = "guide-" + key;
+      history.replaceState(null, "", url.toString());
+    } catch (e) {}
+    return true;
+  }
+
+  if (filter) filter.addEventListener("input", function () {
+    var words = filter.value.toLowerCase().split(/\s+/).filter(Boolean);
+    var shown = 0;
+    guides.forEach(function (g) {
+      var text = g.getAttribute("data-search") || "";
+      var hit = words.every(function (w) { return text.indexOf(w) !== -1; });
+      g.hidden = !hit;
+      if (hit) shown++;
+    });
+    groups.forEach(function (grp) {
+      var any = grp.querySelector("[data-guide]:not([hidden])");
+      grp.hidden = !any;
+      var chip = root.querySelector('[data-guide-jump="' + grp.getAttribute("data-guide-group") + '"]');
+      if (chip) chip.hidden = !any;
+    });
+    if (none) none.hidden = shown !== 0;
+  });
+
+  root.addEventListener("click", function (e) {
+    var link = e.target.closest("[data-guide-link]");
+    if (link && reveal(link.getAttribute("data-guide-link"), true)) { e.preventDefault(); return; }
+    var ticket = e.target.closest("[data-guide-ticket]");
+    if (ticket) {
+      var form = document.querySelector("[data-ticket-form]:not([data-reply-form])");
+      var subject = form && form.querySelector("input[name=subject]");
+      if (!subject) return;
+      e.preventDefault();
+      if (!subject.value) subject.value = "Help with " + ticket.getAttribute("data-guide-ticket");
+      try { subject.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" }); } catch (err) {}
+      var msg = form.querySelector("textarea[name=message]");
+      (msg || subject).focus({ preventScroll: true });
+    }
+  });
+
+  var wanted = root.getAttribute("data-open-guide");
+  if (wanted) setTimeout(function () { reveal(wanted, true); }, 60);
 })();
 </script>
 {% endblock %}
